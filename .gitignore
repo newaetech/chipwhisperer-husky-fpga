@@ -1,0 +1,7 @@
+*.pyc
+*.vcd
+*.fst
+*.gtkw
+*.sw*
+a.out
+tags
