@@ -256,7 +256,7 @@ module clock_managment_advanced(
 
 	assign ADC_clk_src = ADC_clk_sample;
 	
-`if ADCCLK_FEEDBACK
+`ifdef ADCCLK_FEEDBACK
         `ifdef __ICARUS__
 	   assign systemsample_clk = adc_clk_feedback;
         `else
