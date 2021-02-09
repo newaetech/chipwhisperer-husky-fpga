@@ -58,7 +58,7 @@ module reg_chipwhisperer(
    
    /* Clock Sources */
    input          clkgen,
-   input          glitchclk_i,
+   input          glitchclk,
    
    /* GPIO Pins & Routing */
    inout          targetio1_io,
@@ -247,7 +247,7 @@ module reg_chipwhisperer(
    //and forth a lot.
    assign extclk_fpa_io = (registers_cwextclk[4:3] == 2'b00) ? trigger : /* adccapture_i */
                           (registers_cwextclk[4:3] == 2'b01) ? clkgen :
-                          (registers_cwextclk[4:3] == 2'b10) ? glitchclk_i :
+                          (registers_cwextclk[4:3] == 2'b10) ? glitchclk :
                           1'bZ;
 
 /* 
@@ -264,7 +264,7 @@ module reg_chipwhisperer(
    wire rearclk;
 
         `ifdef __ICARUS__
-           assign rearclk = registers_cwextclk[5]? clkgen : glitchclk_i;
+           assign rearclk = registers_cwextclk[5]? clkgen : glitchclk;
         `else
    BUFGMUX #(
    .CLK_SEL_TYPE("ASYNC") // Glitchles ("SYNC") or fast ("ASYNC") clock switch-over
@@ -272,7 +272,7 @@ module reg_chipwhisperer(
    clkgenfx_mux (
    .O(rearclk), // 1-bit output: Clock buffer output
    .I0(clkgen), // 1-bit input: Clock buffer input (S=0)
-   .I1(glitchclk_i), // 1-bit input: Clock buffer input (S=1)
+   .I1(glitchclk), // 1-bit input: Clock buffer input (S=1)
    .S(registers_cwextclk[5]) // 1-bit input: Clock buffer select
    );
    `endif
@@ -286,7 +286,7 @@ module reg_chipwhisperer(
    clkauxline_mux (
    .O(extclk_fpa_int_o), // 1-bit output: Clock buffer output
    .I1(clkgen), // 1-bit input: Clock buffer input (S=0)
-   .I0(glitchclk_i), // 1-bit input: Clock buffer input (S=1)
+   .I0(glitchclk), // 1-bit input: Clock buffer input (S=1)
    .S(registers_cwextclk[4]) // 1-bit input: Clock buffer select
    );
 
@@ -333,8 +333,8 @@ module reg_chipwhisperer(
    )
    ODDR2_hsglitcha (
       .Q(hsglitcha_o),   // 1-bit DDR output data
-      .C0(glitchclk_i), // 1-bit clock input
-      .C1(~glitchclk_i), // 1-bit clock input
+      .C0(glitchclk), // 1-bit clock input
+      .C1(~glitchclk), // 1-bit clock input
       .CE(registers_iorouting[32]), // 1-bit clock enable input
       .D0(1'b1), // 1-bit data input (associated with C0)
       .D1(1'b0), // 1-bit data input (associated with C1)
@@ -352,8 +352,8 @@ module reg_chipwhisperer(
    )
    ODDR2_hsglitchb (
       .Q(hsglitchb_o),   // 1-bit DDR output data
-      .C0(glitchclk_i), // 1-bit clock input
-      .C1(~glitchclk_i), // 1-bit clock input
+      .C0(glitchclk), // 1-bit clock input
+      .C1(~glitchclk), // 1-bit clock input
       .CE(registers_iorouting[33]), // 1-bit clock enable input
       .D0(1'b1), // 1-bit data input (associated with C0)
       .D1(1'b0), // 1-bit data input (associated with C1)
@@ -417,7 +417,7 @@ module reg_chipwhisperer(
    //TODO: Should use a mux?
    /*
    assign target_hs2 = (registers_cwextclk[6:5] == 2'b01) ? clkgen :
-                       (registers_cwextclk[6:5] == 2'b10) ? glitchclk_i :
+                       (registers_cwextclk[6:5] == 2'b10) ? glitchclk :
                        1'bZ;
    */
 

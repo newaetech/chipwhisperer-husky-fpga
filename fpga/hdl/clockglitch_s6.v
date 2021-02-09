@@ -33,7 +33,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 module clockglitch_s6(
    /* Source Clock */
-   input wire  source_clk,
+    input wire  source_clk, // HS1 or clkgen
  
     /* Glitchy Clock */
     output wire  glitched_clk,

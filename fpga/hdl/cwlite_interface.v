@@ -213,7 +213,7 @@ module cwlite_interface(
         .trigger_anapattern_i(1'b0),
         .trigger_decodedio_i(1'b0),
         .clkgen(clkgen),
-        .glitchclk_i(glitchclk),
+        .glitchclk(glitchclk),
 
         .targetio1_io(target_io1),
         .targetio2_io(target_io2),
