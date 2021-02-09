@@ -1,4 +1,5 @@
 `include "includes.v"
+`timescale 1 ns / 1 ps
 `default_nettype none
 
 module cwlite_interface(  
@@ -146,14 +147,14 @@ module cwlite_interface(
         .clk_adcint(clk_usb_buf),
         .clk_iface(clk_usb_buf),
         .clk_adcsample(adc_sample_clk),
-        
+
         .USB_D(USB_D),
         .USB_Addr(USB_Addr),
         .USB_RDn(USB_RDn),
         .USB_WRn(USB_WRn),
         .USB_CEn(USB_CEn),
         .USB_ALEn(USB_ALEn),
-        
+
         .LED_hbeat(GPIO_LED5),
         .LED_armed(GPIO_LED3),
         .LED_ADCDCMUnlock(GPIO_LED2),
@@ -167,7 +168,7 @@ module cwlite_interface(
         .amp_gain(amp_gain),
         .amp_hilo(amp_hilo),
         .target_clk(clkgen),
-        
+
         .reg_reset_o(reg_rst),
         .reg_address_o(reg_addr),
         .reg_bytecnt_o(reg_bcnt),
@@ -347,3 +348,4 @@ module cwlite_interface(
    */
 
 endmodule
+`default_nettype wire

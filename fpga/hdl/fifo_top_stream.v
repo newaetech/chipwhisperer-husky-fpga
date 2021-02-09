@@ -1,5 +1,6 @@
 `include "includes.v"
-//`default_nettype none
+`timescale 1 ns / 1 ps
+`default_nettype none
 
 module fifo_top(
     input wire    reset_i,
@@ -321,3 +322,4 @@ module fifo_top(
 */
 
 endmodule
+`default_nettype wire
