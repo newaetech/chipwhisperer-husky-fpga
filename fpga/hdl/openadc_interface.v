@@ -55,13 +55,13 @@ module openadc_interface(
     output        ADC_clk,
     /* Feedback path for ADC Clock. If unused connect to ADC_clk */
     input         ADC_clk_feedback,
-    input         DUT_CLK_i,
+    input         DUT_CLK_i, // target_hs1
     input         DUT_trigger_i,
     output        amp_gain,
     output        amp_hilo,
 
     /* Generated Clock for other uses */
-    output        target_clk,
+    output        clkgen,
 
     /* Connections to external registers */
     output              reg_reset_o,
@@ -118,7 +118,7 @@ module openadc_interface(
 
    wire extmeasure_clk;
    wire extmeasure_src;
-   assign extmeasure_clk = (extmeasure_src) ? target_clk : DUT_CLK_i;
+   assign extmeasure_clk = (extmeasure_src) ? clkgen : DUT_CLK_i;
 
    reg [31:0] extclk_frequency_int;
    always @(posedge extmeasure_clk or negedge freq_measure) begin
@@ -451,7 +451,7 @@ module openadc_interface(
 `ifdef ADCCLK_FEEDBACK
       .adc_clk_feedback(ADC_clk_feedback),
 `endif
-      .target_clk(target_clk),
+      .clkgen(clkgen),
       .clkadc_source(ADC_clk_selection),
       .clkgen_source(clkgen_selection),
       .systemsample_clk(ADC_clk_sample),

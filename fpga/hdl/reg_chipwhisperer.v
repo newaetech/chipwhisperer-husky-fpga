@@ -39,8 +39,8 @@ module reg_chipwhisperer(
    output  [15:0] reg_hyplen,
    
    /* External Clock */
-   input          extclk_rearin_i,
-   output         extclk_rearout_o,
+   input          target_hs1,
+   output         target_hs2,
    output         extclk_o,
    
    /* Extern Trigger Connections */
@@ -57,7 +57,7 @@ module reg_chipwhisperer(
    input          trigger_anapattern_i,
    
    /* Clock Sources */
-   input          clkgen_i,
+   input          clkgen,
    input          glitchclk_i,
    
    /* GPIO Pins & Routing */
@@ -238,15 +238,15 @@ module reg_chipwhisperer(
    assign extclk_o =  /* (registers_cwextclk[2:0] == 3'b000) ? extclk_fpa_io :  */
                      (registers_cwextclk[2:0] == 3'b001) ? 1'b0 : // XXX TODO
                      (registers_cwextclk[2:0] == 3'b010) ? 1'b0 : // XXX TODO, used to be extclk_pll_i : 
-                     (registers_cwextclk[2:0] == 3'b011) ? extclk_rearin_i : 
-                     //(registers_cwextclk[2:0] == 3'b100) ? extclk_rearout_o : 
+                     (registers_cwextclk[2:0] == 3'b011) ? target_hs1 : 
+                     //(registers_cwextclk[2:0] == 3'b100) ? target_hs2 : 
                      1'b0;
 
    //TODO: Should use a mux?
    //The glitch-clock comes from the fabric anyway, but the clkgen comes from the DCM. Either way we are jumping back
    //and forth a lot.
    assign extclk_fpa_io = (registers_cwextclk[4:3] == 2'b00) ? trigger : /* adccapture_i */
-                          (registers_cwextclk[4:3] == 2'b01) ? clkgen_i :
+                          (registers_cwextclk[4:3] == 2'b01) ? clkgen :
                           (registers_cwextclk[4:3] == 2'b10) ? glitchclk_i :
                           1'bZ;
 
@@ -264,14 +264,14 @@ module reg_chipwhisperer(
    wire rearclk;
 
         `ifdef __ICARUS__
-           assign rearclk = registers_cwextclk[5]? clkgen_i : glitchclk_i;
+           assign rearclk = registers_cwextclk[5]? clkgen : glitchclk_i;
         `else
    BUFGMUX #(
    .CLK_SEL_TYPE("ASYNC") // Glitchles ("SYNC") or fast ("ASYNC") clock switch-over
    )
    clkgenfx_mux (
    .O(rearclk), // 1-bit output: Clock buffer output
-   .I0(clkgen_i), // 1-bit input: Clock buffer input (S=0)
+   .I0(clkgen), // 1-bit input: Clock buffer input (S=0)
    .I1(glitchclk_i), // 1-bit input: Clock buffer input (S=1)
    .S(registers_cwextclk[5]) // 1-bit input: Clock buffer select
    );
@@ -285,7 +285,7 @@ module reg_chipwhisperer(
    )
    clkauxline_mux (
    .O(extclk_fpa_int_o), // 1-bit output: Clock buffer output
-   .I1(clkgen_i), // 1-bit input: Clock buffer input (S=0)
+   .I1(clkgen), // 1-bit input: Clock buffer input (S=0)
    .I0(glitchclk_i), // 1-bit input: Clock buffer input (S=1)
    .S(registers_cwextclk[4]) // 1-bit input: Clock buffer select
    );
@@ -306,7 +306,7 @@ module reg_chipwhisperer(
       .SRTYPE("ASYNC") // Specifies "SYNC" or "ASYNC" set/reset
    )
    ODDR2_rearclk (
-      .Q(extclk_rearout_o),   // 1-bit DDR output data
+      .Q(target_hs2),   // 1-bit DDR output data
       .C0(rearclk), // 1-bit clock input
       .C1(~rearclk), // 1-bit clock input
       .CE(registers_cwextclk[6]), // 1-bit clock enable input
@@ -317,7 +317,7 @@ module reg_chipwhisperer(
    );
    */
 
-   assign extclk_rearout_o = (registers_cwextclk[6] & (~targetio_highz)) ? rearclk : 1'bZ;
+   assign target_hs2 = (registers_cwextclk[6] & (~targetio_highz)) ? rearclk : 1'bZ;
 
         `ifdef __ICARUS__
            // XXX TODO
@@ -416,9 +416,9 @@ module reg_chipwhisperer(
 
    //TODO: Should use a mux?
    /*
-   assign extclk_rearout_o = (registers_cwextclk[6:5] == 2'b01) ? clkgen_i :
-                             (registers_cwextclk[6:5] == 2'b10) ? glitchclk_i :
-                             1'bZ;
+   assign target_hs2 = (registers_cwextclk[6:5] == 2'b01) ? clkgen :
+                       (registers_cwextclk[6:5] == 2'b10) ? glitchclk_i :
+                       1'bZ;
    */
 
    wire trigger_and;

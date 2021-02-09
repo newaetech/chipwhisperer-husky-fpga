@@ -163,7 +163,7 @@ module cwlite_interface(
         .DUT_trigger_i(ext_trigger),
         .amp_gain(amp_gain),
         .amp_hilo(amp_hilo),
-        .target_clk(clkgen),
+        .clkgen(clkgen),
 
         .reg_reset_o(reg_rst),
         .reg_address_o(reg_addr),
@@ -200,8 +200,8 @@ module cwlite_interface(
         .reg_hypaddress(reg_hypaddr), 
         .reg_hyplen(reg_hyplen_cw),
         .reg_stream(),
-        .extclk_rearin_i(target_hs1),
-        .extclk_rearout_o(target_hs2),
+        .target_hs1(target_hs1),
+        .target_hs2(target_hs2),
         .extclk_o(extclk_mux),
         .adc_sample_clk(1'b0), // XXX TODO? this came from openadc_interface, but it wasn't defined
         .trigger_io1_i(target_io1),
@@ -212,7 +212,7 @@ module cwlite_interface(
         .trigger_advio_i(1'b0),
         .trigger_anapattern_i(1'b0),
         .trigger_decodedio_i(1'b0),
-        .clkgen_i(clkgen),
+        .clkgen(clkgen),
         .glitchclk_i(glitchclk),
 
         .targetio1_io(target_io1),

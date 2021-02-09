@@ -27,7 +27,7 @@ module clock_managment_advanced(
 `endif
 
     /* Clock to DUT */
-    output                target_clk,
+    output                clkgen,
     
     /* Clock selection */
     input [2:0]           clkadc_source,
@@ -211,7 +211,7 @@ module clock_managment_advanced(
     );
     `endif
 
-    assign target_clk = clkgenfx_out;
+    assign clkgen = clkgenfx_out;
 
     //Output buffers
     wire out_from_dcmmux;
