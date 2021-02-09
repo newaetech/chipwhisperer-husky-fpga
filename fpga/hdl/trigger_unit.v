@@ -33,7 +33,6 @@ POSSIBILITY OF SUCH DAMAGE.
 *************************************************************************/
 module trigger_unit(
     input               reset,          //system reset
-    input               clk,            //system clock
 
     input               adc_clk,        //ADC sample clock
     input [9:0]         adc_data,       //ADC data

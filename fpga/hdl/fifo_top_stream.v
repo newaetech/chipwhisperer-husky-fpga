@@ -4,9 +4,6 @@
 
 module fifo_top(
     input wire    reset_i,
-    output wire reset_o,
-    input wire  clk_100mhz_in,
-    output wire clk_100mhz_out,
 
     //ADC Sample Input
     input wire [9:0]    adc_datain,
@@ -19,7 +16,7 @@ module fifo_top(
     input wire          arm_i,
 
     //FIFO to USB Read Interface
-    input wire          fifo_read_fifoclk,
+    input wire          clk_usb,
     input wire          fifo_read_fifoen,
     output wire         fifo_read_fifoempty,
     output wire  [7:0]  fifo_read_data,
@@ -60,7 +57,7 @@ module fifo_top(
     reg [9:0]           adcfifo_adcsample1;
     reg [9:0]           adcfifo_adcsample2;
 
-    always @(posedge fifo_read_fifoclk) begin
+    always @(posedge clk_usb) begin
        if (fifo_rst == 1'b1) begin
           fifo_overflow_reg <= 1'b0;
        end else if (fifo_overflow_int) begin
@@ -68,16 +65,6 @@ module fifo_top(
        end
     end
 
-
-    `ifdef NOBUFG_ADCCLK
-       assign clk_100mhz_out = clk_100mhz_in;
-    `else
-       IBUFG IBUFG_inst (
-          .O(clk_100mhz_out),
-          .I(clk_100mhz_in) );
-    `endif
-
-    assign reset_o = reset_i;
 
     //Counter for downsampling (NOT proper decimation)
     reg sample_wr_en;
@@ -183,7 +170,7 @@ module fifo_top(
 
     /* Convert 128-bit to 8-bit */
     reg [15:0] byte_select;
-    always @(posedge fifo_read_fifoclk)
+    always @(posedge clk_usb)
        if (reset_i | fifo_rst)
           byte_select <= 16'b0000000000000001;
        else if (fifo_read_fifoen)
@@ -204,7 +191,7 @@ module fifo_top(
                          16'b0000000000000001;
 
     reg read_en;
-    always @(posedge fifo_read_fifoclk)
+    always @(posedge clk_usb)
        if (fifo_rst | reset_i | (adc_capture_go & ~stream_mode))
           read_en <= 0;
        else
@@ -213,7 +200,7 @@ module fifo_top(
     wire [127:0] fifo_data;
     reg [7:0] fifo_read_data_reg;
     assign fifo_read_data = fifo_read_data_reg;
-    always @(posedge fifo_read_fifoclk)
+    always @(posedge clk_usb)
        fifo_read_data_reg <= (byte_select[15]) ?  fifo_data[7:0] :
                              (byte_select[14]) ?  fifo_data[15:8] :
                              (byte_select[13]) ?  fifo_data[23:16] :
@@ -274,7 +261,7 @@ module fifo_top(
     fifoonly_adcfifo fifoonly_adcfifo_inst (
        .rst             (fifo_rst | reset_i), // input rst
        .wr_clk          (adc_sampleclk), // input wr_clk
-       .rd_clk          (fifo_read_fifoclk), // input rd_clk
+       .rd_clk          (clk_usb), // input rd_clk
        .din             (adcfifo_in), // input [31 : 0] din
        .wr_en           (adcfifo_wr_en & stream_write), // input wr_en
        .rd_en           ((fifo_read_fifoen & read_en) | drain), // input rd_en
@@ -285,7 +272,7 @@ module fifo_top(
        .rd_data_count   (samples_o[31:4])
     );
 
-    always @(posedge fifo_read_fifoclk) begin
+    always @(posedge clk_usb) begin
        if (samples_o[31:4] > FIFO_FULL_SIZE_LARGEWORDS)
           fifo_too_full <= 1'b1;
        else
@@ -303,7 +290,7 @@ module fifo_top(
 
     coregen_ila ila (
        .CONTROL(CONTROL0), // INOUT BUS [35:0]
-       .CLK(fifo_read_fifoclk), // IN
+       .CLK(clk_usb), // IN
        .TRIG0(cs_data) // IN BUS [63:0]
     );
 

@@ -32,14 +32,8 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 *************************************************************************/
 module openadc_interface(
-    input         reset_i,
-
-   /* Fast Clock - ADC Internal Mode. Typically ~100 MHz */
-   input         clk_adcint,
-
-   /* Slower Clock - USB Interface, serial, etc. Typically ~20-60 MHz */
-   input         clk_iface,
-
+   input         reset_i,
+   input         clk_usb, // 96 MHz
    output        clk_adcsample,
 
    inout wire [7:0]     USB_D,
@@ -70,8 +64,7 @@ module openadc_interface(
     /* Generated Clock for other uses */
     output        target_clk,
 
-    /* Connections to external registers. Use clk_iface for
-      clocking */
+    /* Connections to external registers */
     output              reg_reset_o,
     output [5:0]        reg_address_o,
     output [15:0]       reg_bytecnt_o,
@@ -83,21 +76,11 @@ module openadc_interface(
     output              reg_addrvalid_o,
     input               reg_stream_i,
     output [5:0]        reg_hypaddress_o,
-    input  [15:0]       reg_hyplen_i,
-
-    output [9:0]  ADC_Data_out,
-    output        ADC_Clk_out
+    input  [15:0]       reg_hyplen_i
     );
 
-    wire        slowclock;
-    wire        clk_100mhz_buf, clk_100mhz;
     wire        dcm_locked;
-    wire        reset_intermediate;
 
-    assign slowclock = clk_iface;
-    assign clk_100mhz = clk_adcint;
-
-    wire       phase_clk;
     wire [8:0] phase_requested;
     wire [8:0] phase_actual;
     wire       phase_load;
@@ -115,7 +98,7 @@ module openadc_interface(
    //Divide clock by 2^24 for heartbeat LED
    //Divide clock by 2^23 for frequency measurement
    reg [24:0] timer_heartbeat;
-   always @(posedge slowclock)
+   always @(posedge clk_usb)
       if (reset) begin
          timer_heartbeat <= 25'b0;
       end else begin
@@ -236,10 +219,6 @@ module openadc_interface(
       //   ADC_Data_tofifo <= ADC_Data_tofifo + 10'd1;
    end
 
-   //Output stuff
-   assign ADC_Data_out = ADC_Data_tofifo;
-   assign ADC_Clk_out = ADC_clk_sample;
-
    wire [7:0] reg_status;
 
 `ifdef CHIPSCOPE
@@ -271,7 +250,6 @@ module openadc_interface(
 
    trigger_unit tu_inst(
       .reset(reset),
-      .clk(slowclock),
       .adc_clk(ADC_clk_sample),
       .adc_data(ADC_Data_tofifo),
 
@@ -309,7 +287,6 @@ module openadc_interface(
    wire [7:0]  ddrfifo_dout;
    wire ddrfifo_empty;
    wire ddrfifo_rd_en;
-   wire ddrfifo_rd_clk;
 
    wire cmdfifo_rxf;
    wire cmdfifo_txe;
@@ -326,7 +303,6 @@ module openadc_interface(
 
 
 
-   wire reg_clk;
    wire [5:0] reg_address;
    wire [15:0] reg_bytecnt;
    wire [7:0] reg_datao;
@@ -345,7 +321,7 @@ module openadc_interface(
 
    reg_main_cwlite registers_mainctl_cwlite (
       .reset_i(reset_i), 
-      .clk(slowclock), 
+      .clk_usb(clk_usb), 
       .cwusb_din(cmdfifo_din), 
       .cwusb_dout(cmdfifo_dout), 
       .cwusb_rdn(USB_RDn), 
@@ -354,7 +330,6 @@ module openadc_interface(
       .cwusb_alen(USB_ALEn),
       .cwusb_addr(USB_Addr),
       .cwusb_isout(cmdfifo_isout), 
-      .reg_clk(reg_clk), 
       .reg_address(reg_address), 
       .reg_bytecnt(reg_bytecnt), 
       .reg_datao(reg_datao), 
@@ -383,8 +358,8 @@ module openadc_interface(
 
    reg_openadc registers_openadc (
       .reset_i(reset_i),
-      .reset_o(reset_intermediate),
-      .clk(reg_clk),
+      .reset_o(reset),
+      .clk_usb(clk_usb),
       .reg_address(reg_address), 
       .reg_bytecnt(reg_bytecnt), 
       .reg_datao(reg_datai_oadc), 
@@ -416,7 +391,6 @@ module openadc_interface(
       .phase_ld_o(phase_load),
       .phase_i(phase_actual),
       .phase_done_i(phase_done),
-      .phase_clk_o(phase_clk),
       .clkgen_mul(clkgen_mul),
       .clkgen_div(clkgen_div),
       .clkgen_load(clkgen_load),
@@ -439,8 +413,7 @@ module openadc_interface(
    wire [15:0] reg_hyplen_fifo;
    reg_openadc_adcfifo registers_fiforead(
       .reset_i(reset_i),
-      .reset_o(),
-      .clk(reg_clk),
+      .clk_usb(clk_usb),
       .reg_address(reg_address), 
       .reg_bytecnt(reg_bytecnt), 
       .reg_datao(reg_datai_fifo), 
@@ -454,8 +427,7 @@ module openadc_interface(
       .reg_hyplen(reg_hyplen_fifo),
       .fifo_empty(ddrfifo_empty),
       .fifo_data(ddrfifo_dout),
-      .fifo_rd_en(ddrfifo_rd_en),
-      .fifo_rd_clk(ddrfifo_rd_clk)
+      .fifo_rd_en(ddrfifo_rd_en)
    );
 
    assign reg_stream = reg_stream_fifo | reg_stream_openadc | reg_stream_i;
@@ -474,7 +446,7 @@ module openadc_interface(
 
    clock_managment_advanced genclocks(
       .reset(reset | clockreset),
-      .clk_sys(clk_100mhz_buf),
+      .clk_usb(clk_usb),
       .clk_ext(DUT_CLK_i),   
       .adc_clk(ADC_clk),
 `ifdef ADCCLK_FEEDBACK
@@ -484,7 +456,6 @@ module openadc_interface(
       .clkadc_source(ADC_clk_selection),
       .clkgen_source(clkgen_selection),
       .systemsample_clk(ADC_clk_sample),
-      .phase_clk(phase_clk),
       .phase_requested(phase_requested),
       .phase_actual(phase_actual),
       .phase_load(phase_load),
@@ -499,7 +470,7 @@ module openadc_interface(
     );
 
    reg [8:0] PWM_accumulator;
-   always @(posedge slowclock) PWM_accumulator <= PWM_accumulator[7:0] + PWM_incr;
+   always @(posedge clk_usb) PWM_accumulator <= PWM_accumulator[7:0] + PWM_incr;
 
    //assign amp_hilo = 1'b0;
    assign amp_gain = PWM_accumulator[8];
@@ -548,11 +519,7 @@ module openadc_interface(
 
    `ifndef NOFIFO // for clean compilation
    fifo_top fifo_top_inst(
-      .reset_i(reset_intermediate),
-      .reset_o(reset),
-
-    .clk_100mhz_in(clk_100mhz),
-      .clk_100mhz_out(clk_100mhz_buf),
+      .reset_i(reset),
 
       //ADC Sample Input
       .adc_datain(ADC_Data_tofifo),
@@ -565,7 +532,7 @@ module openadc_interface(
       .arm_i(armed),
 
       //DDR to USB Read Interface
-      .fifo_read_fifoclk(ddrfifo_rd_clk),
+      .clk_usb(clk_usb),
       .fifo_read_fifoen(ddrfifo_rd_en),
       .fifo_read_fifoempty(ddrfifo_empty),
       .fifo_read_data(ddrfifo_dout),

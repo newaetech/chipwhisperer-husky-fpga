@@ -38,7 +38,7 @@ POSSIBILITY OF SUCH DAMAGE.
 module reg_openadc(
    input          reset_i,
    output         reset_o,
-   input          clk,
+   input          clk_usb,
    input [5:0]    reg_address,  // Address of register
    input [15:0]   reg_bytecnt,  // Current byte count
    input [7:0]    reg_datai,    // Data to write
@@ -76,7 +76,6 @@ module reg_openadc(
    input [31:0]   adcclk_frequency,
    
    /* Interface to phase shift module */
-   output         phase_clk_o,
    output [8:0]   phase_o,
    output         phase_ld_o,
    input  [8:0]   phase_i,
@@ -108,7 +107,6 @@ module reg_openadc(
    assign reset = reset_i | reset_latched;
    assign reset_o = reset;
    
-   assign phase_clk_o = clk;
     
 `ifdef CHIPSCOPE
    wire [127:0] cs_data;   
@@ -119,7 +117,7 @@ module reg_openadc(
 
    coregen_ila ila (
     .CONTROL(chipscope_control), // INOUT BUS [35:0]
-    .CLK(clk), // IN
+    .CLK(clk_usb), // IN
     .TRIG0(cs_data) // IN BUS [127:0]
    );  
 `endif
@@ -156,7 +154,7 @@ module reg_openadc(
    assign phase_o = phase_out[8:0];
    assign phase_ld_o = phase_loadout;
    
-   always @(posedge clk) begin
+   always @(posedge clk_usb) begin
           if (reset | phase_loadout) begin
              phase_in <= 0;
              //phase_done <= 0;
@@ -218,13 +216,13 @@ module reg_openadc(
    reg clkgen_done_reg;
 
    //Make load 1-cycle only
-   always @(posedge clk) begin
+   always @(posedge clk_usb) begin
           clkgen_load_reg_int <= clkgen_load_reg;
           clkgen_load <= clkgen_load_reg & ~clkgen_load_reg_int;
    end
 
    //Make done latched until cleared by load
-   always @(posedge clk) begin
+   always @(posedge clk_usb) begin
       if (clkgen_load | registers_advclocksettings[26])
          clkgen_done_reg <= 'b0;
       else if (clkgen_done)
@@ -243,17 +241,17 @@ module reg_openadc(
    reg extclk_locked;
    reg adcclk_locked;
 
-   always @(posedge clk) begin
+   always @(posedge clk_usb) begin
       reset_latched <= reset_fromreg;
    end
 
-   always @(posedge clk) begin
+   always @(posedge clk_usb) begin
       if (extclk_locked == 0) begin
          registers_extclk_frequency <= extclk_frequency;
       end
    end
 
-   always @(posedge clk) begin
+   always @(posedge clk_usb) begin
       if (adcclk_locked == 0) begin
          registers_adcclk_frequency <= adcclk_frequency;
       end
@@ -263,7 +261,7 @@ module reg_openadc(
    reg reg_datao_valid_reg;
    assign reg_datao = (reg_datao_valid_reg/*& reg_read*/) ? reg_datao_reg : 8'd0;
 
-   always @(posedge clk) begin
+   always @(posedge clk_usb) begin
       if (reg_addrvalid) begin
          if (reg_address == `EXTFREQ_ADDR) begin
             extclk_locked <= 1;
@@ -273,7 +271,7 @@ module reg_openadc(
       end
    end
    
-   always @(posedge clk) begin
+   always @(posedge clk_usb) begin
           if (reg_addrvalid) begin
              if (reg_address == `ADCFREQ_ADDR) begin
                 adcclk_locked <= 1;
@@ -283,7 +281,7 @@ module reg_openadc(
           end
    end
    
-   always @(posedge clk) begin
+   always @(posedge clk_usb) begin
           if (reg_addrvalid) begin
              case (reg_address)
                 `GAIN_ADDR: begin reg_datao_valid_reg <= 1; end
@@ -309,7 +307,7 @@ module reg_openadc(
           end
    end
 
-   always @(posedge clk) begin
+   always @(posedge clk_usb) begin
           if (reg_read) begin
              case (reg_address)
                 `GAIN_ADDR: reg_datao_reg <= registers_gain; 
@@ -333,7 +331,7 @@ module reg_openadc(
           end
    end
 
-   always @(posedge clk) begin
+   always @(posedge clk_usb) begin
           if (reset) begin
              registers_gain <= 0;
              registers_settings <= 0;
@@ -358,7 +356,7 @@ module reg_openadc(
           end
    end
 
-   always @(posedge clk) begin
+   always @(posedge clk_usb) begin
           if (reset) begin
              phase_out <= 0;
           end else if (phase_out[9] == 1) begin

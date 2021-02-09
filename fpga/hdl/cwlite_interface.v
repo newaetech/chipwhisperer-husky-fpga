@@ -67,7 +67,7 @@ module cwlite_interface(
 
     input wire          USB_spi0_sck_i,
     input wire          USB_spi0_mosi_i,
-    output wire                 USB_spi0_miso_o,
+    output wire         USB_spi0_miso_o,
     input wire          USB_spi0_cs0,
     input wire          USB_treset_i,
     
@@ -144,8 +144,7 @@ module cwlite_interface(
 
    openadc_interface oadc(
         .reset_i(reset_i),
-        .clk_adcint(clk_usb_buf),
-        .clk_iface(clk_usb_buf),
+        .clk_usb(clk_usb_buf),
         .clk_adcsample(adc_sample_clk),
 
         .USB_D(USB_D),
@@ -192,7 +191,7 @@ module cwlite_interface(
 
    reg_chipwhisperer reg_chipwhisperer(
         .reset_i(reg_rst),
-        .clk(clk_usb_buf),
+        .clk_usb(clk_usb_buf),
         .reg_address(reg_addr), 
         .reg_bytecnt(reg_bcnt), 
         .reg_datao(reg_datai_cw), 
@@ -249,7 +248,7 @@ module cwlite_interface(
 
    reg_clockglitch reg_clockglitch(
         .reset_i(reg_rst),
-        .clk(clk_usb_buf),
+        .clk_usb(clk_usb_buf),
         .reg_address(reg_addr), 
         .reg_bytecnt(reg_bcnt), 
         .reg_datao(reg_datai_glitch), 

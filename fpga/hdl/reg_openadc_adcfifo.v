@@ -37,8 +37,7 @@ POSSIBILITY OF SUCH DAMAGE.
 *************************************************************************/
 module reg_openadc_adcfifo(
    input          reset_i,
-   output         reset_o,
-   input          clk,
+   input          clk_usb,
    input [5:0]    reg_address,  // Address of register
    input [15:0]   reg_bytecnt,  // Current byte count
    input [7:0]    reg_datai,    // Data to write
@@ -55,13 +54,11 @@ module reg_openadc_adcfifo(
    /* ADC Fifo Interface */
    input          fifo_empty,
    input [7:0]    fifo_data,
-   output         fifo_rd_en,
-   output         fifo_rd_clk
+   output         fifo_rd_en
 );
 
    wire  reset;
    assign reset = reset_i;
-   assign fifo_rd_clk = clk;
    
    reg fifo_rd_en_reg;
    assign fifo_rd_en = fifo_rd_en_reg;
@@ -78,7 +75,7 @@ module reg_openadc_adcfifo(
 
    coregen_ila ila (
     .CONTROL(chipscope_control), // INOUT BUS [35:0]
-    .CLK(clk), // IN
+    .CLK(clk_usb), // IN
     .TRIG0(cs_data) // IN BUS [127:0]
    );  
 `endif
@@ -98,7 +95,7 @@ module reg_openadc_adcfifo(
    assign reg_datao = (reg_datao_valid_reg /*& reg_read*/) ? reg_datao_reg : 8'd0;
    
    
-   always @(posedge clk) begin
+   always @(posedge clk_usb) begin
           if (reg_addrvalid) begin
              case (reg_address)
                 `ADCREAD_ADDR: begin reg_datao_valid_reg <= 1; end
@@ -121,7 +118,7 @@ module reg_openadc_adcfifo(
    end
 
 /*
-	 always @(negedge clk, negedge reg_read) begin
+	 always @(negedge clk_usb, negedge reg_read) begin
 		if (reg_read == 0) begin
 			fifo_rd_en_reg <= 0;
 		end else if (reg_address == `ADCREAD_ADDR) begin
@@ -137,7 +134,7 @@ module reg_openadc_adcfifo(
  */
 
    //always @(reg_read, reg_address, reg_bytecnt) begin
-   always @(posedge clk) begin
+   always @(posedge clk_usb) begin
       if ((reg_read == 1) && (reg_address == `ADCREAD_ADDR) && (reg_bytecnt > 16'd0)) begin
          fifo_rd_en_reg <= 1;
       end else begin
@@ -148,7 +145,7 @@ module reg_openadc_adcfifo(
    //always begin
    wire stream_rst;
    assign stream_rst = fifo_empty | reset | ~reg_addrvalid;
-   always  @(posedge clk or posedge stream_rst) begin
+   always  @(posedge clk_usb or posedge stream_rst) begin
       //if ((fifo_empty == 1) || (reset == 1) || (reg_addrvalid == 0) || (reg_address != `ADCREAD_ADDR)) begin
       if (stream_rst == 1) begin
          reg_stream_reg <= 0;

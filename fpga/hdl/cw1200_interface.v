@@ -259,8 +259,7 @@ module cw1200_interface(
 
 	openadc_interface oadc(
 		.reset_i(reset_i),
-		.clk_adcint(clk_usb_buf1), //Potentially could be external clock
-		.clk_iface(clk_usb_buf),
+		.clk_usb(clk_usb_buf1),
 		.clk_adcsample(adc_sample_clk),
 		
 		.USB_D(USB_D),

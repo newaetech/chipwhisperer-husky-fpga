@@ -17,7 +17,7 @@ module clock_managment_advanced(
     input                 reset, //Does NOT reset CLKGEN block
 
     /* Clock sources */
-    input                 clk_sys,     //System clock
+    input                 clk_usb,     //System clock
     input                 clk_ext,     //External clock
 
     /* Clock to ADC */
@@ -43,8 +43,7 @@ module clock_managment_advanced(
     input                 clkgen_load,
     output                clkgen_done,
     
-    /* Phase shift control for external clock*/
-    input                 phase_clk,
+    /* Phase shift control for external clock (clock: clk_usb) */
     input [8:0]           phase_requested,
     output [8:0]          phase_actual,
     input                 phase_load,
@@ -62,16 +61,8 @@ module clock_managment_advanced(
     wire dcm_psincdec;
     wire dcm_psdone;
     wire [7:0] dcm_status;
-   
-    wire phase_clk_buf;
-   
-    /* Resync if needed */
-    //NOTE: Due to requirement of PHASECLK location in DCM_CLKGEN
-    //      instance, ISE does some routing which can result in an
-    //      error about clock & non-clock loads. Need to look into that.
-    assign phase_clk_buf = phase_clk;
-   
-    dcm_phaseshift_interface dcmps(.clk_i(phase_clk_buf),
+
+    dcm_phaseshift_interface dcmps(.clk_i(clk_usb),
                                    .reset_i(reset),
                                    .default_value_i(9'd0),
                                    .value_i(phase_requested),
@@ -83,19 +74,13 @@ module clock_managment_advanced(
                                    .dcm_psdone_i(dcm_psdone),
                                    .dcm_status_i(dcm_status));
 
-    //NOTE: Due to requirement of PHASECLK location in DCM_CLKGEN
-    //      instance, ISE does some routing which can result in an
-    //      error about clock & non-clock loads. Need to look into that.
-    wire clkgen_clk;
-    assign clkgen_clk = phase_clk;
-
     wire clkgen_progdone;
     wire clkgen_progdata;
     wire clkgen_progen;
     wire clkgen_progclk;
 
     dcm_clkgen_load clkgenload(
-       .clk_i(clkgen_clk),
+       .clk_i(clk_usb),
        .reset_i(clkgen_reset),
        .mult(clkgen_mul),
        .div(clkgen_div),
@@ -116,7 +101,7 @@ module clock_managment_advanced(
      
     `ifdef __ICARUS__
        assign dcm_clk_in = clkadc_source[2]? clk_ext : clkgenfx_out;
-       assign clkgenfx_in = clkgen_source? clk_ext : clk_sys;
+       assign clkgenfx_in = clkgen_source? clk_ext : clk_usb;
     `else
        BUFGMUX #(
        .CLK_SEL_TYPE("ASYNC") // Glitchles ("SYNC") or fast ("ASYNC") clock switch-over
@@ -134,7 +119,7 @@ module clock_managment_advanced(
        )
        clkgenfx_mux (
        .O(clkgenfx_in), // 1-bit output: Clock buffer output
-       .I0(clk_sys), // 1-bit input: Clock buffer input (S=0)
+       .I0(clk_usb), // 1-bit input: Clock buffer input (S=0)
        .I1(clk_ext), // 1-bit input: Clock buffer input (S=1)
        .S(clkgen_source) // 1-bit input: Clock buffer select
        ); 
@@ -182,7 +167,7 @@ module clock_managment_advanced(
     .STATUS(dcm_status), // 8-bit output: DCM_SP status output
     .CLKFB(dcm_clk), // 1-bit input: Clock feedback input
     .CLKIN(dcm_clk_in), // 1-bit input: Clock input
-    .PSCLK(phase_clk_buf), // 1-bit input: Phase shift clock input
+    .PSCLK(clk_usb), // 1-bit input: Phase shift clock input
     .PSEN(dcm_psen), // 1-bit input: Phase shift enable
     .PSINCDEC(dcm_psincdec), // 1-bit input: Phase shift increment/decrement input
     .RST(reset) // 1-bit input: Active high reset input

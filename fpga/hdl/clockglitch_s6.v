@@ -50,7 +50,7 @@ module clockglitch_s6(
     */
    
     /* ??? */
-    input wire   phase_clk,
+    input wire   clk_usb,
     input wire   dcm_rst,
    
     /* Controls width of pulse */
@@ -69,18 +69,12 @@ module clockglitch_s6(
     );
 
 
-   //NOTE: Due to requirement of PHASECLK location in DCM_CLKGEN
-    //      instance, ISE does some routing which can result in an
-    //      error about clock & non-clock loads. Need to look into that.
-    wire phase_clk_buf;
-    assign phase_clk_buf = phase_clk;
-    
     wire dcm1_psen;
     wire dcm1_psincdec;
     wire dcm1_psdone;
     wire [7:0] dcm1_status;
-   
-    dcm_phaseshift_interface dcmps1(.clk_i(phase_clk_buf),
+
+    dcm_phaseshift_interface dcmps1(.clk_i(clk_usb),
       .reset_i(dcm_rst),
       .default_value_i(9'd0),
       .value_i(phase1_requested),
@@ -97,7 +91,7 @@ module clockglitch_s6(
    wire dcm2_psdone;
    wire [7:0] dcm2_status;
    
-   dcm_phaseshift_interface dcmps2(.clk_i(phase_clk_buf),
+   dcm_phaseshift_interface dcmps2(.clk_i(clk_usb),
       .reset_i(dcm_rst),
       .default_value_i(9'd0),
       .value_i(phase2_requested),
@@ -179,7 +173,7 @@ module clockglitch_s6(
         .STATUS(dcm1_status), // 8-bit output: DCM_SP status output
         .CLKFB(dcm1_clk), // 1-bit input: Clock feedback input
         .CLKIN(source_clk), // 1-bit input: Clock input
-        .PSCLK(phase_clk_buf), // 1-bit input: Phase shift clock input
+        .PSCLK(clk_usb), // 1-bit input: Phase shift clock input
         .PSEN(dcm1_psen), // 1-bit input: Phase shift enable
         .PSINCDEC(dcm1_psincdec), // 1-bit input: Phase shift increment/decrement input
         .RST(dcm_rst) // 1-bit input: Active high reset input
@@ -215,7 +209,7 @@ module clockglitch_s6(
         .STATUS(dcm2_status), // 8-bit output: DCM_SP status output
         .CLKFB(dcm2_clk), // 1-bit input: Clock feedback input
         .CLKIN(dcm1_clk_out), // 1-bit input: Clock input
-        .PSCLK(phase_clk_buf), // 1-bit input: Phase shift clock input
+        .PSCLK(clk_usb), // 1-bit input: Phase shift clock input
         .PSEN(dcm2_psen), // 1-bit input: Phase shift enable
         .PSINCDEC(dcm2_psincdec), // 1-bit input: Phase shift increment/decrement input
         .RST(dcm_rst) // 1-bit input: Active high reset input

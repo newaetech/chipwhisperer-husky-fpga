@@ -24,7 +24,7 @@ Author: Colin O'Flynn <coflynn@newae.com>
 *************************************************************************/
 module reg_chipwhisperer(
    input          reset_i,
-   input          clk,
+   input          clk_usb,
    input [5:0]    reg_address,  // Address of register
    input [15:0]   reg_bytecnt,  // Current byte count
    input [7:0]    reg_datai,    // Data to write
@@ -370,7 +370,7 @@ module reg_chipwhisperer(
    
    reg reg_targetpower_off;
    reg reg_targetpower_off_prev;
-   always @(posedge clk) begin
+   always @(posedge clk_usb) begin
       reg_targetpower_off <= registers_iorouting[41];
            reg_targetpower_off_prev <= reg_targetpower_off;
    end
@@ -379,7 +379,7 @@ module reg_chipwhisperer(
        Only in CW1200 currently. */
 `ifdef SUPPORT_SOFTPOWER
    reg targetpower_soft_on;
-   always @(posedge clk) begin
+   always @(posedge clk_usb) begin
           if ((reg_targetpower_off == 1'b0) && (reg_targetpower_off_prev == 1'b1)) begin
              targetpower_soft_on <= 1'b1;
           end else if (reg_targetpower_off == 1'b1) begin
@@ -388,13 +388,13 @@ module reg_chipwhisperer(
    end
    
    reg [10:0] soft_start_pwm;
-   always @(posedge clk) begin
+   always @(posedge clk_usb) begin
           soft_start_pwm <= soft_start_pwm + 11'd1;
    end
    
    reg output_src_pwm;
    reg [13:0] soft_start_cnt;
-   always @(posedge clk) begin
+   always @(posedge clk_usb) begin
           if (targetpower_soft_on == 1'b0) begin
              soft_start_cnt <= 0;
              output_src_pwm <= 1'b0;
@@ -545,7 +545,7 @@ module reg_chipwhisperer(
    assign enable_output_pdic = registers_iorouting[52];
    assign output_pdic = registers_iorouting[53];
   
-   always @(posedge clk) begin
+   always @(posedge clk_usb) begin
       if (reset) begin
          registers_ioread <= 4'b0000;
       end else begin
@@ -572,7 +572,7 @@ module reg_chipwhisperer(
    reg reg_datao_valid_reg;
    assign reg_datao = (reg_datao_valid_reg/*& reg_read*/) ? reg_datao_reg : 8'd0;
   
-   always @(posedge clk) begin
+   always @(posedge clk_usb) begin
       if (reg_addrvalid) begin
          case (reg_address)
             `CW_EXTCLK_ADDR: begin reg_datao_valid_reg <= 1; end
@@ -587,7 +587,7 @@ module reg_chipwhisperer(
       end
    end
 
-   always @(posedge clk) begin
+   always @(posedge clk_usb) begin
       if (reg_read) begin
          case (reg_address)
            `CW_EXTCLK_ADDR: reg_datao_reg <= registers_cwextclk; 
@@ -600,7 +600,7 @@ module reg_chipwhisperer(
       end
    end  
 
-   always @(posedge clk) begin
+   always @(posedge clk_usb) begin
       if (reset) begin
          registers_cwextclk <= 8'b00000011;
          registers_cwtrigsrc <= 8'b00100000;

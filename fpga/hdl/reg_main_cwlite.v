@@ -38,7 +38,7 @@ POSSIBILITY OF SUCH DAMAGE.
 *************************************************************************/
 module reg_main_cwlite(
    input reset_i,
-   input clk,
+   input clk_usb,
 
    /* Interface to ChipWhisperer-Lite USB Chip */
    input [7:0] cwusb_din,
@@ -51,7 +51,6 @@ module reg_main_cwlite(
    input cwusb_cen,
 
  /* Interface to registers */
-   output         reg_clk,
    output [5:0]   reg_address,  // Address of register
    output [15:0]  reg_bytecnt,  // Current byte count
    output [7:0]   reg_datao,    // Data to write
@@ -80,13 +79,10 @@ module reg_main_cwlite(
    assign cs_data[31:20] = reg_bytecnt[11:0];
 `endif
 
-   wire usb_clk;
-   assign usb_clk = clk;
-   assign reg_clk = clk;
 
    reg cwusb_alen_rs, cwusb_alen_rs_dly;
-   always @(posedge usb_clk) cwusb_alen_rs <= cwusb_alen;
-   always @(posedge usb_clk) cwusb_alen_rs_dly <= cwusb_alen_rs;
+   always @(posedge clk_usb) cwusb_alen_rs <= cwusb_alen;
+   always @(posedge clk_usb) cwusb_alen_rs_dly <= cwusb_alen_rs;
  
    reg [15:0] regout_bytecnt;
    reg regout_addrvalid;
@@ -97,10 +93,10 @@ module reg_main_cwlite(
    wire rdflag = ~cwusb_rdn & ~cwusb_cen;
    reg [7:0]  reg_datai_buf;
    reg rdflag_rs, rdflag_rs_dly;
-   always @(posedge usb_clk) rdflag_rs <= rdflag;
-   always @(posedge usb_clk) rdflag_rs_dly <= rdflag_rs;
+   always @(posedge clk_usb) rdflag_rs <= rdflag;
+   always @(posedge clk_usb) rdflag_rs_dly <= rdflag_rs;
  
-   always @(posedge usb_clk) begin
+   always @(posedge clk_usb) begin
       if (rdflag_rs_dly)
          reg_datai_buf <= reg_datai;
    end
@@ -112,7 +108,7 @@ module reg_main_cwlite(
  
    reg isoutreg, isoutregdly;
  
-   always @(posedge usb_clk) begin
+   always @(posedge clk_usb) begin
       isoutreg <= ~cwusb_rdn;
       isoutregdly <= isoutreg;
    end
@@ -124,7 +120,7 @@ module reg_main_cwlite(
    assign reg_hypaddress = cwusb_addr[5:0];
    reg [5:0] address;
    assign reg_address = address;
-   always @(posedge usb_clk) begin
+   always @(posedge clk_usb) begin
       if (cwusb_alen_rs_dly == 1'b0) begin
          address <= cwusb_addr[5:0];
       end
@@ -132,7 +128,7 @@ module reg_main_cwlite(
  
 //Address valid from ALEn until transaction done marked OR next falling edge of ALEn
    reg addrvalid_outreg;
-   always @(posedge usb_clk) begin
+   always @(posedge clk_usb) begin
       if (cwusb_alen_rs == 1'b0) begin //TODO: Add 'transaction done' flag
          regout_addrvalid <= 1'b0;
       end else if ((cwusb_alen_rs == 1'b1) &&(cwusb_alen_rs_dly == 1'b0)) begin
@@ -141,12 +137,12 @@ module reg_main_cwlite(
    end
  
    reg cwusb_rdn_rs, cwusb_rdn_rs_dly;
-   always @(posedge usb_clk) cwusb_rdn_rs <= cwusb_rdn;
-   always @(posedge usb_clk) cwusb_rdn_rs_dly <= cwusb_rdn_rs;
+   always @(posedge clk_usb) cwusb_rdn_rs <= cwusb_rdn;
+   always @(posedge clk_usb) cwusb_rdn_rs_dly <= cwusb_rdn_rs;
  
    reg cwusb_wrn_rs, cwusb_wrn_rs_dly;
-   always @(posedge usb_clk) cwusb_wrn_rs <= cwusb_wrn;
-   always @(posedge usb_clk) cwusb_wrn_rs_dly <= cwusb_wrn_rs;
+   always @(posedge clk_usb) cwusb_wrn_rs <= cwusb_wrn;
+   always @(posedge clk_usb) cwusb_wrn_rs_dly <= cwusb_wrn_rs;
   
    reg [7:0] cwusb_databuf;
  
@@ -159,7 +155,7 @@ module reg_main_cwlite(
    assign reg_datao = cwusb_databuf;
  
    reg regout_write;
-   always @(posedge usb_clk) begin
+   always @(posedge clk_usb) begin
       regout_write <= cwusb_wrn_rs & ~cwusb_wrn_rs_dly;
    end
  
@@ -167,10 +163,10 @@ module reg_main_cwlite(
  
    /* Byte count block. We need to increment after a read or after a write */
    reg regout_write_dly;
-   always @(posedge usb_clk) regout_write_dly <= regout_write;
+   always @(posedge clk_usb) regout_write_dly <= regout_write;
 
 
-   always @(posedge usb_clk) begin
+   always @(posedge clk_usb) begin
       if (cwusb_alen_rs == 1'b0) begin
          regout_bytecnt <= 0;
       end else if ((rdflag_rs_dly) || (regout_write_dly) ) begin
@@ -203,7 +199,7 @@ module reg_main_cwlite(
 
    coregen_ila csila (
       .CONTROL(cs_control0), // INOUT BUS [35:0]
-      .CLK(usb_clk), // IN
+      .CLK(clk_usb), // IN
       .TRIG0(ila_trigbus) // IN BUS [63:0]
    );
 `endif

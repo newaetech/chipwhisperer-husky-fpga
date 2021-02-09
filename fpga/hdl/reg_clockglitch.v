@@ -34,7 +34,7 @@ POSSIBILITY OF SUCH DAMAGE.
 *************************************************************************/
 module reg_clockglitch(
    input          reset_i,
-   input          clk,
+   input          clk_usb,
    input [5:0]    reg_address,  // Address of register
    input [15:0]   reg_bytecnt,  // Current byte count
    input [7:0]    reg_datai,    // Data to write
@@ -71,7 +71,7 @@ module reg_clockglitch(
 
    coregen_ila ila (
     .CONTROL(chipscope_control), // INOUT BUS [35:0]
-    .CLK(clk), // IN
+    .CLK(clk_usb), // IN
     .TRIG0(cs_data) // IN BUS [127:0]
    );  
 `endif
@@ -210,11 +210,11 @@ module reg_clockglitch(
    wire [7:0] max_glitches;
    assign max_glitches = clockglitch_settings_reg[55:48];
    
-   wire       sourceclk;
+   wire sourceclk;
    assign sourceclk = (clockglitch_settings_reg[57:56] == 2'b01) ? sourceclk1 : sourceclk0;
                     //(clockglitch_settings_reg[57:56] == 1'b01) ? sourceclk1 
    reg manual;
-   always @(posedge clk)
+   always @(posedge clk_usb)
       manual <= clockglitch_settings_reg[47];
    
    reg manual_rs1, manual_rs2;
@@ -286,14 +286,14 @@ module reg_clockglitch(
    assign clockglitch_settings_read[63:41] = clockglitch_settings_reg[63:41];
    assign dcm_rst = clockglitch_settings_reg[41];
   
-   always @(posedge clk) begin
+   always @(posedge clk_usb) begin
       if (phase1_load)
          phase1_done_reg <= 'b0;
       else if (phase1_done)
          phase1_done_reg <= 'b1;
    end
 
-   always @(posedge clk) begin
+   always @(posedge clk_usb) begin
       if (phase2_load)
          phase2_done_reg <= 'b0;
       else if (phase2_done)
@@ -303,7 +303,7 @@ module reg_clockglitch(
    wire [63:0] clockglitch_offset_read_reg;
    assign clockglitch_offset_read_reg[31:0] = clockglitch_offset_reg;
 
-   always @(posedge clk) begin
+   always @(posedge clk_usb) begin
       if (reg_read) begin
          case (reg_address)
             `CLOCKGLITCH_SETTINGS: begin reg_datao_reg <= clockglitch_settings_read[reg_bytecnt*8 +: 8]; end
@@ -319,7 +319,7 @@ module reg_clockglitch(
 
    /* Know when all settings have been written successfully */
    /*
-   always @(posedge clk) begin
+   always @(posedge clk_usb) begin
   	if ((reg_write) && (reg_address == `CLOCKGLITCH_SETTINGS)) begin
   		if (reg_bytecnt == 16'd7) begin
   			regwrite_done <= 1'b1;			
@@ -333,7 +333,7 @@ module reg_clockglitch(
    assign phase2_load  = clockglitch_settings_reg[18];
    assign phase1_load  = clockglitch_settings_reg[18];
    
-   always @(posedge clk) begin
+   always @(posedge clk_usb) begin
       if (reset) begin
          clockglitch_settings_reg <= 0;
          clockglitch_offset_reg <= 0;
@@ -374,7 +374,7 @@ module reg_clockglitch(
     .glitched_clk(glitchclk),
     .glitch_next(glitch_go),
     .glitch_type(glitch_type),
-    .phase_clk(clk),
+    .clk_usb(clk_usb),
     .dcm_rst(dcm_rst),
     .phase1_requested(phase1_requested),
     .phase1_actual(phase1_actual),
