@@ -139,13 +139,12 @@ module cwlite_interface(
    wire ext_trigger;
    wire adv_trigger;
    wire extclk_mux;
-   wire clkgen, glitchclk, adc_sample_clk;
+   wire clkgen, glitchclk;
    wire enable_avrprog;
 
    openadc_interface oadc(
         .reset_i(reset_i),
         .clk_usb(clk_usb_buf),
-        .clk_adcsample(adc_sample_clk),
 
         .USB_D(USB_D),
         .USB_Addr(USB_Addr),
@@ -207,7 +206,7 @@ module cwlite_interface(
         .extclk_rearin_i(target_hs1),
         .extclk_rearout_o(target_hs2),
         .extclk_o(extclk_mux),
-        .adc_sample_clk(adc_sample_clk),
+        .adc_sample_clk(1'b0), // XXX TODO? this came from openadc_interface, but it wasn't defined
         .trigger_io1_i(target_io1),
         .trigger_io2_i(target_io2),
         .trigger_io3_i(target_io3),

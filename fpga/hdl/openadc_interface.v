@@ -34,7 +34,6 @@ POSSIBILITY OF SUCH DAMAGE.
 module openadc_interface(
    input         reset_i,
    input         clk_usb, // 96 MHz
-   output        clk_adcsample,
 
    inout wire [7:0]     USB_D,
    input wire [7:0]     USB_Addr,

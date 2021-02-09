@@ -45,7 +45,7 @@ module reg_chipwhisperer(
    output         extclk_o,
    
    /* Extern Trigger Connections */
-   input          adc_sample_clk,
+   input          adc_sample_clk,       // TODO XXX note this wasn't driven by anything
    input          trigger_io1_i,
    input          trigger_io2_i,
    input          trigger_io3_i,
