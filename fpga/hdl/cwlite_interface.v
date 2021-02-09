@@ -25,8 +25,6 @@ module cwlite_interface(
     input wire          ADC_OR,
     output wire         ADC_clk,
     input wire          ADC_clk_fb,
-    //input         DUT_CLK_i,
-    //input         DUT_trigger_i,
     output wire         amp_gain,
     output wire         amp_hilo,
 
@@ -202,7 +200,6 @@ module cwlite_interface(
         .reg_hypaddress(reg_hypaddr), 
         .reg_hyplen(reg_hyplen_cw),
         .reg_stream(),
-        .extclk_pll_i(1'b0),
         .extclk_rearin_i(target_hs1),
         .extclk_rearout_o(target_hs2),
         .extclk_o(extclk_mux),
@@ -259,8 +256,8 @@ module cwlite_interface(
         .reg_hypaddress(reg_hypaddr), 
         .reg_hyplen(reg_hyplen_glitch),
         .reg_stream(),
-        .sourceclk0(target_hs1),
-        .sourceclk1(clkgen),
+        .target_hs1(target_hs1),
+        .clkgen(clkgen),
         .glitchclk(glitchclk),
         .exttrigger(ext_trigger)
    );

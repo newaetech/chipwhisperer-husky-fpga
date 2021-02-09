@@ -48,8 +48,8 @@ module reg_clockglitch(
    input [5:0]    reg_hypaddress,
    output [15:0]  reg_hyplen,
    
-   input wire     sourceclk0,
-   input wire     sourceclk1,
+   input wire     target_hs1,
+   input wire     clkgen,
    
    output wire    glitchclk,
    input wire     exttrigger,
@@ -194,8 +194,8 @@ module reg_clockglitch(
          Cycles to glitch-1 (e.g. 0 means 1 glitch)
 
     [57..56] (Byte 7, Bits [1..0]) = Glitch Clock Source
-          00 = Source 0
-          01 = Source 1
+          00 = Source 0 (HS1)
+          01 = Source 1 (clkgen)
 
     [63..58] (Byte 7, Bits [7..2]) = Unused
     
@@ -211,8 +211,8 @@ module reg_clockglitch(
    assign max_glitches = clockglitch_settings_reg[55:48];
    
    wire sourceclk;
-   assign sourceclk = (clockglitch_settings_reg[57:56] == 2'b01) ? sourceclk1 : sourceclk0;
-                    //(clockglitch_settings_reg[57:56] == 1'b01) ? sourceclk1 
+   assign sourceclk = (clockglitch_settings_reg[57:56] == 2'b01) ? clkgen : target_hs1;
+                    //(clockglitch_settings_reg[57:56] == 1'b01) ? clkgen 
    reg manual;
    always @(posedge clk_usb)
       manual <= clockglitch_settings_reg[47];

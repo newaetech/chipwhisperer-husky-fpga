@@ -29,7 +29,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 *************************************************************************/
 module dcm_clkgen_load(
-    input wire clk_i,             //Clock for inputs & SPI
+    input wire clk_usb,           //Clock for inputs & SPI
     input wire reset_i,           //Reset - must also connect to DCM so this block knows when defaults are loaded
     input wire [7:0] mult,        //Mult-1 (e.g.: value of 1 means Mult=2)
     input wire [7:0] div,         //Div-1 (e.g.: value of 0 means Div=1)
@@ -38,16 +38,9 @@ module dcm_clkgen_load(
     
     input wire  PROGDONE,   //Connect to DCM
     output reg  PROGDATA,   //Connect to DCM
-    output reg  PROGEN,     //Connect to DCM
-    output wire PROGCLK     //Connect to DCM
+    output reg  PROGEN      //Connect to DCM
 );
 
-   wire clk;
-   wire reset;
-  
-   assign clk = clk_i;
-   assign reset = reset_i;
-   assign PROGCLK = clk;
   
    `define RESET          'b000
    `define IDLE           'b001
@@ -61,21 +54,21 @@ module dcm_clkgen_load(
    reg [24:0] enline;
    reg go;
    
-   always @(posedge clk) begin
+   always @(posedge clk_usb) begin
      if (load)
         dataline <= {1'b0, 2'b00, {mult, 2'b11}, 2'b00 ,{div, 2'b01}};
      else if (go)
         dataline <= {1'b0, dataline[24:1]};
    end
    
-   always @(posedge clk) begin
+   always @(posedge clk_usb) begin
      if (load)
         enline <= {1'b1, 2'b00, {10'b1111111111}, 2'b00 ,{10'b1111111111}};
      else if (go)
         enline <= {1'b0, enline[24:1]};
    end
    
-   always @(posedge clk) begin
+   always @(posedge clk_usb) begin
       if (go) begin
          PROGDATA <= dataline[0];
          PROGEN <= enline[0];
@@ -85,9 +78,9 @@ module dcm_clkgen_load(
       end
    end
    
-   always @(posedge clk)
+   always @(posedge clk_usb)
     begin
-      if (reset == 1) begin
+      if (reset_i == 1) begin
          state <= `RESET;
          go <= 0;
       end else begin

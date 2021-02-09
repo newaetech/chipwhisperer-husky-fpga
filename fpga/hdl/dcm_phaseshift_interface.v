@@ -33,7 +33,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 *************************************************************************/
 module dcm_phaseshift_interface(
-    input clk_i,             //Clock for inputs & PCLK for DCM
+    input clk_usb,           //Clock for inputs & PCLK for DCM
     input reset_i,           //Reset - must also connect to DCM so this block knows when defaults are loaded
     input signed [8:0] default_value_i, //Default PS value in 2's complement format
     input signed [8:0] value_i,     //Requested PS Value in 2's complement format
@@ -70,7 +70,7 @@ module dcm_phaseshift_interface(
     
     reg last_psincdec;
     
-    always @(posedge clk_i or posedge reset_i)
+    always @(posedge clk_usb or posedge reset_i)
     begin
       if (reset_i == 1) begin
          state <= `RESET;          

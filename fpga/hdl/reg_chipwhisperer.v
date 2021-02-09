@@ -39,7 +39,6 @@ module reg_chipwhisperer(
    output  [15:0] reg_hyplen,
    
    /* External Clock */
-   input          extclk_pll_i,
    input          extclk_rearin_i,
    output         extclk_rearout_o,
    output         extclk_o,
@@ -238,7 +237,7 @@ module reg_chipwhisperer(
    //Do to no assumed phase relationship we use regular old fabric for switching
    assign extclk_o =  /* (registers_cwextclk[2:0] == 3'b000) ? extclk_fpa_io :  */
                      (registers_cwextclk[2:0] == 3'b001) ? 1'b0 : // XXX TODO
-                     (registers_cwextclk[2:0] == 3'b010) ? extclk_pll_i : 
+                     (registers_cwextclk[2:0] == 3'b010) ? 1'b0 : // XXX TODO, used to be extclk_pll_i : 
                      (registers_cwextclk[2:0] == 3'b011) ? extclk_rearin_i : 
                      //(registers_cwextclk[2:0] == 3'b100) ? extclk_rearout_o : 
                      1'b0;

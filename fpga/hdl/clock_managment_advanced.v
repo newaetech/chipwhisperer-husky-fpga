@@ -18,7 +18,7 @@ module clock_managment_advanced(
 
     /* Clock sources */
     input                 clk_usb,     //System clock
-    input                 clk_ext,     //External clock
+    input                 clk_ext,     //External clock, aka HS1
 
     /* Clock to ADC */
     output                adc_clk,    //Output clock to ADC
@@ -62,7 +62,7 @@ module clock_managment_advanced(
     wire dcm_psdone;
     wire [7:0] dcm_status;
 
-    dcm_phaseshift_interface dcmps(.clk_i(clk_usb),
+    dcm_phaseshift_interface dcmps(.clk_usb(clk_usb),
                                    .reset_i(reset),
                                    .default_value_i(9'd0),
                                    .value_i(phase_requested),
@@ -77,10 +77,9 @@ module clock_managment_advanced(
     wire clkgen_progdone;
     wire clkgen_progdata;
     wire clkgen_progen;
-    wire clkgen_progclk;
 
     dcm_clkgen_load clkgenload(
-       .clk_i(clk_usb),
+       .clk_usb(clk_usb),
        .reset_i(clkgen_reset),
        .mult(clkgen_mul),
        .div(clkgen_div),
@@ -88,8 +87,7 @@ module clock_managment_advanced(
        .done(clkgen_done),
        .PROGDONE(clkgen_progdone),
        .PROGDATA(clkgen_progdata),
-       .PROGEN(clkgen_progen),
-       .PROGCLK(clkgen_progclk)
+       .PROGEN(clkgen_progen)
     );
 
 
@@ -135,7 +133,8 @@ module clock_managment_advanced(
     wire ADC_clk;
 
     `ifdef __ICARUS__
-
+       assign ADC_clk_times4 = dcm_clk_in;
+       assign ADC_clk = dcm_clk_in;
     `else
     // XXX TODO
     // DCM_SP: Digital Clock Manager
@@ -180,6 +179,7 @@ module clock_managment_advanced(
     assign dcm_gen_locked = dcm2_locked_int & (~dcm2_status[2]);
 
     `ifdef __ICARUS__
+       assign clkgenfx_out = clkgenfx_in;
 
     `else
     // XXX TODO
@@ -204,7 +204,7 @@ module clock_managment_advanced(
     .STATUS(dcm2_status), // 2-bit output: DCM_CLKGEN status
     .CLKIN(clkgenfx_in), // 1-bit input: Input clock
     .FREEZEDCM(1'b0), // 1-bit input: Prevents frequency adjustments to input clock
-    .PROGCLK(clkgen_progclk), // 1-bit input: Clock input for M/D reconfiguration
+    .PROGCLK(clk_usb), // 1-bit input: Clock input for M/D reconfiguration
     .PROGDATA(clkgen_progdata), // 1-bit input: Serial data input for M/D reconfiguration
     .PROGEN(clkgen_progen), // 1-bit input: Active high program enable
     .RST(clkgen_reset) // 1-bit input: Reset input pin
@@ -258,6 +258,7 @@ module clock_managment_advanced(
            assign adc_clk = ADC_clk_src;
         `else
            //Output clock using DDR2 block (recommended for Spartan-6 device)
+           // TODO XXX is this also needed for Artix7?
            ODDR2 #(
               // The following parameters specify the behavior
               // of the component.

@@ -74,7 +74,7 @@ module clockglitch_s6(
     wire dcm1_psdone;
     wire [7:0] dcm1_status;
 
-    dcm_phaseshift_interface dcmps1(.clk_i(clk_usb),
+    dcm_phaseshift_interface dcmps1(.clk_usb(clk_usb),
       .reset_i(dcm_rst),
       .default_value_i(9'd0),
       .value_i(phase1_requested),
@@ -91,7 +91,7 @@ module clockglitch_s6(
    wire dcm2_psdone;
    wire [7:0] dcm2_status;
    
-   dcm_phaseshift_interface dcmps2(.clk_i(clk_usb),
+   dcm_phaseshift_interface dcmps2(.clk_usb(clk_usb),
       .reset_i(dcm_rst),
       .default_value_i(9'd0),
       .value_i(phase2_requested),
