@@ -23,7 +23,7 @@ module cwlite_interface(
     /* ADC Interface */
     input wire [9:0]    ADC_Data,
     input wire          ADC_OR,
-    output wire         ADC_clk,
+    output wire         ADC_clk_out,
     input wire          ADC_clk_fb,
     output wire         amp_gain,
     output wire         amp_hilo,
@@ -157,7 +157,7 @@ module cwlite_interface(
         .LED_CLKGENDCMUnlock(GPIO_LED4),
         .ADC_Data(ADC_Data),
         .ADC_OR(ADC_OR),
-        .ADC_clk(ADC_clk),
+        .ADC_clk_out(ADC_clk_out),
         .ADC_clk_feedback(ADC_clk_fb),
         .DUT_CLK_i(extclk_mux),
         .DUT_trigger_i(ext_trigger),

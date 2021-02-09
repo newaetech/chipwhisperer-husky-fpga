@@ -21,7 +21,7 @@ module clock_managment_advanced(
     input                 clk_ext,     //External clock, aka HS1
 
     /* Clock to ADC */
-    output                adc_clk,    //Output clock to ADC
+    output                adc_clk_out, //Output clock to ADC
 `ifdef ADCCLK_FEEDBACK
     input                 adc_clk_feedback,
 `endif
@@ -54,7 +54,6 @@ module clock_managment_advanced(
     );
  
     wire ADC_clk_extsrc;
-    wire ADC_clk_src; 
     wire ADC_clk_sample;
     
     wire dcm_psen;
@@ -240,7 +239,6 @@ module clock_managment_advanced(
        );
     `endif
 
-    assign ADC_clk_src = ADC_clk_sample;
 
 `ifdef ADCCLK_FEEDBACK
         `ifdef __ICARUS__
@@ -255,7 +253,7 @@ module clock_managment_advanced(
 `endif
 
         `ifdef __ICARUS__
-           assign adc_clk = ADC_clk_src;
+           assign adc_clk_out = ADC_clk_sample;
         `else
            //Output clock using DDR2 block (recommended for Spartan-6 device)
            // TODO XXX is this also needed for Artix7?
@@ -267,9 +265,9 @@ module clock_managment_advanced(
               .SRTYPE("SYNC") // Specifies "SYNC" or "ASYNC" set/reset
            )
            ODDR2_inst (
-              .Q(adc_clk),   // 1-bit DDR output data
-              .C0(ADC_clk_src), // 1-bit clock input
-              .C1(~ADC_clk_src), // 1-bit clock input
+              .Q(adc_clk_out),   // 1-bit DDR output data
+              .C0(ADC_clk_sample), // 1-bit clock input
+              .C1(~ADC_clk_sample), // 1-bit clock input
               .CE(1'b1), // 1-bit clock enable input
               .D0(1'b1), // 1-bit data input (associated with C0)
               .D1(1'b0), // 1-bit data input (associated with C1)

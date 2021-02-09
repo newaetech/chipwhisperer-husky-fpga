@@ -52,8 +52,8 @@ module openadc_interface(
     /* OpenADC Interface Pins */
     input [9:0]   ADC_Data,
     input         ADC_OR,
-    output        ADC_clk,
-    /* Feedback path for ADC Clock. If unused connect to ADC_clk */
+    output        ADC_clk_out,
+    /* Feedback path for ADC Clock. If unused connect to ADC_clk_out */
     input         ADC_clk_feedback,
     input         DUT_CLK_i, // target_hs1
     input         DUT_trigger_i,
@@ -447,7 +447,7 @@ module openadc_interface(
       .reset(reset | clockreset),
       .clk_usb(clk_usb),
       .clk_ext(DUT_CLK_i),   
-      .adc_clk(ADC_clk),
+      .adc_clk_out(ADC_clk_out),
 `ifdef ADCCLK_FEEDBACK
       .adc_clk_feedback(ADC_clk_feedback),
 `endif
