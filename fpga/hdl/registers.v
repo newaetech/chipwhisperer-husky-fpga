@@ -1,6 +1,5 @@
 /* Registers:
 0x00 - Gain Settings (One Byte)
-
   [ G7 G6 G5 G4 G3 G2 G1 G0 ]
 
          G = 8-bit PWM setting for gain voltage.
@@ -8,7 +7,6 @@
 
 
 0x01 - Settings (One Byte)
-
   [  I  F  W  S  A  T  H  R ]
 
          R = (bit 0) System Reset, active high
@@ -38,7 +36,6 @@
 
 
 0x02 - Status (One Byte)
-
    [  X M  DC DE X  E  F  T ] 
         T = (bit 0) Triggered status
              1 = System armed
@@ -63,7 +60,6 @@
              0 = No overflow
 
 0x03 - ADC Readings
-
        Data is read from this register by issuing a READ command.
        The entire contents of the FIFO will be dumped following
        that read command (e.g.: number of samples requested), or
@@ -74,7 +70,6 @@
 
 
 0x04 - Echo Register (1 byte)
-
         [ E7 E6 E5 E4 E3 E2 E1 E0 ]
 
         E = Write data to this register then read back to
@@ -157,11 +152,8 @@
 
 
 0x09 - Phase Adjust (2 Bytes)
-
    [ P7 P6 P5 P4 P3 P2 P1 P0 ] (Byte 0)    
-   [                    S P8 ] (Byte 1)
-        
-        S = Start (write), Status (read)
+   [                      P8 ] (Byte 1)
 
 
 0x0A - Version Information (6 Bytes)
