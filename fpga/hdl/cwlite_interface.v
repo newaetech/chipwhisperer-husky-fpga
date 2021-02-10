@@ -110,20 +110,11 @@ module cwlite_interface(
         .I(clk_usb) );
    `endif
 
-   //Change in ICAP - clock now generated outside. 
-   //TODO: Check skew is OK still
-   wire clk_slow;
-   reg [2:0] slowcnt;
-
-   always @(posedge clk_usb_buf) slowcnt <= slowcnt + 3'd1;
-   assign clk_slow = slowcnt[2];
-   
    wire reg_rst;
    wire [5:0] reg_addr;
    wire [15:0] reg_bcnt;
    wire [7:0] reg_datao;
    wire [7:0] reg_datai_cw;
-   //wire [7:0] reg_datai_reconfig; //XXX
    wire [7:0] reg_datai_glitch;
    wire [15:0] reg_size;
    wire reg_read;
@@ -132,7 +123,6 @@ module cwlite_interface(
    wire [5:0] reg_hypaddr;
    wire [15:0] reg_hyplen_cw;
    wire [15:0] reg_hyplen_glitch;
-   //wire [15:0] reg_hyplen_reconfig; //XXX
    
    wire ext_trigger;
    wire adv_trigger;
@@ -263,30 +253,6 @@ module cwlite_interface(
    );
 
    assign trigger_out = ext_trigger;
-
-/* XXX TODO: obsolete?
-`ifdef ENABLE_RECONFIG
-   reg_reconfig reg_reconfig(
-        .reset_i(reg_rst),
-        .clk(clk_usb_buf),
-        .icap_clk(clk_slow),
-        .reg_address(reg_addr), 
-        .reg_bytecnt(reg_bcnt), 
-        .reg_datao(reg_datai_reconfig), 
-        .reg_datai(reg_datao), 
-        .reg_size(reg_size), 
-        .reg_read(reg_read), 
-        .reg_write(reg_write), 
-        .reg_addrvalid(reg_addrvalid), 
-        .reg_hypaddress(reg_hypaddr), 
-        .reg_hyplen(reg_hyplen_reconfig),
-        .reg_stream()
-   );
-`else
-   assign reg_hyplen_reconfig = 'd0;
-   assign reg_datai_reconfig = 'd0;
-`endif
-*/
 
    wire target_highz = target_npower;
 

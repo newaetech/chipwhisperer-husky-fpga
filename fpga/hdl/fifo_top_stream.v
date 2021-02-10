@@ -9,7 +9,6 @@ module fifo_top(
     input wire [9:0]    adc_datain,
     input wire          adc_sampleclk,
     input wire          adc_or,
-    input wire          adc_trig_status,
     input wire          adc_capture_go, //Set to '1' to start capture, keep at 1 until adc_capture_stop goes high
     output wire         adc_capture_stop,
     input wire          adc_capture_armed,

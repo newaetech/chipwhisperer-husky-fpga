@@ -252,7 +252,7 @@ module openadc_interface(
       .adc_clk(ADC_clk_sample),
       .adc_data(ADC_Data_tofifo),
 
-       .ext_trigger_i(DUT_trigger_i),
+      .ext_trigger_i(DUT_trigger_i),
       .trigger_level_i(trigger_mode),
       .trigger_wait_i(trigger_wait),
       .trigger_adclevel_i(trigger_level),
@@ -487,6 +487,7 @@ module openadc_interface(
       DUT_trigger_i_old <= DUT_trigger_i;
    end
 
+   // TODO - clean this up:
    // Maxsamples will be limited to FIFO size. The addition of +18'd1 on the ending point
    // is because the initial version of this had an off-by-one, to avoid API changes we just
    // continue this. The returned segment size is still smaller than expected by 1 but we
@@ -525,7 +526,6 @@ module openadc_interface(
       .adc_sampleclk(ADC_clk_sample),
       .adc_or(ADC_OR),
       .adc_write_mask(adc_write_mask),
-      .adc_trig_status(DUT_trigger_i),
       .adc_capture_go(adc_capture_go), //Set to '1' to start capture, keep at 1 until adc_capture_stop goes high
       .adc_capture_stop(adc_capture_done),
       .arm_i(armed),
