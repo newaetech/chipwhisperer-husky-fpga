@@ -48,17 +48,17 @@ module reg_openadc(
    input          reg_write,    // Write flag
    input          reg_addrvalid,// Address valid flag
    output         reg_stream,
-   
+
    input [5:0]    reg_hypaddress,
    output  [15:0] reg_hyplen,
-   
+
    /* Interface to gain module */
    output [7:0]   gain,
    output         hilow,
-   
+
    /* General status stuff input */
    input [7:0]    status,
-   
+
    /* Interface to trigger unit */
    output         cmd_arm,
    output         trigger_mode,
@@ -69,24 +69,24 @@ module reg_openadc(
    output [31:0]  trigger_offset,
    input  [31:0]  trigger_length,
    output [1:0]   fifo_mode,
-   
+
    /* Measurement of external clock frequency */
    input [31:0]   extclk_frequency,
    output         extclk_measure_src,
    input [31:0]   adcclk_frequency,
-   
+
    /* Interface to phase shift module */
    output [8:0]   phase_o,
    output         phase_ld_o,
    input  [8:0]   phase_i,
    input          phase_done_i,
-   
+
    /* Interface to clkgen module */
    output wire [7:0] clkgen_mul,        //Mult-1 (e.g.: value of 1 means Mult=2)
    output wire [7:0] clkgen_div,         //Div-1 (e.g.: value of 1 means Div=2)
    output reg        clkgen_load,
    input wire        clkgen_done,
-   
+
    /* Additional ADC control lines */
    output [2:0]   adc_clk_src_o,
    output         clkgen_src_o,
@@ -135,10 +135,9 @@ module reg_openadc(
    reg [31:0] registers_samples;
    reg [31:0] registers_presamples;
    reg [31:0] registers_offset;
-   reg [15:0] phase_out;
+   reg [8:0]  phase_out;
    reg [8:0]  phase_in;
    reg        phase_loadout;
-   //reg phase_done;
    wire [47:0] version_data;
    wire [31:0] system_frequency = 32'd`SYSTEM_CLK;
    wire reset_fromreg;
@@ -151,41 +150,38 @@ module reg_openadc(
 
    assign trigger_offset = registers_offset;
 
-   assign phase_o = phase_out[8:0];
+   assign phase_o = phase_out;
    assign phase_ld_o = phase_loadout;
-   
+
    always @(posedge clk_usb) begin
-          if (reset | phase_loadout) begin
-             phase_in <= 0;
-             //phase_done <= 0;
-          end else if (phase_done_i) begin
-             phase_in <= phase_i;
-             //phase_done <= 1;
-          end
+      if (reset | phase_loadout)
+         phase_in <= 0;
+      else if (phase_done_i)
+         phase_in <= phase_i;
    end
 
    reg [15:0] reg_hyplen_reg;
    assign reg_hyplen = reg_hyplen_reg;
    
    always @(*) begin
-          case (reg_hypaddress)
-             `GAIN_ADDR: reg_hyplen_reg <= 1;
-             `SETTINGS_ADDR: reg_hyplen_reg <= 1;
-             `STATUS_ADDR: reg_hyplen_reg <= 1;
-             `ECHO_ADDR: reg_hyplen_reg <= 1;
-             `EXTFREQ_ADDR: reg_hyplen_reg <= `EXTFREQ_LEN;
-             `ADCFREQ_ADDR: reg_hyplen_reg <= `ADCFREQ_LEN;
-             `PHASE_ADDR: reg_hyplen_reg <= `PHASE_LEN;
-             `VERSION_ADDR: reg_hyplen_reg <= `VERSION_LEN;
-             `SAMPLES_ADDR: reg_hyplen_reg <= `SAMPLES_LEN;
-             `OFFSET_ADDR: reg_hyplen_reg <= `OFFSET_LEN;
-             `PRESAMPLES_ADDR: reg_hyplen_reg <= `PRESAMPLES_LEN;
-             `RETSAMPLES_ADDR: reg_hyplen_reg <= `RETSAMPLES_LEN;
-             `ADVCLOCK_ADDR: reg_hyplen_reg <= `ADVCLOCK_LEN;
-             `SYSTEMCLK_ADDR: reg_hyplen_reg <= `SYSTEMCLK_LEN;
-             `TRIGGER_DUR_ADDR: reg_hyplen_reg <= `TRIGGER_DUR_LEN;
-             default: reg_hyplen_reg<= 0;
-          endcase
+      case (reg_hypaddress)
+         `GAIN_ADDR: reg_hyplen_reg <= 1;
+         `SETTINGS_ADDR: reg_hyplen_reg <= 1;
+         `STATUS_ADDR: reg_hyplen_reg <= 1;
+         `ECHO_ADDR: reg_hyplen_reg <= 1;
+         `EXTFREQ_ADDR: reg_hyplen_reg <= `EXTFREQ_LEN;
+         `ADCFREQ_ADDR: reg_hyplen_reg <= `ADCFREQ_LEN;
+         `PHASE_ADDR: reg_hyplen_reg <= `PHASE_LEN;
+         `VERSION_ADDR: reg_hyplen_reg <= `VERSION_LEN;
+         `SAMPLES_ADDR: reg_hyplen_reg <= `SAMPLES_LEN;
+         `OFFSET_ADDR: reg_hyplen_reg <= `OFFSET_LEN;
+         `PRESAMPLES_ADDR: reg_hyplen_reg <= `PRESAMPLES_LEN;
+         `RETSAMPLES_ADDR: reg_hyplen_reg <= `RETSAMPLES_LEN;
+         `ADVCLOCK_ADDR: reg_hyplen_reg <= `ADVCLOCK_LEN;
+         `SYSTEMCLK_ADDR: reg_hyplen_reg <= `SYSTEMCLK_LEN;
+         `TRIGGER_DUR_ADDR: reg_hyplen_reg <= `TRIGGER_DUR_LEN;
+         default: reg_hyplen_reg<= 0;
+      endcase
    end
 
    assign reset_fromreg = registers_settings[0];
@@ -270,41 +266,41 @@ module reg_openadc(
          end
       end
    end
-   
+
    always @(posedge clk_usb) begin
-          if (reg_addrvalid) begin
-             if (reg_address == `ADCFREQ_ADDR) begin
-                adcclk_locked <= 1;
-             end else begin
-                adcclk_locked <= 0;
-             end
-          end
+      if (reg_addrvalid) begin
+         if (reg_address == `ADCFREQ_ADDR) begin
+            adcclk_locked <= 1;
+         end else begin
+            adcclk_locked <= 0;
+         end
+      end
    end
-   
+
    always @(posedge clk_usb) begin
-          if (reg_addrvalid) begin
-             case (reg_address)
-                `GAIN_ADDR: begin reg_datao_valid_reg <= 1; end
-                `SETTINGS_ADDR: begin reg_datao_valid_reg <= 1; end
-                `STATUS_ADDR: begin reg_datao_valid_reg <= 1; end
-                `ECHO_ADDR: begin reg_datao_valid_reg <= 1; end
-                `EXTFREQ_ADDR: begin reg_datao_valid_reg <= 1; end
-                `ADCFREQ_ADDR: begin reg_datao_valid_reg <= 1; end
-                `PHASE_ADDR: begin reg_datao_valid_reg <= 1; end
-                `VERSION_ADDR: begin reg_datao_valid_reg <= 1; end
-                `DECIMATE_ADDR: begin reg_datao_valid_reg <= 1; end
-                `SAMPLES_ADDR: begin reg_datao_valid_reg <= 1; end
-                `PRESAMPLES_ADDR: begin reg_datao_valid_reg <= 1; end
-                `RETSAMPLES_ADDR: begin reg_datao_valid_reg <= 1; end
-                `OFFSET_ADDR: begin reg_datao_valid_reg <= 1; end
-                `ADVCLOCK_ADDR: begin reg_datao_valid_reg <= 1; end
-                `SYSTEMCLK_ADDR: begin reg_datao_valid_reg <= 1; end
-                `TRIGGER_DUR_ADDR: begin reg_datao_valid_reg <= 1; end
-                default: begin reg_datao_valid_reg <= 0; end
-             endcase
-          end else begin
-             reg_datao_valid_reg <= 0;
-          end
+      if (reg_addrvalid) begin
+         case (reg_address)
+            `GAIN_ADDR: begin reg_datao_valid_reg <= 1; end
+            `SETTINGS_ADDR: begin reg_datao_valid_reg <= 1; end
+            `STATUS_ADDR: begin reg_datao_valid_reg <= 1; end
+            `ECHO_ADDR: begin reg_datao_valid_reg <= 1; end
+            `EXTFREQ_ADDR: begin reg_datao_valid_reg <= 1; end
+            `ADCFREQ_ADDR: begin reg_datao_valid_reg <= 1; end
+            `PHASE_ADDR: begin reg_datao_valid_reg <= 1; end
+            `VERSION_ADDR: begin reg_datao_valid_reg <= 1; end
+            `DECIMATE_ADDR: begin reg_datao_valid_reg <= 1; end
+            `SAMPLES_ADDR: begin reg_datao_valid_reg <= 1; end
+            `PRESAMPLES_ADDR: begin reg_datao_valid_reg <= 1; end
+            `RETSAMPLES_ADDR: begin reg_datao_valid_reg <= 1; end
+            `OFFSET_ADDR: begin reg_datao_valid_reg <= 1; end
+            `ADVCLOCK_ADDR: begin reg_datao_valid_reg <= 1; end
+            `SYSTEMCLK_ADDR: begin reg_datao_valid_reg <= 1; end
+            `TRIGGER_DUR_ADDR: begin reg_datao_valid_reg <= 1; end
+            default: begin reg_datao_valid_reg <= 0; end
+         endcase
+      end else begin
+         reg_datao_valid_reg <= 0;
+      end
    end
 
    always @(posedge clk_usb) begin
@@ -332,41 +328,49 @@ module reg_openadc(
    end
 
    always @(posedge clk_usb) begin
-          if (reset) begin
-             registers_gain <= 0;
-             registers_settings <= 0;
-             registers_echo <= 0;
-             registers_samples <= maxsamples_i;
-             registers_presamples <= 0;
-             registers_offset <= 0;
-             registers_advclocksettings <= 32'h00000102;
-             registers_downsample <= 0;
-          end else if (reg_write) begin
-             case (reg_address)
-                `GAIN_ADDR: registers_gain <= reg_datai;
-                `SETTINGS_ADDR: registers_settings <= reg_datai;
-                `ECHO_ADDR: registers_echo <= reg_datai;
-                `DECIMATE_ADDR:  registers_downsample[reg_bytecnt*8 +: 8] <= reg_datai;
-                `SAMPLES_ADDR: registers_samples[reg_bytecnt*8 +: 8] <= reg_datai;
-                `PRESAMPLES_ADDR: registers_presamples[reg_bytecnt*8 +: 8] <= reg_datai;
-                `OFFSET_ADDR: registers_offset[reg_bytecnt*8 +: 8] <= reg_datai;
-                `ADVCLOCK_ADDR: registers_advclocksettings[reg_bytecnt*8 +: 8] <= reg_datai;
-                default: ;
-             endcase
-          end
+      if (reset) begin
+         registers_gain <= 0;
+         registers_settings <= 0;
+         registers_echo <= 0;
+         registers_samples <= maxsamples_i;
+         registers_presamples <= 0;
+         registers_offset <= 0;
+         registers_advclocksettings <= 32'h00000102;
+         registers_downsample <= 0;
+      end else if (reg_write) begin
+         case (reg_address)
+            `GAIN_ADDR: registers_gain <= reg_datai;
+            `SETTINGS_ADDR: registers_settings <= reg_datai;
+            `ECHO_ADDR: registers_echo <= reg_datai;
+            `DECIMATE_ADDR:  registers_downsample[reg_bytecnt*8 +: 8] <= reg_datai;
+            `SAMPLES_ADDR: registers_samples[reg_bytecnt*8 +: 8] <= reg_datai;
+            `PRESAMPLES_ADDR: registers_presamples[reg_bytecnt*8 +: 8] <= reg_datai;
+            `OFFSET_ADDR: registers_offset[reg_bytecnt*8 +: 8] <= reg_datai;
+            `ADVCLOCK_ADDR: registers_advclocksettings[reg_bytecnt*8 +: 8] <= reg_datai;
+            default: ;
+         endcase
+      end
    end
 
    always @(posedge clk_usb) begin
-          if (reset) begin
-             phase_out <= 0;
-          end else if (phase_out[9] == 1) begin
-             phase_loadout <= 1;
-             phase_out[9] <= 0;
-          end else if (reg_write) begin
-             if (reg_address == `PHASE_ADDR) begin
-                phase_out[reg_bytecnt*8 +: 8] <= reg_datai;
-             end
-          end
+      if (reset) begin
+         phase_out <= 0;
+         phase_loadout <= 1'b0;
+      end
+
+      else if (reg_write) begin
+         if (reg_address == `PHASE_ADDR) begin
+            if (reg_bytecnt == 0)
+               phase_out[7:0] <= reg_datai;
+            else if (reg_bytecnt == 1)
+               phase_out[8] <= reg_datai[0];
+         end
+      end
+
+      if ( reg_write && (reg_address == `PHASE_ADDR) && (reg_bytecnt == 1) )
+         phase_loadout <= 1'b1;
+      else
+         phase_loadout <= 1'b0;
    end
 
  `ifdef CHIPSCOPE

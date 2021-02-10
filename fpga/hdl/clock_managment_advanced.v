@@ -28,7 +28,7 @@ module clock_managment_advanced(
 
     /* Clock to DUT */
     output                clkgen,
-    
+
     /* Clock selection */
     input [2:0]           clkadc_source,
     input                 clkgen_source,
