@@ -1,0 +1,12 @@
+#-----------------------------------------------------------
+# Vivado v2019.2 (64-bit)
+# SW Build 2708876 on Wed Nov  6 21:40:23 MST 2019
+# IP Build 2700528 on Thu Nov  7 00:09:20 MST 2019
+# Start of session at: Thu Feb 11 11:09:11 2021
+# Process ID: 1228
+# Current directory: C:/Users/jp/GitHub/OpenTitan/husky/fpga/vivado/cwhusky.runs/cwlite_shallow_fifo_synth_1
+# Command line: vivado.exe -log cwlite_shallow_fifo.vds -product Vivado -mode batch -messageDb vivado.pb -notrace -source cwlite_shallow_fifo.tcl
+# Log file: C:/Users/jp/GitHub/OpenTitan/husky/fpga/vivado/cwhusky.runs/cwlite_shallow_fifo_synth_1/cwlite_shallow_fifo.vds
+# Journal file: C:/Users/jp/GitHub/OpenTitan/husky/fpga/vivado/cwhusky.runs/cwlite_shallow_fifo_synth_1\vivado.jou
+#-----------------------------------------------------------
+source cwlite_shallow_fifo.tcl -notrace
