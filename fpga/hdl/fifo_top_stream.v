@@ -8,10 +8,9 @@ module fifo_top(
     //ADC Sample Input
     input wire [9:0]    adc_datain,
     input wire          adc_sampleclk,
-    input wire          adc_or,
+    input wire          adc_write_mask,
     input wire          adc_capture_go, //Set to '1' to start capture, keep at 1 until adc_capture_stop goes high
     output wire         adc_capture_stop,
-    input wire          adc_capture_armed,
     input wire          arm_i,
 
     //FIFO to USB Read Interface
@@ -21,7 +20,7 @@ module fifo_top(
     output wire  [7:0]  fifo_read_data,
 
     input wire  [31:0] presample_i,
-    input wire  [31:0] max_samples_i,
+    input wire  [31:0] max_samples_i, // TODO XXX unused
     output wire [31:0] max_samples_o,
     output wire [31:0] samples_o,
     input wire  [12:0] downsample_i, //Ignores this many samples inbetween captured measurements
@@ -30,6 +29,8 @@ module fifo_top(
     input wire       stream_mode //1=Enable stream mode, 0=Normal
     );
 
+    // TODO: TEMPORARY:
+    //`define MAX_SAMPLES 1024
     parameter FIFO_FULL_SIZE = `MAX_SAMPLES - 128;
     parameter FIFO_FULL_SIZE_LARGEWORDS = ((`MAX_SAMPLES - 32) / 3) / 4;
 
@@ -74,7 +75,7 @@ module fifo_top(
     assign downsample_max = (downsample_ctr == downsample_i) ? 1'b1 : 'b0;
 
     always @(posedge adc_sampleclk) begin
-       if (downsample_max) begin
+       if (downsample_max & adc_write_mask) begin
           sample_wr_en <= 1'b1;
        end else begin
           sample_wr_en <= 1'b0;
@@ -112,11 +113,11 @@ module fifo_top(
        end
     end
 
-    /** Keep fifi write enabled until we reach number of samples **/
+    /** Keep fifo write enabled until we reach number of samples **/
     always@(posedge adc_sampleclk) begin
        if (~adc_capture_go)
           presample_counter <= FIFO_FULL_SIZE-6; //max_samples_i
-       else if (downsample_max == 1'b1)
+       else if (downsample_max & adc_write_mask)
           presample_counter <= presample_counter - 32'd1;
     end
 
@@ -257,19 +258,28 @@ module fifo_top(
     after the empty flag goes high to totally clear it out.
     */
 
-    fifoonly_adcfifo fifoonly_adcfifo_inst (
-       .rst             (fifo_rst | reset_i), // input rst
-       .wr_clk          (adc_sampleclk), // input wr_clk
-       .rd_clk          (clk_usb), // input rd_clk
-       .din             (adcfifo_in), // input [31 : 0] din
-       .wr_en           (adcfifo_wr_en & stream_write), // input wr_en
-       .rd_en           ((fifo_read_fifoen & read_en) | drain), // input rd_en
-       .dout            (fifo_data), // output [127 : 0] dout
-       .full            (adcfifo_full), // output full
-       .empty           (fifo_empty), // output empty
-       .overflow        (fifo_overflow_int), //
+    `ifdef NOFIFO
+       // for clean iverilog compilation
+       assign fifo_empty = 0;
+       assign adcfifo_full = 0;
+       assign fifo_overflow_int = 0;
+       assign samples_o = 0;
+    `else
+    //fifoonly_adcfifo fifoonly_adcfifo_inst (
+    cwlite_shallow_fifo fifoonly_adcfifo_inst (
+       .rst             (fifo_rst | reset_i),
+       .wr_clk          (adc_sampleclk),
+       .rd_clk          (clk_usb),
+       .din             (adcfifo_in),
+       .wr_en           (adcfifo_wr_en & stream_write & adc_write_mask),
+       .rd_en           ((fifo_read_fifoen & read_en) | drain),
+       .dout            (fifo_data),
+       .full            (adcfifo_full),
+       .empty           (fifo_empty),
+       .overflow        (fifo_overflow_int),
        .rd_data_count   (samples_o[31:4])
     );
+    `endif
 
     always @(posedge clk_usb) begin
        if (samples_o[31:4] > FIFO_FULL_SIZE_LARGEWORDS)

@@ -51,7 +51,6 @@ module openadc_interface(
 
     /* OpenADC Interface Pins */
     input [9:0]   ADC_Data,
-    input         ADC_OR,
     output        ADC_clk_out,
     /* Feedback path for ADC Clock. If unused connect to ADC_clk_out */
     input         ADC_clk_feedback,
@@ -517,14 +516,12 @@ module openadc_interface(
    assign adc_write_mask = adc_write_mask_int | trigger_now;
 
 
-   `ifndef NOFIFO // for clean compilation
    fifo_top fifo_top_inst(
       .reset_i(reset),
 
       //ADC Sample Input
       .adc_datain(ADC_Data_tofifo),
       .adc_sampleclk(ADC_clk_sample),
-      .adc_or(ADC_OR),
       .adc_write_mask(adc_write_mask),
       .adc_capture_go(adc_capture_go), //Set to '1' to start capture, keep at 1 until adc_capture_stop goes high
       .adc_capture_stop(adc_capture_done),
@@ -549,7 +546,6 @@ module openadc_interface(
       ,.chipscope_control(chipscope_control)
 `endif
    );
-   `endif
 
 
 endmodule

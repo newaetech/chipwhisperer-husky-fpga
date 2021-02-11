@@ -5,6 +5,7 @@ includes.v
 reg_chipwhisperer.v
 reg_openadc.v
 reg_openadc_adcfifo.v
+fifo_top_stream.v
 registers.v
 setup.v
 timescale.v
@@ -15,6 +16,4 @@ reg_clockglitch.v
 cwlite_interface.v
 openadc_interface.v
 clock_managment_advanced.v
-//../vivado/tracewhisperer.srcs/sources_1/ip/fifo_generator_0/fifo_generator_0_sim_netlist.v
-//-y/mnt/c/Xilinx/Vivado/2018.3/ids_lite/ISE/verilog/src/unisims/
 
