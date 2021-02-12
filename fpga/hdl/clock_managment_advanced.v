@@ -14,43 +14,43 @@ This project is released under the Modified FreeBSD License. See LICENSE
 file which should have came with this code.
 *************************************************************************/
 module clock_managment_advanced(
-    input                 reset, //Does NOT reset CLKGEN block
+    input  wire           reset, //Does NOT reset CLKGEN block
 
     /* Clock sources */
-    input                 clk_usb,     //System clock
-    input                 clk_ext,     //External clock, aka HS1
+    input  wire           clk_usb,     //System clock
+    input  wire           clk_ext,     //External clock, aka HS1
 
     /* Clock to ADC */
-    output                adc_clk_out, //Output clock to ADC
+    output wire           adc_clk_out, //Output clock to ADC
 `ifdef ADCCLK_FEEDBACK
-    input                 adc_clk_feedback,
+    input  wire           adc_clk_feedback,
 `endif
 
     /* Clock to DUT */
-    output                clkgen,
+    output wire           clkgen,
 
     /* Clock selection */
-    input [2:0]           clkadc_source,
-    input                 clkgen_source,
+    input  wire [2:0]     clkadc_source,
+    input  wire           clkgen_source,
     
     /* Clock to System compensates for wire delay of ADC clock */
-    output                systemsample_clk,
+    output wire           systemsample_clk,
     
     /* Mul/Div Control for Generated clock */
-    input                 clkgen_reset,
-    input [7:0]           clkgen_mul,
-    input [7:0]           clkgen_div,
-    input                 clkgen_load,
-    output                clkgen_done,
+    input  wire           clkgen_reset,
+    input  wire [7:0]     clkgen_mul,
+    input  wire [7:0]     clkgen_div,
+    input  wire           clkgen_load,
+    output wire           clkgen_done,
     
     /* Phase shift control for external clock (clock: clk_usb) */
-    input [8:0]           phase_requested,
-    output [8:0]          phase_actual,
-    input                 phase_load,
-    output                phase_done, 
+    input  wire [8:0]     phase_requested,
+    output wire [8:0]     phase_actual,
+    input  wire           phase_load,
+    output wire           phase_done, 
     /* Is Selected DCM Locked? */
-    output                dcm_adc_locked,
-    output                dcm_gen_locked 
+    output wire           dcm_adc_locked,
+    output wire           dcm_gen_locked 
     );
  
     wire ADC_clk_extsrc;
@@ -135,8 +135,19 @@ module clock_managment_advanced(
        assign ADC_clk_times4 = dcm_clk_in;
        assign ADC_clk = dcm_clk_in;
     `else
-    // XXX TODO
-    // DCM_SP: Digital Clock Manager
+    MMCM_adc_clock_gen U_adc_clock_gen (
+       // Clock out ports
+       .reset           (reset),
+       .clk_in1         (dcm_clk_in),
+       .clk_out1        (ADC_clk),
+       .clk_out2        (ADC_clk_times4),
+       .locked          (dcm_locked_int),
+       .psclk           (clk_usb),
+       .psen            (dcm_psen),
+       .psincdec        (dcm_psincdec),
+       .psdone          (dcm_psdone)
+    );
+    /* OG DCM_SP: Digital Clock Manager
     // Spartan-6
     // Xilinx HDL Libraries Guide, version 13.2
     DCM_SP #(
@@ -170,6 +181,7 @@ module clock_managment_advanced(
     .PSINCDEC(dcm_psincdec), // 1-bit input: Phase shift increment/decrement input
     .RST(reset) // 1-bit input: Active high reset input
     );
+    */
     `endif
 
     wire clkgenfx_dev_out;
@@ -181,8 +193,21 @@ module clock_managment_advanced(
        assign clkgenfx_out = clkgenfx_in;
 
     `else
-    // XXX TODO
-    // DCM_CLKGEN: Frequency Aligned Digital Clock Manager
+    MMCM_clkgen U_clkgen (
+       .reset           (reset),
+       .clk_in1         (clkgenfx_in),
+       .clk_out1        (clkgenfx_out),
+       .locked          (dcm2_locked_int), // TODO: rename more descriptively
+       // Dynamic reconfiguration ports - TODO
+       .daddr           (7'b0),        // input [6:0] daddr
+       .dclk            (clk_usb),         // input dclk
+       .den             (1'b0),          // input den
+       .din             (16'b0),          // input [15:0] din
+       .dout            (),         // output [15:0] dout
+       .drdy            (),         // output drdy
+       .dwe             ()           // output dwe
+    );
+    /* OG: DCM_CLKGEN: Frequency Aligned Digital Clock Manager
     // Spartan-6
     // Xilinx HDL Libraries Guide, version 14.3
     DCM_CLKGEN #(
@@ -208,6 +233,7 @@ module clock_managment_advanced(
     .PROGEN(clkgen_progen), // 1-bit input: Active high program enable
     .RST(clkgen_reset) // 1-bit input: Reset input pin
     );
+    */
     `endif
 
     assign clkgen = clkgenfx_out;

@@ -33,30 +33,30 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 *************************************************************************/
 module reg_clockglitch(
-   input          reset_i,
-   input          clk_usb,
-   input [5:0]    reg_address,  // Address of register
-   input [15:0]   reg_bytecnt,  // Current byte count
-   input [7:0]    reg_datai,    // Data to write
-   output [7:0]   reg_datao,    // Data to read
-   input [15:0]   reg_size,     // Total size being read/write
-   input          reg_read,     // Read flag
-   input          reg_write,    // Write flag
-   input          reg_addrvalid,// Address valid flag
-   output         reg_stream,
+   input  wire         reset_i,
+   input  wire         clk_usb,
+   input  wire [5:0]   reg_address,  // Address of register
+   input  wire [15:0]  reg_bytecnt,  // Current byte count
+   input  wire [7:0]   reg_datai,    // Data to write
+   output wire [7:0]   reg_datao,    // Data to read
+   input  wire [15:0]  reg_size,     // Total size being read/write
+   input  wire         reg_read,     // Read flag
+   input  wire         reg_write,    // Write flag
+   input  wire         reg_addrvalid,// Address valid flag
+   output wire         reg_stream,
    
-   input [5:0]    reg_hypaddress,
-   output [15:0]  reg_hyplen,
+   input  wire [5:0]   reg_hypaddress,
+   output wire [15:0]  reg_hyplen,
    
-   input wire     target_hs1,
-   input wire     clkgen,
+   input wire          target_hs1,
+   input wire          clkgen,
    
-   output wire    glitchclk,
-   input wire     exttrigger,
+   output wire         glitchclk,
+   input wire          exttrigger,
    
-   output wire    dcm_unlocked,
-   output wire    led_glitch
-   );
+   output wire         dcm_unlocked,
+   output wire         led_glitch
+);
    
    wire  reset;
    assign reset = reset_i;

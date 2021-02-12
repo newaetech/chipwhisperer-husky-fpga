@@ -33,17 +33,17 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 *************************************************************************/
 module dcm_phaseshift_interface(
-    input clk_usb,           //Clock for inputs & PCLK for DCM
-    input reset_i,           //Reset - must also connect to DCM so this block knows when defaults are loaded
-    input signed [8:0] default_value_i, //Default PS value in 2's complement format
-    input signed [8:0] value_i,     //Requested PS Value in 2's complement format
-    input load_i,            //When high starts a new phase shift operation    
-    output signed [8:0] value_o,    //Actual PS Value in 2's complement format, valid when done_o goes high
-    output done_o,           //High for one clock cycle once operation complete
-    output dcm_psen_o,       //Connect to DCM
-    output dcm_psincdec_o,   //Connect to DCM
-    input dcm_psdone_i,      //Connect to DCM
-    input [7:0] dcm_status_i //Connect to DCM
+    input wire clk_usb,           //Clock for inputs & PCLK for DCM
+    input wire reset_i,           //Reset - must also connect to DCM so this block knows when defaults are loaded
+    input wire signed [8:0] default_value_i, //Default PS value in 2's complement format
+    input wire signed [8:0] value_i,     //Requested PS Value in 2's complement format
+    input wire load_i,            //When high starts a new phase shift operation    
+    output wire signed [8:0] value_o,    //Actual PS Value in 2's complement format, valid when done_o goes high
+    output wire done_o,           //High for one clock cycle once operation complete
+    output wire dcm_psen_o,       //Connect to DCM
+    output wire dcm_psincdec_o,   //Connect to DCM
+    input wire dcm_psdone_i,      //Connect to DCM
+    input wire [7:0] dcm_status_i //Connect to DCM
     );
 
     `define RESET          'b000

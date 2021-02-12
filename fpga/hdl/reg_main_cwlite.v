@@ -41,30 +41,30 @@ module reg_main_cwlite(
    input clk_usb,
 
    /* Interface to ChipWhisperer-Lite USB Chip */
-   input [7:0] cwusb_din,
-   output [7:0] cwusb_dout,
-   output cwusb_isout,
-   input [7:0] cwusb_addr,
-   input cwusb_rdn,
-   input cwusb_wrn,
-   input cwusb_alen,
-   input cwusb_cen,
+   input  wire [7:0] cwusb_din,
+   output wire [7:0] cwusb_dout,
+   output wire cwusb_isout,
+   input  wire [7:0] cwusb_addr,
+   input  wire cwusb_rdn,
+   input  wire cwusb_wrn,
+   input  wire cwusb_alen,
+   input  wire cwusb_cen,
 
  /* Interface to registers */
-   output [5:0]   reg_address,  // Address of register
-   output [15:0]  reg_bytecnt,  // Current byte count
-   output [7:0]   reg_datao,    // Data to write
-   input  [7:0]   reg_datai,    // Data to read
-   output [15:0]  reg_size,     // Total size being read/write
-   output         reg_read,     // Read flag. One clock cycle AFTER this flag is high
-                                // valid data must be present on the reg_datai bus
-   output         reg_write,    // Write flag. When high on rising edge valid data is
-                                // present on reg_datao
-   output         reg_addrvalid,// Address valid flag
-   input          reg_stream,
+   output wire [5:0]   reg_address,  // Address of register
+   output wire [15:0]  reg_bytecnt,  // Current byte count
+   output wire [7:0]   reg_datao,    // Data to write
+   input  wire [7:0]   reg_datai,    // Data to read
+   output wire [15:0]  reg_size,     // Total size being read/write
+   output wire         reg_read,     // Read flag. One clock cycle AFTER this flag is high
+                                     // valid data must be present on the reg_datai bus
+   output wire         reg_write,    // Write flag. When high on rising edge valid data is
+                                     // present on reg_datao
+   output wire         reg_addrvalid,// Address valid flag
+   input  wire         reg_stream,
 
-   output [5:0]   reg_hypaddress,
-   input  [15:0]  reg_hyplen
+   output wire [5:0]   reg_hypaddress,
+   input  wire [15:0]  reg_hyplen
 );
 
 `ifdef CHIPSCOPE

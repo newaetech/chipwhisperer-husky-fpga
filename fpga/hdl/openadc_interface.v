@@ -32,8 +32,8 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 *************************************************************************/
 module openadc_interface(
-   input         reset_i,
-   input         clk_usb, // 96 MHz
+   input wire    reset_i,
+   input wire    clk_usb, // 96 MHz
 
    inout wire [7:0]     USB_D,
    input wire [7:0]     USB_Addr,
@@ -43,38 +43,38 @@ module openadc_interface(
    input wire   USB_ALEn,
 
 /* LEDs. Connect up any you wish. */
-    output        LED_hbeat, /* Heartbeat LED */
-    output        LED_armed, /* Armed LED */
-    output        LED_capture, /* Capture in Progress LED (only illuminate during capture, very quick) */
-    output        LED_ADCDCMUnlock, /* DCM for ADC is unlocked */
-    output        LED_CLKGENDCMUnlock, /* DCM for CLKGEN is unlocked */
+    output wire LED_hbeat, /* Heartbeat LED */
+    output wire LED_armed, /* Armed LED */
+    output wire LED_capture, /* Capture in Progress LED (only illuminate during capture, very quick) */
+    output wire LED_ADCDCMUnlock, /* DCM for ADC is unlocked */
+    output wire LED_CLKGENDCMUnlock, /* DCM for CLKGEN is unlocked */
 
     /* OpenADC Interface Pins */
-    input [9:0]   ADC_Data,
-    output        ADC_clk_out,
+    input wire [9:0]   ADC_Data,
+    output wire   ADC_clk_out,
     /* Feedback path for ADC Clock. If unused connect to ADC_clk_out */
-    input         ADC_clk_feedback,
-    input         DUT_CLK_i, // target_hs1
-    input         DUT_trigger_i,
-    output        amp_gain,
-    output        amp_hilo,
+    input  wire   ADC_clk_feedback,
+    input  wire   DUT_CLK_i, // target_hs1
+    input  wire   DUT_trigger_i,
+    output wire   amp_gain,
+    output wire   amp_hilo,
 
     /* Generated Clock for other uses */
-    output        clkgen,
+    output wire   clkgen,
 
     /* Connections to external registers */
-    output              reg_reset_o,
-    output [5:0]        reg_address_o,
-    output [15:0]       reg_bytecnt_o,
-    output [7:0]        reg_datao_o,
-    input  [7:0]        reg_datai_i,
-    output [15:0]       reg_size_o,
-    output              reg_read_o,
-    output              reg_write_o,
-    output              reg_addrvalid_o,
-    input               reg_stream_i,
-    output [5:0]        reg_hypaddress_o,
-    input  [15:0]       reg_hyplen_i
+    output wire         reg_reset_o,
+    output wire [5:0]   reg_address_o,
+    output wire [15:0]  reg_bytecnt_o,
+    output wire [7:0]   reg_datao_o,
+    input  wire [7:0]   reg_datai_i,
+    output wire [15:0]  reg_size_o,
+    output wire         reg_read_o,
+    output wire         reg_write_o,
+    output wire         reg_addrvalid_o,
+    input  wire         reg_stream_i,
+    output wire [5:0]   reg_hypaddress_o,
+    input  wire [15:0]  reg_hyplen_i
     );
 
     wire        dcm_locked;
@@ -162,7 +162,7 @@ module openadc_interface(
 `elsif __ICARUS__
          assign ADC_Data_delayed[index] = ADC_Data[index];
 `else
-         // XXX remove?
+         // TODO XXX remove?
          IODELAY2 #(
             .COUNTER_WRAPAROUND("WRAPAROUND"), // "STAY_AT_LIMIT" or "WRAPAROUND"
             .DATA_RATE("SDR"), // "SDR" or "DDR"

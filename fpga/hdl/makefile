@@ -6,6 +6,12 @@ compile:
 	-Wportbind \
 	-Wselect-range \
 
+cwlite:
+	iverilog -ccmdfile_cwlite \
+	-g2005-sv \
+	-Wportbind \
+	-Wselect-range \
+
 nofifo:
 	iverilog -ccmdfile_nofifo \
 	-g2005-sv \

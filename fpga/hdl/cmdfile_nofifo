@@ -13,7 +13,7 @@ trigger_resync.v
 trigger_unit.v
 reg_main_cwlite.v
 reg_clockglitch.v
-cwlite_interface.v
+cwhusky_top.v
 openadc_interface.v
 clock_managment_advanced.v
 

@@ -141,8 +141,14 @@ module clockglitch_s6(
                          (glitch_type == 3'b100) ? glitch_next_reg :
                          1'b0;
 
+        assign dcm1_clk_out = source_clk;
+        assign dcm1_psdone = 1'b1;
+        assign dcm2_clk_out = dcm1_clk_out;
+        assign dcm2_psdone = 1'b1;
+
+
+        /* XX TODO
         `ifdef __ICARUS__
-           // XX TODO
         `else
         // DCM_SP: Digital Clock Manager
         // Spartan-6
@@ -179,7 +185,6 @@ module clockglitch_s6(
         .RST(dcm_rst) // 1-bit input: Active high reset input
         );
 
-
         // DCM_SP: Digital Clock Manager
         // Spartan-6
         // Xilinx HDL Libraries Guide, version 13.2
@@ -215,6 +220,7 @@ module clockglitch_s6(
         .RST(dcm_rst) // 1-bit input: Active high reset input
         );
         `endif
+        */
 
 endmodule
 

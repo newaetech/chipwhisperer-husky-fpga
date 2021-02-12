@@ -23,76 +23,77 @@ Author: Colin O'Flynn <coflynn@newae.com>
   along with chipwhisperer.  If not, see <http://www.gnu.org/licenses/>.
 *************************************************************************/
 module reg_chipwhisperer(
-   input          reset_i,
-   input          clk_usb,
-   input [5:0]    reg_address,  // Address of register
-   input [15:0]   reg_bytecnt,  // Current byte count
-   input [7:0]    reg_datai,    // Data to write
-   inout [7:0]    reg_datao,    // Data to read
-   input [15:0]   reg_size,     // Total size being read/write
-   input          reg_read,     // Read flag
-   input          reg_write,    // Write flag
-   input          reg_addrvalid,// Address valid flag
-   output         reg_stream,
+   input  wire         reset_i,
+   input  wire         clk_usb,
+   input  wire [5:0]   reg_address,  // Address of register
+   input  wire [15:0]  reg_bytecnt,  // Current byte count
+   input  wire [7:0]   reg_datai,    // Data to write
+   inout  wire [7:0]   reg_datao,    // Data to read
+   input  wire [15:0]  reg_size,     // Total size being read/write
+   input  wire         reg_read,     // Read flag
+   input  wire         reg_write,    // Write flag
+   input  wire         reg_addrvalid,// Address valid flag
+   output wire         reg_stream,
    
-   input [5:0]    reg_hypaddress,
-   output  [15:0] reg_hyplen,
+   input  wire [5:0]   reg_hypaddress,
+   output wire [15:0]  reg_hyplen,
    
    /* External Clock */
-   input          target_hs1,
-   output         target_hs2,
-   output         extclk_o,
+   input  wire        target_hs1,
+   output wire        target_hs2,
+   output wire        extclk_o,
    
    /* Extern Trigger Connections */
-   input          adc_sample_clk,       // TODO XXX note this wasn't driven by anything
-   input          trigger_io1_i,
-   input          trigger_io2_i,
-   input          trigger_io3_i,
-   input          trigger_io4_i,
+   input  wire        adc_sample_clk,       // TODO XXX note this wasn't driven by anything
+   input  wire        trigger_io1_i,
+   input  wire        trigger_io2_i,
+   input  wire        trigger_io3_i,
+   input  wire        trigger_io4_i,
    
    /* Advanced IO Trigger Connections */
-   output         trigger_ext_o,
-   input          trigger_advio_i, 
-   input          trigger_decodedio_i,
-   input          trigger_anapattern_i,
+   output wire        trigger_ext_o,
+   input  wire        trigger_advio_i, 
+   input  wire        trigger_decodedio_i,
+   input  wire        trigger_anapattern_i,
    
    /* Clock Sources */
-   input          clkgen,
-   input          glitchclk,
+   input  wire        clkgen,
+   input  wire        glitchclk,
    
    /* GPIO Pins & Routing */
-   inout          targetio1_io,
-   inout          targetio2_io,
-   inout          targetio3_io,
-   inout          targetio4_io,
+   inout  wire        targetio1_io,
+   inout  wire        targetio2_io,
+   inout  wire        targetio3_io,
+   inout  wire        targetio4_io,
    
-   output         hsglitcha_o,
-   output         hsglitchb_o,
+   output wire        hsglitcha_o,
+   output wire        hsglitchb_o,
    
-   output         enable_avrprog,
+   output wire        enable_avrprog,
    
-   output         enable_output_nrst,
-   output         output_nrst,
-   output         enable_output_pdid,
-   output         output_pdid,
-   output         enable_output_pdic,
-   output         output_pdic,
+   output wire        enable_output_nrst,
+   output wire        output_nrst,
+   output wire        enable_output_pdid,
+   output wire        output_pdid,
+   output wire        enable_output_pdic,
+   output wire        output_pdic,
    
-   input          uart_tx_i,
-   output         uart_rx_o,
+   // TODO: no longer exists
+   input  wire        uart_tx_i,
+   output wire        uart_rx_o,
    
-   input          usi_out_i,
-   output         usi_in_o,
+   input  wire        usi_out_i,
+   output wire        usi_in_o,
    
-   output         targetpower_off,
+   output wire        targetpower_off,
    
    /* Main trigger connections */
-   output         trigger_o, /* Trigger signal to capture system */
-   output         led_auxi,
-   output         led_auxo
+   output wire        trigger_o, /* Trigger signal to capture system */
+   output wire        led_auxi,
+   output wire        led_auxo
 ); 
 
-   wire     reset;
+   wire reset;
    assign reset = reset_i;
    
    `define CW_EXTCLK_ADDR       38

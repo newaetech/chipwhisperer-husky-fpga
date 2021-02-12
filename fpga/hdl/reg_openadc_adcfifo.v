@@ -36,25 +36,25 @@ POSSIBILITY OF SUCH DAMAGE.
 
 *************************************************************************/
 module reg_openadc_adcfifo(
-   input          reset_i,
-   input          clk_usb,
-   input [5:0]    reg_address,  // Address of register
-   input [15:0]   reg_bytecnt,  // Current byte count
-   input [7:0]    reg_datai,    // Data to write
-   inout  [7:0]   reg_datao,    // Data to read
-   input [15:0]   reg_size,     // Total size being read/write
-   input          reg_read,     // Read flag
-   input          reg_write,    // Write flag
-   input          reg_addrvalid,// Address valid flag
-   output         reg_stream,
-   
-   input [5:0]    reg_hypaddress,
-   output  [15:0] reg_hyplen,
-   
+   input  wire         reset_i,
+   input  wire         clk_usb,
+   input  wire [5:0]   reg_address,  // Address of register
+   input  wire [15:0]  reg_bytecnt,  // Current byte count
+   input  wire [7:0]   reg_datai,    // Data to write
+   inout  wire [7:0]   reg_datao,    // Data to read
+   input  wire [15:0]  reg_size,     // Total size being read/write
+   input  wire         reg_read,     // Read flag
+   input  wire         reg_write,    // Write flag
+   input  wire         reg_addrvalid,// Address valid flag
+   output wire         reg_stream,
+
+   input  wire [5:0]   reg_hypaddress,
+   output wire [15:0]  reg_hyplen,
+
    /* ADC Fifo Interface */
-   input          fifo_empty,
-   input [7:0]    fifo_data,
-   output         fifo_rd_en
+   input  wire         fifo_empty,
+   input  wire [7:0]   fifo_data,
+   output wire         fifo_rd_en
 );
 
    wire  reset;

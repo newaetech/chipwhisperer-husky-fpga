@@ -32,28 +32,28 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 *************************************************************************/
 module trigger_unit(
-    input               reset,          //system reset
+    input wire               reset,          //system reset
 
-    input               adc_clk,        //ADC sample clock
-    input [9:0]         adc_data,       //ADC data
+    input wire               adc_clk,        //ADC sample clock
+    input wire [9:0]         adc_data,       //ADC data
 
-    input               ext_trigger_i,
-    input               trigger_level_i,    //1 = trigger on high or rising edge
-                                                    //0 = trigger on low or falling edge
-    input               trigger_wait_i,     //1 = wait for trigger to go to 'inactive' state first (e.g.: edge sensitive)
-                                                    //0 = don't wait
-    input [9:0]         trigger_adclevel_i, //Internal (e.g.: from ADC) trigger level 
-    input               trigger_source_i,   //0 = External trigger, 1 = internal trigger
-    input               trigger_now_i,      //1 = Trigger immediatly when armed
-    input               arm_i,              //1 = arm, edge-sensitive so must be reset to 0 before arming again. Wait until the
+    input wire               ext_trigger_i,
+    input wire               trigger_level_i,    //1 = trigger on high or rising edge
+                                                         //0 = trigger on low or falling edge
+    input wire               trigger_wait_i,     //1 = wait for trigger to go to 'inactive' state first (e.g.: edge sensitive)
+                                                         //0 = don't wait
+    input wire [9:0]         trigger_adclevel_i, //Internal (e.g.: from ADC) trigger level 
+    input wire               trigger_source_i,   //0 = External trigger, 1 = internal trigger
+    input wire               trigger_now_i,      //1 = Trigger immediatly when armed
+    input wire               arm_i,              //1 = arm, edge-sensitive so must be reset to 0 before arming again. Wait until the
                                             //    arm_o goes high before doing this, otherwise the arm won't take effect.
-    output              arm_o,              //Status of internal arm logic
+    output wire              arm_o,              //Status of internal arm logic
 
-    input [31:0]  trigger_offset_i,   //Delays the capture_go_o by this many ADC clock cycles
-    output [31:0] trigger_length_o,   //Length of trigger pulse in ADC samples (only valid AFTER trigger happened)
+    input wire [31:0]        trigger_offset_i,   //Delays the capture_go_o by this many ADC clock cycles
+    output wire [31:0]       trigger_length_o,   //Length of trigger pulse in ADC samples (only valid AFTER trigger happened)
 
-    output        capture_go_o,         //1 = trigger conditions met, stays high until 'capture_done_i' goes high
-    input         capture_done_i        //1 = capture done
+    output wire              capture_go_o,         //1 = trigger conditions met, stays high until 'capture_done_i' goes high
+    input wire               capture_done_i        //1 = capture done
     );
 
    //**** Trigger Logic Selection ****

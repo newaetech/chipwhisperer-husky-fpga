@@ -36,50 +36,50 @@ POSSIBILITY OF SUCH DAMAGE.
 
 *************************************************************************/
 module reg_openadc(
-   input          reset_i,
-   output         reset_o,
-   input          clk_usb,
-   input [5:0]    reg_address,  // Address of register
-   input [15:0]   reg_bytecnt,  // Current byte count
-   input [7:0]    reg_datai,    // Data to write
-   inout [7:0]    reg_datao,    // Data to read
-   input [15:0]   reg_size,     // Total size being read/write
-   input          reg_read,     // Read flag
-   input          reg_write,    // Write flag
-   input          reg_addrvalid,// Address valid flag
-   output         reg_stream,
+   input  wire         reset_i,
+   output wire         reset_o,
+   input  wire         clk_usb,
+   input  wire [5:0]   reg_address,  // Address of register
+   input  wire [15:0]  reg_bytecnt,  // Current byte count
+   input  wire [7:0]   reg_datai,    // Data to write
+   inout  wire [7:0]   reg_datao,    // Data to read
+   input  wire [15:0]  reg_size,     // Total size being read/write
+   input  wire         reg_read,     // Read flag
+   input  wire         reg_write,    // Write flag
+   input  wire         reg_addrvalid,// Address valid flag
+   output wire         reg_stream,
 
-   input [5:0]    reg_hypaddress,
-   output  [15:0] reg_hyplen,
+   input  wire [5:0]   reg_hypaddress,
+   output wire [15:0]  reg_hyplen,
 
    /* Interface to gain module */
-   output [7:0]   gain,
-   output         hilow,
+   output wire [7:0]   gain,
+   output wire         hilow,
 
    /* General status stuff input */
-   input [7:0]    status,
+   input  wire [7:0]   status,
 
    /* Interface to trigger unit */
-   output         cmd_arm,
-   output         trigger_mode,
-   output         trigger_wait,
-   output [9:0]   trigger_level,
-   output         trigger_source,
-   output         trigger_now,
-   output [31:0]  trigger_offset,
-   input  [31:0]  trigger_length,
-   output [1:0]   fifo_mode,
+   output wire         cmd_arm,
+   output wire         trigger_mode,
+   output wire         trigger_wait,
+   output wire [9:0]   trigger_level,
+   output wire         trigger_source,
+   output wire         trigger_now,
+   output wire [31:0]  trigger_offset,
+   input  wire [31:0]  trigger_length,
+   output wire [1:0]   fifo_mode,
 
    /* Measurement of external clock frequency */
-   input [31:0]   extclk_frequency,
-   output         extclk_measure_src,
-   input [31:0]   adcclk_frequency,
+   input  wire [31:0]  extclk_frequency,
+   output wire         extclk_measure_src,
+   input  wire [31:0]  adcclk_frequency,
 
    /* Interface to phase shift module */
-   output [8:0]   phase_o,
-   output         phase_ld_o,
-   input  [8:0]   phase_i,
-   input          phase_done_i,
+   output wire [8:0]   phase_o,
+   output wire         phase_ld_o,
+   input  wire [8:0]   phase_i,
+   input  wire         phase_done_i,
 
    /* Interface to clkgen module */
    output wire [7:0] clkgen_mul,        //Mult-1 (e.g.: value of 1 means Mult=2)
@@ -88,18 +88,18 @@ module reg_openadc(
    input wire        clkgen_done,
 
    /* Additional ADC control lines */
-   output [2:0]   adc_clk_src_o,
-   output         clkgen_src_o,
-   output         clkblock_dcm_reset_o,
-   output         clkblock_gen_reset_o,
-   input          clkblock_dcm_locked_i,
-   input          clkblock_gen_locked_i,
-   output [31:0]  presamples_o,
-   output [31:0]  maxsamples_o,
-   input  [31:0]  maxsamples_i,
-   input  [31:0]  samples_i,
-   output [12:0]  downsample_o,
-   output         fifo_stream
+   output wire [2:0]  adc_clk_src_o,
+   output wire        clkgen_src_o,
+   output wire        clkblock_dcm_reset_o,
+   output wire        clkblock_gen_reset_o,
+   input  wire        clkblock_dcm_locked_i,
+   input  wire        clkblock_gen_locked_i,
+   output wire [31:0] presamples_o,
+   output wire [31:0] maxsamples_o,
+   input  wire [31:0] maxsamples_i,
+   input  wire [31:0] samples_i,
+   output wire [12:0] downsample_o,
+   output wire        fifo_stream
 );
 
    wire reset;

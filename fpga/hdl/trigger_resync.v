@@ -23,7 +23,7 @@ module trigger_resync(
    input wire   reset,
    input wire   clk,    // clkgen or HS1
    input wire   exttrig,
-   input [31:0] offset,
+   input wire [31:0] offset,
    output wire  exttrigger_resync
 );
 
