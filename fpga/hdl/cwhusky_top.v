@@ -4,8 +4,7 @@
 
 module cwhusky_top(  
     input wire         clk_usb,
-      
-    //GPIO_LED1 was removed from final version of CW-Lite design
+
     output wire        LED_CLK1FAIL,
     output wire        LED_CLK2FAIL,
     output wire        LED_ARMED,
