@@ -130,7 +130,9 @@ module cwlite_interface(
    wire clkgen, glitchclk;
    wire enable_avrprog;
 
-   openadc_interface oadc(
+   openadc_interface #(
+      .pBYTECNT_SIZE    (pBYTECNT_SIZE)
+   ) U_openadc_interface (
         .reset_i(reset_i),
         .clk_usb(clk_usb_buf),
 
@@ -175,7 +177,9 @@ module cwlite_interface(
    wire enable_output_pdic;
    wire output_pdic;
 
-   reg_chipwhisperer reg_chipwhisperer(
+   reg_chipwhisperer #(
+      .pBYTECNT_SIZE    (pBYTECNT_SIZE)
+   ) U_reg_chipwhisperer (
         .reset_i(reg_rst),
         .clk_usb(clk_usb_buf),
         .reg_address(reg_addr), 
@@ -231,7 +235,9 @@ module cwlite_interface(
    );
 
 
-   reg_clockglitch reg_clockglitch(
+   reg_clockglitch #(
+      .pBYTECNT_SIZE    (pBYTECNT_SIZE)
+   ) U_reg_clockglitch (
         .reset_i(reg_rst),
         .clk_usb(clk_usb_buf),
         .reg_address(reg_addr), 

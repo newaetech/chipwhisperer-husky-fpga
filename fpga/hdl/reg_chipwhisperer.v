@@ -22,21 +22,18 @@ Author: Colin O'Flynn <coflynn@newae.com>
   You should have received a copy of the GNU General Public License
   along with chipwhisperer.  If not, see <http://www.gnu.org/licenses/>.
 *************************************************************************/
-module reg_chipwhisperer(
+module reg_chipwhisperer #(
+   parameter pBYTECNT_SIZE = 7
+)(
    input  wire         reset_i,
    input  wire         clk_usb,
    input  wire [5:0]   reg_address,  // Address of register
-   input  wire [15:0]  reg_bytecnt,  // Current byte count
+   input  wire [pBYTECNT_SIZE-1:0]  reg_bytecnt,  // Current byte count
    input  wire [7:0]   reg_datai,    // Data to write
    inout  wire [7:0]   reg_datao,    // Data to read
-   input  wire [15:0]  reg_size,     // Total size being read/write
    input  wire         reg_read,     // Read flag
    input  wire         reg_write,    // Write flag
    input  wire         reg_addrvalid,// Address valid flag
-   output wire         reg_stream,
-   
-   input  wire [5:0]   reg_hypaddress,
-   output wire [15:0]  reg_hyplen,
    
    /* External Clock */
    input  wire        target_hs1,
@@ -553,25 +550,11 @@ module reg_chipwhisperer(
       end
    end
   
-   
-   reg [15:0] reg_hyplen_reg;
-   assign reg_hyplen = reg_hyplen_reg;
-   
-   always @(*) begin
-      case (reg_hypaddress)
-      `CW_EXTCLK_ADDR: reg_hyplen_reg <= 1;
-      `CW_TRIGSRC_ADDR: reg_hyplen_reg <= 1;
-      `CW_TRIGMOD_ADDR: reg_hyplen_reg <= 1;
-      `CW_IOROUTE_ADDR: reg_hyplen_reg <= 8;
-      `CW_IOREAD_ADDR: reg_hyplen_reg <= 1;
-      default: reg_hyplen_reg<= 0;
-      endcase
-   end
-  
+
    reg [7:0] reg_datao_reg;
    reg reg_datao_valid_reg;
    assign reg_datao = (reg_datao_valid_reg/*& reg_read*/) ? reg_datao_reg : 8'd0;
-  
+
    always @(posedge clk_usb) begin
       if (reg_addrvalid) begin
          case (reg_address)

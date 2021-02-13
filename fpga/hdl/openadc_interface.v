@@ -31,16 +31,12 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 *************************************************************************/
-module openadc_interface(
-   input wire    reset_i,
-   input wire    clk_usb, // 96 MHz
-
-   inout wire [7:0]     USB_D,
-   input wire [7:0]     USB_Addr,
-   input wire   USB_RDn,
-   input wire   USB_WRn,
-   input wire   USB_CEn,
-   input wire   USB_ALEn,
+module openadc_interface #(
+   parameter pBYTECNT_SIZE = 7
+)(
+   input  wire   reset_i,
+   input  wire   clk_usb, // 96 MHz
+   output wire   reset_o,
 
 /* LEDs. Connect up any you wish. */
     output wire LED_hbeat, /* Heartbeat LED */
@@ -62,20 +58,16 @@ module openadc_interface(
     /* Generated Clock for other uses */
     output wire   clkgen,
 
-    /* Connections to external registers */
-    output wire         reg_reset_o,
-    output wire [5:0]   reg_address_o,
-    output wire [15:0]  reg_bytecnt_o,
-    output wire [7:0]   reg_datao_o,
-    input  wire [7:0]   reg_datai_i,
-    output wire [15:0]  reg_size_o,
-    output wire         reg_read_o,
-    output wire         reg_write_o,
-    output wire         reg_addrvalid_o,
-    input  wire         reg_stream_i,
-    output wire [5:0]   reg_hypaddress_o,
-    input  wire [15:0]  reg_hyplen_i
-    );
+    /* register interface */
+    input  wire [5:0]   reg_address,  // Address of register
+    input  wire [pBYTECNT_SIZE-1:0]  reg_bytecnt,  // Current byte count
+    input  wire [7:0]   reg_datai,    // Data to write
+    output wire [7:0]   reg_datao,    // Data to read
+    input  wire         reg_read,     // Read flag
+    input  wire         reg_write,    // Write flag
+    input  wire         reg_addrvalid // Address valid flag
+
+);
 
     wire        dcm_locked;
 
@@ -92,6 +84,8 @@ module openadc_interface(
     wire       dcm_gen_locked;
     wire       trigger_source;
     wire       fifo_stream;
+
+    assign reset_o = reset;
 
    //Divide clock by 2^24 for heartbeat LED
    //Divide clock by 2^23 for frequency measurement
@@ -286,63 +280,11 @@ module openadc_interface(
    wire ddrfifo_empty;
    wire ddrfifo_rd_en;
 
-   wire cmdfifo_rxf;
-   wire cmdfifo_txe;
-   wire cmdfifo_rd;
-   wire cmdfifo_wr;
-   wire cmdfifo_isout;
-   wire [7:0] cmdfifo_din;
-   wire [7:0] cmdfifo_dout;
-
    wire [31:0] presamples;
    wire [31:0] samples_cnt;
    wire [31:0] maxsamples_limit;
    wire [31:0] maxsamples;
 
-
-
-   wire [5:0] reg_address;
-   wire [15:0] reg_bytecnt;
-   wire [7:0] reg_datao;
-   wire [15:0] reg_size;
-   wire reg_read;
-   wire reg_write;
-   wire reg_addrvalid;
-   wire [5:0] reg_hypaddress;
-   wire reg_stream;
-   wire [7:0] reg_datai_fifo;
-   wire [7:0] reg_datai_oadc;
-   wire [15:0] reg_hyplen;
-
-   assign USB_D = cmdfifo_isout ? cmdfifo_dout : 8'bZ;
-   assign cmdfifo_din = USB_D;
-
-   reg_main_cwlite registers_mainctl_cwlite (
-      .reset_i(reset_i), 
-      .clk_usb(clk_usb), 
-      .cwusb_din(cmdfifo_din), 
-      .cwusb_dout(cmdfifo_dout), 
-      .cwusb_rdn(USB_RDn), 
-      .cwusb_wrn(USB_WRn),
-      .cwusb_cen(USB_CEn),
-      .cwusb_alen(USB_ALEn),
-      .cwusb_addr(USB_Addr),
-      .cwusb_isout(cmdfifo_isout), 
-      .reg_address(reg_address), 
-      .reg_bytecnt(reg_bytecnt), 
-      .reg_datao(reg_datao), 
-      .reg_datai(reg_datai_fifo | reg_datai_oadc | reg_datai_i), 
-      .reg_size(reg_size), 
-      .reg_read(reg_read), 
-      .reg_write(reg_write), 
-      .reg_addrvalid(reg_addrvalid), 
-      .reg_stream(reg_stream),
-      .reg_hypaddress(reg_hypaddress), 
-      .reg_hyplen(reg_hyplen)
-   );
-
-   wire reg_stream_openadc;
-   wire [15:0] reg_hyplen_openadc;
    wire clockreset;
 
    wire [7:0] clkgen_mul;
@@ -353,22 +295,24 @@ module openadc_interface(
 
    wire [12:0] downsample;
    wire [1:0] fifo_mode;
+   wire [7:0] reg_datao_oadc;
+   wire [7:0] reg_datao_fifo;
 
-   reg_openadc registers_openadc (
+   assign reg_datao = reg_datao_oadc | reg_datao_fifo;
+
+   reg_openadc #(
+      .pBYTECNT_SIZE    (pBYTECNT_SIZE)
+   ) U_reg_openadc (
       .reset_i(reset_i),
       .reset_o(reset),
       .clk_usb(clk_usb),
       .reg_address(reg_address), 
       .reg_bytecnt(reg_bytecnt), 
-      .reg_datao(reg_datai_oadc), 
-      .reg_datai(reg_datao), 
-      .reg_size(reg_size), 
+      .reg_datao(reg_datao_oadc), 
+      .reg_datai(reg_datai), 
       .reg_read(reg_read), 
       .reg_write(reg_write), 
       .reg_addrvalid(reg_addrvalid), 
-      .reg_stream(reg_stream_openadc),
-      .reg_hypaddress(reg_hypaddress), 
-      .reg_hyplen(reg_hyplen_openadc),
 
       .gain(PWM_incr),
       .hilow(amp_hilo),
@@ -407,39 +351,22 @@ module openadc_interface(
       .fifo_stream(fifo_stream)
    );
 
-   wire reg_stream_fifo;
-   wire [15:0] reg_hyplen_fifo;
-   reg_openadc_adcfifo registers_fiforead(
+   reg_openadc_adcfifo #(
+      .pBYTECNT_SIZE    (pBYTECNT_SIZE)
+   ) U_reg_openadc_adcfifo (
       .reset_i(reset_i),
       .clk_usb(clk_usb),
       .reg_address(reg_address), 
       .reg_bytecnt(reg_bytecnt), 
-      .reg_datao(reg_datai_fifo), 
-      .reg_datai(reg_datao), 
-      .reg_size(reg_size), 
+      .reg_datao(reg_datao_fifo), 
+      .reg_datai(reg_datai), 
       .reg_read(reg_read), 
       .reg_write(reg_write), 
       .reg_addrvalid(reg_addrvalid), 
-      .reg_stream(reg_stream_fifo),
-      .reg_hypaddress(reg_hypaddress), 
-      .reg_hyplen(reg_hyplen_fifo),
       .fifo_empty(ddrfifo_empty),
       .fifo_data(ddrfifo_dout),
       .fifo_rd_en(ddrfifo_rd_en)
    );
-
-   assign reg_stream = reg_stream_fifo | reg_stream_openadc | reg_stream_i;
-   assign reg_hyplen = reg_hyplen_fifo | reg_hyplen_openadc | reg_hyplen_i; 
-
-   assign reg_reset_o = reset;
-   assign reg_address_o = reg_address;
-   assign reg_bytecnt_o = reg_bytecnt;
-   assign reg_datao_o = reg_datao;
-   assign reg_read_o = reg_read;
-   assign reg_size_o = reg_size;
-   assign reg_write_o = reg_write;
-   assign reg_addrvalid_o = reg_addrvalid;
-   assign reg_hypaddress_o = reg_hypaddress;
 
 
    clock_managment_advanced genclocks(

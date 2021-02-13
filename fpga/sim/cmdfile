@@ -11,7 +11,7 @@ cwhusky_tb.v
 ../hdl/timescale.v
 ../hdl/trigger_resync.v
 ../hdl/trigger_unit.v
-../hdl/reg_main_cwlite.v
+../hdl/usb_reg_main.v
 ../hdl/fifo_top_stream.v
 ../hdl/reg_clockglitch.v
 ../hdl/cwhusky_top.v

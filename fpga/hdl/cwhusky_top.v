@@ -98,7 +98,9 @@ module cwhusky_top(
     output wire         avr_cs
     */
     );
-   
+
+    parameter pBYTECNT_SIZE = 7;
+
    /* PDI Programming done from SAM, must float these wires
       or programming will fail from weak pull-down on FPGA */
    //assign XMEGA_PDID = 1'bZ;
@@ -118,6 +120,9 @@ module cwhusky_top(
    wire         target_npower;
    wire         USB_treset_i; // ? came from SAM3U
 
+   wire         reg_rst;
+
+   // TODO: cleaup
    wire reset_i;
    assign reset_i = 0;
 
@@ -132,41 +137,82 @@ module cwhusky_top(
         .I(clk_usb) );
    `endif
 
-   wire reg_rst;
-   wire [5:0] reg_addr;
-   wire [15:0] reg_bcnt;
-   wire [7:0] reg_datao;
-   wire [7:0] reg_datai_cw;
-   wire [7:0] reg_datai_glitch;
-   wire [15:0] reg_size;
-   wire reg_read;
-   wire reg_write;
-   wire reg_addrvalid;
-   wire [5:0] reg_hypaddr;
-   wire [15:0] reg_hyplen_cw;
-   wire [15:0] reg_hyplen_glitch;
-   
+   wire cmdfifo_isout;
+   wire [7:0] cmdfifo_din;
+   wire [7:0] cmdfifo_dout;
+   wire [pBYTECNT_SIZE-1:0]  reg_bytecnt;
+   wire [7:0]   write_data;
+   wire [7:0]   read_data;
+   wire         reg_read;
+   wire         reg_write;
+   wire         reg_addrvalid;
+   wire [7:0]   reg_address;
+
+   wire [7:0] read_data_openadc;
+   wire [7:0] read_data_cw;
+   wire [7:0] read_data_glitch;
+   assign read_data = read_data_openadc | read_data_cw | read_data_glitch;
+
    wire ext_trigger;
    wire adv_trigger;
    wire extclk_mux;
    wire clkgen, glitchclk;
    wire enable_avrprog;
 
-   openadc_interface oadc(
+   usb_reg_main #(
+      .pBYTECNT_SIZE    (pBYTECNT_SIZE)
+   ) U_usb_reg_main (
+      .cwusb_clk        (clk_usb_buf), 
+      .cwusb_din        (cmdfifo_din), 
+      .cwusb_dout       (cmdfifo_dout), 
+      .cwusb_rdn        (USB_RDn), 
+      .cwusb_wrn        (USB_WRn),
+      .cwusb_cen        (USB_CEn),
+      .cwusb_addr       (USB_Addr),
+      .cwusb_isout      (cmdfifo_isout), 
+      .I_drive_data     (1'b0),         // TODO?
+      .reg_address      (reg_address), 
+      .reg_bytecnt      (reg_bytecnt), 
+      .reg_datao        (write_data), 
+      .reg_datai        (read_data),
+      .reg_read         (reg_read), 
+      .reg_write        (reg_write), 
+      .reg_addrvalid    (reg_addrvalid)
+   );
+
+   assign USB_Data = cmdfifo_isout ? cmdfifo_dout : 8'bZ;
+   assign cmdfifo_din = USB_Data;
+
+
+   // TODO: more hearbeats for initial bringup
+   reg [24:0] usb_hearbeat;
+   always @(posedge clk_usb_buf) usb_hearbeat <= usb_hearbeat +  25'd1;
+
+   reg [24:0] clkgen_heartbeat;
+   always @(posedge clkgen) clkgen_heartbeat <= clkgen_heartbeat +  25'd1;
+
+   assign LED_ARMED = usb_hearbeat[24];
+   assign LED_CAP = clkgen_heartbeat[24];
+
+   assign LED_CLK1FAIL = usb_hearbeat[23];
+   assign LED_CLK2FAIL = clkgen_heartbeat[23];
+
+
+   openadc_interface #(
+        .pBYTECNT_SIZE  (pBYTECNT_SIZE)
+   ) oadc (
         .reset_i(reset_i),
         .clk_usb(clk_usb_buf),
+        .reset_o(reg_rst),
 
-        .USB_D(USB_Data),
-        .USB_Addr(USB_Addr),
-        .USB_RDn(USB_RDn),
-        .USB_WRn(USB_WRn),
-        .USB_CEn(USB_CEn),
-        .USB_ALEn(1'b1),
-
-        .LED_hbeat(LED_CAP),
-        .LED_armed(LED_ARMED),
-        .LED_ADCDCMUnlock(LED_CLK1FAIL),
-        .LED_CLKGENDCMUnlock(LED_CLK2FAIL),
+        //.LED_hbeat(LED_CAP),
+        //.LED_armed(LED_ARMED),
+        .LED_hbeat(),
+        .LED_armed(),
+        //.LED_ADCDCMUnlock(LED_CLK1FAIL),
+        //.LED_CLKGENDCMUnlock(LED_CLK2FAIL),
+        .LED_ADCDCMUnlock(),
+        .LED_CLKGENDCMUnlock(),
         .ADC_Data(ADC_Data),
         .ADC_clk_out(ADC_clk_out),
         .ADC_clk_feedback(ADC_clk_fb),
@@ -176,18 +222,13 @@ module cwhusky_top(
         .amp_hilo(amp_hilo),
         .clkgen(clkgen),
 
-        .reg_reset_o(reg_rst),
-        .reg_address_o(reg_addr),
-        .reg_bytecnt_o(reg_bcnt),
-        .reg_datao_o(reg_datao),
-        .reg_datai_i( reg_datai_cw | reg_datai_glitch),
-        .reg_size_o(reg_size),
-        .reg_read_o(reg_read),
-        .reg_write_o(reg_write),
-        .reg_addrvalid_o(reg_addrvalid),
-        .reg_stream_i(1'b0),
-        .reg_hypaddress_o(reg_hypaddr),
-        .reg_hyplen_i(reg_hyplen_cw |  reg_hyplen_glitch)
+        .reg_address(reg_address[5:0]), 
+        .reg_bytecnt(reg_bytecnt), 
+        .reg_datao(read_data_openadc), 
+        .reg_datai(write_data), 
+        .reg_read(reg_read), 
+        .reg_write(reg_write), 
+        .reg_addrvalid(reg_addrvalid) 
    );
 
    wire enable_output_nrst;
@@ -197,20 +238,18 @@ module cwhusky_top(
    wire enable_output_pdic;
    wire output_pdic;
 
-   reg_chipwhisperer reg_chipwhisperer(
+   reg_chipwhisperer  #(
+        .pBYTECNT_SIZE  (pBYTECNT_SIZE)
+   ) reg_chipwhisperer (
         .reset_i(reg_rst),
         .clk_usb(clk_usb_buf),
-        .reg_address(reg_addr), 
-        .reg_bytecnt(reg_bcnt), 
-        .reg_datao(reg_datai_cw), 
-        .reg_datai(reg_datao), 
-        .reg_size(reg_size), 
+        .reg_address(reg_address[5:0]), 
+        .reg_bytecnt(reg_bytecnt), 
+        .reg_datao(read_data_cw), 
+        .reg_datai(write_data), 
         .reg_read(reg_read), 
         .reg_write(reg_write), 
         .reg_addrvalid(reg_addrvalid), 
-        .reg_hypaddress(reg_hypaddr), 
-        .reg_hyplen(reg_hyplen_cw),
-        .reg_stream(),
         .target_hs1(target_hs1),
         .target_hs2(target_hs2),
         .extclk_o(extclk_mux),
@@ -249,24 +288,25 @@ module cwhusky_top(
         .usi_in_o(),
         .targetpower_off(target_npower),
 
-        .trigger_o(ext_trigger)
+        //.trigger_o(ext_trigger)
+        .trigger_o()
    );
+   // TODO-TEMPORARY: otherwise comb loop error?
+   assign ext_trigger = 1'b0;
 
 
-   reg_clockglitch reg_clockglitch(
+   reg_clockglitch #(
+        .pBYTECNT_SIZE  (pBYTECNT_SIZE)
+   ) reg_clockglitch (
         .reset_i(reg_rst),
         .clk_usb(clk_usb_buf),
-        .reg_address(reg_addr), 
-        .reg_bytecnt(reg_bcnt), 
-        .reg_datao(reg_datai_glitch), 
-        .reg_datai(reg_datao), 
-        .reg_size(reg_size), 
+        .reg_address(reg_address[5:0]), 
+        .reg_bytecnt(reg_bytecnt), 
+        .reg_datao(read_data_glitch), 
+        .reg_datai(write_data), 
         .reg_read(reg_read), 
         .reg_write(reg_write), 
         .reg_addrvalid(reg_addrvalid), 
-        .reg_hypaddress(reg_hypaddr), 
-        .reg_hyplen(reg_hyplen_glitch),
-        .reg_stream(),
         .target_hs1(target_hs1),
         .clkgen(clkgen),
         .glitchclk(glitchclk),

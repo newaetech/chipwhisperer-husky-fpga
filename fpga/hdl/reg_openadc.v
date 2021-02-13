@@ -35,22 +35,19 @@ POSSIBILITY OF SUCH DAMAGE.
 
 
 *************************************************************************/
-module reg_openadc(
+module reg_openadc #(
+   parameter pBYTECNT_SIZE = 7
+)(
    input  wire         reset_i,
    output wire         reset_o,
    input  wire         clk_usb,
    input  wire [5:0]   reg_address,  // Address of register
-   input  wire [15:0]  reg_bytecnt,  // Current byte count
+   input  wire [pBYTECNT_SIZE-1:0]  reg_bytecnt,  // Current byte count
    input  wire [7:0]   reg_datai,    // Data to write
    inout  wire [7:0]   reg_datao,    // Data to read
-   input  wire [15:0]  reg_size,     // Total size being read/write
    input  wire         reg_read,     // Read flag
    input  wire         reg_write,    // Write flag
    input  wire         reg_addrvalid,// Address valid flag
-   output wire         reg_stream,
-
-   input  wire [5:0]   reg_hypaddress,
-   output wire [15:0]  reg_hyplen,
 
    /* Interface to gain module */
    output wire [7:0]   gain,
@@ -158,30 +155,6 @@ module reg_openadc(
          phase_in <= 0;
       else if (phase_done_i)
          phase_in <= phase_i;
-   end
-
-   reg [15:0] reg_hyplen_reg;
-   assign reg_hyplen = reg_hyplen_reg;
-   
-   always @(*) begin
-      case (reg_hypaddress)
-         `GAIN_ADDR: reg_hyplen_reg <= 1;
-         `SETTINGS_ADDR: reg_hyplen_reg <= 1;
-         `STATUS_ADDR: reg_hyplen_reg <= 1;
-         `ECHO_ADDR: reg_hyplen_reg <= 1;
-         `EXTFREQ_ADDR: reg_hyplen_reg <= `EXTFREQ_LEN;
-         `ADCFREQ_ADDR: reg_hyplen_reg <= `ADCFREQ_LEN;
-         `PHASE_ADDR: reg_hyplen_reg <= `PHASE_LEN;
-         `VERSION_ADDR: reg_hyplen_reg <= `VERSION_LEN;
-         `SAMPLES_ADDR: reg_hyplen_reg <= `SAMPLES_LEN;
-         `OFFSET_ADDR: reg_hyplen_reg <= `OFFSET_LEN;
-         `PRESAMPLES_ADDR: reg_hyplen_reg <= `PRESAMPLES_LEN;
-         `RETSAMPLES_ADDR: reg_hyplen_reg <= `RETSAMPLES_LEN;
-         `ADVCLOCK_ADDR: reg_hyplen_reg <= `ADVCLOCK_LEN;
-         `SYSTEMCLK_ADDR: reg_hyplen_reg <= `SYSTEMCLK_LEN;
-         `TRIGGER_DUR_ADDR: reg_hyplen_reg <= `TRIGGER_DUR_LEN;
-         default: reg_hyplen_reg<= 0;
-      endcase
    end
 
    assign reset_fromreg = registers_settings[0];

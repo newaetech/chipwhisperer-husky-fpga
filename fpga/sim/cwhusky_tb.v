@@ -3,16 +3,18 @@
 
 module cwhusky_tb();
 
+
    parameter pCLK_PERIOD = 10;
    parameter pTIMEOUT_CYCLES = 10000;
+   parameter pADDR_WIDTH = 8;
 
    reg                  clk_usb;
-   wire [7:0]           USB_Data;
-   reg  [7:0]           USB_wdata;
-   reg  [7:0]           USB_Addr;
-   reg                  USB_RDn;
-   reg                  USB_WRn;
-   reg                  USB_CEn;
+   wire [7:0]           usb_data;
+   reg  [7:0]           usb_wdata;
+   reg  [7:0]           usb_addr;
+   reg                  usb_rdn;
+   reg                  usb_wrn;
+   reg                  usb_cen;
    reg                  USB_SPARE0;
    reg                  USB_SPARE1;
 
@@ -43,15 +45,26 @@ module cwhusky_tb();
    wire                 LED_ARMED;
    wire                 LED_CAP;
 
+   reg  [7:0] rdata;
+
 
    // initialization thread:
    initial begin
       $dumpfile("results/cwhusky_tb.fst");
       $dumpvars(0, cwhusky_tb);
       clk_usb = 0;
+      usb_addr = 0;
+      usb_rdn = 1;
+      usb_wrn = 1;
+      usb_cen = 1;
 
       //#(pCLK_PERIOD*10) reset = 1;
       //#(pCLK_PERIOD*10) reset = 0;
+      #(pCLK_PERIOD*100);
+      write_1byte('h4, 8'ha5);
+      read_1byte('h4, rdata);
+      $display("Got %h", rdata);
+
    end
 
 
@@ -64,6 +77,24 @@ module cwhusky_tb();
 
    always #(pCLK_PERIOD/2) clk_usb = !clk_usb;
 
+   wire #1 usb_rdn_out = usb_rdn;
+   wire #1 usb_wrn_out = usb_wrn;
+   wire #1 usb_cen_out = usb_cen;
+
+   reg read_select;
+
+   wire usb_clk = clk_usb;
+   `include "tb_reg_tasks.v"
+
+   assign usb_data = read_select? 8'bz : usb_wdata;
+
+   always @(*) begin
+      if (usb_wrn == 1'b0)
+         read_select = 1'b0;
+      else if (usb_rdn == 1'b0)
+         read_select = 1'b1;
+   end
+
 
 cwhusky_top U_dut (  
     .clk_usb            (clk_usb      ),
@@ -71,11 +102,11 @@ cwhusky_top U_dut (
     .LED_CLK2FAIL       (LED_CLK2FAIL ),
     .LED_ARMED          (LED_ARMED    ),
     .LED_CAP            (LED_CAP      ),
-    .USB_Data           (USB_Data     ),
-    .USB_Addr           (USB_Addr     ),
-    .USB_RDn            (USB_RDn      ),
-    .USB_WRn            (USB_WRn      ),
-    .USB_CEn            (USB_CEn      ),
+    .USB_Data           (usb_data     ),
+    .USB_Addr           (usb_addr     ),
+    .USB_RDn            (usb_rdn_out  ),
+    .USB_WRn            (usb_wrn_out  ),
+    .USB_CEn            (usb_cen_out  ),
     .USB_SPARE0         (USB_SPARE0   ),
     .USB_SPARE1         (USB_SPARE1   ),
     .FPGA_BONUS1        (FPGA_BONUS1  ),

@@ -11,7 +11,7 @@
 ../hdl/timescale.v
 ../hdl/trigger_resync.v
 ../hdl/trigger_unit.v
-../hdl/reg_main_cwlite.v
+../hdl/usb_reg_main.v
 ../hdl/reg_clockglitch.v
 ../hdl/cwlite_interface.v
 ../hdl/openadc_interface.v

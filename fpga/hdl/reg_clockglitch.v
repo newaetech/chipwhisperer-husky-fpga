@@ -32,21 +32,18 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 *************************************************************************/
-module reg_clockglitch(
+module reg_clockglitch #(
+   parameter pBYTECNT_SIZE = 7
+)(
    input  wire         reset_i,
    input  wire         clk_usb,
    input  wire [5:0]   reg_address,  // Address of register
-   input  wire [15:0]  reg_bytecnt,  // Current byte count
+   input  wire [pBYTECNT_SIZE-1:0]  reg_bytecnt,  // Current byte count
    input  wire [7:0]   reg_datai,    // Data to write
    output wire [7:0]   reg_datao,    // Data to read
-   input  wire [15:0]  reg_size,     // Total size being read/write
    input  wire         reg_read,     // Read flag
    input  wire         reg_write,    // Write flag
    input  wire         reg_addrvalid,// Address valid flag
-   output wire         reg_stream,
-   
-   input  wire [5:0]   reg_hypaddress,
-   output wire [15:0]  reg_hyplen,
    
    input wire          target_hs1,
    input wire          clkgen,
@@ -60,7 +57,6 @@ module reg_clockglitch(
    
    wire  reset;
    assign reset = reset_i;
-   assign reg_stream = 1'b0;
 
 `ifdef CHIPSCOPE
    wire [127:0] cs_data;   
@@ -121,22 +117,7 @@ module reg_clockglitch(
    wire [63:0] clockglitch_settings_read;
   
    reg [31:0] clockglitch_offset_reg;
-  
-   reg [15:0] reg_hyplen_reg;
-   assign reg_hyplen = reg_hyplen_reg;
-   
-   always @(*) begin
-     case (reg_hypaddress)
-            `CLOCKGLITCH_SETTINGS: reg_hyplen_reg <= `CLOCKGLITCH_LEN;
-            `CLOCKGLITCH_OFFSET: reg_hyplen_reg <= `CLOCKGLITCH_OFFSET_LEN;
-`ifdef SUPPORT_GLITCH_READBACK
-            `GLITCHCYCLES_CNT: reg_hyplen_reg <= `GLITCHCYCLES_CNT_LEN;
-            `GLITCH_RECONFIG_RB_ADDR: reg_hyplen_reg <= `GLITCH_RECONFIG_RB_LEN;
-`endif
-            default: reg_hyplen_reg<= 0;
-     endcase
-   end    
-  
+
    reg [7:0] reg_datao_reg;
    assign reg_datao = reg_datao_reg;
 

@@ -1,3 +1,4 @@
+cwhusky_tb.v
 ../hdl/clockglitch_s6.v
 ../hdl/dcm_clkgen_load.v
 ../hdl/dcm_phaseshift_interface.v
@@ -11,7 +12,7 @@
 ../hdl/timescale.v
 ../hdl/trigger_resync.v
 ../hdl/trigger_unit.v
-../hdl/reg_main_cwlite.v
+../hdl/usb_reg_main.v
 ../hdl/reg_clockglitch.v
 ../hdl/cwhusky_top.v
 ../hdl/openadc_interface.v

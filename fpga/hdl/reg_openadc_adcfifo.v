@@ -35,21 +35,18 @@ POSSIBILITY OF SUCH DAMAGE.
 
 
 *************************************************************************/
-module reg_openadc_adcfifo(
+module reg_openadc_adcfifo #(
+   parameter pBYTECNT_SIZE = 7
+)(
    input  wire         reset_i,
    input  wire         clk_usb,
    input  wire [5:0]   reg_address,  // Address of register
-   input  wire [15:0]  reg_bytecnt,  // Current byte count
+   input  wire [pBYTECNT_SIZE-1:0]  reg_bytecnt,  // Current byte count
    input  wire [7:0]   reg_datai,    // Data to write
    inout  wire [7:0]   reg_datao,    // Data to read
-   input  wire [15:0]  reg_size,     // Total size being read/write
    input  wire         reg_read,     // Read flag
    input  wire         reg_write,    // Write flag
    input  wire         reg_addrvalid,// Address valid flag
-   output wire         reg_stream,
-
-   input  wire [5:0]   reg_hypaddress,
-   output wire [15:0]  reg_hyplen,
 
    /* ADC Fifo Interface */
    input  wire         fifo_empty,
@@ -63,8 +60,6 @@ module reg_openadc_adcfifo(
    reg fifo_rd_en_reg;
    assign fifo_rd_en = fifo_rd_en_reg;
    
-   reg reg_stream_reg;
-   assign reg_stream = reg_stream_reg;
     
 `ifdef CHIPSCOPE
    wire [127:0] cs_data;   
@@ -80,16 +75,6 @@ module reg_openadc_adcfifo(
    );  
 `endif
 
-   reg [15:0] reg_hyplen_reg;
-   assign reg_hyplen = reg_hyplen_reg;
-   
-   always @(reg_hypaddress) begin
-          case (reg_hypaddress)
-             `ADCREAD_ADDR: reg_hyplen_reg <= 1;
-             default: reg_hyplen_reg<= 0;
-          endcase
-   end
-   
    reg [7:0] reg_datao_reg;
    reg reg_datao_valid_reg;
    assign reg_datao = (reg_datao_valid_reg /*& reg_read*/) ? reg_datao_reg : 8'd0;
@@ -142,20 +127,6 @@ module reg_openadc_adcfifo(
       end
    end
    
-   //always begin
-   wire stream_rst;
-   assign stream_rst = fifo_empty | reset | ~reg_addrvalid;
-   always  @(posedge clk_usb or posedge stream_rst) begin
-      //if ((fifo_empty == 1) || (reset == 1) || (reg_addrvalid == 0) || (reg_address != `ADCREAD_ADDR)) begin
-      if (stream_rst == 1) begin
-         reg_stream_reg <= 0;
-      end else begin
-         if ((reg_addrvalid == 1) && (reg_address == `ADCREAD_ADDR)) begin
-            reg_stream_reg <= 1;
-         end
-      end
-   end
-
  `ifdef CHIPSCOPE
    assign cs_data[5:0] = reg_address;
    assign cs_data[21:6] = reg_bytecnt;
