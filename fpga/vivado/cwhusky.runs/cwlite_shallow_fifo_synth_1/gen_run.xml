@@ -1,14 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <GenRun Id="cwlite_shallow_fifo_synth_1" LaunchPart="xc7a35tftg256-2" LaunchTime="1613059748">
   <File Type="PA-TCL" Name="cwlite_shallow_fifo.tcl"/>
-  <File Type="RDS-PROPCONSTRS" Name="cwlite_shallow_fifo_drc_synth.rpt"/>
   <File Type="REPORTS-TCL" Name="cwlite_shallow_fifo_reports.tcl"/>
   <File Type="RDS-RDS" Name="cwlite_shallow_fifo.vds"/>
   <File Type="RDS-UTIL" Name="cwlite_shallow_fifo_utilization_synth.rpt"/>
   <File Type="RDS-UTIL-PB" Name="cwlite_shallow_fifo_utilization_synth.pb"/>
   <File Type="RDS-DCP" Name="cwlite_shallow_fifo.dcp"/>
-  <File Type="VDS-TIMINGSUMMARY" Name="cwlite_shallow_fifo_timing_summary_synth.rpt"/>
-  <File Type="VDS-TIMING-PB" Name="cwlite_shallow_fifo_timing_summary_synth.pb"/>
   <FileSet Name="sources" Type="BlockSrcs" RelSrcDir="$PSRCDIR/cwlite_shallow_fifo">
     <File Path="$PSRCDIR/sources_1/ip/cwlite_shallow_fifo/cwlite_shallow_fifo.xci">
       <FileInfo>
@@ -42,9 +39,7 @@
     </Config>
   </FileSet>
   <Strategy Version="1" Minor="2">
-    <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2019">
-      <Desc>Vivado Synthesis Defaults</Desc>
-    </StratHandle>
+    <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2019"/>
     <Step Id="synth_design"/>
   </Strategy>
 </GenRun>

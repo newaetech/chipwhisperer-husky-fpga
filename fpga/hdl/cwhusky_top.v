@@ -162,7 +162,7 @@ module cwhusky_top(
    usb_reg_main #(
       .pBYTECNT_SIZE    (pBYTECNT_SIZE)
    ) U_usb_reg_main (
-      .cwusb_clk        (clk_usb_buf), 
+      .clk_usb          (clk_usb_buf), 
       .cwusb_din        (cmdfifo_din), 
       .cwusb_dout       (cmdfifo_dout), 
       .cwusb_rdn        (USB_RDn), 

@@ -24,7 +24,7 @@
 module usb_reg_main #(
    parameter pBYTECNT_SIZE = 7
 )(
-   input  wire         cwusb_clk,
+   input  wire         clk_usb,
 
    /* Interface to ChipWhisperer-Lite USB Chip */
    input  wire [7:0]   cwusb_din,
@@ -57,7 +57,7 @@ module usb_reg_main #(
    reg reg_write_dly;
 
    // note: could possibly be simplified, and delays reduced?
-   always @(posedge cwusb_clk) begin
+   always @(posedge clk_usb) begin
       rdflag_rs <= rdflag;
       rdflag_rs_dly <= rdflag_rs;
 
@@ -80,11 +80,11 @@ module usb_reg_main #(
    //Don't immediatly turn off output drivers
    assign cwusb_isout = isoutreg | isoutregdly | I_drive_data;
 
-   always @(posedge cwusb_clk) begin
+   always @(posedge clk_usb) begin
       reg_address <= cwusb_addr;
    end
 
-   always @(posedge cwusb_clk) begin
+   always @(posedge clk_usb) begin
       //if (~cwusb_cen & ~cwusb_wrn) begin
       if (~cwusb_cen & ~cwusb_wrn_rs) begin
          reg_datao <= cwusb_din;
@@ -92,9 +92,9 @@ module usb_reg_main #(
    end
 
    /* Byte count block. We need to increment after a read or after a write */
-   always @(posedge cwusb_clk) reg_write_dly <= reg_write;
+   always @(posedge clk_usb) reg_write_dly <= reg_write;
 
-   always @(posedge cwusb_clk) begin
+   always @(posedge clk_usb) begin
       if (reg_address != cwusb_addr) begin
          reg_bytecnt <= 0;
       end else if ((isoutregdly & !isoutreg) || (reg_write_dly) ) begin
@@ -103,6 +103,27 @@ module usb_reg_main #(
          reg_bytecnt <= reg_bytecnt + 1;
       end
    end
+
+
+   `ifdef ILA_USB
+       ila_usb U_ila_usb (
+	.clk            (clk_usb),      // input wire clk
+	.probe0         (cwusb_din),    // input wire [7:0]  probe0  
+	.probe1         (cwusb_dout),   // input wire [7:0]  probe1 
+	.probe2         (cwusb_isout),  // input wire [0:0]  probe2 
+	.probe3         (cwusb_addr),   // input wire [7:0]  probe3 
+	.probe4         (cwusb_rdn),    // input wire [0:0]  probe4 
+	.probe5         (cwusb_wrn),    // input wire [0:0]  probe5 
+	.probe6         (cwusb_cen),    // input wire [0:0]  probe6 
+	.probe7         (reg_address),  // input wire [7:0]  probe7 
+	.probe8         (reg_bytecnt),  // input wire [6:0]  probe8 
+	.probe9         (reg_datao),    // input wire [7:0]  probe9
+        .probe10        (reg_datai),    // input wire [7:0]  probe10
+        .probe11        (reg_read),     // input wire [0:0]  probe11
+        .probe12        (reg_write),    // input wire [0:0]  probe12
+        .probe13        (reg_addrvalid) // input wire [0:0]  probe13
+       );
+   `endif
 
 endmodule
 
