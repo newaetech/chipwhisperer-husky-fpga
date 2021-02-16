@@ -41,7 +41,7 @@ module reg_openadc #(
    input  wire         reset_i,
    output wire         reset_o,
    input  wire         clk_usb,
-   input  wire [5:0]   reg_address,  // Address of register
+   input  wire [7:0]   reg_address,  // Address of register
    input  wire [pBYTECNT_SIZE-1:0]  reg_bytecnt,  // Current byte count
    input  wire [7:0]   reg_datai,    // Data to write
    inout  wire [7:0]   reg_datao,    // Data to read
@@ -103,21 +103,7 @@ module reg_openadc #(
    reg  reset_latched;
    assign reset = reset_i | reset_latched;
    assign reset_o = reset;
-   
-    
-`ifdef CHIPSCOPE
-   wire [127:0] cs_data;   
-   wire [35:0]  chipscope_control;
-  coregen_icon icon (
-    .CONTROL0(chipscope_control) // INOUT BUS [35:0]
-   ); 
 
-   coregen_ila ila (
-    .CONTROL(chipscope_control), // INOUT BUS [35:0]
-    .CLK(clk_usb), // IN
-    .TRIG0(cs_data) // IN BUS [127:0]
-   );  
-`endif
 
    //Register definitions
    reg [7:0]  registers_gain;
@@ -138,8 +124,9 @@ module reg_openadc #(
    wire [47:0] version_data;
    wire [31:0] system_frequency = 32'd`SYSTEM_CLK;
    wire reset_fromreg;
+   wire [31:0] buildtime;
 
-   assign version_data[47:16] = 'b0;
+   assign version_data[47:16] = 32'b0;
    assign version_data[15:11] = 5'd`HW_TYPE;
    assign version_data[10:8] = 3'd`HW_VER;
    assign version_data[7:4] = 0;
@@ -269,6 +256,7 @@ module reg_openadc #(
             `ADVCLOCK_ADDR: begin reg_datao_valid_reg <= 1; end
             `SYSTEMCLK_ADDR: begin reg_datao_valid_reg <= 1; end
             `TRIGGER_DUR_ADDR: begin reg_datao_valid_reg <= 1; end
+            `FPGA_BUILDTIME_ADDR: begin reg_datao_valid_reg <= 1; end
             default: begin reg_datao_valid_reg <= 0; end
          endcase
       end else begin
@@ -282,7 +270,7 @@ module reg_openadc #(
                 `GAIN_ADDR: reg_datao_reg <= registers_gain; 
                 `SETTINGS_ADDR: reg_datao_reg <= registers_settings;
                 `STATUS_ADDR: reg_datao_reg <= status; 
-                `ECHO_ADDR: reg_datao_reg <= registers_echo; 
+                `ECHO_ADDR: reg_datao_reg <= registers_echo;
                 `EXTFREQ_ADDR: reg_datao_reg <= registers_extclk_frequency[reg_bytecnt*8 +: 8]; 
                 `ADCFREQ_ADDR: reg_datao_reg <= registers_adcclk_frequency[reg_bytecnt*8 +: 8]; 
                 `PHASE_ADDR: reg_datao_reg <= phase_in[reg_bytecnt*8 +: 8]; 
@@ -295,6 +283,7 @@ module reg_openadc #(
                 `ADVCLOCK_ADDR: reg_datao_reg <= registers_advclocksettings_read[reg_bytecnt*8 +: 8];
                 `SYSTEMCLK_ADDR: reg_datao_reg <= system_frequency[reg_bytecnt*8 +: 8];
                 `TRIGGER_DUR_ADDR: reg_datao_reg <= trigger_length[reg_bytecnt*8 +: 8];
+                `FPGA_BUILDTIME_ADDR: reg_datao_reg <= buildtime[reg_bytecnt*8 +: 8];
                 default: reg_datao_reg <= 0;
              endcase
           end
@@ -346,17 +335,27 @@ module reg_openadc #(
          phase_loadout <= 1'b0;
    end
 
- `ifdef CHIPSCOPE
-   assign cs_data[5:0] = reg_address;
-   assign cs_data[21:6] = reg_bytecnt;
-   assign cs_data[29:22] = reg_datai;
-   assign cs_data[37:30] = reg_datao;
-   assign cs_data[38] = reg_read;
-   assign cs_data[39] = reg_write;
-   assign cs_data[40] = reg_addrvalid;
-   assign cs_data[46:41] = reg_hypaddress;
-   assign cs_data[62:47] = reg_hyplen;
- `endif
- 
+
+   `ifndef __ICARUS__
+      USR_ACCESSE2 U_buildtime (
+         .CFGCLK(),
+         .DATA(buildtime),
+         .DATAVALID()
+      );
+   `else
+      assign buildtime = 0;
+   `endif
+
+
+   `ifdef ILA_REG
+       ila_reg U_ila_usb (
+	.clk            (clk_usb),      // input wire clk
+	.probe0         (reset_fromreg),// input wire [0:0]  probe0  
+	.probe1         (reset_o),      // input wire [0:0]  probe1 
+	.probe2         ({24'b0, registers_echo})// input wire [31:0] probe2 
+       );
+   `endif
+
+
 endmodule
 `default_nettype wire

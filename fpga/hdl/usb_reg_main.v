@@ -121,7 +121,8 @@ module usb_reg_main #(
         .probe10        (reg_datai),    // input wire [7:0]  probe10
         .probe11        (reg_read),     // input wire [0:0]  probe11
         .probe12        (reg_write),    // input wire [0:0]  probe12
-        .probe13        (reg_addrvalid) // input wire [0:0]  probe13
+        .probe13        (reg_addrvalid),// input wire [0:0]  probe13
+        .probe14        (32'b0)         // input wire [31:0] probe14
        );
    `endif
 

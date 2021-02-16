@@ -224,47 +224,24 @@
    [ MSB ] (Byte 3)
  */
  
-`define GAIN_ADDR      0
-`define SETTINGS_ADDR  1
-`define STATUS_ADDR    2
-`define ADCREAD_ADDR   3
-`define ECHO_ADDR      4
-
-`define EXTFREQ_ADDR   5 
-`define EXTFREQ_LEN    4
-
-`define ADVCLOCK_ADDR  6
-`define ADVCLOCK_LEN   4
-
-`define SYSTEMCLK_ADDR 7
-`define SYSTEMCLK_LEN  4
-
-`define ADCFREQ_ADDR   8 
-`define ADCFREQ_LEN    4
-
-`define PHASE_ADDR     9  
-`define PHASE_LEN      2
-
-`define VERSION_ADDR   10
-`define VERSION_LEN    6
-
-`define DECIMATE_ADDR  15
-`define DECIMATE_LEN   2
-
-`define SAMPLES_ADDR   16
-`define SAMPLES_LEN    4
-
-`define PRESAMPLES_ADDR 17
-`define PRESAMPLES_LEN 4
-
-`define RETSAMPLES_ADDR 18
-`define RETSAMPLES_LEN 4
-
-`define TRIGGER_DUR_ADDR 20
-`define TRIGGER_DUR_LEN  4
-
-`define OFFSET_ADDR    26
-`define OFFSET_LEN     4
+`define GAIN_ADDR               0
+`define SETTINGS_ADDR           1
+`define STATUS_ADDR             2
+`define ADCREAD_ADDR            3
+`define ECHO_ADDR               4
+`define EXTFREQ_ADDR            5 
+`define ADVCLOCK_ADDR           6
+`define SYSTEMCLK_ADDR          7
+`define ADCFREQ_ADDR            8 
+`define PHASE_ADDR              9  
+`define VERSION_ADDR            10
+`define FPGA_BUILDTIME_ADDR     11
+`define DECIMATE_ADDR           15
+`define SAMPLES_ADDR            16
+`define PRESAMPLES_ADDR         17
+`define RETSAMPLES_ADDR         18
+`define TRIGGER_DUR_ADDR        20
+`define OFFSET_ADDR             26
 
 `define REGISTER_VERSION 1
 

@@ -1,4 +1,7 @@
 set_property IOSTANDARD LVCMOS33 [get_ports *]
+set_property CFGBVS VCCO [current_design]
+set_property CONFIG_VOLTAGE 3.3 [current_design]
+
 
 create_clock -period 10.400 -name clk_usb -waveform {0.000 5.200} [get_nets clk_usb]
 
@@ -27,14 +30,24 @@ set_property PACKAGE_PIN E2 [get_ports {USB_Data[2]}]
 set_property PACKAGE_PIN A7 [get_ports {USB_Data[1]}]
 set_property PACKAGE_PIN B7 [get_ports {USB_Data[0]}]
 
-set_property PACKAGE_PIN H1 [get_ports {USB_Addr[7]}]
-set_property PACKAGE_PIN K3 [get_ports {USB_Addr[6]}]
-set_property PACKAGE_PIN K1 [get_ports {USB_Addr[5]}]
-set_property PACKAGE_PIN E1 [get_ports {USB_Addr[4]}]
-set_property PACKAGE_PIN D1 [get_ports {USB_Addr[3]}]
-set_property PACKAGE_PIN C1 [get_ports {USB_Addr[2]}]
-set_property PACKAGE_PIN K2 [get_ports {USB_Addr[1]}]
-set_property PACKAGE_PIN J1 [get_ports {USB_Addr[0]}]
+#set_property PACKAGE_PIN H1 [get_ports {USB_Addr[7]}]
+#set_property PACKAGE_PIN K3 [get_ports {USB_Addr[6]}]
+#set_property PACKAGE_PIN K1 [get_ports {USB_Addr[5]}]
+#set_property PACKAGE_PIN E1 [get_ports {USB_Addr[4]}]
+#set_property PACKAGE_PIN D1 [get_ports {USB_Addr[3]}]
+#set_property PACKAGE_PIN C1 [get_ports {USB_Addr[2]}]
+#set_property PACKAGE_PIN K2 [get_ports {USB_Addr[1]}]
+#set_property PACKAGE_PIN J1 [get_ports {USB_Addr[0]}]
+
+set_property PACKAGE_PIN K2 [get_ports {USB_Addr[7]}]
+set_property PACKAGE_PIN J1 [get_ports {USB_Addr[6]}]
+set_property PACKAGE_PIN H1 [get_ports {USB_Addr[5]}]
+set_property PACKAGE_PIN K3 [get_ports {USB_Addr[4]}]
+set_property PACKAGE_PIN K1 [get_ports {USB_Addr[3]}]
+set_property PACKAGE_PIN E1 [get_ports {USB_Addr[2]}]
+set_property PACKAGE_PIN D1 [get_ports {USB_Addr[1]}]
+set_property PACKAGE_PIN C1 [get_ports {USB_Addr[0]}]
+
 
 set_property PACKAGE_PIN A5 [get_ports USB_RDn]
 set_property PACKAGE_PIN A4 [get_ports USB_WRn]
@@ -74,13 +87,19 @@ set_property PACKAGE_PIN T9 [get_ports SAM_CS]
 
 
 # No spec for these, seems sensible:
-set_input_delay -clock clk_usb 2.0 [get_ports USB_CEn]
-set_input_delay -clock clk_usb 2.0 [get_ports USB_RDn]
-set_input_delay -clock clk_usb 2.0 [get_ports USB_WRn]
-set_input_delay -clock clk_usb 2.0 [get_ports USB_Data]
-set_input_delay -clock clk_usb 2.0 [get_ports USB_Addr]
-set_input_delay -clock clk_usb 2.0 [get_ports USB_SPARE0]
-set_input_delay -clock clk_usb 2.0 [get_ports USB_SPARE1]
+set_input_delay -clock clk_usb 2.000 [get_ports USB_CEn]
+set_input_delay -clock clk_usb 2.000 [get_ports USB_RDn]
+set_input_delay -clock clk_usb 2.000 [get_ports USB_WRn]
+set_input_delay -clock clk_usb 2.000 [get_ports USB_Data]
+set_input_delay -clock clk_usb 2.000 [get_ports USB_Addr]
+set_input_delay -clock clk_usb 2.000 [get_ports USB_SPARE0]
+set_input_delay -clock clk_usb 2.000 [get_ports USB_SPARE1]
 
 # TODO: lots of constraints missing still
 
+
+set_property BITSTREAM.CONFIG.USR_ACCESS TIMESTAMP [current_design]
+set_property C_CLK_INPUT_FREQ_HZ 300000000 [get_debug_cores dbg_hub]
+set_property C_ENABLE_CLK_DIVIDER false [get_debug_cores dbg_hub]
+set_property C_USER_SCAN_CHAIN 1 [get_debug_cores dbg_hub]
+connect_debug_port dbg_hub/clk [get_nets clk_usb_buf_BUFG]

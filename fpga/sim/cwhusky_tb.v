@@ -46,6 +46,7 @@ module cwhusky_tb();
    wire                 LED_CAP;
 
    reg  [7:0] rdata;
+   int i;
 
 
    // initialization thread:
@@ -61,9 +62,19 @@ module cwhusky_tb();
       //#(pCLK_PERIOD*10) reset = 1;
       //#(pCLK_PERIOD*10) reset = 0;
       #(pCLK_PERIOD*100);
+      write_1byte('h1, 8'h0);
+      write_1byte('h1, 8'h1);
+      write_1byte('h1, 8'h0);
       write_1byte('h4, 8'ha5);
+      read_1byte('h0, rdata);
       read_1byte('h4, rdata);
       $display("Got %h", rdata);
+
+      rw_lots_bytes('d10);
+      for (i = 0; i < 6; i = i + 1) begin
+         read_next_byte(rdata);
+         $display("%2d: %2h", i, rdata);
+      end
 
    end
 
@@ -80,6 +91,7 @@ module cwhusky_tb();
    wire #1 usb_rdn_out = usb_rdn;
    wire #1 usb_wrn_out = usb_wrn;
    wire #1 usb_cen_out = usb_cen;
+   wire [7:0] #1 usb_addr_out = usb_addr;
 
    reg read_select;
 
@@ -103,7 +115,7 @@ cwhusky_top U_dut (
     .LED_ARMED          (LED_ARMED    ),
     .LED_CAP            (LED_CAP      ),
     .USB_Data           (usb_data     ),
-    .USB_Addr           (usb_addr     ),
+    .USB_Addr           (usb_addr_out ),
     .USB_RDn            (usb_rdn_out  ),
     .USB_WRn            (usb_wrn_out  ),
     .USB_CEn            (usb_cen_out  ),

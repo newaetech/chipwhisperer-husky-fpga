@@ -154,7 +154,6 @@ module cwhusky_top(
    assign read_data = read_data_openadc | read_data_cw | read_data_glitch;
 
    wire ext_trigger;
-   wire adv_trigger;
    wire extclk_mux;
    wire clkgen, glitchclk;
    wire enable_avrprog;
@@ -194,8 +193,8 @@ module cwhusky_top(
    assign LED_ARMED = usb_hearbeat[24];
    assign LED_CAP = clkgen_heartbeat[24];
 
-   assign LED_CLK1FAIL = usb_hearbeat[23];
-   assign LED_CLK2FAIL = clkgen_heartbeat[23];
+   //assign LED_CLK1FAIL = usb_hearbeat[23];
+   //assign LED_CLK2FAIL = clkgen_heartbeat[23];
 
 
    openadc_interface #(
@@ -209,10 +208,10 @@ module cwhusky_top(
         //.LED_armed(LED_ARMED),
         .LED_hbeat(),
         .LED_armed(),
-        //.LED_ADCDCMUnlock(LED_CLK1FAIL),
-        //.LED_CLKGENDCMUnlock(LED_CLK2FAIL),
-        .LED_ADCDCMUnlock(),
-        .LED_CLKGENDCMUnlock(),
+        .LED_ADCDCMUnlock(LED_CLK1FAIL),
+        .LED_CLKGENDCMUnlock(LED_CLK2FAIL),
+        //.LED_ADCDCMUnlock(),
+        //.LED_CLKGENDCMUnlock(),
         .ADC_Data(ADC_Data),
         .ADC_clk_out(ADC_clk_out),
         .ADC_clk_feedback(ADC_clk_fb),
@@ -222,7 +221,7 @@ module cwhusky_top(
         .amp_hilo(amp_hilo),
         .clkgen(clkgen),
 
-        .reg_address(reg_address[5:0]), 
+        .reg_address(reg_address),
         .reg_bytecnt(reg_bytecnt), 
         .reg_datao(read_data_openadc), 
         .reg_datai(write_data), 
