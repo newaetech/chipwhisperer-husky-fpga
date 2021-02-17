@@ -69,9 +69,11 @@
 module MMCM_adc_clock_gen_clk_wiz 
 
  (// Clock in ports
+  input         clkfb_in,
   // Clock out ports
   output        clk_out1,
   output        clk_out2,
+  output        clkfb_out,
   // Dynamic phase shift ports
   input         psclk,
   input         psen,
@@ -112,7 +114,6 @@ wire clk_in2_MMCM_adc_clock_gen;
   wire        drdy_unused;
   wire        locked_int;
   wire        clkfbout_MMCM_adc_clock_gen;
-  wire        clkfbout_buf_MMCM_adc_clock_gen;
   wire        clkfboutb_unused;
     wire clkout0b_unused;
    wire clkout1b_unused;
@@ -162,7 +163,7 @@ wire clk_in2_MMCM_adc_clock_gen;
     .CLKOUT5             (clkout5_unused),
     .CLKOUT6             (clkout6_unused),
      // Input clock control
-    .CLKFBIN             (clkfbout_buf_MMCM_adc_clock_gen),
+    .CLKFBIN             (clkfb_in),
     .CLKIN1              (clk_in1_MMCM_adc_clock_gen),
     .CLKIN2              (1'b0),
      // Tied to always select the primary input clock
@@ -193,24 +194,17 @@ wire clk_in2_MMCM_adc_clock_gen;
 //--------------------------------------
  // Output buffering
   //-----------------------------------
-
-  BUFG clkf_buf
-   (.O (clkfbout_buf_MMCM_adc_clock_gen),
-    .I (clkfbout_MMCM_adc_clock_gen));
+  assign clkfb_out = clkfbout_MMCM_adc_clock_gen;
 
 
 
 
 
 
-  BUFG clkout1_buf
-   (.O   (clk_out1),
-    .I   (clk_out1_MMCM_adc_clock_gen));
+  assign clk_out1 = clk_out1_MMCM_adc_clock_gen;
 
 
-  BUFG clkout2_buf
-   (.O   (clk_out2),
-    .I   (clk_out2_MMCM_adc_clock_gen));
+  assign clk_out2 = clk_out2_MMCM_adc_clock_gen;
 
 
 

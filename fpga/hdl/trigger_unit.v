@@ -47,7 +47,7 @@ module trigger_unit(
     input wire               trigger_now_i,      //1 = Trigger immediatly when armed
     input wire               arm_i,              //1 = arm, edge-sensitive so must be reset to 0 before arming again. Wait until the
                                             //    arm_o goes high before doing this, otherwise the arm won't take effect.
-    output wire              arm_o,              //Status of internal arm logic
+    output reg               arm_o,              //Status of internal arm logic
 
     input wire [31:0]        trigger_offset_i,   //Delays the capture_go_o by this many ADC clock cycles
     output wire [31:0]       trigger_length_o,   //Length of trigger pulse in ADC samples (only valid AFTER trigger happened)
@@ -67,8 +67,6 @@ module trigger_unit(
 
    //**** Trigger Logic *****
    reg armed;
-   reg armed_led;
-   assign arm_o = armed_led;
 
    wire adc_capture_done;
    reg adc_capture_go;
@@ -133,12 +131,12 @@ module trigger_unit(
          armed <= 1;
       end
 
-   //'armed_led' goes high when arm command present (doesn't look at other conditions)
+   //'arm_o' goes high when arm command present (doesn't look at other conditions)
    always @(posedge adc_clk)
       if (resetarm) begin
-         armed_led <= 0;
+         arm_o <= 0;
       end else if (arm_i) begin
-         armed_led <= 1;
+         arm_o <= 1;
       end
 
    /** Trigger Length Detection - does not account for multiple togglings**/
@@ -157,30 +155,5 @@ module trigger_unit(
 
    assign trigger_length_o = trigger_length;
 
-   /*
-   wire [127:0] ila_trigbus;
-   wire [35:0] cs_control0;
-   assign ila_trigbus[0] = int_reset_capture;
-   assign ila_trigbus[1] = adc_capture_go;
-   assign ila_trigbus[2] = trigger;
-   assign ila_trigbus[3] = trigger_level_i;
-   assign ila_trigbus[4] = arm_i;
-   assign ila_trigbus[5] = armed;
-   assign ila_trigbus[6] = resetarm;
-   assign ila_trigbus[7] = trigger_now_i;
-   assign ila_trigbus[8] = adc_capture_go_delayed;
-   assign ila_trigbus[41:10] = adc_delay_cnt[20:0];
-   assign ila_trigbus[73:42] = trigger_offset_i[20:0];
-   
-   coregen_icon coregen_icon (
-    .CONTROL0(cs_control0) // INOUT BUS [35:0]
-	);
-
-	coregen_ila coregen_ila  (
-    .CONTROL(cs_control0), // INOUT BUS [35:0]
-    .CLK(adc_clk), // IN
-    .TRIG0(ila_trigbus) // IN BUS [63:0]
-	 );
-	 */
 endmodule
 `default_nettype wire

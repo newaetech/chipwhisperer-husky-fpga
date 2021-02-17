@@ -71,9 +71,11 @@
 
   MMCM_adc_clock_gen instance_name
    (
+    .clkfb_in(clkfb_in),     // input clkfb_in
     // Clock out ports
     .clk_out1(clk_out1),     // output clk_out1
     .clk_out2(clk_out2),     // output clk_out2
+    .clkfb_out(clkfb_out),    // output clkfb_out
     // Dynamic phase shift ports
     .psclk(psclk), // input psclk
     .psen(psen), // input psen

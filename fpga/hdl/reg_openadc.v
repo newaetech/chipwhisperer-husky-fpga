@@ -41,6 +41,7 @@ module reg_openadc #(
    input  wire         reset_i,
    output wire         reset_o,
    input  wire         clk_usb,
+   input  wire         adc_sampleclk,
    input  wire [7:0]   reg_address,  // Address of register
    input  wire [pBYTECNT_SIZE-1:0]  reg_bytecnt,  // Current byte count
    input  wire [7:0]   reg_datai,    // Data to write
@@ -100,8 +101,27 @@ module reg_openadc #(
 );
 
    wire reset;
-   reg  reset_latched;
-   assign reset = reset_i | reset_latched;
+   wire  reset_reg_extended;
+   wire cmd_arm_usb;
+
+   (* ASYNC_REG = "TRUE" *) reg[1:0] arm_pipe;
+   reg arm_r;
+   reg arm_r2;
+
+   always @(posedge adc_sampleclk) begin
+      if (reset) begin
+         arm_pipe <= 0;
+         arm_r <= 0;
+         arm_r2 <= 0;
+      end
+      else begin
+         {arm_r2, arm_r, arm_pipe} <= {arm_r, arm_pipe, cmd_arm_usb};
+      end
+   end
+   assign cmd_arm = arm_r2;
+
+
+   assign reset = reset_i | reset_reg_extended;
    assign reset_o = reset;
 
 
@@ -147,7 +167,7 @@ module reg_openadc #(
    assign reset_fromreg = registers_settings[0];
    assign hilow = registers_settings[1];
    assign trigger_mode = registers_settings[2];
-   assign cmd_arm = registers_settings[3];
+   assign cmd_arm_usb = registers_settings[3];
    assign fifo_stream = registers_settings[4];
    assign trigger_wait = registers_settings[5];
    assign trigger_now = registers_settings[6];
@@ -197,9 +217,9 @@ module reg_openadc #(
    reg extclk_locked;
    reg adcclk_locked;
 
-   always @(posedge clk_usb) begin
-      reset_latched <= reset_fromreg;
-   end
+   reg [7:0] reset_r;
+   always @(posedge clk_usb) reset_r <= {reset_r[6:0], reset_fromreg};
+   assign reset_reg_extended = |reset_r;
 
    always @(posedge clk_usb) begin
       if (extclk_locked == 0) begin

@@ -61,22 +61,9 @@ module reg_openadc_adcfifo #(
    assign fifo_rd_en = fifo_rd_en_reg;
    
     
-`ifdef CHIPSCOPE
-   wire [127:0] cs_data;   
-   wire [35:0]  chipscope_control;
-  coregen_icon icon (
-    .CONTROL0(chipscope_control) // INOUT BUS [35:0]
-   ); 
-
-   coregen_ila ila (
-    .CONTROL(chipscope_control), // INOUT BUS [35:0]
-    .CLK(clk_usb), // IN
-    .TRIG0(cs_data) // IN BUS [127:0]
-   );  
-`endif
-
    reg [7:0] reg_datao_reg;
    reg reg_datao_valid_reg;
+   reg reg_read_r;
    assign reg_datao = (reg_datao_valid_reg /*& reg_read*/) ? reg_datao_reg : 8'd0;
    
    
@@ -94,7 +81,6 @@ module reg_openadc_adcfifo #(
    //always @(reg_address, reg_addrvalid, reg_bytecnt, fifo_data) begin // TODO XXX verify change to @* works ok
    always @(*) begin
           if (reg_read) begin
-          //if (reg_addrvalid) begin
              case (reg_address)
                 `ADCREAD_ADDR: reg_datao_reg <= (reg_bytecnt == 0) ? 8'hAC : fifo_data; 
                 default: reg_datao_reg <= 0;
@@ -120,29 +106,14 @@ module reg_openadc_adcfifo #(
 
    //always @(reg_read, reg_address, reg_bytecnt) begin
    always @(posedge clk_usb) begin
-      if ((reg_read == 1) && (reg_address == `ADCREAD_ADDR) && (reg_bytecnt > 16'd0)) begin
+      reg_read_r <= reg_read;
+      if (reg_read && ~reg_read_r && (reg_address == `ADCREAD_ADDR) && (reg_bytecnt > 16'd0)) begin
          fifo_rd_en_reg <= 1;
       end else begin
          fifo_rd_en_reg <= 0;
       end
    end
-   
- `ifdef CHIPSCOPE
-   assign cs_data[5:0] = reg_address;
-   assign cs_data[21:6] = reg_bytecnt;
-   assign cs_data[29:22] = reg_datai;
-   assign cs_data[37:30] = reg_datao;
-   assign cs_data[38] = reg_read;
-   assign cs_data[39] = reg_write;
-   assign cs_data[40] = reg_addrvalid;
-   assign cs_data[46:41] = reg_hypaddress;
-   assign cs_data[62:47] = reg_hyplen;
-   assign cs_data[63] = reg_stream;
-   
-   assign cs_data[64] = fifo_empty;
-   assign cs_data[65] = fifo_rd_en;
-   assign cs_data[73:66] = fifo_data;
- `endif
- 
+
+
 endmodule
 `default_nettype wire

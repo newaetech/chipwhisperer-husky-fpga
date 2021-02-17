@@ -135,6 +135,7 @@ module clock_managment_advanced(
        assign ADC_clk_times4 = dcm_clk_in;
        assign ADC_clk = dcm_clk_in;
     `else
+    wire adcfb;
     MMCM_adc_clock_gen U_adc_clock_gen (
        // Clock out ports
        .reset           (reset),
@@ -142,6 +143,8 @@ module clock_managment_advanced(
        .clk_out1        (ADC_clk),
        .clk_out2        (ADC_clk_times4),
        .locked          (dcm_locked_int),
+       .clkfb_in        (adcfb),
+       .clkfb_out       (adcfb),
        .psclk           (clk_usb),
        .psen            (dcm_psen),
        .psincdec        (dcm_psincdec),
@@ -268,11 +271,13 @@ module clock_managment_advanced(
 
 `ifdef ADCCLK_FEEDBACK
         `ifdef __ICARUS__
-            assign systemsample_clk = adc_clk_feedback;
+            //assign systemsample_clk = adc_clk_feedback;
+            assign systemsample_clk = ADC_clk_sample; //TODO-temp! YYY
         `else
             IBUFG IBUFG_inst (
             .O(systemsample_clk),
-            .I(adc_clk_feedback) );
+            //.I(adc_clk_feedback) );
+            .I(ADC_clk_sample) ); // YYY
         `endif
 `else
         assign systemsample_clk = ADC_clk_sample;

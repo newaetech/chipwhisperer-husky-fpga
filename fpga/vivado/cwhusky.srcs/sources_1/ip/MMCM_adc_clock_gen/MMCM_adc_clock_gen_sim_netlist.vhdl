@@ -1,10 +1,10 @@
 -- Copyright 1986-2019 Xilinx, Inc. All Rights Reserved.
 -- --------------------------------------------------------------------------------
 -- Tool Version: Vivado v.2019.2 (win64) Build 2708876 Wed Nov  6 21:40:23 MST 2019
--- Date        : Thu Feb 11 15:21:34 2021
+-- Date        : Tue Feb 16 21:55:12 2021
 -- Host        : qed running 64-bit major release  (build 9200)
 -- Command     : write_vhdl -force -mode funcsim
---               c:/Users/jp/GitHub/OpenTitan/husky/fpga/vivado/cwhusky.srcs/sources_1/ip/MMCM_adc_clock_gen/MMCM_adc_clock_gen_sim_netlist.vhdl
+--               C:/Users/jp/GitHub/OpenTitan/husky/fpga/vivado/cwhusky.srcs/sources_1/ip/MMCM_adc_clock_gen/MMCM_adc_clock_gen_sim_netlist.vhdl
 -- Design      : MMCM_adc_clock_gen
 -- Purpose     : This VHDL netlist is a functional simulation representation of the design and should not be modified or
 --               synthesized. This netlist cannot be used for SDF annotated simulation.
@@ -16,8 +16,10 @@ library UNISIM;
 use UNISIM.VCOMPONENTS.ALL;
 entity MMCM_adc_clock_gen_MMCM_adc_clock_gen_clk_wiz is
   port (
+    clkfb_in : in STD_LOGIC;
     clk_out1 : out STD_LOGIC;
     clk_out2 : out STD_LOGIC;
+    clkfb_out : out STD_LOGIC;
     psclk : in STD_LOGIC;
     psen : in STD_LOGIC;
     psincdec : in STD_LOGIC;
@@ -32,10 +34,6 @@ end MMCM_adc_clock_gen_MMCM_adc_clock_gen_clk_wiz;
 
 architecture STRUCTURE of MMCM_adc_clock_gen_MMCM_adc_clock_gen_clk_wiz is
   signal clk_in1_MMCM_adc_clock_gen : STD_LOGIC;
-  signal clk_out1_MMCM_adc_clock_gen : STD_LOGIC;
-  signal clk_out2_MMCM_adc_clock_gen : STD_LOGIC;
-  signal clkfbout_MMCM_adc_clock_gen : STD_LOGIC;
-  signal clkfbout_buf_MMCM_adc_clock_gen : STD_LOGIC;
   signal NLW_mmcm_adv_inst_CLKFBOUTB_UNCONNECTED : STD_LOGIC;
   signal NLW_mmcm_adv_inst_CLKFBSTOPPED_UNCONNECTED : STD_LOGIC;
   signal NLW_mmcm_adv_inst_CLKINSTOPPED_UNCONNECTED : STD_LOGIC;
@@ -51,31 +49,13 @@ architecture STRUCTURE of MMCM_adc_clock_gen_MMCM_adc_clock_gen_clk_wiz is
   signal NLW_mmcm_adv_inst_DRDY_UNCONNECTED : STD_LOGIC;
   signal NLW_mmcm_adv_inst_DO_UNCONNECTED : STD_LOGIC_VECTOR ( 15 downto 0 );
   attribute BOX_TYPE : string;
-  attribute BOX_TYPE of clkf_buf : label is "PRIMITIVE";
   attribute BOX_TYPE of clkin1_bufg : label is "PRIMITIVE";
-  attribute BOX_TYPE of clkout1_buf : label is "PRIMITIVE";
-  attribute BOX_TYPE of clkout2_buf : label is "PRIMITIVE";
   attribute BOX_TYPE of mmcm_adv_inst : label is "PRIMITIVE";
 begin
-clkf_buf: unisim.vcomponents.BUFG
-     port map (
-      I => clkfbout_MMCM_adc_clock_gen,
-      O => clkfbout_buf_MMCM_adc_clock_gen
-    );
 clkin1_bufg: unisim.vcomponents.BUFG
      port map (
       I => clk_in1,
       O => clk_in1_MMCM_adc_clock_gen
-    );
-clkout1_buf: unisim.vcomponents.BUFG
-     port map (
-      I => clk_out1_MMCM_adc_clock_gen,
-      O => clk_out1
-    );
-clkout2_buf: unisim.vcomponents.BUFG
-     port map (
-      I => clk_out2_MMCM_adc_clock_gen,
-      O => clk_out2
     );
 mmcm_adv_inst: unisim.vcomponents.MMCME2_ADV
     generic map(
@@ -114,7 +94,7 @@ mmcm_adv_inst: unisim.vcomponents.MMCME2_ADV
       CLKOUT6_DUTY_CYCLE => 0.500000,
       CLKOUT6_PHASE => 0.000000,
       CLKOUT6_USE_FINE_PS => false,
-      COMPENSATION => "BUF_IN",
+      COMPENSATION => "ZHOLD",
       DIVCLK_DIVIDE => 1,
       IS_CLKINSEL_INVERTED => '0',
       IS_PSEN_INVERTED => '0',
@@ -129,17 +109,17 @@ mmcm_adv_inst: unisim.vcomponents.MMCME2_ADV
       STARTUP_WAIT => false
     )
         port map (
-      CLKFBIN => clkfbout_buf_MMCM_adc_clock_gen,
-      CLKFBOUT => clkfbout_MMCM_adc_clock_gen,
+      CLKFBIN => clkfb_in,
+      CLKFBOUT => clkfb_out,
       CLKFBOUTB => NLW_mmcm_adv_inst_CLKFBOUTB_UNCONNECTED,
       CLKFBSTOPPED => NLW_mmcm_adv_inst_CLKFBSTOPPED_UNCONNECTED,
       CLKIN1 => clk_in1_MMCM_adc_clock_gen,
       CLKIN2 => '0',
       CLKINSEL => '1',
       CLKINSTOPPED => NLW_mmcm_adv_inst_CLKINSTOPPED_UNCONNECTED,
-      CLKOUT0 => clk_out1_MMCM_adc_clock_gen,
+      CLKOUT0 => clk_out1,
       CLKOUT0B => NLW_mmcm_adv_inst_CLKOUT0B_UNCONNECTED,
-      CLKOUT1 => clk_out2_MMCM_adc_clock_gen,
+      CLKOUT1 => clk_out2,
       CLKOUT1B => NLW_mmcm_adv_inst_CLKOUT1B_UNCONNECTED,
       CLKOUT2 => NLW_mmcm_adv_inst_CLKOUT2_UNCONNECTED,
       CLKOUT2B => NLW_mmcm_adv_inst_CLKOUT2B_UNCONNECTED,
@@ -170,8 +150,10 @@ library UNISIM;
 use UNISIM.VCOMPONENTS.ALL;
 entity MMCM_adc_clock_gen is
   port (
+    clkfb_in : in STD_LOGIC;
     clk_out1 : out STD_LOGIC;
     clk_out2 : out STD_LOGIC;
+    clkfb_out : out STD_LOGIC;
     psclk : in STD_LOGIC;
     psen : in STD_LOGIC;
     psincdec : in STD_LOGIC;
@@ -191,6 +173,8 @@ inst: entity work.MMCM_adc_clock_gen_MMCM_adc_clock_gen_clk_wiz
       clk_in1 => clk_in1,
       clk_out1 => clk_out1,
       clk_out2 => clk_out2,
+      clkfb_in => clkfb_in,
+      clkfb_out => clkfb_out,
       locked => locked,
       psclk => psclk,
       psdone => psdone,

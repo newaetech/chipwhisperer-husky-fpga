@@ -24,12 +24,13 @@ module cwhusky_top(
     input wire          FPGA_BONUS2,
     input wire          FPGA_BONUS3,
     input wire          FPGA_BONUS4,
-        
+
+    //input wire          ADC_clk_fb,
+
     /* ADC Interface TODO-later
     input wire [9:0]    ADC_Data,
     input wire          ADC_OR,         // XXX unused
     output wire         ADC_clk_out,
-    input wire          ADC_clk_fb,
     output wire         amp_gain,
     output wire         amp_hilo,
 
@@ -37,10 +38,19 @@ module cwhusky_top(
     VMAG_Dx
     USERIO
     VDBSPWM (to AD8330)
-    FPGA_CDIN ?
-    FPGA_CDOUT ?
-    FPGA_CCLK ?
     */
+
+    output wire         ADC_SCLK,
+    output wire         ADC_SDATA,
+    output wire         ADC_SEN,
+    output wire         ADC_RESET,
+    output wire         ADC_DFS,
+    output wire         ADC_OE,
+    input wire          ADC_OVR_SDOUT,
+
+    //input wire          FPGA_CCLK,
+    input wire          FPGA_CDOUT, /* Input FROM SAM3U */
+    output wire         FPGA_CDIN, /* Output TO SAM3U */
     input  wire         SAM_MOSI,
     output wire         SAM_MISO,
     input  wire         SAM_SPCK,
@@ -110,9 +120,8 @@ module cwhusky_top(
    //wire [63:0] ila_trigbus;
 
    // TEMPORARY, until I/Os are added / cleaned up:
-   wire [9:0]   ADC_Data;
+   wire [11:0]  ADC_DDR_data;
    wire         ADC_clk_out;
-   wire         ADC_clk_fb;
    wire         amp_gain;
    wire         amp_hilo;
    wire         glitchout_highpwr;
@@ -195,7 +204,7 @@ module cwhusky_top(
 
    //assign LED_CLK1FAIL = usb_hearbeat[23];
    //assign LED_CLK2FAIL = clkgen_heartbeat[23];
-
+   wire ADC_clk_fb;
 
    openadc_interface #(
         .pBYTECNT_SIZE  (pBYTECNT_SIZE)
@@ -212,7 +221,7 @@ module cwhusky_top(
         .LED_CLKGENDCMUnlock(LED_CLK2FAIL),
         //.LED_ADCDCMUnlock(),
         //.LED_CLKGENDCMUnlock(),
-        .ADC_Data(ADC_Data),
+        .ADC_DDR_data(ADC_DDR_data),
         .ADC_clk_out(ADC_clk_out),
         .ADC_clk_feedback(ADC_clk_fb),
         .DUT_CLK_i(extclk_mux),

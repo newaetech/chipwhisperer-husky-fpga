@@ -34,42 +34,42 @@ POSSIBILITY OF SUCH DAMAGE.
 module openadc_interface #(
    parameter pBYTECNT_SIZE = 7
 )(
-   input  wire   reset_i,
-   input  wire   clk_usb, // 96 MHz
-   output wire   reset_o,
+    input  wire                         reset_i,
+    input  wire                         clk_usb, // 96 MHz
+    output wire                         reset_o,
 
-/* LEDs. Connect up any you wish. */
-    output wire LED_hbeat, /* Heartbeat LED */
-    output wire LED_armed, /* Armed LED */
-    output wire LED_capture, /* Capture in Progress LED (only illuminate during capture, very quick) */
-    output wire LED_ADCDCMUnlock, /* DCM for ADC is unlocked */
-    output wire LED_CLKGENDCMUnlock, /* DCM for CLKGEN is unlocked */
+    output wire                         LED_hbeat, // Heartbeat LED
+    output wire                         LED_armed, // Armed LED
+    output wire                         LED_capture, // Capture in Progress LED (only illuminate during capture, very quick)
+    output wire                         LED_ADCDCMUnlock, // MMCM for ADC is unlocked
+    output wire                         LED_CLKGENDCMUnlock, // MMCM for CLKGEN is unlocked
 
-    /* OpenADC Interface Pins */
-    input wire [9:0]   ADC_Data,
-    output wire   ADC_clk_out,
-    /* Feedback path for ADC Clock. If unused connect to ADC_clk_out */
-    input  wire   ADC_clk_feedback,
-    input  wire   DUT_CLK_i, // target_hs1
-    input  wire   DUT_trigger_i,
-    output wire   amp_gain,
-    output wire   amp_hilo,
+    // OpenADC Interface Pins
+    input  wire [11:0]                  ADC_DDR_data,
+    output wire                         ADC_clk_out,
+    input  wire                         ADC_clk_feedback, // Feedback path for ADC Clock. If unused connect to ADC_clk_out
+    input  wire                         DUT_CLK_i, // target_hs1
+    input  wire                         DUT_trigger_i,
+    output wire                         amp_gain,
+    output wire                         amp_hilo,
 
-    /* Generated Clock for other uses */
-    output wire   clkgen,
+    // Generated Clock for other uses
+    output wire                         clkgen,
 
-    /* register interface */
-    input  wire [7:0]   reg_address,  // Address of register
-    input  wire [pBYTECNT_SIZE-1:0]  reg_bytecnt,  // Current byte count
-    input  wire [7:0]   reg_datai,    // Data to write
-    output wire [7:0]   reg_datao,    // Data to read
-    input  wire         reg_read,     // Read flag
-    input  wire         reg_write,    // Write flag
-    input  wire         reg_addrvalid // Address valid flag
-
+    // register interface
+    input  wire [7:0]                   reg_address,
+    input  wire [pBYTECNT_SIZE-1:0]     reg_bytecnt,
+    input  wire [7:0]                   reg_datai,
+    output wire [7:0]                   reg_datao,
+    input  wire                         reg_read,
+    input  wire                         reg_write,
+    input  wire                         reg_addrvalid
 );
 
     wire        dcm_locked;
+    wire        ADC_clk_sample;
+
+    wire [11:0] ADC_data;
 
     wire [8:0] phase_requested;
     wire [8:0] phase_actual;
@@ -141,22 +141,21 @@ module openadc_interface #(
       adcclk_frequency <= adcclk_frequency_int;
    end
 
-   wire ADC_clk_sample;
 
-   wire chipscope_clk;
-
-   wire [9:0] ADC_Data_delayed;
+   wire [11:0] ADC_data_delayed;
    genvar index;
    generate
-   for (index=0; index < 10; index=index+1)
+   for (index=0; index < 12; index=index+1)
       begin: gen_iodelay_adcdata
 `ifdef ADCCLK_FEEDBACK
          //If we have feedback clock shouldn't need IODELAY2
-         assign ADC_Data_delayed[index] = ADC_Data[index];
+         assign ADC_data_delayed[index] = ADC_data[index];
 `elsif __ICARUS__
-         assign ADC_Data_delayed[index] = ADC_Data[index];
+         assign ADC_data_delayed[index] = ADC_data[index];
+
 `else
-         // TODO XXX remove?
+         assign ADC_data_delayed[index] = ADC_data[index];
+         /* TODO XXX remove?
          IODELAY2 #(
             .COUNTER_WRAPAROUND("WRAPAROUND"), // "STAY_AT_LIMIT" or "WRAPAROUND"
             .DATA_RATE("SDR"), // "SDR" or "DDR"
@@ -172,13 +171,13 @@ module openadc_interface #(
          IODELAY2_inst (
             //.BUSY(), // 1-bit output: Busy output after CAL
             .DATAOUT(), // 1-bit output: Delayed data output to ISERDES/input register
-            .DATAOUT2(ADC_Data_delayed[index]), // 1-bit output: Delayed data output to general FPGA fabric
+            .DATAOUT2(ADC_data_delayed[index]), // 1-bit output: Delayed data output to general FPGA fabric
             .DOUT(), // 1-bit output: Delayed data output
             .TOUT(), // 1-bit output: Delayed 3-state output
             //.CAL(), // 1-bit input: Initiate calibration input
             //.CE(), // 1-bit input: Enable INC input
             //.CLK(), // 1-bit input: Clock input
-            .IDATAIN(ADC_Data[index]), // 1-bit input: Data input (connect to top-level port or I/O buffer)
+            .IDATAIN(ADC_data[index]), // 1-bit input: Data input (connect to top-level port or I/O buffer)
             //.INC(), // 1-bit input: Increment / decrement input
             //.IOCLK0(), // 1-bit input: Input from the I/O clock network
             //.IOCLK1(), // 1-bit input: Input from the I/O clock network
@@ -186,48 +185,33 @@ module openadc_interface #(
             //RST(), // 1-bit input: Reset to zero or 1/2 of total delay period
             //.T() // 1-bit input: 3-state input signal
          );
+         */
 `endif
       end
    endgenerate
 
-   reg [9:0] ADC_Data_tofifo;
-   wire [9:0] trigger_level;
+   reg [11:0] ADC_data_tofifo = 0;
+   wire [9:0] trigger_level; // TODO: 12 bits
 
    always @(posedge ADC_clk_sample) begin
-      ADC_Data_tofifo <= ADC_Data_delayed;
+      //ADC_data_tofifo <= ADC_data_delayed;
 
       //Input Validation Test #1: Uncomment the following
-      //ADC_Data_tofifo <= 10'hAA;
+      //ADC_data_tofifo <= 12'h3AA;
 
       //Input Validation Test #2: uncomment following, which should
       //put a perfect ramp. Tests FIFO & USB interface for proper
       //syncronization
-      //ADC_Data_tofifo <= ADC_Data_tofifo + 10'd1;
+      ADC_data_tofifo <= ADC_data_tofifo + 12'd1;
 
       //Input Validation Test #3: used for checking trigger location
       //if (DUT_trigger_i == 0)
-      //   ADC_Data_tofifo <= 10'd512;
+      //   ADC_data_tofifo <= 12'd512;
       //else
-      //   ADC_Data_tofifo <= ADC_Data_tofifo + 10'd1;
+      //   ADC_data_tofifo <= ADC_data_tofifo + 12'd1;
    end
 
    wire [7:0] reg_status;
-
-`ifdef CHIPSCOPE
-// XXX ILA
-  wire [35:0]                          chipscope_control;
-  coregen_icon icon (
-    .CONTROL0(chipscope_control) // INOUT BUS [35:0]
-   );
-
-   wire [127:0] cs_data;
-
-   coregen_ila ila (
-    .CONTROL(chipscope_control), // INOUT BUS [35:0]
-    .CLK(ADC_clk_sample), // IN
-    .TRIG0(cs_data) // IN BUS [127:0]
-   );
-`endif
 
    //1 = trigger on high, 0 = trigger on low
    wire trigger_mode;
@@ -243,7 +227,7 @@ module openadc_interface #(
    trigger_unit tu_inst(
       .reset(reset),
       .adc_clk(ADC_clk_sample),
-      .adc_data(ADC_Data_tofifo),
+      .adc_data(ADC_data_tofifo[9:0]), // TODO
 
       .ext_trigger_i(DUT_trigger_i),
       .trigger_level_i(trigger_mode),
@@ -306,6 +290,7 @@ module openadc_interface #(
       .reset_i(reset_i),
       .reset_o(reset),
       .clk_usb(clk_usb),
+      .adc_sampleclk(ADC_clk_sample),
       .reg_address(reg_address), 
       .reg_bytecnt(reg_bytecnt), 
       .reg_datao(reg_datao_oadc), 
@@ -443,35 +428,29 @@ module openadc_interface #(
    assign adc_write_mask = adc_write_mask_int | trigger_now;
 
 
-   fifo_top fifo_top_inst(
-      .reset_i(reset),
+   fifo_top_husky U_fifo(
+      .reset                    (reset),
 
-      //ADC Sample Input
-      .adc_datain(ADC_Data_tofifo),
-      .adc_sampleclk(ADC_clk_sample),
-      .adc_write_mask(adc_write_mask),
-      .adc_capture_go(adc_capture_go), //Set to '1' to start capture, keep at 1 until adc_capture_stop goes high
-      .adc_capture_stop(adc_capture_done),
-      .arm_i(armed),
+      .adc_datain               (ADC_data_tofifo),
+      .adc_sampleclk            (ADC_clk_sample),
+      .adc_write_mask           (adc_write_mask),
+      .adc_capture_go           (adc_capture_go), //Set to '1' to start capture, keep at 1 until adc_capture_stop goes high
+      .adc_capture_stop         (adc_capture_done),
+      .arm_i                    (armed),
 
-      //DDR to USB Read Interface
-      .clk_usb(clk_usb),
-      .fifo_read_fifoen(ddrfifo_rd_en),
-      .fifo_read_fifoempty(ddrfifo_empty),
-      .fifo_read_data(ddrfifo_dout),
+      .clk_usb                  (clk_usb),
+      .fifo_read_fifoen         (ddrfifo_rd_en),
+      .fifo_read_fifoempty      (ddrfifo_empty),
+      .fifo_read_data           (ddrfifo_dout),
 
-      .presample_i(presamples),
-      .max_samples_i(maxsamples),
-      .max_samples_o(maxsamples_limit),
-      .samples_o(samples_cnt),
-      .downsample_i(downsample),
+      .presample_i              (presamples),
+      .max_samples_i            (maxsamples),
+      .max_samples_o            (maxsamples_limit),
+      .samples_o                (samples_cnt),
+      .downsample_i             (downsample),
 
-      .fifo_overflow(reg_status[7]),
-      .stream_mode(fifo_stream)
-
-`ifdef CHIPSCOPE
-      ,.chipscope_control(chipscope_control)
-`endif
+      .fifo_overflow            (reg_status[7]),
+      .stream_mode              (fifo_stream)
    );
 
 

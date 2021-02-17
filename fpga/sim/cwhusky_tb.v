@@ -5,7 +5,7 @@ module cwhusky_tb();
 
 
    parameter pCLK_PERIOD = 10;
-   parameter pTIMEOUT_CYCLES = 10000;
+   parameter pTIMEOUT_CYCLES = 1000;
    parameter pADDR_WIDTH = 8;
 
    reg                  clk_usb;
@@ -70,11 +70,22 @@ module cwhusky_tb();
       read_1byte('h4, rdata);
       $display("Got %h", rdata);
 
-      rw_lots_bytes('d10);
-      for (i = 0; i < 6; i = i + 1) begin
+      //rw_lots_bytes('d10);
+      //for (i = 0; i < 6; i = i + 1) begin
+      //   read_next_byte(rdata);
+      //   $display("%2d: %2h", i, rdata);
+      //end
+
+      write_1byte('h1, 8'h8); // arm
+      write_1byte('h1, 8'h48); // trigger now
+
+      #(pCLK_PERIOD*100);
+      rw_lots_bytes('d3);
+      for (i = 0; i < 20; i = i + 1) begin
          read_next_byte(rdata);
          $display("%2d: %2h", i, rdata);
       end
+
 
    end
 
@@ -110,6 +121,7 @@ module cwhusky_tb();
 
 cwhusky_top U_dut (  
     .clk_usb            (clk_usb      ),
+    //.ADC_clk_fb         (clk_usb      ),
     .LED_CLK1FAIL       (LED_CLK1FAIL ),
     .LED_CLK2FAIL       (LED_CLK2FAIL ),
     .LED_ARMED          (LED_ARMED    ),
@@ -142,7 +154,10 @@ cwhusky_top U_dut (
     .target_hs1         (target_hs1   ),
     .target_hs2         (target_hs2   ),
     .FPGA_TRIGOUT       (FPGA_TRIGOUT ),
-    .USBIOHS2           (USBIOHS2     )
+    .USBIOHS2           (USBIOHS2     ),
+    .ADC_OVR_SDOUT      (1'b0         ),
+    .FPGA_CDOUT         (1'b0         )
+
 );
 
 
