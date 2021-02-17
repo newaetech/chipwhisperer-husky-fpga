@@ -17,4 +17,4 @@ cwhusky_tb.v
 ../hdl/cwhusky_top.v
 ../hdl/openadc_interface.v
 ../hdl/clock_managment_advanced.v
-
+../hdl/cdc_pulse.v

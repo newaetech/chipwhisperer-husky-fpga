@@ -5,7 +5,7 @@ module cwhusky_tb();
 
 
    parameter pCLK_PERIOD = 10;
-   parameter pTIMEOUT_CYCLES = 1000;
+   parameter pTIMEOUT_CYCLES = 2000;
    parameter pADDR_WIDTH = 8;
 
    reg                  clk_usb;
@@ -79,7 +79,7 @@ module cwhusky_tb();
       write_1byte('h1, 8'h8); // arm
       write_1byte('h1, 8'h48); // trigger now
 
-      #(pCLK_PERIOD*100);
+      #(pCLK_PERIOD*1000);
       rw_lots_bytes('d3);
       for (i = 0; i < 20; i = i + 1) begin
          read_next_byte(rdata);

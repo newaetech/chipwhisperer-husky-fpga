@@ -63,7 +63,8 @@ module fifo_top_husky(
 
     reg                 arm_r;
     reg                 arm_r2;
-    reg                 fifo_rst;
+    reg                 arm_fifo_rst_adc;
+    wire                arm_fifo_rst_usb;
 
     assign stream_write = (stream_mode) ? adc_capture_go : 1'b1; //In stream mode we don't write until trigger
     assign fifo_overflow = fifo_overflow_reg;
@@ -77,7 +78,7 @@ module fifo_top_husky(
     assign downsample_max = (downsample_ctr == downsample_i) ? 1'b1 : 'b0;
 
     always @(posedge adc_sampleclk) begin
-       if ((fifo_rst == 1'b1) || (adc_capture_go == 1'b0)) begin
+       if ((arm_fifo_rst_adc == 1'b1) || (adc_capture_go == 1'b0)) begin
           downsample_ctr <= 13'd0;
        end else begin
           if (downsample_max)
@@ -109,15 +110,11 @@ module fifo_top_husky(
     */
     assign adc_capture_stop_reg = 1'b0;
 
-    always@(posedge adc_sampleclk) begin
+    always @(posedge adc_sampleclk) begin
        arm_r <= arm_i;
        arm_r2 <= arm_r;
-       fifo_rst <= ~arm_r2 & arm_r;
-       // TODO: pass fifo_rst to FIFO; extend it to 5 cycles too
-    end
-
-    always @(posedge adc_sampleclk) begin
-       if (fifo_rst)
+       arm_fifo_rst_adc <= ~arm_r2 & arm_r;
+       if (arm_fifo_rst_adc)
           fifo_capture_en <= 1'b1;
        else if (adc_capture_stop_int)
           fifo_capture_en <= 1'b0;
@@ -136,16 +133,51 @@ module fifo_top_husky(
 
     assign fast_fifo_wr = adcfifo_wr_en & stream_write & adc_write_mask & reset_done;
 
-    reg reset_done;
-    reg [7:0] reset_r;
+    // Xilinx FIFO is very particular about its reset: it must be wide enough
+    // and the FIFO shouldn't be accessed for some time after reset has been
+    // released. USB (slow) clock is 96 MHz, ADC (fast) clock is anywhere from
+    // 5 to 200 MHz.  So we make the FIFO reset four 5 MHz cycles long = 76 USB
+    // clocks, and prevent FIFO access for thiry 5 MHz cycles = 570 USB clocks
+    // after reset. (Ref: Xilinx PG057 v13.2, p.129).
 
-    always @(posedge adc_sampleclk) reset_r <= {reset_r[6:0], reset};
-    always @(posedge adc_sampleclk) begin
-       if (reset)
+   cdc_pulse U_fifo_rst_cdc (
+      .reset_i       (reset),
+      .src_clk       (adc_sampleclk),
+      .src_pulse     (arm_fifo_rst_adc),
+      .dst_clk       (clk_usb),
+      .dst_pulse     (arm_fifo_rst_usb)
+   );
+
+    wire fifo_rst_start = arm_fifo_rst_usb || (reset && ~reset_r);
+
+    reg reset_r;
+    reg [6:0] reset_hi_count;
+    reg [9:0] reset_lo_count;
+    reg fifo_rst;
+    reg reset_done;
+    always @(posedge clk_usb) begin
+       reset_r <= reset;
+       if (fifo_rst_start) begin
+          fifo_rst <= 1'b1;
+          reset_hi_count <= 0;
+          reset_lo_count <= 1;
           reset_done <= 1'b0;
-       else begin
-          if (reset_r[7] & !reset_r[6])
+       end
+       else if (fifo_rst) begin
+          if (reset_hi_count < 76)
+             reset_hi_count <= reset_hi_count + 1;
+          else begin
+             reset_hi_count <= 0;
+             fifo_rst <= 0;
+          end
+       end
+       else if (reset_lo_count > 0) begin
+          if (reset_lo_count < 576)
+             reset_lo_count <= reset_lo_count + 1;
+          else begin
+             reset_lo_count <= 0;
              reset_done <= 1'b1;
+          end
        end
     end
 
@@ -164,7 +196,6 @@ module fifo_top_husky(
           if (adc_capture_go) begin
              if (!fast_fifo_empty && !slow_fifo_full) begin
                 fast_fifo_rd <= 1'b1;
-                //slow_fifo_din <= {slow_fifo_din[23:0], fast_fifo_dout};
                 if (fast_read_count < 2) begin
                    fast_read_count <= fast_read_count + 1;
                    slow_fifo_prewr <= 1'b0;
@@ -216,7 +247,7 @@ module fifo_top_husky(
     `else
        adc_fast_fifo U_adc_fast_fifo(
           .clk          (adc_sampleclk),
-          .rst          (reset),
+          .rst          (fifo_rst),
           .din          (adc_datain),
           .wr_en        (fast_fifo_wr),
           .rd_en        (fast_fifo_rd),
@@ -228,7 +259,7 @@ module fifo_top_husky(
        );
 
        usb_slow_fifo U_usb_slow_fifo(
-          .rst          (reset),
+          .rst          (fifo_rst),
           .wr_clk       (adc_sampleclk),
           .rd_clk       (clk_usb),
           .din          (slow_fifo_din),
