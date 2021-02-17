@@ -39,7 +39,6 @@ module cwhusky_top(
     USERIO
     VDBSPWM (to AD8330)
     */
-
     output wire         ADC_SCLK,
     output wire         ADC_SDATA,
     output wire         ADC_SEN,
@@ -47,10 +46,11 @@ module cwhusky_top(
     output wire         ADC_DFS,
     output wire         ADC_OE,
     input wire          ADC_OVR_SDOUT,
-
+    
     //input wire          FPGA_CCLK,
     input wire          FPGA_CDOUT, /* Input FROM SAM3U */
     output wire         FPGA_CDIN, /* Output TO SAM3U */
+    
     input  wire         SAM_MOSI,
     output wire         SAM_MISO,
     input  wire         SAM_SPCK,

@@ -99,7 +99,7 @@ set_property PACKAGE_PIN R7 [get_ports SAM_MISO]
 set_property PACKAGE_PIN T8 [get_ports SAM_SPCK]
 set_property PACKAGE_PIN T9 [get_ports SAM_CS]
 
-# SAM3U - USART (config pins)
+#SAM3U - USART (config pins)
 set_property PACKAGE_PIN J13 [get_ports FPGA_CDIN]
 set_property PACKAGE_PIN J14 [get_ports FPGA_CDOUT]
 
