@@ -79,11 +79,24 @@ set_property PACKAGE_PIN F5 [get_ports target_hs1]
 set_property PACKAGE_PIN R15 [get_ports FPGA_TRIGOUT]
 set_property PACKAGE_PIN N14 [get_ports USBIOHS2]
 
+# SAM3U - SPI
 set_property PACKAGE_PIN T7 [get_ports SAM_MOSI]
 set_property PACKAGE_PIN R7 [get_ports SAM_MISO]
 set_property PACKAGE_PIN T8 [get_ports SAM_SPCK]
 set_property PACKAGE_PIN T9 [get_ports SAM_CS]
 
+#SAM3U - USART (config pins)
+set_property PACKAGE_PIN J13 [get_ports FPGA_CDIN]
+set_property PACKAGE_PIN J14 [get_ports FPGA_CDOUT]
+
+#ADC - control
+set_property PACKAGE_PIN A9 [get_ports ADC_SCLK]
+set_property PACKAGE_PIN B9 [get_ports ADC_SDATA]
+set_property PACKAGE_PIN A8 [get_ports ADC_SEN]
+set_property PACKAGE_PIN A10 [get_ports ADC_RESET]
+set_property PACKAGE_PIN G12 [get_ports ADC_DFS]
+set_property PACKAGE_PIN H12 [get_ports ADC_OE]
+set_property PACKAGE_PIN G16 [get_ports ADC_OVR_SDOUT]
 
 
 # No spec for these, seems sensible:
