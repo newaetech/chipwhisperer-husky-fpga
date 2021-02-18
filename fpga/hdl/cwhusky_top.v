@@ -32,9 +32,6 @@ module cwhusky_top(
 
     /* ADC Interface TODO-later
     input wire [9:0]    ADC_Data,
-    input wire          ADC_OR,         // XXX unused
-    output wire         amp_gain,
-    output wire         amp_hilo,
 
     TODO: 
     VMAG_Dx
@@ -48,11 +45,11 @@ module cwhusky_top(
     output wire         ADC_DFS,
     output wire         ADC_OE,
     input wire          ADC_OVR_SDOUT,
-    
+
     //input wire          FPGA_CCLK,
     input wire          FPGA_CDOUT, /* Input FROM SAM3U */
     output wire         FPGA_CDIN, /* Output TO SAM3U */
-    
+
     input  wire         SAM_MOSI,
     output wire         SAM_MISO,
     input  wire         SAM_SPCK,
@@ -163,8 +160,9 @@ module cwhusky_top(
 
    wire [7:0] read_data_openadc;
    wire [7:0] read_data_cw;
+   wire [7:0] read_data_adc;
    wire [7:0] read_data_glitch;
-   assign read_data = read_data_openadc | read_data_cw | read_data_glitch;
+   assign read_data = read_data_openadc | read_data_cw | read_data_adc | read_data_glitch;
 
    wire ext_trigger;
    wire extclk_mux;
@@ -237,8 +235,8 @@ module cwhusky_top(
         .ADC_clk_feedback(ADC_clk_fb),
         .DUT_CLK_i(extclk_mux),
         .DUT_trigger_i(ext_trigger),
-        .amp_gain(amp_gain),
-        .amp_hilo(amp_hilo),
+        .amp_gain(),
+        .amp_hilo(),
         .clkgen(clkgen),
 
         .reg_address(reg_address),
@@ -257,6 +255,29 @@ module cwhusky_top(
    wire enable_output_pdic;
    wire output_pdic;
 
+   reg_husky_adc #(
+        .pBYTECNT_SIZE  (pBYTECNT_SIZE)
+   ) U_reg_husky_adc (
+        .reset_i        (reg_rst),
+        .clk_usb        (clk_usb_buf),
+        .reg_address    (reg_address[5:0]), 
+        .reg_bytecnt    (reg_bytecnt), 
+        .reg_datao      (read_data_adc), 
+        .reg_datai      (write_data), 
+        .reg_read       (reg_read), 
+        .reg_write      (reg_write), 
+        .reg_addrvalid  (reg_addrvalid), 
+
+        .ADC_RESET      (ADC_RESET    ),
+        .ADC_SDATA      (ADC_SDATA    ),
+        .ADC_SEN        (ADC_SEN      ),
+        .ADC_DFS        (ADC_DFS      ),
+        .ADC_OE         (ADC_OE       ),
+        .ADC_SCLK       (ADC_SCLK     ),
+        .ADC_OVR_SDOUT  (ADC_OVR_SDOUT)
+   );
+
+
    reg_chipwhisperer  #(
         .pBYTECNT_SIZE  (pBYTECNT_SIZE)
    ) reg_chipwhisperer (
@@ -269,6 +290,7 @@ module cwhusky_top(
         .reg_read(reg_read), 
         .reg_write(reg_write), 
         .reg_addrvalid(reg_addrvalid), 
+
         .target_hs1(target_hs1),
         .target_hs2(target_hs2),
         .extclk_o(extclk_mux),

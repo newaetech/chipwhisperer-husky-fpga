@@ -71,6 +71,17 @@ module cwhusky_tb();
       read_1byte('h4, rdata);
       $display("Got %h", rdata);
 
+      write_1byte('d60, 'h41);
+      write_1byte('d60, 'h01);
+      write_1byte('d60, 'h00);
+      write_1byte('d60, 'h11);
+      write_1byte('d60, 'h10);
+      write_1byte('d60, 'h01);
+      write_1byte('d60, 'h00);
+      write_1byte('d60, 'h11);
+      write_1byte('d60, 'h10);
+      write_1byte('d60, 'h41);
+
       write_1byte('h1, 8'h8); // arm
       write_1byte('h1, 8'h48); // trigger now
 
