@@ -25,12 +25,14 @@ module cwhusky_top(
     input wire          FPGA_BONUS3,
     input wire          FPGA_BONUS4,
 
-    //input wire          ADC_clk_fb,
+    input wire          ADC_clk_fbp,
+    input wire          ADC_clk_fbn,
+    output wire         ADC_CLKP,
+    output wire         ADC_CLKN,
 
     /* ADC Interface TODO-later
     input wire [9:0]    ADC_Data,
     input wire          ADC_OR,         // XXX unused
-    output wire         ADC_clk_out,
     output wire         amp_gain,
     output wire         amp_hilo,
 
@@ -137,13 +139,15 @@ module cwhusky_top(
 
    wire reset_intermediate;
    wire clk_usb_buf;
+   wire ADC_clk_fb;
 
    `ifdef __ICARUS__
-   assign clk_usb_buf = clk_usb;
+      assign clk_usb_buf = clk_usb;
    `else
-   IBUFG IBUFG_inst (
-        .O(clk_usb_buf),
-        .I(clk_usb) );
+      IBUFG IBUFG_usb_inst (
+         .O(clk_usb_buf),
+         .I(clk_usb)
+      );
    `endif
 
    wire cmdfifo_isout;
@@ -192,19 +196,26 @@ module cwhusky_top(
    assign cmdfifo_din = USB_Data;
 
 
-   // TODO: more hearbeats for initial bringup
    reg [24:0] usb_hearbeat;
    always @(posedge clk_usb_buf) usb_hearbeat <= usb_hearbeat +  25'd1;
 
    reg [24:0] clkgen_heartbeat;
    always @(posedge clkgen) clkgen_heartbeat <= clkgen_heartbeat +  25'd1;
 
+   reg [24:0] adc_fb_heartbeat;
+   always @(posedge ADC_clk_fb) adc_fb_heartbeat <= adc_fb_heartbeat +  25'd1;
+
+   reg [24:0] adc_out_heartbeat;
+   always @(posedge ADC_clk_out) adc_out_heartbeat <= adc_out_heartbeat +  25'd1;
+
+
    assign LED_ARMED = usb_hearbeat[24];
    assign LED_CAP = clkgen_heartbeat[24];
 
-   //assign LED_CLK1FAIL = usb_hearbeat[23];
-   //assign LED_CLK2FAIL = clkgen_heartbeat[23];
-   wire ADC_clk_fb;
+   // TODO-temporary:
+   assign LED_CLK1FAIL = adc_fb_heartbeat[24];
+   assign LED_CLK2FAIL = adc_out_heartbeat[24];
+
 
    openadc_interface #(
         .pBYTECNT_SIZE  (pBYTECNT_SIZE)
@@ -217,10 +228,10 @@ module cwhusky_top(
         //.LED_armed(LED_ARMED),
         .LED_hbeat(),
         .LED_armed(),
-        .LED_ADCDCMUnlock(LED_CLK1FAIL),
-        .LED_CLKGENDCMUnlock(LED_CLK2FAIL),
-        //.LED_ADCDCMUnlock(),
-        //.LED_CLKGENDCMUnlock(),
+        //.LED_ADCDCMUnlock(LED_CLK1FAIL),
+        //.LED_CLKGENDCMUnlock(LED_CLK2FAIL),
+        .LED_ADCDCMUnlock(),
+        .LED_CLKGENDCMUnlock(),
         .ADC_DDR_data(ADC_DDR_data),
         .ADC_clk_out(ADC_clk_out),
         .ADC_clk_feedback(ADC_clk_fb),
@@ -342,6 +353,57 @@ module cwhusky_top(
                        (enable_avrprog) ? SAM_SPCK : 1'bZ;
 
    assign SAM_MISO = (enable_avrprog) ? target_MISO : 1'bZ; //ext_miso;
+
+
+   // generate ADC output differential clock
+   `ifdef __ICARUS__
+      assign ADC_CLKP = ADC_clk_out;
+      assign ADC_CLKN = ADC_clk_out;
+
+   `else
+      wire adc_clk_out_oddr;
+      ODDR  #(
+         .DDR_CLK_EDGE     ("OPPOSITE_EDGE"),
+         .INIT             (1'b0),
+         .SRTYPE           ("SYNC")
+      ) U_ODDR_adc_clk_out (
+         .Q                (adc_clk_out_oddr),
+         .C                (ADC_clk_out),
+         .CE               (1'b1),
+         .D1               (1'b1),
+         .D2               (1'b0),
+         .R                (1'b0),
+         .S                (1'b0)
+      );
+
+      OBUFDS #(
+         // TODO: are these the best settings?
+         .IOSTANDARD       ("LVDS_25"),
+         .SLEW             ("FAST")
+      ) U_OBUFDS_adc_clk_out (
+         .O                (ADC_CLKP),
+         .OB               (ADC_CLKN),
+         .I                (adc_clk_out_oddr)
+      );
+   `endif
+
+
+   // take in ADC input differential clock
+   `ifdef __ICARUS__
+      assign ADC_clk_fb = ADC_clk_fbp;
+
+   `else
+      IBUFDS #(
+         .DIFF_TERM        ("FALSE"),
+         .IBUF_LOW_PWR     ("FALSE"),
+         .IOSTANDARD       ("LVDS_25")
+      ) U_IBUFDS_adc_clk_fb (
+         .I                (ADC_clk_fbp),
+         .IB               (ADC_clk_fbn),
+         .O                (ADC_clk_fb)
+      );
+   `endif
+
 
 
    /*

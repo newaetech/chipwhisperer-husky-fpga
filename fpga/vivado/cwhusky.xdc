@@ -1,14 +1,23 @@
 set_property IOSTANDARD LVCMOS33 [get_ports *]
+set_property IOSTANDARD LVCMOS25 [get_ports ADC*]
+set_property IOSTANDARD LVDS_25 [get_ports ADC_clk_fb*]
+set_property IOSTANDARD LVDS_25 [get_ports ADC_CLK*]
 set_property CFGBVS VCCO [current_design]
 set_property CONFIG_VOLTAGE 3.3 [current_design]
+#set_property CONFIG_VOLTAGE 2.5 [current_design]
 
 
 create_clock -period 10.400 -name clk_usb -waveform {0.000 5.200} [get_nets clk_usb]
-#create_clock -period 5.000 -name ADC_clk_fb -waveform {0.000 2.500} [get_nets ADC_clk_fb]
+create_clock -period 5.000 -name ADC_clk_fb -waveform {0.000 2.500} [get_nets ADC_clk_fb]
 
+# TODO: these are temporary
 set_clock_groups -asynchronous \
                  -group [get_clocks clk_usb] \
                  -group [get_clocks ADC_clk_times4]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks clk_usb] \
+                 -group [get_clocks ADC_clk_fb]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks clk_usb] \
@@ -111,6 +120,14 @@ set_property PACKAGE_PIN A10 [get_ports ADC_RESET]
 set_property PACKAGE_PIN G12 [get_ports ADC_DFS]
 set_property PACKAGE_PIN H12 [get_ports ADC_OE]
 set_property PACKAGE_PIN G16 [get_ports ADC_OVR_SDOUT]
+
+# output from FPGA:
+set_property PACKAGE_PIN J15 [get_ports ADC_CLKP]
+set_property PACKAGE_PIN J16 [get_ports ADC_CLKN]
+
+# input to FPGA:
+set_property PACKAGE_PIN E12 [get_ports ADC_clk_fbp]
+set_property PACKAGE_PIN E13 [get_ports ADC_clk_fbn]
 
 
 # No spec for these, seems sensible:

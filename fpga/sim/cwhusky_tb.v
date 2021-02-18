@@ -59,22 +59,17 @@ module cwhusky_tb();
       usb_wrn = 1;
       usb_cen = 1;
 
-      //#(pCLK_PERIOD*10) reset = 1;
-      //#(pCLK_PERIOD*10) reset = 0;
       #(pCLK_PERIOD*100);
+
+      // manually reset:
       write_1byte('h1, 8'h0);
       write_1byte('h1, 8'h1);
       write_1byte('h1, 8'h0);
+      
       write_1byte('h4, 8'ha5);
       read_1byte('h0, rdata);
       read_1byte('h4, rdata);
       $display("Got %h", rdata);
-
-      //rw_lots_bytes('d10);
-      //for (i = 0; i < 6; i = i + 1) begin
-      //   read_next_byte(rdata);
-      //   $display("%2d: %2h", i, rdata);
-      //end
 
       write_1byte('h1, 8'h8); // arm
       write_1byte('h1, 8'h48); // trigger now
@@ -85,7 +80,6 @@ module cwhusky_tb();
          read_next_byte(rdata);
          $display("%2d: %2h", i, rdata);
       end
-
 
    end
 
@@ -121,7 +115,10 @@ module cwhusky_tb();
 
 cwhusky_top U_dut (  
     .clk_usb            (clk_usb      ),
-    //.ADC_clk_fb         (clk_usb      ),
+    .ADC_clk_fbp        (clk_usb      ),
+    .ADC_clk_fbn        (clk_usb      ),
+    .ADC_CLKP           (             ),
+    .ADC_CLKN           (             ),
     .LED_CLK1FAIL       (LED_CLK1FAIL ),
     .LED_CLK2FAIL       (LED_CLK2FAIL ),
     .LED_ARMED          (LED_ARMED    ),

@@ -20,11 +20,11 @@ module clock_managment_advanced(
     input  wire           clk_usb,     //System clock
     input  wire           clk_ext,     //External clock, aka HS1
 
-    /* Clock to ADC */
+    /* Clock to ADC (not used by CW) */
     output wire           adc_clk_out, //Output clock to ADC
-`ifdef ADCCLK_FEEDBACK
+
+    /* Clock from ADC (used for sampling)*/
     input  wire           adc_clk_feedback,
-`endif
 
     /* Clock to DUT */
     output wire           clkgen,
@@ -268,44 +268,10 @@ module clock_managment_advanced(
        );
     `endif
 
+    assign adc_clk_out = ADC_clk_sample;
 
-`ifdef ADCCLK_FEEDBACK
-        `ifdef __ICARUS__
-            //assign systemsample_clk = adc_clk_feedback;
-            assign systemsample_clk = ADC_clk_sample; //TODO-temp! YYY
-        `else
-            IBUFG IBUFG_inst (
-            .O(systemsample_clk),
-            //.I(adc_clk_feedback) );
-            .I(ADC_clk_sample) ); // YYY
-        `endif
-`else
-        assign systemsample_clk = ADC_clk_sample;
-`endif
-
-        `ifdef __ICARUS__
-           assign adc_clk_out = ADC_clk_sample;
-        `else
-           //Output clock using DDR2 block (recommended for Spartan-6 device)
-           // TODO XXX is this also needed for Artix7?
-           ODDR2 #(
-              // The following parameters specify the behavior
-              // of the component.
-              .DDR_ALIGNMENT("NONE"), // Sets output alignment to "NONE", "C0" or "C1"
-              .INIT(1'b0),    // Sets initial state of the Q output to 1'b0 or 1'b1
-              .SRTYPE("SYNC") // Specifies "SYNC" or "ASYNC" set/reset
-           )
-           ODDR2_inst (
-              .Q(adc_clk_out),   // 1-bit DDR output data
-              .C0(ADC_clk_sample), // 1-bit clock input
-              .C1(~ADC_clk_sample), // 1-bit clock input
-              .CE(1'b1), // 1-bit clock enable input
-              .D0(1'b1), // 1-bit data input (associated with C0)
-              .D1(1'b0), // 1-bit data input (associated with C1)
-              .R(1'b0),   // 1-bit reset input
-              .S(1'b0)    // 1-bit set input
-           );
-        `endif
+    assign systemsample_clk = adc_clk_feedback;
+    //assign systemsample_clk = ADC_clk_sample; //TODO-temp! YYY
 
 endmodule
 `default_nettype wire

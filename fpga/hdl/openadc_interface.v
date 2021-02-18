@@ -142,59 +142,11 @@ module openadc_interface #(
    end
 
 
-   wire [11:0] ADC_data_delayed;
-   genvar index;
-   generate
-   for (index=0; index < 12; index=index+1)
-      begin: gen_iodelay_adcdata
-`ifdef ADCCLK_FEEDBACK
-         //If we have feedback clock shouldn't need IODELAY2
-         assign ADC_data_delayed[index] = ADC_data[index];
-`elsif __ICARUS__
-         assign ADC_data_delayed[index] = ADC_data[index];
-
-`else
-         assign ADC_data_delayed[index] = ADC_data[index];
-         /* TODO XXX remove?
-         IODELAY2 #(
-            .COUNTER_WRAPAROUND("WRAPAROUND"), // "STAY_AT_LIMIT" or "WRAPAROUND"
-            .DATA_RATE("SDR"), // "SDR" or "DDR"
-            .DELAY_SRC("IDATAIN"), // "IO", "ODATAIN" or "IDATAIN"
-            .IDELAY2_VALUE(0), // Delay value when IDELAY_MODE="PCI" (0-255)
-            .IDELAY_MODE("NORMAL"), // "NORMAL" or "PCI"
-            .IDELAY_TYPE("DEFAULT"), // "FIXED", "DEFAULT", "VARIABLE_FROM_ZERO", "VARIABLE_FROM_HALF_MAX"
-            .IDELAY_VALUE(20), // Amount of taps for fixed input delay (0-255)
-            .ODELAY_VALUE(0), // Amount of taps fixed output delay (0-255)
-            .SERDES_MODE("NONE"), // "NONE", "MASTER" or "SLAVE"
-            .SIM_TAPDELAY_VALUE(75) // Per tap delay used for simulation in ps
-         )
-         IODELAY2_inst (
-            //.BUSY(), // 1-bit output: Busy output after CAL
-            .DATAOUT(), // 1-bit output: Delayed data output to ISERDES/input register
-            .DATAOUT2(ADC_data_delayed[index]), // 1-bit output: Delayed data output to general FPGA fabric
-            .DOUT(), // 1-bit output: Delayed data output
-            .TOUT(), // 1-bit output: Delayed 3-state output
-            //.CAL(), // 1-bit input: Initiate calibration input
-            //.CE(), // 1-bit input: Enable INC input
-            //.CLK(), // 1-bit input: Clock input
-            .IDATAIN(ADC_data[index]), // 1-bit input: Data input (connect to top-level port or I/O buffer)
-            //.INC(), // 1-bit input: Increment / decrement input
-            //.IOCLK0(), // 1-bit input: Input from the I/O clock network
-            //.IOCLK1(), // 1-bit input: Input from the I/O clock network
-            .ODATAIN() // 1-bit input: Output data input from output register or OSERDES2.
-            //RST(), // 1-bit input: Reset to zero or 1/2 of total delay period
-            //.T() // 1-bit input: 3-state input signal
-         );
-         */
-`endif
-      end
-   endgenerate
-
    reg [11:0] ADC_data_tofifo = 0;
    wire [9:0] trigger_level; // TODO: 12 bits
 
    always @(posedge ADC_clk_sample) begin
-      //ADC_data_tofifo <= ADC_data_delayed;
+      //ADC_data_tofifo <= ADC_data;
 
       //Input Validation Test #1: Uncomment the following
       //ADC_data_tofifo <= 12'h3AA;
@@ -359,9 +311,7 @@ module openadc_interface #(
       .clk_usb(clk_usb),
       .clk_ext(DUT_CLK_i),   
       .adc_clk_out(ADC_clk_out),
-`ifdef ADCCLK_FEEDBACK
       .adc_clk_feedback(ADC_clk_feedback),
-`endif
       .clkgen(clkgen),
       .clkadc_source(ADC_clk_selection),
       .clkgen_source(clkgen_selection),
