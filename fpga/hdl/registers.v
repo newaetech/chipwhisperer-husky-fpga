@@ -242,6 +242,8 @@
 `define RETSAMPLES_ADDR         18
 `define TRIGGER_DUR_ADDR        20
 `define OFFSET_ADDR             26
+`define DATA_SOURCE_SELECT      27
+`define RESET                   28
 
 `define REGISTER_VERSION 1
 

@@ -82,7 +82,8 @@ module reg_openadc_adcfifo #(
    always @(*) begin
           if (reg_read) begin
              case (reg_address)
-                `ADCREAD_ADDR: reg_datao_reg <= (reg_bytecnt == 0) ? 8'hAC : fifo_data; 
+                //`ADCREAD_ADDR: reg_datao_reg <= (reg_bytecnt == 0) ? 8'hAC : fifo_data; 
+                `ADCREAD_ADDR: reg_datao_reg <= fifo_data;  // TODO: unsure why AC byte was needed? should I keep it?
                 default: reg_datao_reg <= 0;
              endcase
           end

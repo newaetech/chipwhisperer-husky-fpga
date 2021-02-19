@@ -5,7 +5,7 @@ module cwhusky_tb();
 
 
    parameter pCLK_PERIOD = 10;
-   parameter pTIMEOUT_CYCLES = 2000;
+   parameter pTIMEOUT_CYCLES = 5000;
    parameter pADDR_WIDTH = 8;
 
    reg                  clk_usb;
@@ -61,11 +61,12 @@ module cwhusky_tb();
 
       #(pCLK_PERIOD*100);
 
-      // manually reset:
-      write_1byte('h1, 8'h0);
-      write_1byte('h1, 8'h1);
-      write_1byte('h1, 8'h0);
-      
+      // manually reset with new register:
+      write_1byte('d28, 8'h1);
+      write_1byte('d28, 8'h0);
+      //write_1byte('h1, 8'h1);
+      //write_1byte('h1, 8'h0);
+
       write_1byte('h4, 8'ha5);
       read_1byte('h0, rdata);
       read_1byte('h4, rdata);
@@ -82,7 +83,17 @@ module cwhusky_tb();
       write_1byte('d60, 'h10);
       write_1byte('d60, 'h41);
 
+      // reset again:
+      write_1byte('d28, 8'h1);
+      write_1byte('d28, 8'h0);
+      //write_1byte('h1, 8'h1);
+      //write_1byte('h1, 8'h0);
+      #(pCLK_PERIOD*1000);
+
+      write_1byte('d27, 8'h0); // data source select
+
       write_1byte('h1, 8'h8); // arm
+      #(pCLK_PERIOD*1000);
       write_1byte('h1, 8'h48); // trigger now
 
       #(pCLK_PERIOD*1000);

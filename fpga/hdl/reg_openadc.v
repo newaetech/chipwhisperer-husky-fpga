@@ -86,6 +86,7 @@ module reg_openadc #(
    input wire        clkgen_done,
 
    /* Additional ADC control lines */
+   output reg         data_source_select,
    output wire [2:0]  adc_clk_src_o,
    output wire        clkgen_src_o,
    output wire        clkblock_dcm_reset_o,
@@ -145,6 +146,7 @@ module reg_openadc #(
    wire [31:0] system_frequency = 32'd`SYSTEM_CLK;
    wire reset_fromreg;
    wire [31:0] buildtime;
+   reg new_reset;
 
    assign version_data[47:16] = 32'b0;
    assign version_data[15:11] = 5'd`HW_TYPE;
@@ -164,7 +166,8 @@ module reg_openadc #(
          phase_in <= phase_i;
    end
 
-   assign reset_fromreg = registers_settings[0];
+   //assign reset_fromreg = registers_settings[0] || new_reset;
+   assign reset_fromreg = new_reset;
    assign hilow = registers_settings[1];
    assign trigger_mode = registers_settings[2];
    assign cmd_arm_usb = registers_settings[3];
@@ -219,7 +222,8 @@ module reg_openadc #(
 
    reg [7:0] reset_r;
    always @(posedge clk_usb) reset_r <= {reset_r[6:0], reset_fromreg};
-   assign reset_reg_extended = |reset_r;
+   //assign reset_reg_extended = |reset_r;
+   assign reset_reg_extended = reset_fromreg;
 
    always @(posedge clk_usb) begin
       if (extclk_locked == 0) begin
@@ -277,6 +281,7 @@ module reg_openadc #(
             `SYSTEMCLK_ADDR: begin reg_datao_valid_reg <= 1; end
             `TRIGGER_DUR_ADDR: begin reg_datao_valid_reg <= 1; end
             `FPGA_BUILDTIME_ADDR: begin reg_datao_valid_reg <= 1; end
+            `DATA_SOURCE_SELECT: begin reg_datao_valid_reg <= 1; end
             default: begin reg_datao_valid_reg <= 0; end
          endcase
       end else begin
@@ -304,6 +309,7 @@ module reg_openadc #(
                 `SYSTEMCLK_ADDR: reg_datao_reg <= system_frequency[reg_bytecnt*8 +: 8];
                 `TRIGGER_DUR_ADDR: reg_datao_reg <= trigger_length[reg_bytecnt*8 +: 8];
                 `FPGA_BUILDTIME_ADDR: reg_datao_reg <= buildtime[reg_bytecnt*8 +: 8];
+                `DATA_SOURCE_SELECT: reg_datao_reg <= data_source_select;
                 default: reg_datao_reg <= 0;
              endcase
           end
@@ -319,6 +325,7 @@ module reg_openadc #(
          registers_offset <= 0;
          registers_advclocksettings <= 32'h00000102;
          registers_downsample <= 0;
+         data_source_select <= 1; // default to ADC
       end else if (reg_write) begin
          case (reg_address)
             `GAIN_ADDR: registers_gain <= reg_datai;
@@ -329,9 +336,16 @@ module reg_openadc #(
             `PRESAMPLES_ADDR: registers_presamples[reg_bytecnt*8 +: 8] <= reg_datai;
             `OFFSET_ADDR: registers_offset[reg_bytecnt*8 +: 8] <= reg_datai;
             `ADVCLOCK_ADDR: registers_advclocksettings[reg_bytecnt*8 +: 8] <= reg_datai;
+            `DATA_SOURCE_SELECT: data_source_select <= reg_datai[0];
             default: ;
          endcase
       end
+   end
+
+   // it's handy to have a reset-only register, which doesn't get reset when you reset...
+   always @(posedge clk_usb) begin
+      if (reg_write && (reg_address == `RESET))
+         new_reset <= reg_datai[0];
    end
 
    always @(posedge clk_usb) begin
@@ -372,7 +386,8 @@ module reg_openadc #(
 	.clk            (clk_usb),      // input wire clk
 	.probe0         (reset_fromreg),// input wire [0:0]  probe0  
 	.probe1         (reset_o),      // input wire [0:0]  probe1 
-	.probe2         ({24'b0, registers_echo})// input wire [31:0] probe2 
+        .probe2         (new_reset),    // input wire [0:0]  probe2 
+	.probe3         (registers_echo)// input wire [7:0]  probe3 
        );
    `endif
 

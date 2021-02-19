@@ -30,10 +30,8 @@ module cwhusky_top(
     output wire         ADC_CLKP,
     output wire         ADC_CLKN,
 
-    /* ADC Interface TODO-later
-    input wire [9:0]    ADC_Data,
 
-    TODO: 
+    /*  TODO-later:
     VMAG_Dx
     USERIO
     VDBSPWM (to AD8330)
@@ -45,6 +43,20 @@ module cwhusky_top(
     output wire         ADC_DFS,
     output wire         ADC_OE,
     input wire          ADC_OVR_SDOUT,
+    input wire [5:0]    ADC_DP,
+    input wire [5:0]    ADC_DN,
+    //input wire          ADC_D0_P,
+    //input wire          ADC_D0_N,
+    //input wire          ADC_D2_P,
+    //input wire          ADC_D2_N,
+    //input wire          ADC_D4_P,
+    //input wire          ADC_D4_N,
+    //input wire          ADC_D6_P,
+    //input wire          ADC_D6_N,
+    //input wire          ADC_D8_P,
+    //input wire          ADC_D8_N,
+    //input wire          ADC_D10_P,
+    //input wire          ADC_D10_N,
 
     //input wire          FPGA_CCLK,
     input wire          FPGA_CDOUT, /* Input FROM SAM3U */
@@ -119,7 +131,6 @@ module cwhusky_top(
    //wire [63:0] ila_trigbus;
 
    // TEMPORARY, until I/Os are added / cleaned up:
-   wire [11:0]  ADC_DDR_data;
    wire         ADC_clk_out;
    wire         amp_gain;
    wire         amp_hilo;
@@ -168,6 +179,7 @@ module cwhusky_top(
    wire extclk_mux;
    wire clkgen, glitchclk;
    wire enable_avrprog;
+   wire [11:0] ADC_data;
 
    usb_reg_main #(
       .pBYTECNT_SIZE    (pBYTECNT_SIZE)
@@ -230,7 +242,7 @@ module cwhusky_top(
         //.LED_CLKGENDCMUnlock(LED_CLK2FAIL),
         .LED_ADCDCMUnlock(),
         .LED_CLKGENDCMUnlock(),
-        .ADC_DDR_data(ADC_DDR_data),
+        .ADC_data(ADC_data),
         .ADC_clk_out(ADC_clk_out),
         .ADC_clk_feedback(ADC_clk_fb),
         .DUT_CLK_i(extclk_mux),
@@ -426,26 +438,76 @@ module cwhusky_top(
       );
    `endif
 
-
-
    /*
-   assign ila_trigbus[7:0] = USB_D;
-   assign ila_trigbus[15:8] = USB_Addr;
-   assign ila_trigbus[16] = USB_RDn;
-   assign ila_trigbus[17] = USB_WRn;
-   assign ila_trigbus[18] = USB_ALEn;
-   assign ila_trigbus[19] = USB_CEn;
+   wire [1:0] ADC_data;
+   wire ADC_DDR_D0;
 
-   coregen_icon csicon (
-    .CONTROL0(cs_control0) // INOUT BUS [35:0]
+   // TODO: are these the best settings?
+   IBUFDS #(
+      .DIFF_TERM          ("FALSE"),
+      .IBUF_LOW_PWR       ("FALSE"),
+      .IOSTANDARD         ("LVDS_25")
+   ) U_adc_ibufds (
+      .O                  (ADC_DDR_D0),
+      .I                  (ADC_D0_P),
+      .IB                 (ADC_D0_N)
    );
 
-   coregen_ila csila (
-    .CONTROL(cs_control0), // INOUT BUS [35:0]
-    .CLK(clk_usb), // IN
-    .TRIG0(ila_trigbus) // IN BUS [63:0]
+   // TODO: are these the best settings?
+   IDDR #(
+      .DDR_CLK_EDGE     ("OPPOSITE_EDGE"),
+      .INIT_Q1          (0),
+      .INIT_Q2          (0),
+      .SRTYPE           ("SYNC")
+   ) U_adc_iddr (
+      .Q1               (ADC_data[0]),
+      .Q2               (ADC_data[1]),
+      .D                (ADC_DDR_D0),
+      .CE               (1'b1),
+      .C                (ADC_clk_fb),
+      .S                (1'b0),
+      .R                (1'b0)
    );
    */
+
+
+   `ifdef __ICARUS__
+      assign ADC_data = {ADC_DP, ADC_DN};
+   `else
+   wire [5:0] ADC_D;
+   genvar adc_index;
+   generate 
+      for (adc_index = 0; adc_index < 6; adc_index = adc_index + 1) begin: gen_adc_data
+         // TODO: are these the best settings?
+         IBUFDS #(
+            .DIFF_TERM          ("FALSE"),
+            .IBUF_LOW_PWR       ("FALSE"),
+            .IOSTANDARD         ("LVDS_25")
+         ) U_adc_ibufds (
+            .O                  (ADC_D[adc_index]),
+            .I                  (ADC_DP[adc_index]),
+            .IB                 (ADC_DN[adc_index])
+         );
+
+         IDDR #(
+            .DDR_CLK_EDGE     ("OPPOSITE_EDGE"),
+            .INIT_Q1          (0),
+            .INIT_Q2          (0),
+            .SRTYPE           ("SYNC")
+         ) U_adc_iddr (
+            .Q1               (ADC_data[adc_index*2]),
+            .Q2               (ADC_data[adc_index*2+1]),
+            .D                (ADC_D[adc_index]),
+            .CE               (1'b1),
+            .C                (ADC_clk_fb),
+            .S                (1'b0),
+            .R                (1'b0)
+         );
+      end
+   endgenerate
+   `endif
+
+
 
 endmodule
 `default_nettype wire

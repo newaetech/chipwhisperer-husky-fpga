@@ -45,7 +45,7 @@ module openadc_interface #(
     output wire                         LED_CLKGENDCMUnlock, // MMCM for CLKGEN is unlocked
 
     // OpenADC Interface Pins
-    input  wire [11:0]                  ADC_DDR_data,
+    input  wire [11:0]                  ADC_data,
     output wire                         ADC_clk_out,
     input  wire                         ADC_clk_feedback, // Feedback path for ADC Clock. If unused connect to ADC_clk_out
     input  wire                         DUT_CLK_i, // target_hs1
@@ -69,7 +69,6 @@ module openadc_interface #(
     wire        dcm_locked;
     wire        ADC_clk_sample;
 
-    wire [11:0] ADC_data;
 
     wire [8:0] phase_requested;
     wire [8:0] phase_actual;
@@ -84,6 +83,7 @@ module openadc_interface #(
     wire       dcm_gen_locked;
     wire       trigger_source;
     wire       fifo_stream;
+    wire       data_source_select;
 
     assign reset_o = reset;
 
@@ -146,6 +146,7 @@ module openadc_interface #(
    wire [9:0] trigger_level; // TODO: 12 bits
 
    always @(posedge ADC_clk_sample) begin
+      ADC_data_tofifo <= data_source_select? ADC_data : ADC_data_tofifo + 1;
       //ADC_data_tofifo <= ADC_data;
 
       //Input Validation Test #1: Uncomment the following
@@ -154,7 +155,7 @@ module openadc_interface #(
       //Input Validation Test #2: uncomment following, which should
       //put a perfect ramp. Tests FIFO & USB interface for proper
       //syncronization
-      ADC_data_tofifo <= ADC_data_tofifo + 12'd1;
+      //ADC_data_tofifo <= ADC_data_tofifo + 12'd1;
 
       //Input Validation Test #3: used for checking trigger location
       //if (DUT_trigger_i == 0)
@@ -279,6 +280,7 @@ module openadc_interface #(
       .maxsamples_o(maxsamples),
       .samples_i(samples_cnt),
       .downsample_o(downsample),
+      .data_source_select(data_source_select),
       .adc_clk_src_o(ADC_clk_selection),
       .clkgen_src_o(clkgen_selection),
       .clkblock_dcm_reset_o(clockreset),

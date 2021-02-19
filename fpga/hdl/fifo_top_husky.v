@@ -131,7 +131,8 @@ module fifo_top_husky(
        end
     end
 
-    assign fast_fifo_wr = adcfifo_wr_en & stream_write & adc_write_mask & reset_done;
+    // TODO: check on fast_fifo_full is temporary, probably need to detect and flag overflow events
+    assign fast_fifo_wr = adcfifo_wr_en & stream_write & adc_write_mask & reset_done & !fast_fifo_full;
 
     // Xilinx FIFO is very particular about its reset: it must be wide enough
     // and the FIFO shouldn't be accessed for some time after reset has been
@@ -148,7 +149,9 @@ module fifo_top_husky(
       .dst_pulse     (arm_fifo_rst_usb)
    );
 
-    wire fifo_rst_start = arm_fifo_rst_usb || (reset && ~reset_r);
+    //wire fifo_rst_start = arm_fifo_rst_usb || (reset && ~reset_r);
+    wire fifo_rst_start = arm_fifo_rst_usb || reset;
+    reg fifo_rst_start_r;
 
     reg reset_r;
     reg [6:0] reset_hi_count;
@@ -157,13 +160,14 @@ module fifo_top_husky(
     reg reset_done;
     always @(posedge clk_usb) begin
        reset_r <= reset;
-       if (fifo_rst_start) begin
+       fifo_rst_start_r <= fifo_rst_start;
+       if (fifo_rst_start_r) begin
           fifo_rst <= 1'b1;
-          reset_hi_count <= 0;
+          reset_hi_count <= 1;
           reset_lo_count <= 1;
           reset_done <= 1'b0;
        end
-       else if (fifo_rst) begin
+       else if (reset_hi_count > 0) begin
           if (reset_hi_count < 76)
              reset_hi_count <= reset_hi_count + 1;
           else begin
@@ -175,6 +179,7 @@ module fifo_top_husky(
           if (reset_lo_count < 576)
              reset_lo_count <= reset_lo_count + 1;
           else begin
+             reset_hi_count <= 0;
              reset_lo_count <= 0;
              reset_done <= 1'b1;
           end
@@ -193,7 +198,12 @@ module fifo_top_husky(
 
        else begin
           slow_fifo_wr <= slow_fifo_prewr;
-          if (adc_capture_go) begin
+          if (~reset_done) begin
+             fast_fifo_rd <= 0;
+             fast_read_count <= 0;
+             slow_fifo_prewr <= 0;
+          end
+          else if (adc_capture_go) begin
              if (!fast_fifo_empty && !slow_fifo_full) begin
                 fast_fifo_rd <= 1'b1;
                 if (fast_read_count < 2) begin
@@ -289,7 +299,12 @@ module fifo_top_husky(
 	.probe9         (adcfifo_wr_en),        // input wire [0:0]  probe9 
 	.probe10        (stream_write),         // input wire [0:0]  probe10 
 	.probe11        (adc_write_mask),       // input wire [0:0]  probe11 
-	.probe12        (reset_done)            // input wire [0:0]  probe12 
+	.probe12        (reset_done),           // input wire [0:0]  probe12 
+
+	.probe13        (fifo_rst_start_r),     // input wire [0:0]  probe13 
+	.probe14        (reset_hi_count),       // input wire [6:0]  probe14 
+	.probe15        (reset_lo_count),       // input wire [9:0]  probe15 
+	.probe16        (fifo_rst)              // input wire [0:0]  probe16 
        );
 
        ila_slow_fifo U_ila_slow_fifo (
