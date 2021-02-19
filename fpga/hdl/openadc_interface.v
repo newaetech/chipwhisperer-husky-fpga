@@ -142,11 +142,13 @@ module openadc_interface #(
    end
 
 
-   reg [11:0] ADC_data_tofifo = 0;
+   reg [11:0] ADC_data_tofifo;
+   reg [11:0] datacounter = 0;
    wire [9:0] trigger_level; // TODO: 12 bits
 
    always @(posedge ADC_clk_sample) begin
-      ADC_data_tofifo <= data_source_select? ADC_data : ADC_data_tofifo + 1;
+      ADC_data_tofifo <= data_source_select? ADC_data : datacounter;
+      datacounter <= datacounter + 1;
       //ADC_data_tofifo <= ADC_data;
 
       //Input Validation Test #1: Uncomment the following

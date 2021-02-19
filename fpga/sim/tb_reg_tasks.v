@@ -93,7 +93,7 @@ task read_next_byte;
    #1 data = usb_data;
    @(posedge usb_clk);
    usb_rdn = 1;
-   repeat (2) @(posedge usb_clk);
+   repeat (1) @(posedge usb_clk);
    if (pSLOW_READS)
       repeat($urandom_range(2, 20)) @(posedge usb_clk);
 endtask

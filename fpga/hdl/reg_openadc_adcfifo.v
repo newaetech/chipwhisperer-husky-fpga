@@ -108,7 +108,8 @@ module reg_openadc_adcfifo #(
    //always @(reg_read, reg_address, reg_bytecnt) begin
    always @(posedge clk_usb) begin
       reg_read_r <= reg_read;
-      if (reg_read && ~reg_read_r && (reg_address == `ADCREAD_ADDR) && (reg_bytecnt > 16'd0)) begin
+      //if (reg_read && ~reg_read_r && (reg_address == `ADCREAD_ADDR) && (reg_bytecnt > 16'd0)) begin
+      if (reg_read && ~reg_read_r && (reg_address == `ADCREAD_ADDR)) begin
          fifo_rd_en_reg <= 1;
       end else begin
          fifo_rd_en_reg <= 0;
