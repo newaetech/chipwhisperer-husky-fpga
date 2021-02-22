@@ -1,3 +1,5 @@
+ADC_LOW_RES=0
+
 all: compile run
 
 compile:
@@ -6,6 +8,7 @@ compile:
 	-I../hdl \
 	-Wportbind \
 	-Wselect-range \
+	-P cwhusky_tb.pADC_LOW_RES=$(ADC_LOW_RES) \
 
 cwlite:
 	iverilog -ccmdfile_cwlite \

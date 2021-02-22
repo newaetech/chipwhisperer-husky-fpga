@@ -51,7 +51,9 @@ module reg_openadc_adcfifo #(
    /* ADC Fifo Interface */
    input  wire         fifo_empty,
    input  wire [7:0]   fifo_data,
-   output wire         fifo_rd_en
+   output wire         fifo_rd_en,
+   output reg          low_res,
+   output reg          low_res_lsb
 );
 
    wire  reset;
@@ -71,6 +73,7 @@ module reg_openadc_adcfifo #(
           if (reg_addrvalid) begin
              case (reg_address)
                 `ADCREAD_ADDR: begin reg_datao_valid_reg <= 1; end
+                `ADC_LOW_RES: begin reg_datao_valid_reg <= 1; end
                 default: begin reg_datao_valid_reg <= 0; end
              endcase
           end else begin
@@ -88,6 +91,23 @@ module reg_openadc_adcfifo #(
              endcase
           end
    end
+
+   always @(posedge clk_usb) begin
+      if (reset) begin
+         low_res <= 0;
+         low_res_lsb <= 0;
+      end 
+      else if (reg_write) begin
+         case (reg_address)
+            `ADC_LOW_RES: begin
+               low_res <= reg_datai[0];
+               low_res_lsb <= reg_datai[1];
+            end
+            default: ;
+         endcase
+      end
+   end
+
 
 /*
 	 always @(negedge clk_usb, negedge reg_read) begin

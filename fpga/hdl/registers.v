@@ -244,6 +244,7 @@
 `define OFFSET_ADDR             26
 `define DATA_SOURCE_SELECT      27
 `define RESET                   28
+`define ADC_LOW_RES             29
 
 `define REGISTER_VERSION 1
 

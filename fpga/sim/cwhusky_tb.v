@@ -5,8 +5,10 @@ module cwhusky_tb();
 
 
    parameter pCLK_PERIOD = 10;
-   parameter pTIMEOUT_CYCLES = 5000;
+   parameter pTIMEOUT_CYCLES = 50000;
    parameter pADDR_WIDTH = 8;
+   parameter pADC_LOW_RES = 1;
+   parameter pFIFO_SAMPLES = 90;
 
    reg                  clk_usb;
    wire [7:0]           usb_data;
@@ -46,13 +48,21 @@ module cwhusky_tb();
    wire                 LED_CAP;
 
    reg  [7:0] rdata;
-   int i;
+   reg  [7:0] rdata_r;
+   reg  [11:0] sample[0:5];
+   reg  [11:0] last_sample;
+   reg  [11:0] comp;
+   reg  setup_done;
+   int i, j;
+   int good_reads, bad_reads, errors;
 
 
    // initialization thread:
    initial begin
       $dumpfile("results/cwhusky_tb.fst");
       $dumpvars(0, cwhusky_tb);
+      setup_done = 0;
+      errors = 0;
       clk_usb = 0;
       usb_addr = 0;
       usb_rdn = 1;
@@ -91,18 +101,92 @@ module cwhusky_tb();
       #(pCLK_PERIOD*1000);
 
       write_1byte('d27, 8'h0); // data source select
+      if (pADC_LOW_RES)
+         write_1byte('d29, 3);
+      else
+         write_1byte('d29, 0);
 
       write_1byte('h1, 8'h8); // arm
       #(pCLK_PERIOD*1000);
       write_1byte('h1, 8'h48); // trigger now
 
-      #(pCLK_PERIOD*1000);
+      setup_done = 1;
+
+   end
+
+
+   // read thread:
+   initial begin
+      #1 wait (setup_done);
+      #(pCLK_PERIOD * 100);
+      good_reads = 0;
+      bad_reads = 0;
       rw_lots_bytes('d3);
-      for (i = 0; i < 20; i = i + 1) begin
-         read_next_byte(rdata);
-         $display("%2d: %2h", i, rdata);
+
+      if (pADC_LOW_RES) begin // 8 bits per sample
+         for (i = 0; i < pFIFO_SAMPLES; i = i + 1) begin
+            read_next_byte(rdata);
+            if (i == 0)
+               last_sample = rdata;
+            else begin
+               if (rdata == (last_sample + 1) % 256)
+                  good_reads += 1;
+               else begin
+                  bad_reads += 1;
+                  errors += 1;
+                  $display("%2d: expected %2h, got %2h", i, (last_sample + 1)%256, rdata);
+               end
+               //$display("%2d: last=%2h, read %2h", i, last_sample, rdata);
+               last_sample = rdata;
+            end
+         end
       end
 
+      else begin // 12 bits per sample
+         for (i = 0; i < pFIFO_SAMPLES/6; i = i + 1) begin
+            for (j = 0; j < 9; j = j + 1) begin
+               rdata_r = rdata;
+               read_next_byte(rdata);
+               case (j)
+                  1: sample[0] = {rdata_r, rdata[7:4]};
+                  2: sample[1] = {rdata_r[3:0], rdata};
+                  4: sample[2] = {rdata_r, rdata[7:4]};
+                  5: sample[3] = {rdata_r[3:0], rdata};
+                  7: sample[4] = {rdata_r, rdata[7:4]};
+                  8: sample[5] = {rdata_r[3:0], rdata};
+               endcase
+            end
+            for (j = 0; j < 6; j += 1) begin
+               if (j == 0)
+                  comp = (i==0)? (sample[0]-1) % 2**12 : last_sample;
+               else
+                  comp = sample[j-1];
+               if (sample[j] == (comp + 1) % 2**12)
+                  good_reads += 1;
+               else begin
+                  bad_reads += 1;
+                  errors += 1;
+                  $display("%2d: expected %2h, got %2h", i, (comp + 1) % 2**12, sample[j]);
+               end
+            end
+            last_sample = sample[5];
+            //$display("%2d: %2h", i*3+0, sample[0]);
+            //$display("%2d: %2h", i*3+1, sample[1]);
+            //$display("%2d: %2h", i*3+2, sample[2]);
+            //$display("%2d: %2h", i*3+3, sample[3]);
+            //$display("%2d: %2h", i*3+4, sample[4]);
+            //$display("%2d: %2h", i*3+5, sample[5]);
+         end
+      end
+
+      $display("Done reading.");
+      $display("Good reads: %d", good_reads);
+      $display("Bad reads: %d", bad_reads);
+      if (errors)
+         $display("Simulation FAILED");
+      else
+         $display("Simulation passed");
+      $finish;
    end
 
 

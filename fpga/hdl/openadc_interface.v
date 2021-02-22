@@ -218,6 +218,8 @@ module openadc_interface #(
    wire [7:0]  ddrfifo_dout;
    wire ddrfifo_empty;
    wire ddrfifo_rd_en;
+   wire low_res;
+   wire low_res_lsb;
 
    wire [31:0] presamples;
    wire [31:0] samples_cnt;
@@ -306,7 +308,9 @@ module openadc_interface #(
       .reg_addrvalid(reg_addrvalid), 
       .fifo_empty(ddrfifo_empty),
       .fifo_data(ddrfifo_dout),
-      .fifo_rd_en(ddrfifo_rd_en)
+      .fifo_rd_en(ddrfifo_rd_en),
+      .low_res(low_res),
+      .low_res_lsb(low_res_lsb)
    );
 
 
@@ -396,6 +400,8 @@ module openadc_interface #(
       .fifo_read_fifoen         (ddrfifo_rd_en),
       .fifo_read_fifoempty      (ddrfifo_empty),
       .fifo_read_data           (ddrfifo_dout),
+      .low_res                  (low_res),
+      .low_res_lsb              (low_res_lsb),
 
       .presample_i              (presamples),
       .max_samples_i            (maxsamples),

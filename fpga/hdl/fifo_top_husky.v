@@ -15,9 +15,11 @@ module fifo_top_husky(
 
     //FIFO to USB Read Interface
     input wire          clk_usb,
+    input wire          low_res,        // if set, return just 8 bits per sample; if clear return all 12 bits per sample
+    input wire          low_res_lsb,    // useless except for testing: if set, return the 8 LSB bits when in low_res mode
     input wire          fifo_read_fifoen,
     output wire         fifo_read_fifoempty,
-    output wire  [7:0]  fifo_read_data,
+    output reg   [7:0]  fifo_read_data,
 
     input wire  [31:0] presample_i,
     input wire  [31:0] max_samples_i, // TODO XXX unused
@@ -47,6 +49,7 @@ module fifo_top_husky(
     reg                 slow_fifo_wr = 1'b0;
     reg                 slow_fifo_rd;
     wire [35:0]         slow_fifo_dout;
+    reg  [3:0]          slow_fifo_dout_r;
     wire                slow_fifo_full;
     wire                slow_fifo_empty;
     wire                slow_fifo_overflow;
@@ -70,6 +73,7 @@ module fifo_top_husky(
     assign fifo_overflow = fifo_overflow_reg;
     assign adc_capture_stop_int = (stream_mode) ? fifo_overflow_int : adc_capture_stop_reg;
     assign adc_capture_stop = adc_capture_stop_int;
+    assign fifo_read_fifoempty = slow_fifo_empty;
 
     //Counter for downsampling (NOT proper decimation)
     reg [12:0] downsample_ctr;
@@ -228,29 +232,67 @@ module fifo_top_husky(
        end
     end
 
-    reg [1:0] slow_read_count;
+    reg [3:0] slow_read_count;
     // read slow FIFO
     always @(posedge clk_usb) begin
-       if (reset) begin
+       if (reset || ~reset_done) begin
           slow_read_count <= 0;
           slow_fifo_rd <= 1'b0;
+          slow_fifo_dout_r <= 0;
        end
+
        else if (fifo_read_fifoen) begin
-          if (slow_read_count < 2) begin
-             slow_read_count <= slow_read_count + 1;
-             slow_fifo_rd <= 1'b0;
+          if (low_res) begin
+             if (slow_read_count < 2) begin
+                slow_read_count <= slow_read_count + 1;
+                slow_fifo_rd <= 1'b0;
+             end
+             else begin
+                slow_read_count <= 0;
+                slow_fifo_rd <= 1'b1;
+             end
           end
-          else begin
-             slow_read_count <= 0;
-             slow_fifo_rd <= 1'b1;
+
+          else begin // hi_res
+             if (slow_read_count < 8)
+                slow_read_count <= slow_read_count + 1;
+             else
+                slow_read_count <= 0;
+             if ((slow_read_count == 8) || (slow_read_count == 3)) begin
+                slow_fifo_rd <= 1;
+                slow_fifo_dout_r <= slow_fifo_dout[3:0];
+             end
+             else
+                slow_fifo_rd <= 0;
           end
+
        end
        else
           slow_fifo_rd <= 1'b0;
     end
 
-    // TOOD-temp: returning just 8 bit per sample for now, because it's easier
-    assign fifo_read_data = slow_fifo_dout[(2-slow_read_count)*12 +: 8];
+    always @(*) begin
+       if (low_res) begin
+          if (low_res_lsb)
+             fifo_read_data = slow_fifo_dout[(2-slow_read_count)*12 +: 8];
+          else
+             fifo_read_data = slow_fifo_dout[(2-slow_read_count)*12 + 4 +: 8];
+       end
+       else begin
+          case (slow_read_count)
+             0: fifo_read_data = slow_fifo_dout[35:28];
+             1: fifo_read_data = slow_fifo_dout[27:20];
+             2: fifo_read_data = slow_fifo_dout[19:12];
+             3: fifo_read_data = slow_fifo_dout[11:4];
+             4: fifo_read_data = {slow_fifo_dout_r, slow_fifo_dout[35:32]};
+             5: fifo_read_data = slow_fifo_dout[31:24];
+             6: fifo_read_data = slow_fifo_dout[23:16];
+             7: fifo_read_data = slow_fifo_dout[15:8];
+             8: fifo_read_data = slow_fifo_dout[7:0];
+             default: fifo_read_data = 8'h00;
+          endcase
+       end
+    end
 
     `ifdef NOFIFO
        //for clean iverilog compilation
@@ -317,7 +359,9 @@ module fifo_top_husky(
 	.probe5         (slow_fifo_full),       // input wire [0:0]  probe5 
 	.probe6         (slow_fifo_empty),      // input wire [0:0]  probe6 
 	.probe7         (slow_fifo_overflow),   // input wire [0:0]  probe7 
-	.probe8         (slow_fifo_underflow)   // input wire [0:0]  probe8 
+	.probe8         (slow_fifo_underflow),  // input wire [0:0]  probe8 
+        .probe9         (fifo_rst),             // input wire [0:0]  probe9
+        .probe10        (reset_done)            // input wire [0:0]  probe10
        );
 
 
