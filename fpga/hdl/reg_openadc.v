@@ -174,6 +174,7 @@ module reg_openadc #(
    assign fifo_stream = registers_settings[4];
    assign trigger_wait = registers_settings[5];
    assign trigger_now = registers_settings[6];
+   assign trigger_source = registers_settings[7];
 
    assign registers_advclocksettings_read[4:0] = registers_advclocksettings[4:0];
    assign registers_advclocksettings_read[5] = clkblock_gen_locked_i;

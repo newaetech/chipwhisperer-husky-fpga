@@ -338,7 +338,12 @@ module openadc_interface #(
     );
 
    reg [8:0] PWM_accumulator;
-   always @(posedge clk_usb) PWM_accumulator <= PWM_accumulator[7:0] + PWM_incr;
+   always @(posedge clk_usb) begin
+      if (reset)
+         PWM_accumulator <= 0;
+      else
+         PWM_accumulator <= PWM_accumulator[7:0] + PWM_incr;
+   end
 
    //assign amp_hilo = 1'b0;
    assign amp_gain = PWM_accumulator[8];

@@ -227,7 +227,6 @@ module reg_chipwhisperer #(
    reg [3:0] registers_ioread;
 
    wire targetio_highz;
-   wire extclk_fpa_io;
 
    assign led_auxi = registers_cwtrigsrc[0];
    assign led_auxo = registers_cwextclk[4] | registers_cwextclk[3] | registers_cwtrigmod[3];
@@ -243,21 +242,8 @@ module reg_chipwhisperer #(
    //TODO: Should use a mux?
    //The glitch-clock comes from the fabric anyway, but the clkgen comes from the DCM. Either way we are jumping back
    //and forth a lot.
-   assign extclk_fpa_io = (registers_cwextclk[4:3] == 2'b00) ? trigger : /* adccapture_i */
-                          (registers_cwextclk[4:3] == 2'b01) ? clkgen :
-                          (registers_cwextclk[4:3] == 2'b10) ? glitchclk :
-                          1'bZ;
 
-/* 
-`ifdef SUPPORT_AUXLINE
 
-   wire extclk_fpa_int_o;
-   wire fpa_trigger_int;
-   assign extclk_fpa_io = (registers_cwextclk[4:3] == 2'b00) ? fpa_trigger_int : extclk_fpa_int_o;
-`else
-   assign extclk_fpa_io = 1'bZ;
-`endif
-*/ 
 
    wire rearclk;
 
@@ -275,21 +261,6 @@ module reg_chipwhisperer #(
    );
    `endif
    
-   /*
-`ifdef SUPPORT_AUXLINE
-   //NB: Swap I0 / I1 lines here as allows above two muxes to be placed together
-   BUFGMUX #(
-   .CLK_SEL_TYPE("ASYNC") // Glitchles ("SYNC") or fast ("ASYNC") clock switch-over
-   )
-   clkauxline_mux (
-   .O(extclk_fpa_int_o), // 1-bit output: Clock buffer output
-   .I1(clkgen), // 1-bit input: Clock buffer input (S=0)
-   .I0(glitchclk), // 1-bit input: Clock buffer input (S=1)
-   .S(registers_cwextclk[4]) // 1-bit input: Clock buffer select
-   );
-
-`endif
-*/
 
    //NB: Normally ODDR2 used for clock output. This won't work as this clock
    //can have glitches, which screws up the ODDR2 block. Because we don't care
@@ -423,21 +394,12 @@ module reg_chipwhisperer #(
    wire trigger_or;
    wire trigger_ext;
    
-   wire trigger_fpa;
-   wire trigger_fpa_i;
-   wire trigger_fpb_i;
-   wire fpa_trigger_int;
-
-   assign trigger_and = ((registers_cwtrigsrc[0] & trigger_fpa) | ~registers_cwtrigsrc[0]) &
-                        ((registers_cwtrigsrc[1] & trigger_fpb_i) | ~registers_cwtrigsrc[1]) &
-                        ((registers_cwtrigsrc[2] & trigger_io1_i) | ~registers_cwtrigsrc[2]) &
+   assign trigger_and = ((registers_cwtrigsrc[2] & trigger_io1_i) | ~registers_cwtrigsrc[2]) &
                         ((registers_cwtrigsrc[3] & trigger_io2_i) | ~registers_cwtrigsrc[3]) &
                         ((registers_cwtrigsrc[4] & trigger_io3_i) | ~registers_cwtrigsrc[4]) &
                         ((registers_cwtrigsrc[5] & trigger_io4_i) | ~registers_cwtrigsrc[5]);
 
-   assign trigger_or  = (registers_cwtrigsrc[0] & trigger_fpa) |
-                        (registers_cwtrigsrc[1] & trigger_fpb_i) |
-                        (registers_cwtrigsrc[2] & trigger_io1_i) |
+   assign trigger_or  = (registers_cwtrigsrc[2] & trigger_io1_i) |
                         (registers_cwtrigsrc[3] & trigger_io2_i) |
                         (registers_cwtrigsrc[4] & trigger_io3_i) |
                         (registers_cwtrigsrc[5] & trigger_io4_i);
@@ -458,42 +420,6 @@ module reg_chipwhisperer #(
 
    assign trigger_o = trigger;
 
-   assign fpa_trigger_int = (registers_cwtrigmod[3] == 1'b1) ? trigger : 1'bZ;
-   assign trigger_fpa_i =  fpa_trigger_int;
-   assign trigger_fpb_i =  (registers_cwtrigmod[4] == 1'b1) ? trigger : 1'bZ;	 
-   
-
-`ifdef SUPPORT_AUXLINE
-   IODELAY2 #(
-      .COUNTER_WRAPAROUND("WRAPAROUND"), // "STAY_AT_LIMIT" or "WRAPAROUND"
-      .DATA_RATE("SDR"), // "SDR" or "DDR"
-      .DELAY_SRC("IDATAIN"), // "IO", "ODATAIN" or "IDATAIN"
-      .IDELAY2_VALUE(0), // Delay value when IDELAY_MODE="PCI" (0-255)
-      .IDELAY_MODE("NORMAL"), // "NORMAL" or "PCI"
-      .IDELAY_TYPE("DEFAULT"), // "FIXED", "DEFAULT", "VARIABLE_FROM_ZERO", "VARIABLE_FROM_HALF_MAX"
-      .IDELAY_VALUE(20), // Amount of taps for fixed input delay (0-255)
-      .ODELAY_VALUE(0), // Amount of taps fixed output delay (0-255)
-      .SERDES_MODE("NONE"), // "NONE", "MASTER" or "SLAVE"
-      .SIM_TAPDELAY_VALUE(75) // Per tap delay used for simulation in ps
-      )
-   IODELAY2_inst (
-      .BUSY(), // 1-bit output: Busy output after CAL
-      .DATAOUT(), // 1-bit output: Delayed data output to ISERDES/input register
-      .DATAOUT2(trigger_fpa), // 1-bit output: Delayed data output to general FPGA fabric
-      .DOUT(), // 1-bit output: Delayed data output
-      .TOUT(), // 1-bit output: Delayed 3-state output
-      .CAL(~reset_i), // 1-bit input: Initiate calibration input
-      .CE(1'b0), // 1-bit input: Enable INC input
-      .CLK(), // 1-bit input: Clock input
-      .IDATAIN(extclk_fpa_io), // 1-bit input: Data input (connect to top-level port or I/O buffer)
-      .INC(), // 1-bit input: Increment / decrement input
-      .IOCLK0(adc_sample_clk), // 1-bit input: Input from the I/O clock network
-      .IOCLK1(), // 1-bit input: Input from the I/O clock network
-      .ODATAIN(), // 1-bit input: Output data input from output register or OSERDES2.
-      .RST(reset_i), // 1-bit input: Reset to zero or 1/2 of total delay period
-      .T() // 1-bit input: 3-state input signal
-      );
-`endif
 
 
 /* IO Routing */

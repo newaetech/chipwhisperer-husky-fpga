@@ -42,11 +42,13 @@ module reg_husky_adc #(
    output reg          ADC_DFS,
    output reg          ADC_OE,
    output reg          ADC_SCLK,
+   input wire          ADC_OVR_SDOUT,
 
-   input wire          ADC_OVR_SDOUT
+   output reg  [4:0]   VMAG_D
 ); 
 
    `define CW_ADC_CTRL          60
+   `define CW_VMAG_CTRL         61
 
    // Bit-bang access to the ADC (ADS4128) registers.
    // Focus is on simplicity.
@@ -85,6 +87,7 @@ module reg_husky_adc #(
       if (reg_addrvalid) begin
          case (reg_address)
             `CW_ADC_CTRL: begin reg_datao_valid_reg <= 1; end
+            `CW_VMAG_CTRL: begin reg_datao_valid_reg <= 1; end
             default: begin reg_datao_valid_reg <= 0; end
          endcase
       end else begin
@@ -123,6 +126,8 @@ module reg_husky_adc #(
             if (reg_datai[1])
                data_reg <= {data_reg[6:0], ADC_OVR_SDOUT};
          end
+         else if (reg_write && (reg_address == `CW_VMAG_CTRL))
+            VMAG_D <= reg_datai[4:0];
       end
    end
 

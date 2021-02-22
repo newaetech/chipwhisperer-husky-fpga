@@ -53,6 +53,7 @@ module cwhusky_tb();
    reg  [11:0] last_sample;
    reg  [11:0] comp;
    reg  setup_done;
+   reg  target_io4_reg;
    int i, j;
    int good_reads, bad_reads, errors;
 
@@ -68,6 +69,7 @@ module cwhusky_tb();
       usb_rdn = 1;
       usb_wrn = 1;
       usb_cen = 1;
+      target_io4_reg = 0;
 
       #(pCLK_PERIOD*100);
 
@@ -100,15 +102,20 @@ module cwhusky_tb();
       //write_1byte('h1, 8'h0);
       #(pCLK_PERIOD*1000);
 
+      write_1byte('d61, 'hff);
+      write_1byte('d0, 'h7f);
+
       write_1byte('d27, 8'h0); // data source select
       if (pADC_LOW_RES)
          write_1byte('d29, 3);
       else
          write_1byte('d29, 0);
 
-      write_1byte('h1, 8'h8); // arm
+      write_1byte('h1, 8'hc); // arm, trigger level = high
+      #(pCLK_PERIOD*20);
+      target_io4_reg = 1'b1;
       #(pCLK_PERIOD*1000);
-      write_1byte('h1, 8'h48); // trigger now
+      //write_1byte('h1, 8'h48); // trigger now
 
       setup_done = 1;
 
@@ -218,6 +225,7 @@ module cwhusky_tb();
          read_select = 1'b1;
    end
 
+assign target_io4 = target_io4_reg;
 
 cwhusky_top U_dut (  
     .clk_usb            (clk_usb      ),

@@ -149,6 +149,14 @@ set_property PACKAGE_PIN D15 [get_ports ADC_DN[4]]
 set_property PACKAGE_PIN F15 [get_ports ADC_DP[5]]
 set_property PACKAGE_PIN E15 [get_ports ADC_DN[5]]
 
+#VGA:
+set_property PACKAGE_PIN L15 [get_ports VMAG_D[4]]
+set_property PACKAGE_PIN M16 [get_ports VMAG_D[3]]
+set_property PACKAGE_PIN M15 [get_ports VMAG_D[2]]
+set_property PACKAGE_PIN N16 [get_ports VMAG_D[1]]
+set_property PACKAGE_PIN P16 [get_ports VMAG_D[0]]
+set_property PACKAGE_PIN R16 [get_ports VDBSPWM]
+
 
 # output from FPGA:
 set_property PACKAGE_PIN J15 [get_ports ADC_CLKP]

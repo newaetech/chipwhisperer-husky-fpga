@@ -25,17 +25,11 @@ module cwhusky_top(
     input wire          FPGA_BONUS3,
     input wire          FPGA_BONUS4,
 
+    // ADC
     input wire          ADC_clk_fbp,
     input wire          ADC_clk_fbn,
     output wire         ADC_CLKP,
     output wire         ADC_CLKN,
-
-
-    /*  TODO-later:
-    VMAG_Dx
-    USERIO
-    VDBSPWM (to AD8330)
-    */
     output wire         ADC_SCLK,
     output wire         ADC_SDATA,
     output wire         ADC_SEN,
@@ -57,6 +51,15 @@ module cwhusky_top(
     //input wire          ADC_D8_N,
     //input wire          ADC_D10_P,
     //input wire          ADC_D10_N,
+
+    // VGA
+    output wire [4:0]   VMAG_D,
+    output wire         VDBSPWM,
+
+    /*  TODO-later:
+    USERIO
+    VDBSPWM (to AD8330)
+    */
 
     //input wire          FPGA_CCLK,
     input wire          FPGA_CDOUT, /* Input FROM SAM3U */
@@ -132,8 +135,6 @@ module cwhusky_top(
 
    // TEMPORARY, until I/Os are added / cleaned up:
    wire         ADC_clk_out;
-   wire         amp_gain;
-   wire         amp_hilo;
    wire         glitchout_highpwr;
    wire         glitchout_lowpwr;
    wire         target_npower;
@@ -247,7 +248,7 @@ module cwhusky_top(
         .ADC_clk_feedback(ADC_clk_fb),
         .DUT_CLK_i(extclk_mux),
         .DUT_trigger_i(ext_trigger),
-        .amp_gain(),
+        .amp_gain(VDBSPWM),
         .amp_hilo(),
         .clkgen(clkgen),
 
@@ -286,7 +287,8 @@ module cwhusky_top(
         .ADC_DFS        (ADC_DFS      ),
         .ADC_OE         (ADC_OE       ),
         .ADC_SCLK       (ADC_SCLK     ),
-        .ADC_OVR_SDOUT  (ADC_OVR_SDOUT)
+        .ADC_OVR_SDOUT  (ADC_OVR_SDOUT),
+        .VMAG_D         (VMAG_D)
    );
 
 
@@ -341,32 +343,35 @@ module cwhusky_top(
         .usi_in_o(),
         .targetpower_off(target_npower),
 
-        //.trigger_o(ext_trigger)
-        .trigger_o()
+        .trigger_o(ext_trigger)
+        //.trigger_o()
    );
    // TODO-TEMPORARY: otherwise comb loop error?
-   assign ext_trigger = 1'b0;
+   //assign ext_trigger = 1'b0;
 
 
    reg_clockglitch #(
         .pBYTECNT_SIZE  (pBYTECNT_SIZE)
    ) reg_clockglitch (
-        .reset_i(reg_rst),
-        .clk_usb(clk_usb_buf),
-        .reg_address(reg_address[5:0]), 
-        .reg_bytecnt(reg_bytecnt), 
-        .reg_datao(read_data_glitch), 
-        .reg_datai(write_data), 
-        .reg_read(reg_read), 
-        .reg_write(reg_write), 
-        .reg_addrvalid(reg_addrvalid), 
-        .target_hs1(target_hs1),
-        .clkgen(clkgen),
-        .glitchclk(glitchclk),
-        .exttrigger(ext_trigger)
+        .reset_i        (reg_rst),
+        .clk_usb        (clk_usb_buf),
+        .reg_address    (reg_address[5:0]), 
+        .reg_bytecnt    (reg_bytecnt), 
+        .reg_datao      (read_data_glitch), 
+        .reg_datai      (write_data), 
+        .reg_read       (reg_read), 
+        .reg_write      (reg_write), 
+        .reg_addrvalid  (reg_addrvalid), 
+        .target_hs1     (target_hs1),
+        .clkgen         (clkgen),
+        //.glitchclk      (glitchclk),
+        .glitchclk      (), // TODO-temp
+        .exttrigger     (ext_trigger)
    );
+   assign glitchclk = 1'b0; // TODO-temp
 
    assign FPGA_TRIGOUT = ext_trigger;
+   //assign FPGA_TRIGOUT = 1'b0;
 
    wire target_highz = target_npower;
 
