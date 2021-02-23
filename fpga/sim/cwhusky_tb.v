@@ -2,15 +2,25 @@
 `default_nettype none
 
 module cwhusky_tb();
-
-
-   parameter pCLK_PERIOD = 10;
-   parameter pTIMEOUT_CYCLES = 50000;
+   parameter pCLK_USB_PERIOD = 10;
+   parameter pCLK_ADC_FAST_PERIOD = 5.5;
+   parameter pCLK_ADC_SLOW_PERIOD = 21.0;
+   parameter pCLK_ADC_NOM_PERIOD = 11.0;
    parameter pADDR_WIDTH = 8;
    parameter pADC_LOW_RES = 1;
+   parameter pSLOW_ADC = 0;
+   parameter pFAST_ADC = 0;
    parameter pFIFO_SAMPLES = 90;
+   parameter pSEED = 1;
+   parameter pTIMEOUT_CYCLES = 50000;
+   parameter pDUMP = 0;
+
 
    reg                  clk_usb;
+   reg                  clk_adc_slow;
+   reg                  clk_adc_fast;
+   reg                  clk_adc_nom;
+   wire                 clk_adc;
    wire [7:0]           usb_data;
    reg  [7:0]           usb_wdata;
    reg  [7:0]           usb_addr;
@@ -55,23 +65,33 @@ module cwhusky_tb();
    reg  setup_done;
    reg  target_io4_reg;
    int i, j;
-   int good_reads, bad_reads, errors;
+   int good_reads, bad_reads, errors, warnings;
+   int seed;
 
 
    // initialization thread:
    initial begin
-      $dumpfile("results/cwhusky_tb.fst");
-      $dumpvars(0, cwhusky_tb);
+      seed = pSEED;
+      $display("Running with seed=%0d", seed);
+      rdata = $urandom(seed);
+      if (pDUMP) begin
+         $dumpfile("results/cwhusky_tb.fst");
+         $dumpvars(0, cwhusky_tb);
+      end
       setup_done = 0;
       errors = 0;
+      warnings = 0;
       clk_usb = 0;
+      clk_adc_slow = 0;
+      clk_adc_fast = 0;
+      clk_adc_nom = 0;
       usb_addr = 0;
       usb_rdn = 1;
       usb_wrn = 1;
       usb_cen = 1;
       target_io4_reg = 0;
 
-      #(pCLK_PERIOD*100);
+      #(pCLK_USB_PERIOD*100);
 
       // manually reset with new register:
       write_1byte('d28, 8'h1);
@@ -100,7 +120,7 @@ module cwhusky_tb();
       write_1byte('d28, 8'h0);
       //write_1byte('h1, 8'h1);
       //write_1byte('h1, 8'h0);
-      #(pCLK_PERIOD*1000);
+      #(pCLK_USB_PERIOD*1000);
 
       write_1byte('d61, 'hff);
       write_1byte('d0, 'h7f);
@@ -112,11 +132,22 @@ module cwhusky_tb();
          write_1byte('d29, 0);
 
       write_1byte('h1, 8'hc); // arm, trigger level = high
-      #(pCLK_PERIOD*20);
-      target_io4_reg = 1'b1;
-      #(pCLK_PERIOD*1000);
-      //write_1byte('h1, 8'h48); // trigger now
 
+      // random delay before trigger:
+      #($urandom_range(0, 100)*pCLK_USB_PERIOD);
+
+      // randomly choose to use trigger pin or "trigger now"
+      if ($urandom % 2) begin
+         $display("Using trigger pin.");
+         target_io4_reg = 1'b1;
+      end
+      else begin
+         $display("Using 'trigger now'.");
+         write_1byte('h1, 8'h48);
+      end
+
+      // it takes up to ~700 clock cycles after reset for things to get going again:
+      #(pCLK_USB_PERIOD*900);
       setup_done = 1;
 
    end
@@ -125,7 +156,6 @@ module cwhusky_tb();
    // read thread:
    initial begin
       #1 wait (setup_done);
-      #(pCLK_PERIOD * 100);
       good_reads = 0;
       bad_reads = 0;
       rw_lots_bytes('d3);
@@ -141,7 +171,7 @@ module cwhusky_tb();
                else begin
                   bad_reads += 1;
                   errors += 1;
-                  $display("%2d: expected %2h, got %2h", i, (last_sample + 1)%256, rdata);
+                  $display("ERROR %2d: expected %2h, got %2h", i, (last_sample + 1)%256, rdata);
                end
                //$display("%2d: last=%2h, read %2h", i, last_sample, rdata);
                last_sample = rdata;
@@ -154,6 +184,7 @@ module cwhusky_tb();
             for (j = 0; j < 9; j = j + 1) begin
                rdata_r = rdata;
                read_next_byte(rdata);
+               //$display("XXX: read %2h", rdata);
                case (j)
                   1: sample[0] = {rdata_r, rdata[7:4]};
                   2: sample[1] = {rdata_r[3:0], rdata};
@@ -173,7 +204,7 @@ module cwhusky_tb();
                else begin
                   bad_reads += 1;
                   errors += 1;
-                  $display("%2d: expected %2h, got %2h", i, (comp + 1) % 2**12, sample[j]);
+                  $display("ERROR %2d: expected %2h, got %2h", i, (comp + 1) % 2**12, sample[j]);
                end
             end
             last_sample = sample[5];
@@ -190,21 +221,26 @@ module cwhusky_tb();
       $display("Good reads: %d", good_reads);
       $display("Bad reads: %d", bad_reads);
       if (errors)
-         $display("Simulation FAILED");
+         $display("SIMULATION FAILED (%0d errors)", errors);
       else
-         $display("Simulation passed");
+         $display("Simulation passed (%0d warnings)", warnings);
       $finish;
    end
 
 
    // timeout thread:
    initial begin
-      #(pCLK_PERIOD*pTIMEOUT_CYCLES);
-      $display("Timeout reached.");
+      #(pCLK_USB_PERIOD*pTIMEOUT_CYCLES);
+      errors += 1;
+      $display("ERROR: global timeout.");
+      $display("SIMULATION FAILED (%0d errors)", errors);
       $finish;
    end
 
-   always #(pCLK_PERIOD/2) clk_usb = !clk_usb;
+   always #(pCLK_USB_PERIOD/2) clk_usb = !clk_usb;
+   always #(pCLK_ADC_FAST_PERIOD/2) clk_adc_fast = !clk_adc_fast;
+   always #(pCLK_ADC_SLOW_PERIOD/2) clk_adc_slow = !clk_adc_slow;
+   always #(pCLK_ADC_NOM_PERIOD/2) clk_adc_nom = !clk_adc_nom;
 
    wire #1 usb_rdn_out = usb_rdn;
    wire #1 usb_wrn_out = usb_wrn;
@@ -227,10 +263,13 @@ module cwhusky_tb();
 
 assign target_io4 = target_io4_reg;
 
+assign clk_adc = pSLOW_ADC? clk_adc_slow :
+                 pFAST_ADC? clk_adc_fast : clk_adc_nom;
+
 cwhusky_top U_dut (  
     .clk_usb            (clk_usb      ),
-    .ADC_clk_fbp        (clk_usb      ),
-    .ADC_clk_fbn        (clk_usb      ),
+    .ADC_clk_fbp        (clk_adc      ),
+    .ADC_clk_fbn        (1'b0         ),
     .ADC_CLKP           (             ),
     .ADC_CLKN           (             ),
     .LED_CLK1FAIL       (LED_CLK1FAIL ),

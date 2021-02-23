@@ -37,7 +37,8 @@ module fifo_top_husky(
     parameter FIFO_FULL_SIZE_LARGEWORDS = ((`MAX_SAMPLES - 32) / 3) / 4;
 
     wire                fast_fifo_wr;
-    reg                 fast_fifo_rd = 1'b0;
+    reg                 fast_fifo_rd_en = 1'b0;
+    wire                fast_fifo_rd;
     wire [11:0]         fast_fifo_dout;
     wire                fast_fifo_full;
     wire                fast_fifo_empty;
@@ -46,7 +47,8 @@ module fifo_top_husky(
 
     reg  [35:0]         slow_fifo_din;
     reg                 slow_fifo_prewr = 1'b0;
-    reg                 slow_fifo_wr = 1'b0;
+    reg                 slow_fifo_wr_premask = 1'b0;
+    wire                slow_fifo_wr;
     reg                 slow_fifo_rd;
     wire [35:0]         slow_fifo_dout;
     reg  [3:0]          slow_fifo_dout_r;
@@ -136,13 +138,15 @@ module fifo_top_husky(
     end
 
     // TODO: check on fast_fifo_full is temporary, probably need to detect and flag overflow events
-    assign fast_fifo_wr = adcfifo_wr_en & stream_write & adc_write_mask & reset_done & !fast_fifo_full;
+    assign fast_fifo_wr = adcfifo_wr_en & stream_write & adc_write_mask & reset_done & !fifo_rst_pre & !fast_fifo_full;
+    assign fast_fifo_rd = fast_fifo_rd_en & reset_done & !fifo_rst_pre;
+    assign slow_fifo_wr = slow_fifo_wr_premask & reset_done & !fifo_rst_pre;
 
     // Xilinx FIFO is very particular about its reset: it must be wide enough
     // and the FIFO shouldn't be accessed for some time after reset has been
     // released. USB (slow) clock is 96 MHz, ADC (fast) clock is anywhere from
     // 5 to 200 MHz.  So we make the FIFO reset four 5 MHz cycles long = 76 USB
-    // clocks, and prevent FIFO access for thiry 5 MHz cycles = 570 USB clocks
+    // clocks, and prevent FIFO access for thirty 5 MHz cycles = 570 USB clocks
     // after reset. (Ref: Xilinx PG057 v13.2, p.129).
 
    cdc_pulse U_fifo_rst_cdc (
@@ -160,13 +164,15 @@ module fifo_top_husky(
     reg reset_r;
     reg [6:0] reset_hi_count;
     reg [9:0] reset_lo_count;
+    reg fifo_rst_pre;
     reg fifo_rst;
     reg reset_done;
     always @(posedge clk_usb) begin
        reset_r <= reset;
+       fifo_rst <= fifo_rst_pre;
        fifo_rst_start_r <= fifo_rst_start;
        if (fifo_rst_start_r) begin
-          fifo_rst <= 1'b1;
+          fifo_rst_pre <= 1'b1;
           reset_hi_count <= 1;
           reset_lo_count <= 1;
           reset_done <= 1'b0;
@@ -176,7 +182,7 @@ module fifo_top_husky(
              reset_hi_count <= reset_hi_count + 1;
           else begin
              reset_hi_count <= 0;
-             fifo_rst <= 0;
+             fifo_rst_pre <= 0;
           end
        end
        else if (reset_lo_count > 0) begin
@@ -195,21 +201,21 @@ module fifo_top_husky(
     always @(posedge adc_sampleclk) begin
        if (reset) begin
           fast_read_count <= 0;
-          fast_fifo_rd <= 1'b0;
+          fast_fifo_rd_en <= 1'b0;
           slow_fifo_prewr <= 1'b0;
-          slow_fifo_wr <= 1'b0;
+          slow_fifo_wr_premask <= 1'b0;
        end
 
        else begin
-          slow_fifo_wr <= slow_fifo_prewr;
-          if (~reset_done) begin
-             fast_fifo_rd <= 0;
+          slow_fifo_wr_premask <= slow_fifo_prewr;
+          if (fifo_rst_pre || ~reset_done) begin
+             fast_fifo_rd_en <= 0;
              fast_read_count <= 0;
              slow_fifo_prewr <= 0;
           end
           else if (adc_capture_go) begin
              if (!fast_fifo_empty && !slow_fifo_full) begin
-                fast_fifo_rd <= 1'b1;
+                fast_fifo_rd_en <= 1'b1;
                 if (fast_read_count < 2) begin
                    fast_read_count <= fast_read_count + 1;
                    slow_fifo_prewr <= 1'b0;
@@ -221,12 +227,12 @@ module fifo_top_husky(
 
              end
              else begin
-                fast_fifo_rd <= 1'b0;
+                fast_fifo_rd_en <= 1'b0;
                 slow_fifo_prewr <= 1'b0;
              end
           end
 
-          if (fast_fifo_rd)
+          if (fast_fifo_rd_en)
              slow_fifo_din <= {slow_fifo_din[23:0], fast_fifo_dout};
 
        end

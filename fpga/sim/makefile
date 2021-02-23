@@ -1,4 +1,11 @@
 ADC_LOW_RES=0
+SLOW_ADC=0
+FAST_ADC=0
+LOGFILE=make.log
+WAVEFORMAT=fst
+SEED=1
+TIMEOUT_CYCLES= 50000
+DUMP=0
 
 all: compile run
 
@@ -9,6 +16,11 @@ compile:
 	-Wportbind \
 	-Wselect-range \
 	-P cwhusky_tb.pADC_LOW_RES=$(ADC_LOW_RES) \
+	-P cwhusky_tb.pSLOW_ADC=$(SLOW_ADC) \
+	-P cwhusky_tb.pFAST_ADC=$(FAST_ADC) \
+	-P cwhusky_tb.pTIMEOUT_CYCLES=$(TIMEOUT_CYCLES) \
+	-P cwhusky_tb.pDUMP=$(DUMP) \
+	-P cwhusky_tb.pSEED=$(SEED) \
 
 cwlite:
 	iverilog -ccmdfile_cwlite \
@@ -38,7 +50,7 @@ fifo:
 
 
 run:
-	vvp -lsim.log a.out -fst
+	vvp -l$(LOGFILE) a.out -$(WAVEFORMAT)
 
 clean:
 	rm -f a.out
