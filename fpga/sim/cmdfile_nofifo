@@ -19,3 +19,4 @@ cwhusky_tb.v
 ../hdl/clock_managment_advanced.v
 ../hdl/cdc_pulse.v
 ../hdl/reg_husky_adc.v
+../hdl/reg_mmcm_drp.v

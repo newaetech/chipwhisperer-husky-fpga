@@ -246,6 +246,9 @@
 `define RESET                   28
 `define ADC_LOW_RES             29
 
+`define DRP_ADDR                30
+`define DRP_DATA                31
+
 `define REGISTER_VERSION 1
 
 //`define SCARDCTRL_ADDR 30

@@ -25,6 +25,7 @@ module usb_reg_main #(
    parameter pBYTECNT_SIZE = 7
 )(
    input  wire         clk_usb,
+   input  wire         reset,
 
    /* Interface to ChipWhisperer-Lite USB Chip */
    input  wire [7:0]   cwusb_din,
@@ -96,7 +97,9 @@ module usb_reg_main #(
    always @(posedge clk_usb) reg_write_dly <= reg_write;
 
    always @(posedge clk_usb) begin
-      if (reg_address != cwusb_addr) begin
+      if (reset)
+         reg_bytecnt <= 0;
+      else if (reg_address != cwusb_addr) begin
          reg_bytecnt <= 0;
       end else if ((isoutregdly & !isoutreg) || (reg_write_dly) ) begin
          //roll-over is allowed (only access to use it is FIFO read, where we

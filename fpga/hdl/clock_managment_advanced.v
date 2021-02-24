@@ -13,7 +13,9 @@ Copyright (c) 2012-2021, Colin O'Flynn <coflynn@newae.com>. All rights reserved.
 This project is released under the Modified FreeBSD License. See LICENSE
 file which should have came with this code.
 *************************************************************************/
-module clock_managment_advanced(
+module clock_managment_advanced #(
+   parameter pBYTECNT_SIZE = 7
+)(
     input  wire           reset, //Does NOT reset CLKGEN block
 
     /* Clock sources */
@@ -50,11 +52,27 @@ module clock_managment_advanced(
     output wire           phase_done, 
     /* Is Selected DCM Locked? */
     output wire           dcm_adc_locked,
-    output wire           dcm_gen_locked 
+    output wire           dcm_gen_locked ,
+
+    // register interface
+    input  wire [7:0]                   reg_address,
+    input  wire [pBYTECNT_SIZE-1:0]     reg_bytecnt,
+    input  wire [7:0]                   reg_datai,
+    output wire [7:0]                   reg_datao,
+    input  wire                         reg_read,
+    input  wire                         reg_write,
+    input  wire                         reg_addrvalid
     );
  
     wire ADC_clk_extsrc;
     wire ADC_clk_sample;
+
+    wire [6:0] drp_addr;
+    wire drp_den;
+    wire [15:0] drp_din;
+    wire [15:0] drp_dout;
+    wire drp_drdy;
+    wire drp_dwe;
     
     wire dcm_psen;
     wire dcm_psincdec;
@@ -77,6 +95,7 @@ module clock_managment_advanced(
     wire clkgen_progdata;
     wire clkgen_progen;
 
+    // TODO: remove
     dcm_clkgen_load clkgenload(
        .clk_usb(clk_usb),
        .reset_i(clkgen_reset),
@@ -88,6 +107,27 @@ module clock_managment_advanced(
        .PROGDATA(clkgen_progdata),
        .PROGEN(clkgen_progen)
     );
+
+   reg_mmcm_drp #(
+      .pBYTECNT_SIZE    (pBYTECNT_SIZE)
+   ) U_reg_mmcm_drp (
+      .reset_i          (reset),
+      .clk_usb          (clk_usb),
+      .reg_address      (reg_address), 
+      .reg_bytecnt      (reg_bytecnt), 
+      .reg_datao        (reg_datao), 
+      .reg_datai        (reg_datai), 
+      .reg_read         (reg_read), 
+      .reg_write        (reg_write), 
+      .reg_addrvalid    (reg_addrvalid), 
+
+      .drp_addr         (drp_addr ),
+      .drp_den          (drp_den  ),
+      .drp_din          (drp_din  ),
+      .drp_dout         (drp_dout ),
+      .drp_drdy         (drp_drdy ),
+      .drp_dwe          (drp_dwe  )
+   ); 
 
 
     wire clkb;
@@ -201,14 +241,14 @@ module clock_managment_advanced(
        .clk_in1         (clkgenfx_in),
        .clk_out1        (clkgenfx_out),
        .locked          (dcm2_locked_int), // TODO: rename more descriptively
-       // Dynamic reconfiguration ports - TODO
-       .daddr           (7'b0),        // input [6:0] daddr
+       // Dynamic reconfiguration ports:
+       .daddr           (drp_addr),    // input [6:0] daddr
        .dclk            (clk_usb),         // input dclk
-       .den             (1'b0),          // input den
-       .din             (16'b0),          // input [15:0] din
-       .dout            (),         // output [15:0] dout
-       .drdy            (),         // output drdy
-       .dwe             ()           // output dwe
+       .den             (drp_den),       // input den
+       .din             (drp_din),
+       .dout            (drp_dout),
+       .drdy            (drp_drdy),
+       .dwe             (drp_dwe)
     );
     /* OG: DCM_CLKGEN: Frequency Aligned Digital Clock Manager
     // Spartan-6

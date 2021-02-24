@@ -146,7 +146,6 @@ module cwhusky_top(
    wire reset_i;
    assign reset_i = 0;
 
-   wire reset_intermediate;
    wire clk_usb_buf;
    wire ADC_clk_fb;
 
@@ -186,6 +185,7 @@ module cwhusky_top(
       .pBYTECNT_SIZE    (pBYTECNT_SIZE)
    ) U_usb_reg_main (
       .clk_usb          (clk_usb_buf), 
+      .reset            (reg_rst),
       .cwusb_din        (cmdfifo_din), 
       .cwusb_dout       (cmdfifo_dout), 
       .cwusb_rdn        (USB_RDn), 

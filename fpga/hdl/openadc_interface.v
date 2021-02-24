@@ -238,8 +238,9 @@ module openadc_interface #(
    wire [1:0] fifo_mode;
    wire [7:0] reg_datao_oadc;
    wire [7:0] reg_datao_fifo;
+   wire [7:0] reg_datao_mmcm_drp;
 
-   assign reg_datao = reg_datao_oadc | reg_datao_fifo;
+   assign reg_datao = reg_datao_oadc | reg_datao_fifo | reg_datao_mmcm_drp;
 
    reg_openadc #(
       .pBYTECNT_SIZE    (pBYTECNT_SIZE)
@@ -334,7 +335,16 @@ module openadc_interface #(
       .clkgen_load(clkgen_load),
       .clkgen_done(clkgen_done),
       .dcm_adc_locked(dcm_locked),
-      .dcm_gen_locked(dcm_gen_locked)
+      .dcm_gen_locked(dcm_gen_locked),
+
+      .reg_address(reg_address),
+      .reg_bytecnt(reg_bytecnt), 
+      .reg_datao(reg_datao_mmcm_drp), 
+      .reg_datai(reg_datai), 
+      .reg_read(reg_read), 
+      .reg_write(reg_write), 
+      .reg_addrvalid(reg_addrvalid) 
+
     );
 
    reg [8:0] PWM_accumulator;

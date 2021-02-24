@@ -14,7 +14,7 @@
                     },
                     {
                         "type": "ILA_V3",
-                        "name": "U_reg_husky_adc/U_ila_adc",
+                        "name": "U_usb_reg_main/U_ila_usb",
                         "spec": "labtools_ila_v6",
                         "ipName": "ila",
                         "core_location": {
@@ -22,227 +22,11 @@
                             "slave_index": 0,
                             "bscan_switch_index": 0
                         },
-                        "uuid": "F7E499C14B8D5C27A1F85FAE5F1AB5C8",
-                        "pins": [
-                            {
-                                "name": "probe0",
-                                "id": 0,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": false,
-                                "leftIndex": 0,
-                                "rightIndex": 0,
-                                "portIndex": 0,
-                                "nets": [
-                                    {
-                                        "name": "U_reg_husky_adc/ADC_RESET",
-                                        "isBus": false
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "probe1",
-                                "id": 1,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": false,
-                                "leftIndex": 0,
-                                "rightIndex": 0,
-                                "portIndex": 1,
-                                "nets": [
-                                    {
-                                        "name": "U_reg_husky_adc/ADC_SEN",
-                                        "isBus": false
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "probe2",
-                                "id": 2,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": false,
-                                "leftIndex": 0,
-                                "rightIndex": 0,
-                                "portIndex": 2,
-                                "nets": [
-                                    {
-                                        "name": "U_reg_husky_adc/ADC_SDATA",
-                                        "isBus": false
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "probe3",
-                                "id": 3,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": false,
-                                "leftIndex": 0,
-                                "rightIndex": 0,
-                                "portIndex": 3,
-                                "nets": [
-                                    {
-                                        "name": "U_reg_husky_adc/ADC_DFS",
-                                        "isBus": false
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "probe4",
-                                "id": 4,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": false,
-                                "leftIndex": 0,
-                                "rightIndex": 0,
-                                "portIndex": 4,
-                                "nets": [
-                                    {
-                                        "name": "U_reg_husky_adc/ADC_OE",
-                                        "isBus": false
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "probe5",
-                                "id": 5,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": false,
-                                "leftIndex": 0,
-                                "rightIndex": 0,
-                                "portIndex": 5,
-                                "nets": [
-                                    {
-                                        "name": "U_reg_husky_adc/ADC_SCLK",
-                                        "isBus": false
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "probe6",
-                                "id": 6,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": true,
-                                "leftIndex": 0,
-                                "rightIndex": 7,
-                                "portIndex": 6,
-                                "nets": [
-                                    {
-                                        "name": "U_reg_husky_adc/data_reg",
-                                        "isBus": true,
-                                        "subnets": [
-                                            {
-                                                "name": "U_reg_husky_adc/data_reg[7]"
-                                            },
-                                            {
-                                                "name": "U_reg_husky_adc/data_reg[6]"
-                                            },
-                                            {
-                                                "name": "U_reg_husky_adc/data_reg[5]"
-                                            },
-                                            {
-                                                "name": "U_reg_husky_adc/data_reg[4]"
-                                            },
-                                            {
-                                                "name": "U_reg_husky_adc/data_reg[3]"
-                                            },
-                                            {
-                                                "name": "U_reg_husky_adc/data_reg[2]"
-                                            },
-                                            {
-                                                "name": "U_reg_husky_adc/data_reg[1]"
-                                            },
-                                            {
-                                                "name": "U_reg_husky_adc/data_reg[0]"
-                                            }
-                                        ]
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "probe7",
-                                "id": 7,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": false,
-                                "leftIndex": 0,
-                                "rightIndex": 0,
-                                "portIndex": 7,
-                                "nets": [
-                                    {
-                                        "name": "U_reg_husky_adc/reg_datao_valid_reg",
-                                        "isBus": false
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "probe8",
-                                "id": 8,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": false,
-                                "leftIndex": 0,
-                                "rightIndex": 0,
-                                "portIndex": 8,
-                                "nets": [
-                                    {
-                                        "name": "U_reg_husky_adc/reg_write",
-                                        "isBus": false
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "probe9",
-                                "id": 9,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": false,
-                                "leftIndex": 0,
-                                "rightIndex": 0,
-                                "portIndex": 9,
-                                "nets": [
-                                    {
-                                        "name": "U_reg_husky_adc/reg_write_r",
-                                        "isBus": false
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "probe10",
-                                "id": 10,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": false,
-                                "leftIndex": 0,
-                                "rightIndex": 0,
-                                "portIndex": 10,
-                                "nets": [
-                                    {
-                                        "name": "U_reg_husky_adc/ADC_OVR_SDOUT",
-                                        "isBus": false
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        "type": "ILA_V3",
-                        "name": "U_usb_reg_main/U_ila_usb",
-                        "spec": "labtools_ila_v6",
-                        "ipName": "ila",
-                        "core_location": {
-                            "user_chain": 1,
-                            "slave_index": 1,
-                            "bscan_switch_index": 0
-                        },
                         "uuid": "7711C27F78A2508BB7793D21BD622F7E",
                         "pins": [
                             {
                                 "name": "probe0",
-                                "id": 11,
+                                "id": 0,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -284,7 +68,7 @@
                             },
                             {
                                 "name": "probe1",
-                                "id": 12,
+                                "id": 1,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -326,7 +110,7 @@
                             },
                             {
                                 "name": "probe2",
-                                "id": 13,
+                                "id": 2,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -342,7 +126,7 @@
                             },
                             {
                                 "name": "probe3",
-                                "id": 14,
+                                "id": 3,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -384,7 +168,7 @@
                             },
                             {
                                 "name": "probe4",
-                                "id": 15,
+                                "id": 4,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -400,7 +184,7 @@
                             },
                             {
                                 "name": "probe5",
-                                "id": 16,
+                                "id": 5,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -416,7 +200,7 @@
                             },
                             {
                                 "name": "probe6",
-                                "id": 17,
+                                "id": 6,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -432,7 +216,7 @@
                             },
                             {
                                 "name": "probe7",
-                                "id": 18,
+                                "id": 7,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -474,7 +258,7 @@
                             },
                             {
                                 "name": "probe8",
-                                "id": 19,
+                                "id": 8,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -513,7 +297,7 @@
                             },
                             {
                                 "name": "probe9",
-                                "id": 20,
+                                "id": 9,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -555,7 +339,7 @@
                             },
                             {
                                 "name": "probe10",
-                                "id": 21,
+                                "id": 10,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -597,7 +381,7 @@
                             },
                             {
                                 "name": "probe11",
-                                "id": 22,
+                                "id": 11,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -613,7 +397,7 @@
                             },
                             {
                                 "name": "probe12",
-                                "id": 23,
+                                "id": 12,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -629,7 +413,7 @@
                             },
                             {
                                 "name": "probe13",
-                                "id": 24,
+                                "id": 13,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -645,7 +429,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 25,
+                                "id": 14,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -661,7 +445,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 26,
+                                "id": 15,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -677,7 +461,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 27,
+                                "id": 16,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -693,7 +477,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 28,
+                                "id": 17,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -709,7 +493,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 29,
+                                "id": 18,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -725,7 +509,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 30,
+                                "id": 19,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -741,7 +525,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 31,
+                                "id": 20,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -757,7 +541,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 32,
+                                "id": 21,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -773,7 +557,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 33,
+                                "id": 22,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -789,7 +573,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 34,
+                                "id": 23,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -805,7 +589,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 35,
+                                "id": 24,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -821,7 +605,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 36,
+                                "id": 25,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -837,7 +621,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 37,
+                                "id": 26,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -853,7 +637,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 38,
+                                "id": 27,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -869,7 +653,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 39,
+                                "id": 28,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -885,7 +669,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 40,
+                                "id": 29,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -901,7 +685,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 41,
+                                "id": 30,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -917,7 +701,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 42,
+                                "id": 31,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -933,7 +717,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 43,
+                                "id": 32,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -949,7 +733,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 44,
+                                "id": 33,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -965,7 +749,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 45,
+                                "id": 34,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -981,7 +765,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 46,
+                                "id": 35,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -997,7 +781,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 47,
+                                "id": 36,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -1013,7 +797,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 48,
+                                "id": 37,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -1029,7 +813,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 49,
+                                "id": 38,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -1045,7 +829,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 50,
+                                "id": 39,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -1061,7 +845,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 51,
+                                "id": 40,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -1077,7 +861,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 52,
+                                "id": 41,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -1093,7 +877,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 53,
+                                "id": 42,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -1109,7 +893,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 54,
+                                "id": 43,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -1125,7 +909,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 55,
+                                "id": 44,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -1141,7 +925,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 56,
+                                "id": 45,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -1164,14 +948,14 @@
                         "ipName": "ila",
                         "core_location": {
                             "user_chain": 1,
-                            "slave_index": 2,
+                            "slave_index": 1,
                             "bscan_switch_index": 0
                         },
                         "uuid": "13577614A99651F9BBA8183B54A142E7",
                         "pins": [
                             {
                                 "name": "probe0",
-                                "id": 57,
+                                "id": 46,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -1187,7 +971,7 @@
                             },
                             {
                                 "name": "probe1",
-                                "id": 58,
+                                "id": 47,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -1241,7 +1025,7 @@
                             },
                             {
                                 "name": "probe2",
-                                "id": 59,
+                                "id": 48,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -1257,7 +1041,7 @@
                             },
                             {
                                 "name": "probe3",
-                                "id": 60,
+                                "id": 49,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -1273,7 +1057,7 @@
                             },
                             {
                                 "name": "probe4",
-                                "id": 61,
+                                "id": 50,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -1327,7 +1111,7 @@
                             },
                             {
                                 "name": "probe5",
-                                "id": 62,
+                                "id": 51,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -1343,7 +1127,7 @@
                             },
                             {
                                 "name": "probe6",
-                                "id": 63,
+                                "id": 52,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -1359,7 +1143,7 @@
                             },
                             {
                                 "name": "probe7",
-                                "id": 64,
+                                "id": 53,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -1375,7 +1159,7 @@
                             },
                             {
                                 "name": "probe8",
-                                "id": 65,
+                                "id": 54,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -1391,7 +1175,7 @@
                             },
                             {
                                 "name": "probe9",
-                                "id": 66,
+                                "id": 55,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -1407,7 +1191,7 @@
                             },
                             {
                                 "name": "probe10",
-                                "id": 67,
+                                "id": 56,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -1423,7 +1207,7 @@
                             },
                             {
                                 "name": "probe11",
-                                "id": 68,
+                                "id": 57,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -1439,7 +1223,7 @@
                             },
                             {
                                 "name": "probe12",
-                                "id": 69,
+                                "id": 58,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -1455,7 +1239,7 @@
                             },
                             {
                                 "name": "probe13",
-                                "id": 70,
+                                "id": 59,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -1471,7 +1255,7 @@
                             },
                             {
                                 "name": "probe14",
-                                "id": 71,
+                                "id": 60,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -1510,7 +1294,7 @@
                             },
                             {
                                 "name": "probe15",
-                                "id": 72,
+                                "id": 61,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -1558,7 +1342,7 @@
                             },
                             {
                                 "name": "probe16",
-                                "id": 73,
+                                "id": 62,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -1581,14 +1365,14 @@
                         "ipName": "ila",
                         "core_location": {
                             "user_chain": 1,
-                            "slave_index": 3,
+                            "slave_index": 2,
                             "bscan_switch_index": 0
                         },
                         "uuid": "191367044E705964B9613360323B4B60",
                         "pins": [
                             {
                                 "name": "probe0",
-                                "id": 74,
+                                "id": 63,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -1604,7 +1388,7 @@
                             },
                             {
                                 "name": "probe1",
-                                "id": 75,
+                                "id": 64,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -1730,7 +1514,7 @@
                             },
                             {
                                 "name": "probe2",
-                                "id": 76,
+                                "id": 65,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -1746,7 +1530,7 @@
                             },
                             {
                                 "name": "probe3",
-                                "id": 77,
+                                "id": 66,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -1762,7 +1546,7 @@
                             },
                             {
                                 "name": "probe4",
-                                "id": 78,
+                                "id": 67,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -1888,7 +1672,7 @@
                             },
                             {
                                 "name": "probe5",
-                                "id": 79,
+                                "id": 68,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -1904,7 +1688,7 @@
                             },
                             {
                                 "name": "probe6",
-                                "id": 80,
+                                "id": 69,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -1920,7 +1704,7 @@
                             },
                             {
                                 "name": "probe7",
-                                "id": 81,
+                                "id": 70,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -1936,7 +1720,7 @@
                             },
                             {
                                 "name": "probe8",
-                                "id": 82,
+                                "id": 71,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -1952,7 +1736,7 @@
                             },
                             {
                                 "name": "probe9",
-                                "id": 83,
+                                "id": 72,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -1968,7 +1752,7 @@
                             },
                             {
                                 "name": "probe10",
-                                "id": 84,
+                                "id": 73,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -1991,14 +1775,14 @@
                         "ipName": "ila",
                         "core_location": {
                             "user_chain": 1,
-                            "slave_index": 4,
+                            "slave_index": 3,
                             "bscan_switch_index": 0
                         },
                         "uuid": "95201B687A16503AA1B613F472CBD467",
                         "pins": [
                             {
                                 "name": "probe0",
-                                "id": 85,
+                                "id": 74,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -2014,7 +1798,7 @@
                             },
                             {
                                 "name": "probe1",
-                                "id": 86,
+                                "id": 75,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -2030,7 +1814,7 @@
                             },
                             {
                                 "name": "probe2",
-                                "id": 87,
+                                "id": 76,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -2046,7 +1830,7 @@
                             },
                             {
                                 "name": "probe3",
-                                "id": 88,
+                                "id": 77,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -2083,6 +1867,239 @@
                                                 "name": "oadc/U_reg_openadc/registers_echo[0]"
                                             }
                                         ]
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "type": "ILA_V3",
+                        "name": "oadc/genclocks/U_reg_mmcm_drp/U_ila_drp",
+                        "spec": "labtools_ila_v6",
+                        "ipName": "ila",
+                        "core_location": {
+                            "user_chain": 1,
+                            "slave_index": 4,
+                            "bscan_switch_index": 0
+                        },
+                        "uuid": "6EA1D1A75C9052858C7181E50B32B858",
+                        "pins": [
+                            {
+                                "name": "probe0",
+                                "id": 78,
+                                "type": "DATA_TRIGGER",
+                                "direction": "IN",
+                                "isVector": true,
+                                "leftIndex": 0,
+                                "rightIndex": 6,
+                                "portIndex": 0,
+                                "nets": [
+                                    {
+                                        "name": "oadc/genclocks/U_reg_mmcm_drp/drp_addr",
+                                        "isBus": true,
+                                        "subnets": [
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_addr[6]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_addr[5]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_addr[4]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_addr[3]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_addr[2]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_addr[1]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_addr[0]"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                "name": "probe1",
+                                "id": 79,
+                                "type": "DATA_TRIGGER",
+                                "direction": "IN",
+                                "isVector": false,
+                                "leftIndex": 0,
+                                "rightIndex": 0,
+                                "portIndex": 1,
+                                "nets": [
+                                    {
+                                        "name": "oadc/genclocks/U_reg_mmcm_drp/drp_den",
+                                        "isBus": false
+                                    }
+                                ]
+                            },
+                            {
+                                "name": "probe2",
+                                "id": 80,
+                                "type": "DATA_TRIGGER",
+                                "direction": "IN",
+                                "isVector": true,
+                                "leftIndex": 0,
+                                "rightIndex": 15,
+                                "portIndex": 2,
+                                "nets": [
+                                    {
+                                        "name": "oadc/genclocks/U_reg_mmcm_drp/drp_din",
+                                        "isBus": true,
+                                        "subnets": [
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_din[15]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_din[14]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_din[13]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_din[12]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_din[11]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_din[10]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_din[9]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_din[8]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_din[7]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_din[6]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_din[5]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_din[4]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_din[3]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_din[2]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_din[1]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_din[0]"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                "name": "probe3",
+                                "id": 81,
+                                "type": "DATA_TRIGGER",
+                                "direction": "IN",
+                                "isVector": true,
+                                "leftIndex": 0,
+                                "rightIndex": 15,
+                                "portIndex": 3,
+                                "nets": [
+                                    {
+                                        "name": "oadc/genclocks/U_reg_mmcm_drp/drp_dout",
+                                        "isBus": true,
+                                        "subnets": [
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_dout[15]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_dout[14]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_dout[13]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_dout[12]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_dout[11]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_dout[10]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_dout[9]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_dout[8]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_dout[7]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_dout[6]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_dout[5]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_dout[4]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_dout[3]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_dout[2]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_dout[1]"
+                                            },
+                                            {
+                                                "name": "oadc/genclocks/U_reg_mmcm_drp/drp_dout[0]"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                "name": "probe4",
+                                "id": 82,
+                                "type": "DATA_TRIGGER",
+                                "direction": "IN",
+                                "isVector": false,
+                                "leftIndex": 0,
+                                "rightIndex": 0,
+                                "portIndex": 4,
+                                "nets": [
+                                    {
+                                        "name": "oadc/genclocks/U_reg_mmcm_drp/drp_drdy",
+                                        "isBus": false
+                                    }
+                                ]
+                            },
+                            {
+                                "name": "probe5",
+                                "id": 83,
+                                "type": "DATA_TRIGGER",
+                                "direction": "IN",
+                                "isVector": false,
+                                "leftIndex": 0,
+                                "rightIndex": 0,
+                                "portIndex": 5,
+                                "nets": [
+                                    {
+                                        "name": "oadc/genclocks/U_reg_mmcm_drp/drp_dwe",
+                                        "isBus": false
                                     }
                                 ]
                             }

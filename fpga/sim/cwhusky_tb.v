@@ -146,6 +146,8 @@ module cwhusky_tb();
          write_1byte('h1, 8'h48);
       end
 
+      write_1byte(38, 8'h63);
+
       // it takes up to ~700 clock cycles after reset for things to get going again:
       #(pCLK_USB_PERIOD*900);
       setup_done = 1;
