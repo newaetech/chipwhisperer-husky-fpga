@@ -37,8 +37,7 @@ module fifo_top_husky(
     parameter FIFO_FULL_SIZE_LARGEWORDS = ((`MAX_SAMPLES - 32) / 3) / 4;
 
     wire                fast_fifo_wr;
-    reg                 fast_fifo_rd_en = 1'b0;
-    wire                fast_fifo_rd;
+    reg                 fast_fifo_rd = 1'b0;
     wire [11:0]         fast_fifo_dout;
     wire                fast_fifo_full;
     wire                fast_fifo_empty;
@@ -64,7 +63,6 @@ module fifo_top_husky(
     wire                stream_write;
     reg  [31:0]         presample_counter;
     reg                 fifo_capture_en;
-    reg                 adcfifo_wr_en;
 
     reg                 arm_r;
     reg                 arm_r2;
@@ -80,21 +78,28 @@ module fifo_top_husky(
     //Counter for downsampling (NOT proper decimation)
     reg [12:0] downsample_ctr;
     wire downsample_max;
+    reg downsample_wr_en;
 
     assign downsample_max = (downsample_ctr == downsample_i) ? 1'b1 : 'b0;
 
     always @(posedge adc_sampleclk) begin
        if ((arm_fifo_rst_adc == 1'b1) || (adc_capture_go == 1'b0)) begin
           downsample_ctr <= 13'd0;
-       end else begin
-          if (downsample_max)
+          downsample_wr_en <= 1'b0;
+       end 
+       else begin
+          if (downsample_max) begin
              downsample_ctr <= 13'd0;
-          else
+             downsample_wr_en <= 1'b1;
+          end
+          else begin
              downsample_ctr <= downsample_ctr + 13'd1;
+             downsample_wr_en <= 1'b0;
+          end
        end
     end
 
-    //3 samples per 4 bytes
+    //TODO: return correct value
     assign max_samples_o = FIFO_FULL_SIZE ;
 
 
@@ -114,32 +119,103 @@ module fifo_top_husky(
           adc_capture_stop_reg <= 1'b0;
     end
     */
+    // Presample logic: when armed, we always write to the fast FIFO. When
+    // we reach the requested number of presamples, we start to also read
+    // and discard, so as to keep exactly the requested number of presamples
+    // in the fast FIFO. During this time, no data is sent to the slow FIFO.
+    // When the trigger is received, the fast FIFO read data is then written
+    // to the slow FIFO.
+
+    localparam pS_IDLE = 0;
+    localparam pS_PRESAMP_FILLING = 1;
+    localparam pS_PRESAMP_FULL = 2;
+    localparam pS_TRIGGERED = 3;
+    reg [1:0] state;
+
+    // strictly for easier debugging:
+    wire state_idle = (state == pS_IDLE);
+    wire state_presamp_filling = (state == pS_PRESAMP_FILLING);
+    wire state_presamp_full = (state == pS_PRESAMP_FULL);
+    wire state_triggered = (state == pS_TRIGGERED);
+
+    wire discard_reads;
+    wire stop_capture_conditions;
+    wire fsm_fast_wr_en;
+
+    assign discard_reads = state_presamp_full;
+
+    assign stop_capture_conditions = fifo_rst_pre || adc_capture_stop_int;
+
+    assign fsm_fast_wr_en = (state != pS_IDLE);
+
+    always @ (posedge adc_sampleclk) begin
+       if (reset) begin
+          state <= pS_IDLE;
+          presample_counter <= 0;
+          fast_fifo_rd <= 1'b0;
+       end
+
+       else begin
+          case (state)
+
+             pS_IDLE: begin
+                presample_counter <= 0;
+                fast_fifo_rd <= 1'b0;
+                if (reset_done)
+                   if (arm_i)
+                      state <= pS_PRESAMP_FILLING;
+                   else if (adc_capture_go)
+                      state <= pS_TRIGGERED;
+             end
+
+             pS_PRESAMP_FILLING: begin
+                fast_fifo_rd <= 1'b0;
+                if (stop_capture_conditions)
+                   state <= pS_IDLE;
+                else if (adc_capture_go)
+                   state <= pS_TRIGGERED;
+                else if (presample_counter == presample_i)
+                   state <= pS_PRESAMP_FULL;
+                else if (fast_fifo_wr)
+                   presample_counter <= presample_counter + 1;
+             end
+
+             pS_PRESAMP_FULL: begin
+                if (stop_capture_conditions)
+                   state <= pS_IDLE;
+                else if (adc_capture_go)
+                   state <= pS_TRIGGERED;
+                if (fast_fifo_wr)
+                   fast_fifo_rd <= 1'b1;
+                else
+                   fast_fifo_rd <= 1'b0;
+             end
+
+             pS_TRIGGERED: begin
+                if (stop_capture_conditions)
+                   state <= pS_IDLE;
+                if (fast_fifo_wr)
+                   fast_fifo_rd <= 1'b1;
+                else
+                   fast_fifo_rd <= 1'b0;
+             end
+
+          endcase
+       end
+    end
+
+    // TODO: is this still needed?
     assign adc_capture_stop_reg = 1'b0;
 
     always @(posedge adc_sampleclk) begin
        arm_r <= arm_i;
        arm_r2 <= arm_r;
        arm_fifo_rst_adc <= ~arm_r2 & arm_r;
-       if (arm_fifo_rst_adc)
-          fifo_capture_en <= 1'b1;
-       else if (adc_capture_stop_int)
-          fifo_capture_en <= 1'b0;
-    end
-
-    always @(posedge adc_sampleclk) begin
-       if (fifo_capture_en == 0)
-          adcfifo_wr_en <= 0;
-       else begin
-          if (downsample_max)
-             adcfifo_wr_en <= 1;
-          else
-             adcfifo_wr_en <= 0;
-       end
     end
 
     // TODO: check on fast_fifo_full is temporary, probably need to detect and flag overflow events
-    assign fast_fifo_wr = adcfifo_wr_en & stream_write & adc_write_mask & reset_done & !fifo_rst_pre & !fast_fifo_full;
-    assign fast_fifo_rd = fast_fifo_rd_en & reset_done & !fifo_rst_pre;
+    assign fast_fifo_wr = downsample_wr_en & fsm_fast_wr_en & stream_write & adc_write_mask & reset_done & !fifo_rst_pre & !fast_fifo_full;
+    //assign fast_fifo_rd = fast_fifo_rd_en & reset_done & !fifo_rst_pre;
     assign slow_fifo_wr = slow_fifo_wr_premask & reset_done & !fifo_rst_pre;
 
     // Xilinx FIFO is very particular about its reset: it must be wide enough
@@ -197,11 +273,12 @@ module fifo_top_husky(
     end
 
     reg [1:0] fast_read_count;
-    // bridge the two fifos:
+
+    // Write slow FIFO:
     always @(posedge adc_sampleclk) begin
        if (reset) begin
           fast_read_count <= 0;
-          fast_fifo_rd_en <= 1'b0;
+          //fast_fifo_rd_en <= 1'b0;
           slow_fifo_prewr <= 1'b0;
           slow_fifo_wr_premask <= 1'b0;
        end
@@ -209,13 +286,13 @@ module fifo_top_husky(
        else begin
           slow_fifo_wr_premask <= slow_fifo_prewr;
           if (fifo_rst_pre || ~reset_done) begin
-             fast_fifo_rd_en <= 0;
+             //fast_fifo_rd_en <= 0;
              fast_read_count <= 0;
              slow_fifo_prewr <= 0;
           end
           else if (adc_capture_go) begin
              if (!fast_fifo_empty && !slow_fifo_full) begin
-                fast_fifo_rd_en <= 1'b1;
+                //fast_fifo_rd_en <= 1'b1;
                 if (fast_read_count < 2) begin
                    fast_read_count <= fast_read_count + 1;
                    slow_fifo_prewr <= 1'b0;
@@ -227,19 +304,20 @@ module fifo_top_husky(
 
              end
              else begin
-                fast_fifo_rd_en <= 1'b0;
+                //fast_fifo_rd_en <= 1'b0;
                 slow_fifo_prewr <= 1'b0;
              end
           end
 
-          if (fast_fifo_rd_en)
+          if (fast_fifo_rd)
              slow_fifo_din <= {slow_fifo_din[23:0], fast_fifo_dout};
 
        end
     end
 
     reg [3:0] slow_read_count;
-    // read slow FIFO
+
+    // Read slow FIFO:
     always @(posedge clk_usb) begin
        if (reset || ~reset_done) begin
           slow_read_count <= 0;
@@ -248,7 +326,7 @@ module fifo_top_husky(
        end
 
        else if (fifo_read_fifoen) begin
-          if (low_res) begin
+          if (low_res) begin // return 8 bits per sample
              if (slow_read_count < 2) begin
                 slow_read_count <= slow_read_count + 1;
                 slow_fifo_rd <= 1'b0;
@@ -259,7 +337,7 @@ module fifo_top_husky(
              end
           end
 
-          else begin // hi_res
+          else begin // hi_res, return all 12 bits per sample
              if (slow_read_count < 8)
                 slow_read_count <= slow_read_count + 1;
              else
@@ -334,40 +412,41 @@ module fifo_top_husky(
 
    `ifdef ILA_FIFO
        ila_fast_fifo U_ila_fast_fifo (
-	.clk            (adc_sampleclk),        // input wire clk
-	.probe0         (reset),                // input wire [0:0]  probe0  
-	.probe1         (adc_datain),           // input wire [11:0] probe1 
-	.probe2         (fast_fifo_wr),         // input wire [0:0]  probe2 
-	.probe3         (fast_fifo_rd),         // input wire [7:0]  probe3 
-	.probe4         (fast_fifo_dout),       // input wire [11:0] probe4 
-	.probe5         (fast_fifo_full),       // input wire [0:0]  probe5 
-	.probe6         (fast_fifo_empty),      // input wire [0:0]  probe6 
-	.probe7         (fast_fifo_overflow),   // input wire [0:0]  probe7 
-	.probe8         (fast_fifo_underflow),  // input wire [0:0]  probe8 
-	.probe9         (adcfifo_wr_en),        // input wire [0:0]  probe9 
-	.probe10        (stream_write),         // input wire [0:0]  probe10 
-	.probe11        (adc_write_mask),       // input wire [0:0]  probe11 
-	.probe12        (reset_done),           // input wire [0:0]  probe12 
-
-	.probe13        (fifo_rst_start_r),     // input wire [0:0]  probe13 
-	.probe14        (reset_hi_count),       // input wire [6:0]  probe14 
-	.probe15        (reset_lo_count),       // input wire [9:0]  probe15 
-	.probe16        (fifo_rst)              // input wire [0:0]  probe16 
+          .clk            (adc_sampleclk),        // input wire clk
+          .probe0         (reset),                // input wire [0:0]  probe0  
+          .probe1         (adc_datain),           // input wire [11:0] probe1 
+          .probe2         (fast_fifo_wr),         // input wire [0:0]  probe2 
+          .probe3         (fast_fifo_rd),         // input wire [7:0]  probe3 
+          .probe4         (fast_fifo_dout),       // input wire [11:0] probe4 
+          .probe5         (fast_fifo_full),       // input wire [0:0]  probe5 
+          .probe6         (fast_fifo_empty),      // input wire [0:0]  probe6 
+          .probe7         (fast_fifo_overflow),   // input wire [0:0]  probe7 
+          .probe8         (fast_fifo_underflow),  // input wire [0:0]  probe8 
+          .probe9         (downsample_wr_en),     // input wire [0:0]  probe9 
+          .probe10        (stream_write),         // input wire [0:0]  probe10 
+          .probe11        (adc_write_mask),       // input wire [0:0]  probe11 
+          .probe12        (reset_done),           // input wire [0:0]  probe12 
+          
+          .probe13        (fifo_rst_start_r),     // input wire [0:0]  probe13 
+          .probe14        (reset_hi_count),       // input wire [6:0]  probe14 
+          .probe15        (reset_lo_count),       // input wire [9:0]  probe15 
+          .probe16        (fifo_rst),             // input wire [0:0]  probe16 
+          .probe17        (adc_capture_go)        // input wire [0:0]  probe17 
        );
 
        ila_slow_fifo U_ila_slow_fifo (
-	.clk            (clk_usb),              // input wire clk
-	.probe0         (reset),                // input wire [0:0]  probe0  
-	.probe1         (slow_fifo_din),        // input wire [35:0] probe1 
-	.probe2         (slow_fifo_wr),         // input wire [0:0]  probe2 
-	.probe3         (slow_fifo_rd),         // input wire [7:0]  probe3 
-	.probe4         (slow_fifo_dout),       // input wire [35:0] probe4 
-	.probe5         (slow_fifo_full),       // input wire [0:0]  probe5 
-	.probe6         (slow_fifo_empty),      // input wire [0:0]  probe6 
-	.probe7         (slow_fifo_overflow),   // input wire [0:0]  probe7 
-	.probe8         (slow_fifo_underflow),  // input wire [0:0]  probe8 
-        .probe9         (fifo_rst),             // input wire [0:0]  probe9
-        .probe10        (reset_done)            // input wire [0:0]  probe10
+          .clk            (clk_usb),              // input wire clk
+          .probe0         (reset),                // input wire [0:0]  probe0  
+          .probe1         (slow_fifo_din),        // input wire [35:0] probe1 
+          .probe2         (slow_fifo_wr),         // input wire [0:0]  probe2 
+          .probe3         (slow_fifo_rd),         // input wire [7:0]  probe3 
+          .probe4         (slow_fifo_dout),       // input wire [35:0] probe4 
+          .probe5         (slow_fifo_full),       // input wire [0:0]  probe5 
+          .probe6         (slow_fifo_empty),      // input wire [0:0]  probe6 
+          .probe7         (slow_fifo_overflow),   // input wire [0:0]  probe7 
+          .probe8         (slow_fifo_underflow),  // input wire [0:0]  probe8 
+          .probe9         (fifo_rst),             // input wire [0:0]  probe9
+          .probe10        (reset_done)            // input wire [0:0]  probe10
        );
 
 
