@@ -22,7 +22,7 @@ module fifo_top_husky(
     output reg   [7:0]  fifo_read_data,
 
     input wire  [31:0] presample_i,
-    input wire  [31:0] max_samples_i, // TODO XXX unused
+    input wire  [31:0] max_samples_i,
     output wire [31:0] max_samples_o,
     output wire [31:0] samples_o,
     input wire  [12:0] downsample_i, //Ignores this many samples inbetween captured measurements
@@ -32,9 +32,9 @@ module fifo_top_husky(
 );
 
     // TODO: TEMPORARY:
-    //`define MAX_SAMPLES 1024
-    parameter FIFO_FULL_SIZE = `MAX_SAMPLES - 128;
-    parameter FIFO_FULL_SIZE_LARGEWORDS = ((`MAX_SAMPLES - 32) / 3) / 4;
+    `define MAX_SAMPLES 2048
+    parameter FIFO_FULL_SIZE = `MAX_SAMPLES - 128; // TODO: adjust?
+    parameter FIFO_FULL_SIZE_LARGEWORDS = ((`MAX_SAMPLES - 32) / 3) / 4; // TODO: ?
 
     wire                fast_fifo_wr;
     reg                 fast_fifo_rd = 1'b0;
@@ -57,11 +57,12 @@ module fifo_top_husky(
     wire                slow_fifo_underflow;
 
     wire                adc_capture_stop_int;
-    wire                adc_capture_stop_reg;
-    wire                fifo_overflow_int;
+    reg                 adc_capture_stop_reg;
+    wire                fifo_overflow_int;      // TODO: need to drive this, for streaming mode
     reg                 fifo_overflow_reg;
     wire                stream_write;
-    reg  [31:0]         presample_counter;
+    reg  [31:0]         presample_counter;      // TODO: reduced size as required when FIFOs are finalized
+    reg  [31:0]         sample_counter;         // TODO: reduced size as required when FIFOs are finalized
     reg                 fifo_capture_en;
 
     reg                 arm_r;
@@ -122,6 +123,7 @@ module fifo_top_husky(
           adc_capture_stop_reg <= 1'b0;
     end
     */
+
     // Presample logic: when armed, we always write to the fast FIFO. When
     // we reach the requested number of presamples, we start to also read
     // and discard, so as to keep exactly the requested number of presamples
@@ -133,13 +135,15 @@ module fifo_top_husky(
     localparam pS_PRESAMP_FILLING = 1;
     localparam pS_PRESAMP_FULL = 2;
     localparam pS_TRIGGERED = 3;
-    reg [1:0] state;
+    localparam pS_DONE = 4;
+    reg [2:0] state;
 
     // strictly for easier debugging:
     wire state_idle = (state == pS_IDLE);
     wire state_presamp_filling = (state == pS_PRESAMP_FILLING);
     wire state_presamp_full = (state == pS_PRESAMP_FULL);
     wire state_triggered = (state == pS_TRIGGERED);
+    wire state_done = (state == pS_DONE);
 
     wire stop_capture_conditions;
     wire fsm_fast_wr_en;
@@ -152,7 +156,10 @@ module fifo_top_husky(
        if (reset) begin
           state <= pS_IDLE;
           presample_counter <= 0;
+          sample_counter <= 0;
+          sample_counter <= 0;
           fast_fifo_rd <= 1'b0;
+          adc_capture_stop_reg <= 1'b0;
        end
 
        else begin
@@ -160,8 +167,10 @@ module fifo_top_husky(
 
              pS_IDLE: begin
                 presample_counter <= 0;
+                sample_counter <= 0;
                 fast_fifo_rd <= 1'b0;
-                if (armed_and_ready)
+                adc_capture_stop_reg <= 1'b0;
+                if (armed_and_ready && ~adc_capture_stop_reg)
                    if (arm_i & (presample_i > 0))
                       state <= pS_PRESAMP_FILLING;
                    else if (adc_capture_go)
@@ -171,7 +180,7 @@ module fifo_top_husky(
              pS_PRESAMP_FILLING: begin
                 fast_fifo_rd <= 1'b0;
                 if (stop_capture_conditions)
-                   state <= pS_IDLE;
+                   state <= pS_DONE;
                 else if (adc_capture_go)
                    state <= pS_TRIGGERED;
                 else if (presample_counter == presample_i)
@@ -182,7 +191,7 @@ module fifo_top_husky(
 
              pS_PRESAMP_FULL: begin
                 if (stop_capture_conditions)
-                   state <= pS_IDLE;
+                   state <= pS_DONE;
                 else if (adc_capture_go)
                    state <= pS_TRIGGERED;
                 if (fast_fifo_wr)
@@ -192,12 +201,21 @@ module fifo_top_husky(
              end
 
              pS_TRIGGERED: begin
-                if (stop_capture_conditions)
-                   state <= pS_IDLE;
-                if (fast_fifo_wr)
+                if (stop_capture_conditions || (sample_counter == max_samples_i)) begin
+                   adc_capture_stop_reg <= 1'b1;
+                   state <= pS_DONE;
+                end
+                if (fast_fifo_wr) begin
+                   sample_counter <= sample_counter + 1;
                    fast_fifo_rd <= 1'b1;
+                end
                 else
                    fast_fifo_rd <= 1'b0;
+             end
+
+             pS_DONE: begin
+                // basically just a wait state so that we don't get back out of idle right away
+                state <= pS_IDLE;
              end
 
           endcase
@@ -205,7 +223,7 @@ module fifo_top_husky(
     end
 
     // TODO: is this still needed?
-    assign adc_capture_stop_reg = 1'b0;
+    //assign adc_capture_stop_reg = 1'b0;
 
    (* ASYNC_REG = "TRUE" *) reg[1:0] reset_done_pipe;
    reg reset_done_r;
@@ -232,6 +250,8 @@ module fifo_top_husky(
              arming <= 1'b0;
              armed_and_ready <= 1'b1;
           end
+          else if (adc_capture_stop_reg)
+             armed_and_ready <= 1'b0;
        end
     end
 

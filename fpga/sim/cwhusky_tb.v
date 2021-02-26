@@ -154,6 +154,13 @@ module cwhusky_tb();
       write_next_byte((pPRESAMPLES & 32'h00FF_0000)>>16);
       write_next_byte((pPRESAMPLES & 32'hFF00_0000)>>24);
 
+      rw_lots_bytes('h10);
+      write_next_byte((pFIFO_SAMPLES & 32'h0000_00FF));
+      write_next_byte((pFIFO_SAMPLES & 32'h0000_FF00)>>8);
+      write_next_byte((pFIFO_SAMPLES & 32'h00FF_0000)>>16);
+      write_next_byte((pFIFO_SAMPLES & 32'hFF00_0000)>>24);
+
+
       write_1byte('h1, 8'hc); // arm, trigger level = high
 
       // random delay before trigger:
@@ -311,6 +318,8 @@ cwhusky_top U_dut (
     .clk_usb            (clk_usb      ),
     .ADC_clk_fbp        (clk_adc      ),
     .ADC_clk_fbn        (1'b0         ),
+    .ADC_DP             (6'b0         ),
+    .ADC_DN             (6'b0         ),
     .ADC_CLKP           (             ),
     .ADC_CLKN           (             ),
     .LED_CLK1FAIL       (LED_CLK1FAIL ),
