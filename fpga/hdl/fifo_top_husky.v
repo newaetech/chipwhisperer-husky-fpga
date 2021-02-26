@@ -68,6 +68,8 @@ module fifo_top_husky(
     reg                 arm_r2;
     reg                 arm_fifo_rst_adc;
     wire                arm_fifo_rst_usb;
+    reg                 armed_and_ready;
+    reg                 arming;
 
     assign stream_write = (stream_mode) ? adc_capture_go : 1'b1; //In stream mode we don't write until trigger
     assign fifo_overflow = fifo_overflow_reg;
@@ -83,7 +85,8 @@ module fifo_top_husky(
     assign downsample_max = (downsample_ctr == downsample_i) ? 1'b1 : 'b0;
 
     always @(posedge adc_sampleclk) begin
-       if ((arm_fifo_rst_adc == 1'b1) || (adc_capture_go == 1'b0)) begin
+       //if ((arm_fifo_rst_adc == 1'b1) || (adc_capture_go == 1'b0)) begin
+       if (arm_fifo_rst_adc == 1'b1) begin
           downsample_ctr <= 13'd0;
           downsample_wr_en <= 1'b0;
        end 
@@ -138,11 +141,8 @@ module fifo_top_husky(
     wire state_presamp_full = (state == pS_PRESAMP_FULL);
     wire state_triggered = (state == pS_TRIGGERED);
 
-    wire discard_reads;
     wire stop_capture_conditions;
     wire fsm_fast_wr_en;
-
-    assign discard_reads = state_presamp_full;
 
     assign stop_capture_conditions = fifo_rst_pre || adc_capture_stop_int;
 
@@ -161,8 +161,8 @@ module fifo_top_husky(
              pS_IDLE: begin
                 presample_counter <= 0;
                 fast_fifo_rd <= 1'b0;
-                if (reset_done)
-                   if (arm_i)
+                if (armed_and_ready)
+                   if (arm_i & (presample_i > 0))
                       state <= pS_PRESAMP_FILLING;
                    else if (adc_capture_go)
                       state <= pS_TRIGGERED;
@@ -207,10 +207,32 @@ module fifo_top_husky(
     // TODO: is this still needed?
     assign adc_capture_stop_reg = 1'b0;
 
+   (* ASYNC_REG = "TRUE" *) reg[1:0] reset_done_pipe;
+   reg reset_done_r;
+   reg reset_done_r2;
+
     always @(posedge adc_sampleclk) begin
-       arm_r <= arm_i;
-       arm_r2 <= arm_r;
-       arm_fifo_rst_adc <= ~arm_r2 & arm_r;
+       if (reset) begin
+          reset_done_pipe <= 0;
+          reset_done_r <= 1'b0;
+          reset_done_r2 <= 1'b0;
+          arming <= 1'b0;
+          armed_and_ready <= 1'b0;
+       end
+       else begin
+          {reset_done_r2, reset_done_r, reset_done_pipe} <= {reset_done_r, reset_done_pipe, reset_done};
+          arm_r <= arm_i;
+          arm_r2 <= arm_r;
+          arm_fifo_rst_adc <= ~arm_r2 & arm_r;
+          if (arm_i && ~arm_r && ~arming) begin
+             arming <= 1'b1;
+             armed_and_ready <= 1'b0;
+          end
+          else if (arming && ~reset_done_r2 && reset_done_r) begin
+             arming <= 1'b0;
+             armed_and_ready <= 1'b1;
+          end
+       end
     end
 
     // TODO: check on fast_fifo_full is temporary, probably need to detect and flag overflow events

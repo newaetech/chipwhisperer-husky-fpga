@@ -21,18 +21,37 @@ random.seed()
 # Define testcases:
 tests = []
 tests.append(dict(name  = 'slow_adc',
-             frequency = 1,
+             frequency = 5,
              description = 'Slow ADC clock.',
              SLOW_ADC = 1))
 
 tests.append(dict(name  = 'fast_adc',
-             frequency = 1,
+             frequency = 5,
              description = 'Fast ADC clock.',
              FAST_ADC = 1))
 
 tests.append(dict(name  = 'nom_adc',
-             frequency = 1,
+             frequency = 5,
              description = 'Nominal ADC clock (almost same as USB clock).'))
+
+tests.append(dict(name  = 'presamples',
+             frequency = 1,
+             PRESAMPLES = [10, 500],
+             TRIGGER_DELAY = 2000,
+             description = 'Randomized pre-trigger samples.'))
+
+tests.append(dict(name  = 'nopresamples',
+             frequency = 2,
+             PRESAMPLES = 0,
+             TRIGGER_DELAY = [0, 500],
+             description = 'No pre-trigger samples, randomized trigger delay.'))
+
+tests.append(dict(name  = 'both_fifos',
+             frequency = 2,
+             description = 'Read beyond what the slow FIFO can hold, to verify proper transitioning.',
+             ADC_LOW_RES = [0,1],
+             TIMEOUT_CYCLES = 500000,
+             FIFO_SAMPLES = 1600))
 
 
 
@@ -99,7 +118,11 @@ for test in tests:
             elif i % test[key]:
                run_test = False
          else:
-            makeargs.append("%s=%s" % (key, test[key]))
+            if type(test[key]) == list:
+               value = random.randint(test[key][0], test[key][1])
+            else:
+               value = test[key]
+            makeargs.append("%s=%s" % (key, value))
       if (args.seed):
          seed = args.seed
       else:

@@ -10,7 +10,10 @@ module cwhusky_tb();
    parameter pADC_LOW_RES = 1;
    parameter pSLOW_ADC = 0;
    parameter pFAST_ADC = 0;
+   parameter pNOM_ADC = 0;
    parameter pFIFO_SAMPLES = 90;
+   parameter pPRESAMPLES = 0;
+   parameter pTRIGGER_DELAY = 0;
    parameter pSEED = 1;
    parameter pTIMEOUT_CYCLES = 50000;
    parameter pDUMP = 0;
@@ -21,6 +24,8 @@ module cwhusky_tb();
    reg                  clk_adc_fast;
    reg                  clk_adc_nom;
    wire                 clk_adc;
+   wire [2:0]           adc_clocks;
+   reg  [1:0]           chosen_clock;
    wire [7:0]           usb_data;
    reg  [7:0]           usb_wdata;
    reg  [7:0]           usb_addr;
@@ -74,6 +79,17 @@ module cwhusky_tb();
       seed = pSEED;
       $display("Running with seed=%0d", seed);
       rdata = $urandom(seed);
+      $display("pPRESAMPLES = %d", pPRESAMPLES);
+      $display("pFIFO_SAMPLES = %d", pFIFO_SAMPLES);
+      $display("pADC_LOW_RES = %d", pADC_LOW_RES);
+      if ((pSLOW_ADC == 0) && (pFAST_ADC == 0) && (pNOM_ADC == 0)) begin
+         chosen_clock = $urandom_range(0, 2);
+         case (chosen_clock)
+            0: $display("Chose slow ADC clock.");
+            1: $display("Chose fast ADC clock.");
+            2: $display("Chose nominal ADC clock.");
+         endcase
+      end
       if (pDUMP) begin
          $dumpfile("results/cwhusky_tb.fst");
          $dumpvars(0, cwhusky_tb);
@@ -131,10 +147,23 @@ module cwhusky_tb();
       else
          write_1byte('d29, 0);
 
+      // program number of samples:
+      rw_lots_bytes('h11);
+      write_next_byte((pPRESAMPLES & 32'h0000_00FF));
+      write_next_byte((pPRESAMPLES & 32'h0000_FF00)>>8);
+      write_next_byte((pPRESAMPLES & 32'h00FF_0000)>>16);
+      write_next_byte((pPRESAMPLES & 32'hFF00_0000)>>24);
+
       write_1byte('h1, 8'hc); // arm, trigger level = high
 
       // random delay before trigger:
-      #($urandom_range(0, 100)*pCLK_USB_PERIOD);
+      //#($urandom_range(0, 100)*pCLK_USB_PERIOD);
+
+      if (pTRIGGER_DELAY) begin
+         //wait (U_dut.oadc.U_fifo.fast_fifo_full);
+         //wait (U_dut.oadc.U_fifo.fast_fifo_empty == 1'b0);
+         repeat (pTRIGGER_DELAY) @(posedge clk_adc);
+      end
 
       // randomly choose to use trigger pin or "trigger now"
       if ($urandom % 2) begin
@@ -161,9 +190,13 @@ module cwhusky_tb();
       good_reads = 0;
       bad_reads = 0;
       rw_lots_bytes('d3);
+      //wait (U_dut.oadc.U_fifo.slow_fifo_full);
+      //#(pCLK_USB_PERIOD*1000);
 
       if (pADC_LOW_RES) begin // 8 bits per sample
          for (i = 0; i < pFIFO_SAMPLES; i = i + 1) begin
+            if (i%1000 == 0)
+               $display("heartbeat: read %d samples", i);
             read_next_byte(rdata);
             if (i == 0)
                last_sample = rdata;
@@ -183,6 +216,8 @@ module cwhusky_tb();
 
       else begin // 12 bits per sample
          for (i = 0; i < pFIFO_SAMPLES/6; i = i + 1) begin
+            if (i%100 == 0)
+               $display("heartbeat: read %d samples", i*6);
             for (j = 0; j < 9; j = j + 1) begin
                rdata_r = rdata;
                read_next_byte(rdata);
@@ -206,7 +241,7 @@ module cwhusky_tb();
                else begin
                   bad_reads += 1;
                   errors += 1;
-                  $display("ERROR %2d: expected %2h, got %2h", i, (comp + 1) % 2**12, sample[j]);
+                  $display("ERROR %2d: expected %2h, got %2h", i*6+j, (comp + 1) % 2**12, sample[j]);
                end
             end
             last_sample = sample[5];
@@ -265,8 +300,12 @@ module cwhusky_tb();
 
 assign target_io4 = target_io4_reg;
 
+assign adc_clocks = {clk_adc_slow, clk_adc_fast, clk_adc_nom};
+
 assign clk_adc = pSLOW_ADC? clk_adc_slow :
-                 pFAST_ADC? clk_adc_fast : clk_adc_nom;
+                 pFAST_ADC? clk_adc_fast : 
+                 pNOM_ADC? clk_adc_nom :
+                 adc_clocks[chosen_clock];
 
 cwhusky_top U_dut (  
     .clk_usb            (clk_usb      ),

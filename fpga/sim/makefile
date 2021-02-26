@@ -1,6 +1,10 @@
 ADC_LOW_RES=0
 SLOW_ADC=0
 FAST_ADC=0
+NOM_ADC=0
+FIFO_SAMPLES=90
+PRESAMPLES=0
+TRIGGER_DELAY=0
 LOGFILE=make.log
 WAVEFORMAT=fst
 SEED=1
@@ -18,6 +22,10 @@ compile:
 	-P cwhusky_tb.pADC_LOW_RES=$(ADC_LOW_RES) \
 	-P cwhusky_tb.pSLOW_ADC=$(SLOW_ADC) \
 	-P cwhusky_tb.pFAST_ADC=$(FAST_ADC) \
+	-P cwhusky_tb.pNOM_ADC=$(NOM_ADC) \
+	-P cwhusky_tb.pFIFO_SAMPLES=$(FIFO_SAMPLES) \
+	-P cwhusky_tb.pPRESAMPLES=$(PRESAMPLES) \
+	-P cwhusky_tb.pTRIGGER_DELAY=$(TRIGGER_DELAY) \
 	-P cwhusky_tb.pTIMEOUT_CYCLES=$(TIMEOUT_CYCLES) \
 	-P cwhusky_tb.pDUMP=$(DUMP) \
 	-P cwhusky_tb.pSEED=$(SEED) \
