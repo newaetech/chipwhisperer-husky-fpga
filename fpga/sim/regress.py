@@ -49,7 +49,7 @@ tests.append(dict(name  = 'both_fifos',
              description = 'Read beyond what the slow FIFO can hold, to verify proper transitioning.',
              ADC_LOW_RES = [0,1],
              TIMEOUT_CYCLES = 500000,
-             FIFO_SAMPLES = 1600))
+             FIFO_SAMPLES = 1620))
 
 
 

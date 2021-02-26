@@ -77,6 +77,25 @@ module trigger_unit(
 
    reg [31:0] adc_delay_cnt;
 
+   (* ASYNC_REG = "TRUE" *) reg[1:0] trigger_now_pipe;
+   reg trigger_now_r;
+   reg trigger_now_r2;
+   wire trigger_now;
+
+   always @(posedge adc_clk) begin
+      if (reset) begin
+         trigger_now_pipe <= 0;
+         trigger_now_r <= 0;
+         trigger_now_r2 <= 0;
+      end
+      else begin
+         {trigger_now_r2, trigger_now_r, trigger_now_pipe} <= {trigger_now_r, trigger_now_pipe, trigger_now_i};
+      end
+   end
+
+   assign trigger_now = trigger_now_r && ~trigger_now_r2;
+
+
    always @(posedge adc_clk) begin
       if (adc_capture_go == 1'b0) begin
          adc_delay_cnt <= 0;
@@ -98,7 +117,7 @@ module trigger_unit(
       if (reset) begin
          reset_arm <= 0;
       end else begin
-         if (((trigger == trigger_level_i) & armed) | (trigger_now_i)) begin
+         if (((trigger == trigger_level_i) & armed) | trigger_now) begin
             reset_arm <= 1;
          end else if ((arm_i == 0) & (adc_capture_go == 0)) begin
             reset_arm <= 0;
@@ -113,7 +132,7 @@ module trigger_unit(
       if (int_reset_capture) begin
          adc_capture_go <= 0;
       end else begin
-         if (((trigger == trigger_level_i) & armed) | (trigger_now_i)) begin
+         if (((trigger == trigger_level_i) & armed) | trigger_now) begin
             adc_capture_go <= 1;
          end
       end

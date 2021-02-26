@@ -261,6 +261,8 @@ module cwhusky_tb();
          end
       end
 
+      #(pCLK_USB_PERIOD*20);
+
       $display("Done reading.");
       $display("Good reads: %d", good_reads);
       $display("Bad reads: %d", bad_reads);

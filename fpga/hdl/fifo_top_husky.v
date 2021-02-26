@@ -351,6 +351,9 @@ module fifo_top_husky(
              end
           end
 
+          else
+             slow_fifo_prewr <= 1'b0;
+
           if (fast_fifo_rd)
              slow_fifo_din <= {slow_fifo_din[23:0], fast_fifo_dout};
 
