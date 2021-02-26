@@ -16,8 +16,6 @@ parser.add_argument("--list", help="List available tests.", action='store_true')
 parser.add_argument("--dump", help="Enable waveform dumping.", action='store_true')
 args = parser.parse_args()
 
-random.seed()
-
 # Define testcases:
 tests = []
 tests.append(dict(name  = 'slow_adc',
@@ -96,11 +94,23 @@ if result.returncode:
 
 # Run tests:
 start_time = int(time.time())
+
+
 for test in tests:
    if args.tests:
       if test_regex.search(test['name']) == None:
           continue
+
    for i in range(args.runs):
+
+      # set the random seed first, so that both Python and Verilog randomizations are reproducible:
+      if (args.seed):
+         seed = args.seed
+      else:
+         seed = random.randint(0, 2**31-1)
+      random.seed(seed)
+      makeargs.append("SEED=%d" % seed)
+
       run_test = True
       # build make command:
       makeargs = ['make', 'all', 'VERBOSE=0']
@@ -123,11 +133,6 @@ for test in tests:
             else:
                value = test[key]
             makeargs.append("%s=%s" % (key, value))
-      if (args.seed):
-         seed = args.seed
-      else:
-         seed = random.randint(0, 2**31-1)
-      makeargs.append("SEED=%d" % seed)
 
       # run:
       if run_test:
