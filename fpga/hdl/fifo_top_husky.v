@@ -152,7 +152,7 @@ module fifo_top_husky(
 
     assign stop_capture_conditions = fifo_rst_pre || adc_capture_stop_int;
 
-    assign fsm_fast_wr_en = (state != pS_IDLE);
+    assign fsm_fast_wr_en = ((state == pS_PRESAMP_FILLING) || (state == pS_PRESAMP_FULL) || (state == pS_TRIGGERED));
 
     always @ (posedge adc_sampleclk) begin
        if (reset) begin
@@ -196,8 +196,10 @@ module fifo_top_husky(
              pS_PRESAMP_FULL: begin
                 if (stop_capture_conditions)
                    state <= pS_DONE;
-                else if (adc_capture_go)
+                else if (adc_capture_go) begin
+                   sample_counter <= presample_counter;
                    state <= pS_TRIGGERED;
+                end
                 if (fast_fifo_wr)
                    fast_fifo_presample_drain <= 1'b1;
                 else
