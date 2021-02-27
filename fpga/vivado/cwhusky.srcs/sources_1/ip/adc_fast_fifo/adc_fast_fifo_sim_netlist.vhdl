@@ -1,10 +1,10 @@
 -- Copyright 1986-2019 Xilinx, Inc. All Rights Reserved.
 -- --------------------------------------------------------------------------------
 -- Tool Version: Vivado v.2019.2 (win64) Build 2708876 Wed Nov  6 21:40:23 MST 2019
--- Date        : Tue Feb 16 15:06:30 2021
+-- Date        : Wed Feb 24 14:19:38 2021
 -- Host        : qed running 64-bit major release  (build 9200)
 -- Command     : write_vhdl -force -mode funcsim
---               c:/Users/jp/GitHub/OpenTitan/husky/fpga/vivado/cwhusky.srcs/sources_1/ip/adc_fast_fifo/adc_fast_fifo_sim_netlist.vhdl
+--               C:/Users/jp/GitHub/OpenTitan/husky/fpga/vivado/cwhusky.srcs/sources_1/ip/adc_fast_fifo/adc_fast_fifo_sim_netlist.vhdl
 -- Design      : adc_fast_fifo
 -- Purpose     : This VHDL netlist is a functional simulation representation of the design and should not be modified or
 --               synthesized. This netlist cannot be used for SDF annotated simulation.
@@ -16,11 +16,15 @@ library UNISIM;
 use UNISIM.VCOMPONENTS.ALL;
 entity adc_fast_fifo_builtin_prim_v6 is
   port (
-    dout : out STD_LOGIC_VECTOR ( 3 downto 0 );
+    full : out STD_LOGIC;
+    overflow : out STD_LOGIC;
+    dout : out STD_LOGIC_VECTOR ( 11 downto 0 );
+    \gsfl.empty_user_reg_0\ : out STD_LOGIC;
+    underflow_i_ic : out STD_LOGIC;
     clk : in STD_LOGIC;
     rd_rst_i : in STD_LOGIC;
     wr_en : in STD_LOGIC;
-    din : in STD_LOGIC_VECTOR ( 3 downto 0 );
+    din : in STD_LOGIC_VECTOR ( 11 downto 0 );
     rd_en : in STD_LOGIC
   );
   attribute ORIG_REF_NAME : string;
@@ -30,432 +34,73 @@ end adc_fast_fifo_builtin_prim_v6;
 architecture STRUCTURE of adc_fast_fifo_builtin_prim_v6 is
   signal empty_fifo : STD_LOGIC;
   signal empty_q : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_10\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_11\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_12\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_13\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_14\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_15\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_16\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_17\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_18\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_19\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_2\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_20\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_21\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_22\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_23\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_24\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_25\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_26\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_27\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_28\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_29\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_30\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_31\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_32\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_33\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_4\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_5\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_6\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_7\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_8\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_9\ : STD_LOGIC;
-  signal \gsfl.empty_user_i_1__1_n_0\ : STD_LOGIC;
-  signal \gsfl.empty_user_reg_n_0\ : STD_LOGIC;
-  signal prog_empty_fifo : STD_LOGIC;
-  signal prog_full_fifo : STD_LOGIC;
-  signal \rden_fifo__0\ : STD_LOGIC;
-  signal \NLW_gf36e1_inst.sngfifo36e1_DO_UNCONNECTED\ : STD_LOGIC_VECTOR ( 63 downto 4 );
-  signal \NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED\ : STD_LOGIC_VECTOR ( 7 downto 0 );
-  signal \NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED\ : STD_LOGIC_VECTOR ( 7 downto 0 );
-  attribute box_type : string;
-  attribute box_type of \gf36e1_inst.sngfifo36e1\ : label is "PRIMITIVE";
-  attribute SOFT_HLUTNM : string;
-  attribute SOFT_HLUTNM of \gsfl.empty_user_i_1__1\ : label is "soft_lutpair2";
-  attribute SOFT_HLUTNM of rden_fifo : label is "soft_lutpair2";
-begin
-\gf36e1_inst.sngfifo36e1\: unisim.vcomponents.FIFO36E1
-    generic map(
-      ALMOST_EMPTY_OFFSET => X"0003",
-      ALMOST_FULL_OFFSET => X"0002",
-      DATA_WIDTH => 4,
-      DO_REG => 0,
-      EN_ECC_READ => false,
-      EN_ECC_WRITE => false,
-      EN_SYN => true,
-      FIFO_MODE => "FIFO36",
-      FIRST_WORD_FALL_THROUGH => false,
-      INIT => X"000000000000000000",
-      IS_RDCLK_INVERTED => '0',
-      IS_RDEN_INVERTED => '0',
-      IS_RSTREG_INVERTED => '0',
-      IS_RST_INVERTED => '0',
-      IS_WRCLK_INVERTED => '0',
-      IS_WREN_INVERTED => '0',
-      SIM_DEVICE => "7SERIES",
-      SRVAL => X"000000000000000000"
-    )
-        port map (
-      ALMOSTEMPTY => prog_empty_fifo,
-      ALMOSTFULL => prog_full_fifo,
-      DBITERR => \gf36e1_inst.sngfifo36e1_n_2\,
-      DI(63 downto 4) => B"000000000000000000000000000000000000000000000000000000000000",
-      DI(3 downto 0) => din(3 downto 0),
-      DIP(7 downto 0) => B"00000000",
-      DO(63 downto 4) => \NLW_gf36e1_inst.sngfifo36e1_DO_UNCONNECTED\(63 downto 4),
-      DO(3 downto 0) => dout(3 downto 0),
-      DOP(7 downto 0) => \NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED\(7 downto 0),
-      ECCPARITY(7 downto 0) => \NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED\(7 downto 0),
-      EMPTY => empty_fifo,
-      FULL => \gf36e1_inst.sngfifo36e1_n_4\,
-      INJECTDBITERR => '0',
-      INJECTSBITERR => '0',
-      RDCLK => clk,
-      RDCOUNT(12) => \gf36e1_inst.sngfifo36e1_n_8\,
-      RDCOUNT(11) => \gf36e1_inst.sngfifo36e1_n_9\,
-      RDCOUNT(10) => \gf36e1_inst.sngfifo36e1_n_10\,
-      RDCOUNT(9) => \gf36e1_inst.sngfifo36e1_n_11\,
-      RDCOUNT(8) => \gf36e1_inst.sngfifo36e1_n_12\,
-      RDCOUNT(7) => \gf36e1_inst.sngfifo36e1_n_13\,
-      RDCOUNT(6) => \gf36e1_inst.sngfifo36e1_n_14\,
-      RDCOUNT(5) => \gf36e1_inst.sngfifo36e1_n_15\,
-      RDCOUNT(4) => \gf36e1_inst.sngfifo36e1_n_16\,
-      RDCOUNT(3) => \gf36e1_inst.sngfifo36e1_n_17\,
-      RDCOUNT(2) => \gf36e1_inst.sngfifo36e1_n_18\,
-      RDCOUNT(1) => \gf36e1_inst.sngfifo36e1_n_19\,
-      RDCOUNT(0) => \gf36e1_inst.sngfifo36e1_n_20\,
-      RDEN => \rden_fifo__0\,
-      RDERR => \gf36e1_inst.sngfifo36e1_n_5\,
-      REGCE => '0',
-      RST => rd_rst_i,
-      RSTREG => '0',
-      SBITERR => \gf36e1_inst.sngfifo36e1_n_6\,
-      WRCLK => clk,
-      WRCOUNT(12) => \gf36e1_inst.sngfifo36e1_n_21\,
-      WRCOUNT(11) => \gf36e1_inst.sngfifo36e1_n_22\,
-      WRCOUNT(10) => \gf36e1_inst.sngfifo36e1_n_23\,
-      WRCOUNT(9) => \gf36e1_inst.sngfifo36e1_n_24\,
-      WRCOUNT(8) => \gf36e1_inst.sngfifo36e1_n_25\,
-      WRCOUNT(7) => \gf36e1_inst.sngfifo36e1_n_26\,
-      WRCOUNT(6) => \gf36e1_inst.sngfifo36e1_n_27\,
-      WRCOUNT(5) => \gf36e1_inst.sngfifo36e1_n_28\,
-      WRCOUNT(4) => \gf36e1_inst.sngfifo36e1_n_29\,
-      WRCOUNT(3) => \gf36e1_inst.sngfifo36e1_n_30\,
-      WRCOUNT(2) => \gf36e1_inst.sngfifo36e1_n_31\,
-      WRCOUNT(1) => \gf36e1_inst.sngfifo36e1_n_32\,
-      WRCOUNT(0) => \gf36e1_inst.sngfifo36e1_n_33\,
-      WREN => wr_en,
-      WRERR => \gf36e1_inst.sngfifo36e1_n_7\
-    );
-\gsfl.empty_q_reg\: unisim.vcomponents.FDPE
-    generic map(
-      INIT => '1'
-    )
-        port map (
-      C => clk,
-      CE => '1',
-      D => empty_fifo,
-      PRE => rd_rst_i,
-      Q => empty_q
-    );
-\gsfl.empty_user_i_1__1\: unisim.vcomponents.LUT4
-    generic map(
-      INIT => X"ABA0"
-    )
-        port map (
-      I0 => empty_fifo,
-      I1 => empty_q,
-      I2 => rd_en,
-      I3 => \gsfl.empty_user_reg_n_0\,
-      O => \gsfl.empty_user_i_1__1_n_0\
-    );
-\gsfl.empty_user_reg\: unisim.vcomponents.FDPE
-    generic map(
-      INIT => '1'
-    )
-        port map (
-      C => clk,
-      CE => '1',
-      D => \gsfl.empty_user_i_1__1_n_0\,
-      PRE => rd_rst_i,
-      Q => \gsfl.empty_user_reg_n_0\
-    );
-rden_fifo: unisim.vcomponents.LUT4
-    generic map(
-      INIT => X"AAEA"
-    )
-        port map (
-      I0 => rd_en,
-      I1 => \gsfl.empty_user_reg_n_0\,
-      I2 => empty_q,
-      I3 => empty_fifo,
-      O => \rden_fifo__0\
-    );
-end STRUCTURE;
-library IEEE;
-use IEEE.STD_LOGIC_1164.ALL;
-library UNISIM;
-use UNISIM.VCOMPONENTS.ALL;
-entity adc_fast_fifo_builtin_prim_v6_2 is
-  port (
-    dout : out STD_LOGIC_VECTOR ( 3 downto 0 );
-    clk : in STD_LOGIC;
-    rd_rst_i : in STD_LOGIC;
-    wr_en : in STD_LOGIC;
-    din : in STD_LOGIC_VECTOR ( 3 downto 0 );
-    rd_en : in STD_LOGIC
-  );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of adc_fast_fifo_builtin_prim_v6_2 : entity is "builtin_prim_v6";
-end adc_fast_fifo_builtin_prim_v6_2;
-
-architecture STRUCTURE of adc_fast_fifo_builtin_prim_v6_2 is
-  signal empty_fifo : STD_LOGIC;
-  signal empty_q : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_10\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_11\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_12\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_13\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_14\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_15\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_16\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_17\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_18\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_19\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_2\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_20\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_21\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_22\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_23\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_24\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_25\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_26\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_27\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_28\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_29\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_30\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_31\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_32\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_33\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_4\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_5\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_6\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_7\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_8\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_9\ : STD_LOGIC;
-  signal \gsfl.empty_user_i_1__0_n_0\ : STD_LOGIC;
-  signal \gsfl.empty_user_reg_n_0\ : STD_LOGIC;
-  signal prog_empty_fifo : STD_LOGIC;
-  signal prog_full_fifo : STD_LOGIC;
-  signal \rden_fifo__0\ : STD_LOGIC;
-  signal \NLW_gf36e1_inst.sngfifo36e1_DO_UNCONNECTED\ : STD_LOGIC_VECTOR ( 63 downto 4 );
-  signal \NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED\ : STD_LOGIC_VECTOR ( 7 downto 0 );
-  signal \NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED\ : STD_LOGIC_VECTOR ( 7 downto 0 );
-  attribute box_type : string;
-  attribute box_type of \gf36e1_inst.sngfifo36e1\ : label is "PRIMITIVE";
-  attribute SOFT_HLUTNM : string;
-  attribute SOFT_HLUTNM of \gsfl.empty_user_i_1__0\ : label is "soft_lutpair1";
-  attribute SOFT_HLUTNM of rden_fifo : label is "soft_lutpair1";
-begin
-\gf36e1_inst.sngfifo36e1\: unisim.vcomponents.FIFO36E1
-    generic map(
-      ALMOST_EMPTY_OFFSET => X"0003",
-      ALMOST_FULL_OFFSET => X"0002",
-      DATA_WIDTH => 4,
-      DO_REG => 0,
-      EN_ECC_READ => false,
-      EN_ECC_WRITE => false,
-      EN_SYN => true,
-      FIFO_MODE => "FIFO36",
-      FIRST_WORD_FALL_THROUGH => false,
-      INIT => X"000000000000000000",
-      IS_RDCLK_INVERTED => '0',
-      IS_RDEN_INVERTED => '0',
-      IS_RSTREG_INVERTED => '0',
-      IS_RST_INVERTED => '0',
-      IS_WRCLK_INVERTED => '0',
-      IS_WREN_INVERTED => '0',
-      SIM_DEVICE => "7SERIES",
-      SRVAL => X"000000000000000000"
-    )
-        port map (
-      ALMOSTEMPTY => prog_empty_fifo,
-      ALMOSTFULL => prog_full_fifo,
-      DBITERR => \gf36e1_inst.sngfifo36e1_n_2\,
-      DI(63 downto 4) => B"000000000000000000000000000000000000000000000000000000000000",
-      DI(3 downto 0) => din(3 downto 0),
-      DIP(7 downto 0) => B"00000000",
-      DO(63 downto 4) => \NLW_gf36e1_inst.sngfifo36e1_DO_UNCONNECTED\(63 downto 4),
-      DO(3 downto 0) => dout(3 downto 0),
-      DOP(7 downto 0) => \NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED\(7 downto 0),
-      ECCPARITY(7 downto 0) => \NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED\(7 downto 0),
-      EMPTY => empty_fifo,
-      FULL => \gf36e1_inst.sngfifo36e1_n_4\,
-      INJECTDBITERR => '0',
-      INJECTSBITERR => '0',
-      RDCLK => clk,
-      RDCOUNT(12) => \gf36e1_inst.sngfifo36e1_n_8\,
-      RDCOUNT(11) => \gf36e1_inst.sngfifo36e1_n_9\,
-      RDCOUNT(10) => \gf36e1_inst.sngfifo36e1_n_10\,
-      RDCOUNT(9) => \gf36e1_inst.sngfifo36e1_n_11\,
-      RDCOUNT(8) => \gf36e1_inst.sngfifo36e1_n_12\,
-      RDCOUNT(7) => \gf36e1_inst.sngfifo36e1_n_13\,
-      RDCOUNT(6) => \gf36e1_inst.sngfifo36e1_n_14\,
-      RDCOUNT(5) => \gf36e1_inst.sngfifo36e1_n_15\,
-      RDCOUNT(4) => \gf36e1_inst.sngfifo36e1_n_16\,
-      RDCOUNT(3) => \gf36e1_inst.sngfifo36e1_n_17\,
-      RDCOUNT(2) => \gf36e1_inst.sngfifo36e1_n_18\,
-      RDCOUNT(1) => \gf36e1_inst.sngfifo36e1_n_19\,
-      RDCOUNT(0) => \gf36e1_inst.sngfifo36e1_n_20\,
-      RDEN => \rden_fifo__0\,
-      RDERR => \gf36e1_inst.sngfifo36e1_n_5\,
-      REGCE => '0',
-      RST => rd_rst_i,
-      RSTREG => '0',
-      SBITERR => \gf36e1_inst.sngfifo36e1_n_6\,
-      WRCLK => clk,
-      WRCOUNT(12) => \gf36e1_inst.sngfifo36e1_n_21\,
-      WRCOUNT(11) => \gf36e1_inst.sngfifo36e1_n_22\,
-      WRCOUNT(10) => \gf36e1_inst.sngfifo36e1_n_23\,
-      WRCOUNT(9) => \gf36e1_inst.sngfifo36e1_n_24\,
-      WRCOUNT(8) => \gf36e1_inst.sngfifo36e1_n_25\,
-      WRCOUNT(7) => \gf36e1_inst.sngfifo36e1_n_26\,
-      WRCOUNT(6) => \gf36e1_inst.sngfifo36e1_n_27\,
-      WRCOUNT(5) => \gf36e1_inst.sngfifo36e1_n_28\,
-      WRCOUNT(4) => \gf36e1_inst.sngfifo36e1_n_29\,
-      WRCOUNT(3) => \gf36e1_inst.sngfifo36e1_n_30\,
-      WRCOUNT(2) => \gf36e1_inst.sngfifo36e1_n_31\,
-      WRCOUNT(1) => \gf36e1_inst.sngfifo36e1_n_32\,
-      WRCOUNT(0) => \gf36e1_inst.sngfifo36e1_n_33\,
-      WREN => wr_en,
-      WRERR => \gf36e1_inst.sngfifo36e1_n_7\
-    );
-\gsfl.empty_q_reg\: unisim.vcomponents.FDPE
-    generic map(
-      INIT => '1'
-    )
-        port map (
-      C => clk,
-      CE => '1',
-      D => empty_fifo,
-      PRE => rd_rst_i,
-      Q => empty_q
-    );
-\gsfl.empty_user_i_1__0\: unisim.vcomponents.LUT4
-    generic map(
-      INIT => X"ABA0"
-    )
-        port map (
-      I0 => empty_fifo,
-      I1 => empty_q,
-      I2 => rd_en,
-      I3 => \gsfl.empty_user_reg_n_0\,
-      O => \gsfl.empty_user_i_1__0_n_0\
-    );
-\gsfl.empty_user_reg\: unisim.vcomponents.FDPE
-    generic map(
-      INIT => '1'
-    )
-        port map (
-      C => clk,
-      CE => '1',
-      D => \gsfl.empty_user_i_1__0_n_0\,
-      PRE => rd_rst_i,
-      Q => \gsfl.empty_user_reg_n_0\
-    );
-rden_fifo: unisim.vcomponents.LUT4
-    generic map(
-      INIT => X"AAEA"
-    )
-        port map (
-      I0 => rd_en,
-      I1 => \gsfl.empty_user_reg_n_0\,
-      I2 => empty_q,
-      I3 => empty_fifo,
-      O => \rden_fifo__0\
-    );
-end STRUCTURE;
-library IEEE;
-use IEEE.STD_LOGIC_1164.ALL;
-library UNISIM;
-use UNISIM.VCOMPONENTS.ALL;
-entity adc_fast_fifo_builtin_prim_v6_3 is
-  port (
-    full : out STD_LOGIC;
-    overflow : out STD_LOGIC;
-    dout : out STD_LOGIC_VECTOR ( 3 downto 0 );
-    \gsfl.empty_user_reg_0\ : out STD_LOGIC;
-    underflow_int : out STD_LOGIC;
-    clk : in STD_LOGIC;
-    rd_rst_i : in STD_LOGIC;
-    wr_en : in STD_LOGIC;
-    din : in STD_LOGIC_VECTOR ( 3 downto 0 );
-    rd_en : in STD_LOGIC
-  );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of adc_fast_fifo_builtin_prim_v6_3 : entity is "builtin_prim_v6";
-end adc_fast_fifo_builtin_prim_v6_3;
-
-architecture STRUCTURE of adc_fast_fifo_builtin_prim_v6_3 is
-  signal dbiterr_i : STD_LOGIC;
-  signal empty_fifo : STD_LOGIC;
-  signal empty_q : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_10\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_11\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_12\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_13\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_14\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_15\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_16\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_17\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_18\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_19\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_20\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_21\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_22\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_23\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_24\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_25\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_26\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_27\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_28\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_29\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_30\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_31\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_32\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_33\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_5\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_8\ : STD_LOGIC;
-  signal \gf36e1_inst.sngfifo36e1_n_9\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_10\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_11\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_12\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_13\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_14\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_15\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_16\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_17\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_21\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_22\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_23\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_24\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_25\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_26\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_27\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_28\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_29\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_30\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_31\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_32\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_33\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_34\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_35\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_36\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_37\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_38\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_39\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_4\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_40\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_41\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_42\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_43\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_44\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_45\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_46\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_47\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_48\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_49\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_62\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_63\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_64\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_65\ : STD_LOGIC;
+  signal \gf18e1_inst.sngfifo18e1_n_9\ : STD_LOGIC;
   signal \gsfl.empty_user_i_1_n_0\ : STD_LOGIC;
   signal \^gsfl.empty_user_reg_0\ : STD_LOGIC;
   signal prog_empty_fifo : STD_LOGIC;
   signal prog_full_fifo : STD_LOGIC;
   signal \rden_fifo__0\ : STD_LOGIC;
-  signal sbiterr_i : STD_LOGIC;
-  signal \NLW_gf36e1_inst.sngfifo36e1_DO_UNCONNECTED\ : STD_LOGIC_VECTOR ( 63 downto 4 );
-  signal \NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED\ : STD_LOGIC_VECTOR ( 7 downto 0 );
-  signal \NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED\ : STD_LOGIC_VECTOR ( 7 downto 0 );
+  signal \NLW_gf18e1_inst.sngfifo18e1_RDCOUNT_UNCONNECTED\ : STD_LOGIC_VECTOR ( 11 downto 9 );
+  signal \NLW_gf18e1_inst.sngfifo18e1_WRCOUNT_UNCONNECTED\ : STD_LOGIC_VECTOR ( 11 downto 9 );
   attribute box_type : string;
-  attribute box_type of \gf36e1_inst.sngfifo36e1\ : label is "PRIMITIVE";
+  attribute box_type of \gf18e1_inst.sngfifo18e1\ : label is "PRIMITIVE";
   attribute SOFT_HLUTNM : string;
   attribute SOFT_HLUTNM of \gsfl.empty_user_i_1\ : label is "soft_lutpair0";
   attribute SOFT_HLUTNM of rden_fifo : label is "soft_lutpair0";
 begin
   \gsfl.empty_user_reg_0\ <= \^gsfl.empty_user_reg_0\;
-\gf36e1_inst.sngfifo36e1\: unisim.vcomponents.FIFO36E1
+\gf18e1_inst.sngfifo18e1\: unisim.vcomponents.FIFO18E1
     generic map(
       ALMOST_EMPTY_OFFSET => X"0003",
       ALMOST_FULL_OFFSET => X"0002",
-      DATA_WIDTH => 4,
+      DATA_WIDTH => 36,
       DO_REG => 0,
-      EN_ECC_READ => false,
-      EN_ECC_WRITE => false,
       EN_SYN => true,
-      FIFO_MODE => "FIFO36",
+      FIFO_MODE => "FIFO18_36",
       FIRST_WORD_FALL_THROUGH => false,
-      INIT => X"000000000000000000",
+      INIT => X"000000000",
       IS_RDCLK_INVERTED => '0',
       IS_RDEN_INVERTED => '0',
       IS_RSTREG_INVERTED => '0',
@@ -463,57 +108,68 @@ begin
       IS_WRCLK_INVERTED => '0',
       IS_WREN_INVERTED => '0',
       SIM_DEVICE => "7SERIES",
-      SRVAL => X"000000000000000000"
+      SRVAL => X"000000000"
     )
         port map (
       ALMOSTEMPTY => prog_empty_fifo,
       ALMOSTFULL => prog_full_fifo,
-      DBITERR => dbiterr_i,
-      DI(63 downto 4) => B"000000000000000000000000000000000000000000000000000000000000",
-      DI(3 downto 0) => din(3 downto 0),
-      DIP(7 downto 0) => B"00000000",
-      DO(63 downto 4) => \NLW_gf36e1_inst.sngfifo36e1_DO_UNCONNECTED\(63 downto 4),
-      DO(3 downto 0) => dout(3 downto 0),
-      DOP(7 downto 0) => \NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED\(7 downto 0),
-      ECCPARITY(7 downto 0) => \NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED\(7 downto 0),
+      DI(31 downto 12) => B"00000000000000000000",
+      DI(11 downto 0) => din(11 downto 0),
+      DIP(3 downto 0) => B"0000",
+      DO(31) => \gf18e1_inst.sngfifo18e1_n_30\,
+      DO(30) => \gf18e1_inst.sngfifo18e1_n_31\,
+      DO(29) => \gf18e1_inst.sngfifo18e1_n_32\,
+      DO(28) => \gf18e1_inst.sngfifo18e1_n_33\,
+      DO(27) => \gf18e1_inst.sngfifo18e1_n_34\,
+      DO(26) => \gf18e1_inst.sngfifo18e1_n_35\,
+      DO(25) => \gf18e1_inst.sngfifo18e1_n_36\,
+      DO(24) => \gf18e1_inst.sngfifo18e1_n_37\,
+      DO(23) => \gf18e1_inst.sngfifo18e1_n_38\,
+      DO(22) => \gf18e1_inst.sngfifo18e1_n_39\,
+      DO(21) => \gf18e1_inst.sngfifo18e1_n_40\,
+      DO(20) => \gf18e1_inst.sngfifo18e1_n_41\,
+      DO(19) => \gf18e1_inst.sngfifo18e1_n_42\,
+      DO(18) => \gf18e1_inst.sngfifo18e1_n_43\,
+      DO(17) => \gf18e1_inst.sngfifo18e1_n_44\,
+      DO(16) => \gf18e1_inst.sngfifo18e1_n_45\,
+      DO(15) => \gf18e1_inst.sngfifo18e1_n_46\,
+      DO(14) => \gf18e1_inst.sngfifo18e1_n_47\,
+      DO(13) => \gf18e1_inst.sngfifo18e1_n_48\,
+      DO(12) => \gf18e1_inst.sngfifo18e1_n_49\,
+      DO(11 downto 0) => dout(11 downto 0),
+      DOP(3) => \gf18e1_inst.sngfifo18e1_n_62\,
+      DOP(2) => \gf18e1_inst.sngfifo18e1_n_63\,
+      DOP(1) => \gf18e1_inst.sngfifo18e1_n_64\,
+      DOP(0) => \gf18e1_inst.sngfifo18e1_n_65\,
       EMPTY => empty_fifo,
       FULL => full,
-      INJECTDBITERR => '0',
-      INJECTSBITERR => '0',
       RDCLK => clk,
-      RDCOUNT(12) => \gf36e1_inst.sngfifo36e1_n_8\,
-      RDCOUNT(11) => \gf36e1_inst.sngfifo36e1_n_9\,
-      RDCOUNT(10) => \gf36e1_inst.sngfifo36e1_n_10\,
-      RDCOUNT(9) => \gf36e1_inst.sngfifo36e1_n_11\,
-      RDCOUNT(8) => \gf36e1_inst.sngfifo36e1_n_12\,
-      RDCOUNT(7) => \gf36e1_inst.sngfifo36e1_n_13\,
-      RDCOUNT(6) => \gf36e1_inst.sngfifo36e1_n_14\,
-      RDCOUNT(5) => \gf36e1_inst.sngfifo36e1_n_15\,
-      RDCOUNT(4) => \gf36e1_inst.sngfifo36e1_n_16\,
-      RDCOUNT(3) => \gf36e1_inst.sngfifo36e1_n_17\,
-      RDCOUNT(2) => \gf36e1_inst.sngfifo36e1_n_18\,
-      RDCOUNT(1) => \gf36e1_inst.sngfifo36e1_n_19\,
-      RDCOUNT(0) => \gf36e1_inst.sngfifo36e1_n_20\,
+      RDCOUNT(11 downto 9) => \NLW_gf18e1_inst.sngfifo18e1_RDCOUNT_UNCONNECTED\(11 downto 9),
+      RDCOUNT(8) => \gf18e1_inst.sngfifo18e1_n_9\,
+      RDCOUNT(7) => \gf18e1_inst.sngfifo18e1_n_10\,
+      RDCOUNT(6) => \gf18e1_inst.sngfifo18e1_n_11\,
+      RDCOUNT(5) => \gf18e1_inst.sngfifo18e1_n_12\,
+      RDCOUNT(4) => \gf18e1_inst.sngfifo18e1_n_13\,
+      RDCOUNT(3) => \gf18e1_inst.sngfifo18e1_n_14\,
+      RDCOUNT(2) => \gf18e1_inst.sngfifo18e1_n_15\,
+      RDCOUNT(1) => \gf18e1_inst.sngfifo18e1_n_16\,
+      RDCOUNT(0) => \gf18e1_inst.sngfifo18e1_n_17\,
       RDEN => \rden_fifo__0\,
-      RDERR => \gf36e1_inst.sngfifo36e1_n_5\,
+      RDERR => \gf18e1_inst.sngfifo18e1_n_4\,
       REGCE => '0',
       RST => rd_rst_i,
       RSTREG => '0',
-      SBITERR => sbiterr_i,
       WRCLK => clk,
-      WRCOUNT(12) => \gf36e1_inst.sngfifo36e1_n_21\,
-      WRCOUNT(11) => \gf36e1_inst.sngfifo36e1_n_22\,
-      WRCOUNT(10) => \gf36e1_inst.sngfifo36e1_n_23\,
-      WRCOUNT(9) => \gf36e1_inst.sngfifo36e1_n_24\,
-      WRCOUNT(8) => \gf36e1_inst.sngfifo36e1_n_25\,
-      WRCOUNT(7) => \gf36e1_inst.sngfifo36e1_n_26\,
-      WRCOUNT(6) => \gf36e1_inst.sngfifo36e1_n_27\,
-      WRCOUNT(5) => \gf36e1_inst.sngfifo36e1_n_28\,
-      WRCOUNT(4) => \gf36e1_inst.sngfifo36e1_n_29\,
-      WRCOUNT(3) => \gf36e1_inst.sngfifo36e1_n_30\,
-      WRCOUNT(2) => \gf36e1_inst.sngfifo36e1_n_31\,
-      WRCOUNT(1) => \gf36e1_inst.sngfifo36e1_n_32\,
-      WRCOUNT(0) => \gf36e1_inst.sngfifo36e1_n_33\,
+      WRCOUNT(11 downto 9) => \NLW_gf18e1_inst.sngfifo18e1_WRCOUNT_UNCONNECTED\(11 downto 9),
+      WRCOUNT(8) => \gf18e1_inst.sngfifo18e1_n_21\,
+      WRCOUNT(7) => \gf18e1_inst.sngfifo18e1_n_22\,
+      WRCOUNT(6) => \gf18e1_inst.sngfifo18e1_n_23\,
+      WRCOUNT(5) => \gf18e1_inst.sngfifo18e1_n_24\,
+      WRCOUNT(4) => \gf18e1_inst.sngfifo18e1_n_25\,
+      WRCOUNT(3) => \gf18e1_inst.sngfifo18e1_n_26\,
+      WRCOUNT(2) => \gf18e1_inst.sngfifo18e1_n_27\,
+      WRCOUNT(1) => \gf18e1_inst.sngfifo18e1_n_28\,
+      WRCOUNT(0) => \gf18e1_inst.sngfifo18e1_n_29\,
       WREN => wr_en,
       WRERR => overflow
     );
@@ -557,7 +213,7 @@ begin
         port map (
       I0 => \^gsfl.empty_user_reg_0\,
       I1 => rd_en,
-      O => underflow_int
+      O => underflow_i_ic
     );
 rden_fifo: unisim.vcomponents.LUT4
     generic map(
@@ -641,7 +297,7 @@ architecture STRUCTURE of adc_fast_fifo_reset_builtin is
   attribute KEEP of \rsync.rcc.wr_rst_reg2_reg\ : label is "yes";
   attribute msgon of \rsync.rcc.wr_rst_reg2_reg\ : label is "true";
 begin
-\gf36e1_inst.sngfifo36e1_i_1\: unisim.vcomponents.LUT2
+\gf18e1_inst.sngfifo18e1_i_1\: unisim.vcomponents.LUT2
     generic map(
       INIT => X"E"
     )
@@ -856,13 +512,13 @@ entity adc_fast_fifo_builtin_extdepth_v6 is
   port (
     full : out STD_LOGIC;
     overflow : out STD_LOGIC;
-    dout : out STD_LOGIC_VECTOR ( 3 downto 0 );
+    dout : out STD_LOGIC_VECTOR ( 11 downto 0 );
     \gsfl.empty_user_reg\ : out STD_LOGIC;
-    underflow_int : out STD_LOGIC;
+    underflow_i_ic : out STD_LOGIC;
     clk : in STD_LOGIC;
     rd_rst_i : in STD_LOGIC;
     wr_en : in STD_LOGIC;
-    din : in STD_LOGIC_VECTOR ( 3 downto 0 );
+    din : in STD_LOGIC_VECTOR ( 11 downto 0 );
     rd_en : in STD_LOGIC
   );
   attribute ORIG_REF_NAME : string;
@@ -885,167 +541,17 @@ architecture STRUCTURE of adc_fast_fifo_builtin_extdepth_v6 is
   attribute async_reg of sbr_d1 : signal is "true";
   attribute msgon of sbr_d1 : signal is "true";
 begin
-\gonep.inst_prim\: entity work.adc_fast_fifo_builtin_prim_v6_3
+\gonep.inst_prim\: entity work.adc_fast_fifo_builtin_prim_v6
      port map (
       clk => clk,
-      din(3 downto 0) => din(3 downto 0),
-      dout(3 downto 0) => dout(3 downto 0),
+      din(11 downto 0) => din(11 downto 0),
+      dout(11 downto 0) => dout(11 downto 0),
       full => full,
       \gsfl.empty_user_reg_0\ => \gsfl.empty_user_reg\,
       overflow => overflow,
       rd_en => rd_en,
       rd_rst_i => rd_rst_i,
-      underflow_int => underflow_int,
-      wr_en => wr_en
-    );
-i_0: unisim.vcomponents.LUT1
-    generic map(
-      INIT => X"2"
-    )
-        port map (
-      I0 => '0',
-      O => sbr_d1
-    );
-i_1: unisim.vcomponents.LUT1
-    generic map(
-      INIT => X"2"
-    )
-        port map (
-      I0 => '0',
-      O => dbr_d1
-    );
-i_2: unisim.vcomponents.LUT1
-    generic map(
-      INIT => X"2"
-    )
-        port map (
-      I0 => '0',
-      O => sbr_as_reg
-    );
-i_3: unisim.vcomponents.LUT1
-    generic map(
-      INIT => X"2"
-    )
-        port map (
-      I0 => '0',
-      O => dbr_as_reg
-    );
-end STRUCTURE;
-library IEEE;
-use IEEE.STD_LOGIC_1164.ALL;
-library UNISIM;
-use UNISIM.VCOMPONENTS.ALL;
-entity adc_fast_fifo_builtin_extdepth_v6_0 is
-  port (
-    dout : out STD_LOGIC_VECTOR ( 3 downto 0 );
-    clk : in STD_LOGIC;
-    rd_rst_i : in STD_LOGIC;
-    wr_en : in STD_LOGIC;
-    din : in STD_LOGIC_VECTOR ( 3 downto 0 );
-    rd_en : in STD_LOGIC
-  );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of adc_fast_fifo_builtin_extdepth_v6_0 : entity is "builtin_extdepth_v6";
-end adc_fast_fifo_builtin_extdepth_v6_0;
-
-architecture STRUCTURE of adc_fast_fifo_builtin_extdepth_v6_0 is
-  signal dbr_as_reg : STD_LOGIC;
-  attribute async_reg : string;
-  attribute async_reg of dbr_as_reg : signal is "true";
-  attribute msgon : string;
-  attribute msgon of dbr_as_reg : signal is "true";
-  signal dbr_d1 : STD_LOGIC;
-  attribute async_reg of dbr_d1 : signal is "true";
-  attribute msgon of dbr_d1 : signal is "true";
-  signal sbr_as_reg : STD_LOGIC;
-  attribute async_reg of sbr_as_reg : signal is "true";
-  attribute msgon of sbr_as_reg : signal is "true";
-  signal sbr_d1 : STD_LOGIC;
-  attribute async_reg of sbr_d1 : signal is "true";
-  attribute msgon of sbr_d1 : signal is "true";
-begin
-\gonep.inst_prim\: entity work.adc_fast_fifo_builtin_prim_v6_2
-     port map (
-      clk => clk,
-      din(3 downto 0) => din(3 downto 0),
-      dout(3 downto 0) => dout(3 downto 0),
-      rd_en => rd_en,
-      rd_rst_i => rd_rst_i,
-      wr_en => wr_en
-    );
-i_0: unisim.vcomponents.LUT1
-    generic map(
-      INIT => X"2"
-    )
-        port map (
-      I0 => '0',
-      O => sbr_d1
-    );
-i_1: unisim.vcomponents.LUT1
-    generic map(
-      INIT => X"2"
-    )
-        port map (
-      I0 => '0',
-      O => dbr_d1
-    );
-i_2: unisim.vcomponents.LUT1
-    generic map(
-      INIT => X"2"
-    )
-        port map (
-      I0 => '0',
-      O => sbr_as_reg
-    );
-i_3: unisim.vcomponents.LUT1
-    generic map(
-      INIT => X"2"
-    )
-        port map (
-      I0 => '0',
-      O => dbr_as_reg
-    );
-end STRUCTURE;
-library IEEE;
-use IEEE.STD_LOGIC_1164.ALL;
-library UNISIM;
-use UNISIM.VCOMPONENTS.ALL;
-entity adc_fast_fifo_builtin_extdepth_v6_1 is
-  port (
-    dout : out STD_LOGIC_VECTOR ( 3 downto 0 );
-    clk : in STD_LOGIC;
-    rd_rst_i : in STD_LOGIC;
-    wr_en : in STD_LOGIC;
-    din : in STD_LOGIC_VECTOR ( 3 downto 0 );
-    rd_en : in STD_LOGIC
-  );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of adc_fast_fifo_builtin_extdepth_v6_1 : entity is "builtin_extdepth_v6";
-end adc_fast_fifo_builtin_extdepth_v6_1;
-
-architecture STRUCTURE of adc_fast_fifo_builtin_extdepth_v6_1 is
-  signal dbr_as_reg : STD_LOGIC;
-  attribute async_reg : string;
-  attribute async_reg of dbr_as_reg : signal is "true";
-  attribute msgon : string;
-  attribute msgon of dbr_as_reg : signal is "true";
-  signal dbr_d1 : STD_LOGIC;
-  attribute async_reg of dbr_d1 : signal is "true";
-  attribute msgon of dbr_d1 : signal is "true";
-  signal sbr_as_reg : STD_LOGIC;
-  attribute async_reg of sbr_as_reg : signal is "true";
-  attribute msgon of sbr_as_reg : signal is "true";
-  signal sbr_d1 : STD_LOGIC;
-  attribute async_reg of sbr_d1 : signal is "true";
-  attribute msgon of sbr_d1 : signal is "true";
-begin
-\gonep.inst_prim\: entity work.adc_fast_fifo_builtin_prim_v6
-     port map (
-      clk => clk,
-      din(3 downto 0) => din(3 downto 0),
-      dout(3 downto 0) => dout(3 downto 0),
-      rd_en => rd_en,
-      rd_rst_i => rd_rst_i,
+      underflow_i_ic => underflow_i_ic,
       wr_en => wr_en
     );
 i_0: unisim.vcomponents.LUT1
@@ -1103,37 +609,19 @@ entity adc_fast_fifo_builtin_top_v6 is
 end adc_fast_fifo_builtin_top_v6;
 
 architecture STRUCTURE of adc_fast_fifo_builtin_top_v6 is
-  signal underflow_int : STD_LOGIC;
+  signal underflow_i_ic : STD_LOGIC;
 begin
 \gextw[1].gnll_fifo.inst_extd\: entity work.adc_fast_fifo_builtin_extdepth_v6
      port map (
       clk => clk,
-      din(3 downto 0) => din(3 downto 0),
-      dout(3 downto 0) => dout(3 downto 0),
+      din(11 downto 0) => din(11 downto 0),
+      dout(11 downto 0) => dout(11 downto 0),
       full => full,
       \gsfl.empty_user_reg\ => \gsfl.empty_user_reg\,
       overflow => overflow,
       rd_en => rd_en,
       rd_rst_i => rd_rst_i,
-      underflow_int => underflow_int,
-      wr_en => wr_en
-    );
-\gextw[2].gnll_fifo.inst_extd\: entity work.adc_fast_fifo_builtin_extdepth_v6_0
-     port map (
-      clk => clk,
-      din(3 downto 0) => din(7 downto 4),
-      dout(3 downto 0) => dout(7 downto 4),
-      rd_en => rd_en,
-      rd_rst_i => rd_rst_i,
-      wr_en => wr_en
-    );
-\gextw[3].gnll_fifo.inst_extd\: entity work.adc_fast_fifo_builtin_extdepth_v6_1
-     port map (
-      clk => clk,
-      din(3 downto 0) => din(11 downto 8),
-      dout(3 downto 0) => dout(11 downto 8),
-      rd_en => rd_en,
-      rd_rst_i => rd_rst_i,
+      underflow_i_ic => underflow_i_ic,
       wr_en => wr_en
     );
 \gunf.gunf1.gunb.UNDERFLOW_reg\: unisim.vcomponents.FDRE
@@ -1143,7 +631,7 @@ begin
         port map (
       C => clk,
       CE => '1',
-      D => underflow_int,
+      D => underflow_i_ic,
       Q => underflow,
       R => '0'
     );
@@ -1284,12 +772,12 @@ entity adc_fast_fifo_fifo_generator_v13_2_5 is
     din : in STD_LOGIC_VECTOR ( 11 downto 0 );
     wr_en : in STD_LOGIC;
     rd_en : in STD_LOGIC;
-    prog_empty_thresh : in STD_LOGIC_VECTOR ( 12 downto 0 );
-    prog_empty_thresh_assert : in STD_LOGIC_VECTOR ( 12 downto 0 );
-    prog_empty_thresh_negate : in STD_LOGIC_VECTOR ( 12 downto 0 );
-    prog_full_thresh : in STD_LOGIC_VECTOR ( 12 downto 0 );
-    prog_full_thresh_assert : in STD_LOGIC_VECTOR ( 12 downto 0 );
-    prog_full_thresh_negate : in STD_LOGIC_VECTOR ( 12 downto 0 );
+    prog_empty_thresh : in STD_LOGIC_VECTOR ( 8 downto 0 );
+    prog_empty_thresh_assert : in STD_LOGIC_VECTOR ( 8 downto 0 );
+    prog_empty_thresh_negate : in STD_LOGIC_VECTOR ( 8 downto 0 );
+    prog_full_thresh : in STD_LOGIC_VECTOR ( 8 downto 0 );
+    prog_full_thresh_assert : in STD_LOGIC_VECTOR ( 8 downto 0 );
+    prog_full_thresh_negate : in STD_LOGIC_VECTOR ( 8 downto 0 );
     int_clk : in STD_LOGIC;
     injectdbiterr : in STD_LOGIC;
     injectsbiterr : in STD_LOGIC;
@@ -1303,9 +791,9 @@ entity adc_fast_fifo_fifo_generator_v13_2_5 is
     almost_empty : out STD_LOGIC;
     valid : out STD_LOGIC;
     underflow : out STD_LOGIC;
-    data_count : out STD_LOGIC_VECTOR ( 12 downto 0 );
-    rd_data_count : out STD_LOGIC_VECTOR ( 12 downto 0 );
-    wr_data_count : out STD_LOGIC_VECTOR ( 12 downto 0 );
+    data_count : out STD_LOGIC_VECTOR ( 8 downto 0 );
+    rd_data_count : out STD_LOGIC_VECTOR ( 8 downto 0 );
+    wr_data_count : out STD_LOGIC_VECTOR ( 8 downto 0 );
     prog_full : out STD_LOGIC;
     prog_empty : out STD_LOGIC;
     sbiterr : out STD_LOGIC;
@@ -1559,7 +1047,7 @@ entity adc_fast_fifo_fifo_generator_v13_2_5 is
   attribute C_COUNT_TYPE : integer;
   attribute C_COUNT_TYPE of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 0;
   attribute C_DATA_COUNT_WIDTH : integer;
-  attribute C_DATA_COUNT_WIDTH of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 13;
+  attribute C_DATA_COUNT_WIDTH of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 9;
   attribute C_DEFAULT_VALUE : string;
   attribute C_DEFAULT_VALUE of adc_fast_fifo_fifo_generator_v13_2_5 : entity is "BlankString";
   attribute C_DIN_WIDTH : integer;
@@ -1731,7 +1219,7 @@ entity adc_fast_fifo_fifo_generator_v13_2_5 is
   attribute C_PRELOAD_REGS : integer;
   attribute C_PRELOAD_REGS of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 1;
   attribute C_PRIM_FIFO_TYPE : string;
-  attribute C_PRIM_FIFO_TYPE of adc_fast_fifo_fifo_generator_v13_2_5 : entity is "8kx4";
+  attribute C_PRIM_FIFO_TYPE of adc_fast_fifo_fifo_generator_v13_2_5 : entity is "512x36";
   attribute C_PRIM_FIFO_TYPE_AXIS : string;
   attribute C_PRIM_FIFO_TYPE_AXIS of adc_fast_fifo_fifo_generator_v13_2_5 : entity is "1kx18";
   attribute C_PRIM_FIFO_TYPE_RACH : string;
@@ -1775,7 +1263,7 @@ entity adc_fast_fifo_fifo_generator_v13_2_5 is
   attribute C_PROG_EMPTY_TYPE_WRCH : integer;
   attribute C_PROG_EMPTY_TYPE_WRCH of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 0;
   attribute C_PROG_FULL_THRESH_ASSERT_VAL : integer;
-  attribute C_PROG_FULL_THRESH_ASSERT_VAL of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 8191;
+  attribute C_PROG_FULL_THRESH_ASSERT_VAL of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 511;
   attribute C_PROG_FULL_THRESH_ASSERT_VAL_AXIS : integer;
   attribute C_PROG_FULL_THRESH_ASSERT_VAL_AXIS of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 1023;
   attribute C_PROG_FULL_THRESH_ASSERT_VAL_RACH : integer;
@@ -1789,7 +1277,7 @@ entity adc_fast_fifo_fifo_generator_v13_2_5 is
   attribute C_PROG_FULL_THRESH_ASSERT_VAL_WRCH : integer;
   attribute C_PROG_FULL_THRESH_ASSERT_VAL_WRCH of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 1023;
   attribute C_PROG_FULL_THRESH_NEGATE_VAL : integer;
-  attribute C_PROG_FULL_THRESH_NEGATE_VAL of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 8190;
+  attribute C_PROG_FULL_THRESH_NEGATE_VAL of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 510;
   attribute C_PROG_FULL_TYPE : integer;
   attribute C_PROG_FULL_TYPE of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 0;
   attribute C_PROG_FULL_TYPE_AXIS : integer;
@@ -1809,13 +1297,13 @@ entity adc_fast_fifo_fifo_generator_v13_2_5 is
   attribute C_RDCH_TYPE : integer;
   attribute C_RDCH_TYPE of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 0;
   attribute C_RD_DATA_COUNT_WIDTH : integer;
-  attribute C_RD_DATA_COUNT_WIDTH of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 13;
+  attribute C_RD_DATA_COUNT_WIDTH of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 9;
   attribute C_RD_DEPTH : integer;
-  attribute C_RD_DEPTH of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 8192;
+  attribute C_RD_DEPTH of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 512;
   attribute C_RD_FREQ : integer;
   attribute C_RD_FREQ of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 1;
   attribute C_RD_PNTR_WIDTH : integer;
-  attribute C_RD_PNTR_WIDTH of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 13;
+  attribute C_RD_PNTR_WIDTH of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 9;
   attribute C_REG_SLICE_MODE_AXIS : integer;
   attribute C_REG_SLICE_MODE_AXIS of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 0;
   attribute C_REG_SLICE_MODE_RACH : integer;
@@ -1875,9 +1363,9 @@ entity adc_fast_fifo_fifo_generator_v13_2_5 is
   attribute C_WR_ACK_LOW : integer;
   attribute C_WR_ACK_LOW of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 0;
   attribute C_WR_DATA_COUNT_WIDTH : integer;
-  attribute C_WR_DATA_COUNT_WIDTH of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 13;
+  attribute C_WR_DATA_COUNT_WIDTH of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 9;
   attribute C_WR_DEPTH : integer;
-  attribute C_WR_DEPTH of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 8192;
+  attribute C_WR_DEPTH of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 512;
   attribute C_WR_DEPTH_AXIS : integer;
   attribute C_WR_DEPTH_AXIS of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 1024;
   attribute C_WR_DEPTH_RACH : integer;
@@ -1893,7 +1381,7 @@ entity adc_fast_fifo_fifo_generator_v13_2_5 is
   attribute C_WR_FREQ : integer;
   attribute C_WR_FREQ of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 1;
   attribute C_WR_PNTR_WIDTH : integer;
-  attribute C_WR_PNTR_WIDTH of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 13;
+  attribute C_WR_PNTR_WIDTH of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 9;
   attribute C_WR_PNTR_WIDTH_AXIS : integer;
   attribute C_WR_PNTR_WIDTH_AXIS of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 10;
   attribute C_WR_PNTR_WIDTH_RACH : integer;
@@ -2098,10 +1586,6 @@ begin
   axis_wr_data_count(2) <= \<const0>\;
   axis_wr_data_count(1) <= \<const0>\;
   axis_wr_data_count(0) <= \<const0>\;
-  data_count(12) <= \<const0>\;
-  data_count(11) <= \<const0>\;
-  data_count(10) <= \<const0>\;
-  data_count(9) <= \<const0>\;
   data_count(8) <= \<const0>\;
   data_count(7) <= \<const0>\;
   data_count(6) <= \<const0>\;
@@ -2338,10 +1822,6 @@ begin
   m_axis_tvalid <= \<const0>\;
   prog_empty <= \<const0>\;
   prog_full <= \<const0>\;
-  rd_data_count(12) <= \<const0>\;
-  rd_data_count(11) <= \<const0>\;
-  rd_data_count(10) <= \<const0>\;
-  rd_data_count(9) <= \<const0>\;
   rd_data_count(8) <= \<const0>\;
   rd_data_count(7) <= \<const0>\;
   rd_data_count(6) <= \<const0>\;
@@ -2434,10 +1914,6 @@ begin
   sbiterr <= \<const0>\;
   valid <= \<const0>\;
   wr_ack <= \<const0>\;
-  wr_data_count(12) <= \<const0>\;
-  wr_data_count(11) <= \<const0>\;
-  wr_data_count(10) <= \<const0>\;
-  wr_data_count(9) <= \<const0>\;
   wr_data_count(8) <= \<const0>\;
   wr_data_count(7) <= \<const0>\;
   wr_data_count(6) <= \<const0>\;
@@ -2577,7 +2053,7 @@ architecture STRUCTURE of adc_fast_fifo is
   signal NLW_U0_axis_data_count_UNCONNECTED : STD_LOGIC_VECTOR ( 10 downto 0 );
   signal NLW_U0_axis_rd_data_count_UNCONNECTED : STD_LOGIC_VECTOR ( 10 downto 0 );
   signal NLW_U0_axis_wr_data_count_UNCONNECTED : STD_LOGIC_VECTOR ( 10 downto 0 );
-  signal NLW_U0_data_count_UNCONNECTED : STD_LOGIC_VECTOR ( 12 downto 0 );
+  signal NLW_U0_data_count_UNCONNECTED : STD_LOGIC_VECTOR ( 8 downto 0 );
   signal NLW_U0_m_axi_araddr_UNCONNECTED : STD_LOGIC_VECTOR ( 31 downto 0 );
   signal NLW_U0_m_axi_arburst_UNCONNECTED : STD_LOGIC_VECTOR ( 1 downto 0 );
   signal NLW_U0_m_axi_arcache_UNCONNECTED : STD_LOGIC_VECTOR ( 3 downto 0 );
@@ -2610,7 +2086,7 @@ architecture STRUCTURE of adc_fast_fifo is
   signal NLW_U0_m_axis_tkeep_UNCONNECTED : STD_LOGIC_VECTOR ( 0 to 0 );
   signal NLW_U0_m_axis_tstrb_UNCONNECTED : STD_LOGIC_VECTOR ( 0 to 0 );
   signal NLW_U0_m_axis_tuser_UNCONNECTED : STD_LOGIC_VECTOR ( 3 downto 0 );
-  signal NLW_U0_rd_data_count_UNCONNECTED : STD_LOGIC_VECTOR ( 12 downto 0 );
+  signal NLW_U0_rd_data_count_UNCONNECTED : STD_LOGIC_VECTOR ( 8 downto 0 );
   signal NLW_U0_s_axi_bid_UNCONNECTED : STD_LOGIC_VECTOR ( 0 to 0 );
   signal NLW_U0_s_axi_bresp_UNCONNECTED : STD_LOGIC_VECTOR ( 1 downto 0 );
   signal NLW_U0_s_axi_buser_UNCONNECTED : STD_LOGIC_VECTOR ( 0 to 0 );
@@ -2618,7 +2094,7 @@ architecture STRUCTURE of adc_fast_fifo is
   signal NLW_U0_s_axi_rid_UNCONNECTED : STD_LOGIC_VECTOR ( 0 to 0 );
   signal NLW_U0_s_axi_rresp_UNCONNECTED : STD_LOGIC_VECTOR ( 1 downto 0 );
   signal NLW_U0_s_axi_ruser_UNCONNECTED : STD_LOGIC_VECTOR ( 0 to 0 );
-  signal NLW_U0_wr_data_count_UNCONNECTED : STD_LOGIC_VECTOR ( 12 downto 0 );
+  signal NLW_U0_wr_data_count_UNCONNECTED : STD_LOGIC_VECTOR ( 8 downto 0 );
   attribute C_ADD_NGC_CONSTRAINT : integer;
   attribute C_ADD_NGC_CONSTRAINT of U0 : label is 0;
   attribute C_APPLICATION_TYPE_AXIS : integer;
@@ -2674,7 +2150,7 @@ architecture STRUCTURE of adc_fast_fifo is
   attribute C_COUNT_TYPE : integer;
   attribute C_COUNT_TYPE of U0 : label is 0;
   attribute C_DATA_COUNT_WIDTH : integer;
-  attribute C_DATA_COUNT_WIDTH of U0 : label is 13;
+  attribute C_DATA_COUNT_WIDTH of U0 : label is 9;
   attribute C_DEFAULT_VALUE : string;
   attribute C_DEFAULT_VALUE of U0 : label is "BlankString";
   attribute C_DIN_WIDTH : integer;
@@ -2846,7 +2322,7 @@ architecture STRUCTURE of adc_fast_fifo is
   attribute C_PRELOAD_REGS : integer;
   attribute C_PRELOAD_REGS of U0 : label is 1;
   attribute C_PRIM_FIFO_TYPE : string;
-  attribute C_PRIM_FIFO_TYPE of U0 : label is "8kx4";
+  attribute C_PRIM_FIFO_TYPE of U0 : label is "512x36";
   attribute C_PRIM_FIFO_TYPE_AXIS : string;
   attribute C_PRIM_FIFO_TYPE_AXIS of U0 : label is "1kx18";
   attribute C_PRIM_FIFO_TYPE_RACH : string;
@@ -2890,7 +2366,7 @@ architecture STRUCTURE of adc_fast_fifo is
   attribute C_PROG_EMPTY_TYPE_WRCH : integer;
   attribute C_PROG_EMPTY_TYPE_WRCH of U0 : label is 0;
   attribute C_PROG_FULL_THRESH_ASSERT_VAL : integer;
-  attribute C_PROG_FULL_THRESH_ASSERT_VAL of U0 : label is 8191;
+  attribute C_PROG_FULL_THRESH_ASSERT_VAL of U0 : label is 511;
   attribute C_PROG_FULL_THRESH_ASSERT_VAL_AXIS : integer;
   attribute C_PROG_FULL_THRESH_ASSERT_VAL_AXIS of U0 : label is 1023;
   attribute C_PROG_FULL_THRESH_ASSERT_VAL_RACH : integer;
@@ -2904,7 +2380,7 @@ architecture STRUCTURE of adc_fast_fifo is
   attribute C_PROG_FULL_THRESH_ASSERT_VAL_WRCH : integer;
   attribute C_PROG_FULL_THRESH_ASSERT_VAL_WRCH of U0 : label is 1023;
   attribute C_PROG_FULL_THRESH_NEGATE_VAL : integer;
-  attribute C_PROG_FULL_THRESH_NEGATE_VAL of U0 : label is 8190;
+  attribute C_PROG_FULL_THRESH_NEGATE_VAL of U0 : label is 510;
   attribute C_PROG_FULL_TYPE : integer;
   attribute C_PROG_FULL_TYPE of U0 : label is 0;
   attribute C_PROG_FULL_TYPE_AXIS : integer;
@@ -2924,13 +2400,13 @@ architecture STRUCTURE of adc_fast_fifo is
   attribute C_RDCH_TYPE : integer;
   attribute C_RDCH_TYPE of U0 : label is 0;
   attribute C_RD_DATA_COUNT_WIDTH : integer;
-  attribute C_RD_DATA_COUNT_WIDTH of U0 : label is 13;
+  attribute C_RD_DATA_COUNT_WIDTH of U0 : label is 9;
   attribute C_RD_DEPTH : integer;
-  attribute C_RD_DEPTH of U0 : label is 8192;
+  attribute C_RD_DEPTH of U0 : label is 512;
   attribute C_RD_FREQ : integer;
   attribute C_RD_FREQ of U0 : label is 1;
   attribute C_RD_PNTR_WIDTH : integer;
-  attribute C_RD_PNTR_WIDTH of U0 : label is 13;
+  attribute C_RD_PNTR_WIDTH of U0 : label is 9;
   attribute C_REG_SLICE_MODE_AXIS : integer;
   attribute C_REG_SLICE_MODE_AXIS of U0 : label is 0;
   attribute C_REG_SLICE_MODE_RACH : integer;
@@ -2990,9 +2466,9 @@ architecture STRUCTURE of adc_fast_fifo is
   attribute C_WR_ACK_LOW : integer;
   attribute C_WR_ACK_LOW of U0 : label is 0;
   attribute C_WR_DATA_COUNT_WIDTH : integer;
-  attribute C_WR_DATA_COUNT_WIDTH of U0 : label is 13;
+  attribute C_WR_DATA_COUNT_WIDTH of U0 : label is 9;
   attribute C_WR_DEPTH : integer;
-  attribute C_WR_DEPTH of U0 : label is 8192;
+  attribute C_WR_DEPTH of U0 : label is 512;
   attribute C_WR_DEPTH_AXIS : integer;
   attribute C_WR_DEPTH_AXIS of U0 : label is 1024;
   attribute C_WR_DEPTH_RACH : integer;
@@ -3008,7 +2484,7 @@ architecture STRUCTURE of adc_fast_fifo is
   attribute C_WR_FREQ : integer;
   attribute C_WR_FREQ of U0 : label is 1;
   attribute C_WR_PNTR_WIDTH : integer;
-  attribute C_WR_PNTR_WIDTH of U0 : label is 13;
+  attribute C_WR_PNTR_WIDTH of U0 : label is 9;
   attribute C_WR_PNTR_WIDTH_AXIS : integer;
   attribute C_WR_PNTR_WIDTH_AXIS of U0 : label is 10;
   attribute C_WR_PNTR_WIDTH_RACH : integer;
@@ -3119,7 +2595,7 @@ U0: entity work.adc_fast_fifo_fifo_generator_v13_2_5
       backup => '0',
       backup_marker => '0',
       clk => clk,
-      data_count(12 downto 0) => NLW_U0_data_count_UNCONNECTED(12 downto 0),
+      data_count(8 downto 0) => NLW_U0_data_count_UNCONNECTED(8 downto 0),
       dbiterr => NLW_U0_dbiterr_UNCONNECTED,
       din(11 downto 0) => din(11 downto 0),
       dout(11 downto 0) => dout(11 downto 0),
@@ -3186,15 +2662,15 @@ U0: entity work.adc_fast_fifo_fifo_generator_v13_2_5
       m_axis_tvalid => NLW_U0_m_axis_tvalid_UNCONNECTED,
       overflow => overflow,
       prog_empty => NLW_U0_prog_empty_UNCONNECTED,
-      prog_empty_thresh(12 downto 0) => B"0000000000000",
-      prog_empty_thresh_assert(12 downto 0) => B"0000000000000",
-      prog_empty_thresh_negate(12 downto 0) => B"0000000000000",
+      prog_empty_thresh(8 downto 0) => B"000000000",
+      prog_empty_thresh_assert(8 downto 0) => B"000000000",
+      prog_empty_thresh_negate(8 downto 0) => B"000000000",
       prog_full => NLW_U0_prog_full_UNCONNECTED,
-      prog_full_thresh(12 downto 0) => B"0000000000000",
-      prog_full_thresh_assert(12 downto 0) => B"0000000000000",
-      prog_full_thresh_negate(12 downto 0) => B"0000000000000",
+      prog_full_thresh(8 downto 0) => B"000000000",
+      prog_full_thresh_assert(8 downto 0) => B"000000000",
+      prog_full_thresh_negate(8 downto 0) => B"000000000",
       rd_clk => '0',
-      rd_data_count(12 downto 0) => NLW_U0_rd_data_count_UNCONNECTED(12 downto 0),
+      rd_data_count(8 downto 0) => NLW_U0_rd_data_count_UNCONNECTED(8 downto 0),
       rd_en => rd_en,
       rd_rst => '0',
       rd_rst_busy => NLW_U0_rd_rst_busy_UNCONNECTED,
@@ -3263,7 +2739,7 @@ U0: entity work.adc_fast_fifo_fifo_generator_v13_2_5
       valid => NLW_U0_valid_UNCONNECTED,
       wr_ack => NLW_U0_wr_ack_UNCONNECTED,
       wr_clk => '0',
-      wr_data_count(12 downto 0) => NLW_U0_wr_data_count_UNCONNECTED(12 downto 0),
+      wr_data_count(8 downto 0) => NLW_U0_wr_data_count_UNCONNECTED(8 downto 0),
       wr_en => wr_en,
       wr_rst => '0',
       wr_rst_busy => NLW_U0_wr_rst_busy_UNCONNECTED

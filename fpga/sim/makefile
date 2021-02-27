@@ -5,6 +5,7 @@ NOM_ADC=0
 FIFO_SAMPLES=90
 PRESAMPLES=0
 TRIGGER_DELAY=0
+READ_DELAY=0
 LOGFILE=make.log
 WAVEFORMAT=fst
 SEED=1
@@ -26,6 +27,7 @@ compile:
 	-P cwhusky_tb.pFIFO_SAMPLES=$(FIFO_SAMPLES) \
 	-P cwhusky_tb.pPRESAMPLES=$(PRESAMPLES) \
 	-P cwhusky_tb.pTRIGGER_DELAY=$(TRIGGER_DELAY) \
+	-P cwhusky_tb.pREAD_DELAY=$(READ_DELAY) \
 	-P cwhusky_tb.pTIMEOUT_CYCLES=$(TIMEOUT_CYCLES) \
 	-P cwhusky_tb.pDUMP=$(DUMP) \
 	-P cwhusky_tb.pSEED=$(SEED) \

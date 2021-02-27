@@ -14,6 +14,7 @@ module cwhusky_tb();
    parameter pFIFO_SAMPLES = 90;
    parameter pPRESAMPLES = 0;
    parameter pTRIGGER_DELAY = 0;
+   parameter pREAD_DELAY = 0;
    parameter pSEED = 1;
    parameter pTIMEOUT_CYCLES = 50000;
    parameter pDUMP = 0;
@@ -186,6 +187,7 @@ module cwhusky_tb();
 
       // it takes up to ~700 clock cycles after reset for things to get going again:
       #(pCLK_USB_PERIOD*900);
+
       setup_done = 1;
 
    end
@@ -196,10 +198,13 @@ module cwhusky_tb();
       #1 wait (setup_done);
       good_reads = 0;
       bad_reads = 0;
-      rw_lots_bytes('d3);
       //wait (U_dut.oadc.U_fifo.slow_fifo_full);
       //#(pCLK_USB_PERIOD*1000);
+      if (pREAD_DELAY) begin
+         repeat (pREAD_DELAY) @(posedge clk_adc);
+      end
 
+      rw_lots_bytes('d3);
       if (pADC_LOW_RES) begin // 8 bits per sample
          for (i = 0; i < pFIFO_SAMPLES; i = i + 1) begin
             if (i%1000 == 0)
