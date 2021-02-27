@@ -15,6 +15,7 @@ module cwhusky_tb();
    parameter pPRESAMPLES = 0;
    parameter pTRIGGER_DELAY = 0;
    parameter pREAD_DELAY = 0;
+   parameter pSLOP = 10;
    parameter pSEED = 1;
    parameter pTIMEOUT_CYCLES = 50000;
    parameter pDUMP = 0;
@@ -68,6 +69,10 @@ module cwhusky_tb();
    reg  [11:0] sample[0:5];
    reg  [11:0] last_sample;
    reg  [11:0] comp;
+   reg  [11:0] trigger_counter_value;
+   int comp_min;
+   int comp_max;
+   int signed_sample;
    reg  setup_done;
    reg  target_io4_reg;
    int i, j;
@@ -182,6 +187,7 @@ module cwhusky_tb();
          $display("Using 'trigger now'.");
          write_1byte('h1, 8'h48);
       end
+      trigger_counter_value = U_dut.oadc.U_fifo.adc_datain - pPRESAMPLES;
 
       write_1byte(38, 8'h63);
 
@@ -244,17 +250,38 @@ module cwhusky_tb();
                endcase
             end
             for (j = 0; j < 6; j += 1) begin
-               if (j == 0)
-                  comp = (i==0)? (sample[0]-1) % 2**12 : last_sample;
-               else
-                  comp = sample[j-1];
-               if (sample[j] == (comp + 1) % 2**12)
-                  good_reads += 1;
-               else begin
-                  bad_reads += 1;
-                  errors += 1;
-                  $display("ERROR %2d: expected %2h, got %2h", i*6+j, (comp + 1) % 2**12, sample[j]);
+
+               // for the very first sample, we check against what we peeked when we applied the trigger, with some slop to account for CDCs:
+               if ((i == 0) && (j == 0)) begin
+                  // dealing with signed numbers in Verilog is always really fun!
+                  comp_min = {1'b0, trigger_counter_value} - pSLOP; // signed
+                  comp_max = {1'b0, trigger_counter_value} + pSLOP; // signed
+                  signed_sample = {1'b0, sample[0]};
+                  if ( ($signed(signed_sample) >= $signed(comp_min)) && ($signed(signed_sample) <= $signed(comp_max)) ) begin
+                     good_reads += 1;
+                     $display("Good first read: expected min=%3h, max=%3h, got %3h", comp_min, comp_max, sample[0]);
+                  end
+                  else begin
+                     bad_reads += 1;
+                     errors += 1;
+                     $display("ERROR on first read: expected min=%3h, max=%3h, got %3h", comp_min, comp_max, sample[0]);
+                  end
                end
+               
+               else begin
+                  if (j == 0)
+                     comp = last_sample;
+                  else
+                     comp = sample[j-1];
+                  if (sample[j] == (comp + 1) % 2**12)
+                     good_reads += 1;
+                  else begin
+                     bad_reads += 1;
+                     errors += 1;
+                     $display("ERROR %2d: expected %3h, got %3h", i*6+j, (comp + 1) % 2**12, sample[j]);
+                  end
+               end
+
             end
             last_sample = sample[5];
             //$display("%2d: %2h", i*3+0, sample[0]);

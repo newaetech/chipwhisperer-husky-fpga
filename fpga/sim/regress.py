@@ -36,21 +36,22 @@ tests.append(dict(name  = 'presamples',
              frequency = 1,
              PRESAMPLES = [10, 500],
              READ_DELAY = [0, 500],
-             TRIGGER_DELAY = 2000,
+             TRIGGER_DELAY = [2500, 4000],
              description = 'Randomized pre-trigger samples.'))
 
 tests.append(dict(name  = 'nopresamples',
              frequency = 2,
              PRESAMPLES = 0,
-             TRIGGER_DELAY = [0, 500],
+             TRIGGER_DELAY = [1500, 3000],
              READ_DELAY = [0, 500],
-             description = 'No pre-trigger samples, randomized trigger delay.'))
+             description = 'No pre-trigger samples.'))
 
 tests.append(dict(name  = 'both_fifos',
              frequency = 2,
              description = 'Read beyond what the slow FIFO can hold, to verify proper transitioning.',
              ADC_LOW_RES = [0,1],
              READ_DELAY = [0, 3000],
+             TRIGGER_DELAY = [1500, 3000],
              TIMEOUT_CYCLES = 500000,
              FIFO_SAMPLES = 2043)) # multiple of 9 for now
 
