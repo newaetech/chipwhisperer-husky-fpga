@@ -199,7 +199,7 @@ module fifo_top_husky(
                 // TODO: flag if we were unable to capture enough presamples - which is definitely possible with segmenting
                 else if ( (adc_capture_go && (segment_counter == 0)) || (adc_segment_go && (segment_counter > 0)) )
                    state <= pS_TRIGGERED;
-                else if (presample_counter == presample_i)
+                else if (presample_counter == (presample_i-2))
                    state <= pS_PRESAMP_FULL;
                 else if (fast_fifo_wr)
                    presample_counter <= presample_counter + 1;
@@ -210,7 +210,8 @@ module fifo_top_husky(
                    state <= pS_DONE;
                 //else if (adc_capture_go) begin
                 else if ( (adc_capture_go && (segment_counter == 0)) || (adc_segment_go && (segment_counter > 0)) ) begin
-                   sample_counter <= presample_counter;
+                   //sample_counter <= presample_counter;
+                   sample_counter <= presample_i;
                    state <= pS_TRIGGERED;
                 end
                 if (fast_fifo_wr)
@@ -223,7 +224,7 @@ module fifo_top_husky(
                 fast_fifo_presample_drain <= 1'b0;
                 fast_fifo_rd_en <= 1'b1;
                 segment_cycle_counter <= segment_cycle_counter + 1;
-                if (stop_capture_conditions || ((sample_counter == max_samples_i) && (segment_counter == num_segments))) begin
+                if (stop_capture_conditions || ((sample_counter == (max_samples_i-1)) && (segment_counter == num_segments))) begin
                    adc_capture_stop_reg <= 1'b1;
                    state <= pS_DONE;
                 end
@@ -245,10 +246,12 @@ module fifo_top_husky(
                 if (fast_fifo_empty) begin
                    fast_fifo_rd_en <= 1'b0;
                    if (presample_i > 0) begin
-                      segment_counter <= segment_counter + 1;
-                      sample_counter <= 0;
-                      presample_counter <= 0;
-                      state <= pS_PRESAMP_FILLING;
+                      if (slow_fifo_empty) begin
+                         segment_counter <= segment_counter + 1;
+                         sample_counter <= 0;
+                         presample_counter <= 0;
+                         state <= pS_PRESAMP_FILLING;
+                      end
                    end
                    else if ((adc_segment_go && ~adc_segment_go_r) || (segment_cycle_counter == segment_cycles)) begin
                    //else if (segment_cycle_counter == segment_cycles) begin
@@ -309,7 +312,8 @@ module fifo_top_husky(
     // TODO: check on fast_fifo_full is temporary, probably need to detect and flag overflow events
     assign fast_fifo_wr = downsample_wr_en & fsm_fast_wr_en & stream_write & adc_write_mask & reset_done & !fifo_rst_pre & !fast_fifo_full;
     //assign fast_fifo_rd = fast_fifo_rd_en & reset_done & !fifo_rst_pre;
-    assign slow_fifo_wr = slow_fifo_wr_premask & reset_done & !fifo_rst_pre;
+    //assign slow_fifo_wr = slow_fifo_wr_premask & reset_done & !fifo_rst_pre;
+    assign slow_fifo_wr = slow_fifo_prewr & reset_done & !fifo_rst_pre;
 
     // Xilinx FIFO is very particular about its reset: it must be wide enough
     // and the FIFO shouldn't be accessed for some time after reset has been
@@ -381,7 +385,8 @@ module fifo_top_husky(
              fast_read_count <= 0;
              slow_fifo_prewr <= 0;
           end
-          else if (adc_capture_go || (state == pS_DONE)) begin
+          //else if (adc_capture_go || (state == pS_DONE)) begin
+          else if ((state == pS_TRIGGERED) || (state == pS_DONE) || (state == pS_SEGMENT_DONE)) begin
           //else if (~fast_fifo_empty) begin
              if (!fast_fifo_empty && !slow_fifo_full) begin
                 if (fast_read_count < 2) begin

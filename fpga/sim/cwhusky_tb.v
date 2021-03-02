@@ -245,6 +245,8 @@ module cwhusky_tb();
                dbg = 4;
                trigger_done = 0;
                repeat ($urandom_range(0, 200)) @(posedge clk_adc);
+               if (pPRESAMPLES)
+                  repeat (500+pPRESAMPLES*2) @(posedge clk_adc);
                target_io4_reg = 1'b1;
                trigger_counter_value = U_dut.oadc.U_fifo.adc_datain - pPRESAMPLES;
                #(pCLK_USB_PERIOD*20);
@@ -351,6 +353,16 @@ module cwhusky_tb();
             end
          end
          read_done = 1;
+         #1;
+         // TODO: change these into errors
+         if (U_dut.oadc.U_fifo.fast_fifo_empty == 0) begin
+            warnings += 1;
+            $display("WARNING at t=%0t: fast FIFO not empty at the end of a read cycle", $time);
+         end
+         if (U_dut.oadc.U_fifo.slow_fifo_empty == 0) begin
+            warnings += 1;
+            $display("WARNING at t=%0t: slow FIFO not empty at the end of a read cycle", $time);
+         end
       end // for segment_read_index loop
 
       //#(pCLK_USB_PERIOD*20);

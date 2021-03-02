@@ -74,7 +74,18 @@ tests.append(dict(name  = 'segments_counter',
 
 tests.append(dict(name  = 'segments_trigger',
              frequency = 1,
-             PRESAMPLES = 0,  # TODO: allow presamples
+             PRESAMPLES = 0,
+             READ_DELAY = [0, 500],
+             SEGMENT_CYCLES = [2000, 3000],
+             SEGMENT_CYCLE_COUNTER_EN = 0,
+             NUM_SEGMENTS = [1,4],
+             TRIGGER_DELAY = [2500, 4000],
+             TRIGGER_NOW = 0,
+             description = 'Segmented capture, by external trigger.'))
+
+tests.append(dict(name  = 'segments_presamples',
+             frequency = 1,
+             PRESAMPLES = [3,30],
              READ_DELAY = [0, 500],
              SEGMENT_CYCLES = [2000, 3000],
              SEGMENT_CYCLE_COUNTER_EN = 0,
