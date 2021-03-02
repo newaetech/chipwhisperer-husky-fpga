@@ -20,16 +20,19 @@ args = parser.parse_args()
 tests = []
 tests.append(dict(name  = 'slow_adc',
              frequency = 5,
+             TRIGGER_NOW = [0,1],
              description = 'Slow ADC clock.',
              SLOW_ADC = 1))
 
 tests.append(dict(name  = 'fast_adc',
              frequency = 5,
+             TRIGGER_NOW = [0,1],
              description = 'Fast ADC clock.',
              FAST_ADC = 1))
 
 tests.append(dict(name  = 'nom_adc',
              frequency = 5,
+             TRIGGER_NOW = [0,1],
              description = 'Nominal ADC clock (almost same as USB clock).'))
 
 tests.append(dict(name  = 'presamples',
@@ -37,6 +40,7 @@ tests.append(dict(name  = 'presamples',
              PRESAMPLES = [10, 500],
              READ_DELAY = [0, 500],
              TRIGGER_DELAY = [2500, 4000],
+             TRIGGER_NOW = [0,1],
              description = 'Randomized pre-trigger samples.'))
 
 tests.append(dict(name  = 'nopresamples',
@@ -44,6 +48,7 @@ tests.append(dict(name  = 'nopresamples',
              PRESAMPLES = 0,
              TRIGGER_DELAY = [1500, 3000],
              READ_DELAY = [0, 500],
+             TRIGGER_NOW = [0,1],
              description = 'No pre-trigger samples.'))
 
 tests.append(dict(name  = 'both_fifos',
@@ -52,8 +57,31 @@ tests.append(dict(name  = 'both_fifos',
              ADC_LOW_RES = [0,1],
              READ_DELAY = [0, 3000],
              TRIGGER_DELAY = [1500, 3000],
+             TRIGGER_NOW = [0,1],
              TIMEOUT_CYCLES = 500000,
              FIFO_SAMPLES = 2043)) # multiple of 9 for now
+
+tests.append(dict(name  = 'segments_counter',
+             frequency = 1,
+             PRESAMPLES = 0,
+             READ_DELAY = [0, 500],
+             SEGMENT_CYCLES = [2000, 3000],
+             SEGMENT_CYCLE_COUNTER_EN = 1,
+             NUM_SEGMENTS = 1,
+             TRIGGER_DELAY = [2500, 4000],
+             TRIGGER_NOW = 0,
+             description = 'Segmented capture, by cycle counter.'))
+
+tests.append(dict(name  = 'segments_trigger',
+             frequency = 1,
+             PRESAMPLES = 0,  # TODO: allow presamples
+             READ_DELAY = [0, 500],
+             SEGMENT_CYCLES = [2000, 3000],
+             SEGMENT_CYCLE_COUNTER_EN = 0,
+             NUM_SEGMENTS = 1,
+             TRIGGER_DELAY = [2500, 4000],
+             TRIGGER_NOW = 0,
+             description = 'Segmented capture, by external trigger.'))
 
 
 

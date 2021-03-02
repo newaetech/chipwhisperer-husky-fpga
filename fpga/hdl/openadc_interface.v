@@ -76,6 +76,7 @@ module openadc_interface #(
     wire       phase_done;
 
     wire       adc_capture_go;
+    wire       adc_segment_go;
     wire       adc_capture_done;
     wire       armed;
     wire       reset;
@@ -83,6 +84,8 @@ module openadc_interface #(
     wire       dcm_gen_locked;
     wire       trigger_source;
     wire       fifo_stream;
+    wire [15:0] num_segments;
+    wire [19:0] segment_cycles;
     wire       data_source_select;
 
     assign reset_o = reset;
@@ -195,6 +198,7 @@ module openadc_interface #(
       .trigger_offset_i(trigger_offset),
       .trigger_length_o(trigger_length),
       .capture_go_o(adc_capture_go),
+      .segment_go_o(adc_segment_go),
       .capture_done_i(adc_capture_done)
    );
 
@@ -258,7 +262,7 @@ module openadc_interface #(
       .reg_addrvalid(reg_addrvalid), 
 
       .gain(PWM_incr),
-      .hilow(amp_hilo),
+      .hilow(amp_hilo), // TODO- obsolete
       .status(reg_status),         
       .cmd_arm(cmd_arm),
       .trigger_mode(trigger_mode),
@@ -292,7 +296,9 @@ module openadc_interface #(
       .clkblock_gen_reset_o(clkgen_reset),
       .clkblock_dcm_locked_i(dcm_locked),
       .clkblock_gen_locked_i(dcm_gen_locked),
-      .fifo_stream(fifo_stream)
+      .fifo_stream(fifo_stream),
+      .num_segments(num_segments),
+      .segment_cycles(segment_cycles)
    );
 
    reg_openadc_adcfifo #(
@@ -384,6 +390,7 @@ module openadc_interface #(
       end
    end
 
+   /*
    always @(posedge ADC_clk_sample)
       if (segment_trigger_go == 1'b0)
         segment_trigger_count <= 18'd0;
@@ -399,6 +406,8 @@ module openadc_interface #(
                                1'b1;
 
    assign adc_write_mask = adc_write_mask_int | trigger_now;
+   */
+   wire adc_write_mask = 1'b1; // TODO: clean up / remove if no longer required
 
 
    fifo_top_husky U_fifo(
@@ -408,8 +417,11 @@ module openadc_interface #(
       .adc_sampleclk            (ADC_clk_sample),
       .adc_write_mask           (adc_write_mask),
       .adc_capture_go           (adc_capture_go), //Set to '1' to start capture, keep at 1 until adc_capture_stop goes high
+      .adc_segment_go           (adc_segment_go),
       .adc_capture_stop         (adc_capture_done),
       .arm_i                    (armed),
+      .num_segments             (num_segments),
+      .segment_cycles           (segment_cycles),
 
       .clk_usb                  (clk_usb),
       .fifo_read_fifoen         (ddrfifo_rd_en),

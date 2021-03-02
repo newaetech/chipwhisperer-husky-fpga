@@ -53,6 +53,7 @@ module trigger_unit(
     output wire [31:0]       trigger_length_o,   //Length of trigger pulse in ADC samples (only valid AFTER trigger happened)
 
     output wire              capture_go_o,         //1 = trigger conditions met, stays high until 'capture_done_i' goes high
+    output wire              segment_go_o,
     input wire               capture_done_i        //1 = capture done
     );
 
@@ -70,10 +71,13 @@ module trigger_unit(
 
    wire adc_capture_done;
    reg adc_capture_go;
+   reg segment_go;
+   reg segment_go_delayed;
    reg adc_capture_go_delayed;
 
    assign adc_capture_done = capture_done_i;
    assign capture_go_o = adc_capture_go_delayed;
+   assign segment_go_o = segment_go_delayed;
 
    reg [31:0] adc_delay_cnt;
 
@@ -108,7 +112,7 @@ module trigger_unit(
       if (adc_capture_go == 0)
          adc_capture_go_delayed <= 1'b0;
       else if (adc_delay_cnt == trigger_offset_i)
-            adc_capture_go_delayed <= adc_capture_go;
+         adc_capture_go_delayed <= adc_capture_go;
    end
 
    //ADC Trigger Stuff
@@ -131,10 +135,16 @@ module trigger_unit(
    always @(posedge adc_clk or posedge int_reset_capture) begin // TODO XXX
       if (int_reset_capture) begin
          adc_capture_go <= 0;
+         segment_go <= 0;
+         segment_go_delayed <= 0;
       end else begin
-         if (((trigger == trigger_level_i) & armed) | trigger_now) begin
+         segment_go_delayed <= segment_go; // delay one cycle to match adc_capture_go_delayed timing
+         if (((trigger == trigger_level_i) & armed) | trigger_now)
             adc_capture_go <= 1;
-         end
+         if ((trigger == trigger_level_i) && adc_capture_go)
+            segment_go <= 1'b1;
+         else
+            segment_go <= 1'b0;
       end
    end
 

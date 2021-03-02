@@ -85,6 +85,10 @@ module reg_openadc #(
    output reg        clkgen_load,
    input wire        clkgen_done,
 
+   /* Interface to fifo/capture module */
+   output reg  [15:0] num_segments,
+   output reg  [19:0] segment_cycles,
+
    /* Additional ADC control lines */
    output reg         data_source_select,
    output wire [2:0]  adc_clk_src_o,
@@ -310,6 +314,8 @@ module reg_openadc #(
                 `SYSTEMCLK_ADDR: reg_datao_reg <= system_frequency[reg_bytecnt*8 +: 8];
                 `TRIGGER_DUR_ADDR: reg_datao_reg <= trigger_length[reg_bytecnt*8 +: 8];
                 `FPGA_BUILDTIME_ADDR: reg_datao_reg <= buildtime[reg_bytecnt*8 +: 8];
+                `NUM_SEGMENTS: reg_datao_reg <= num_segments[reg_bytecnt*8 +: 8];
+                `SEGMENT_CYCLES: reg_datao_reg <= segment_cycles[reg_bytecnt*8 +: 8];
                 `DATA_SOURCE_SELECT: reg_datao_reg <= data_source_select;
                 default: reg_datao_reg <= 0;
              endcase
@@ -327,6 +333,8 @@ module reg_openadc #(
          registers_advclocksettings <= 32'h00000102;
          registers_downsample <= 0;
          data_source_select <= 1; // default to ADC
+         num_segments <= 0;
+         segment_cycles <= 0;
       end else if (reg_write) begin
          case (reg_address)
             `GAIN_ADDR: registers_gain <= reg_datai;
@@ -337,6 +345,8 @@ module reg_openadc #(
             `PRESAMPLES_ADDR: registers_presamples[reg_bytecnt*8 +: 8] <= reg_datai;
             `OFFSET_ADDR: registers_offset[reg_bytecnt*8 +: 8] <= reg_datai;
             `ADVCLOCK_ADDR: registers_advclocksettings[reg_bytecnt*8 +: 8] <= reg_datai;
+            `NUM_SEGMENTS: num_segments[reg_bytecnt*8 +: 8] <= reg_datai;
+            `SEGMENT_CYCLES: segment_cycles[reg_bytecnt*8 +: 8] <= reg_datai;
             `DATA_SOURCE_SELECT: data_source_select <= reg_datai[0];
             default: ;
          endcase

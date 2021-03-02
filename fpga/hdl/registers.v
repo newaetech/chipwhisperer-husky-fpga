@@ -249,6 +249,9 @@
 `define DRP_ADDR                30
 `define DRP_DATA                31
 
+`define NUM_SEGMENTS            32
+`define SEGMENT_CYCLES          33
+
 `define REGISTER_VERSION 1
 
 //`define SCARDCTRL_ADDR 30
