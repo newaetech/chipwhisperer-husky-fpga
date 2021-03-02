@@ -37,7 +37,7 @@ tests.append(dict(name  = 'nom_adc',
 
 tests.append(dict(name  = 'presamples',
              frequency = 1,
-             PRESAMPLES = [10, 500],
+             PRESAMPLES = [10, 30],
              READ_DELAY = [0, 500],
              TRIGGER_DELAY = [2500, 4000],
              TRIGGER_NOW = [0,1],
@@ -152,11 +152,11 @@ for test in tests:
       else:
          seed = random.randint(0, 2**31-1)
       random.seed(seed)
-      makeargs.append("SEED=%d" % seed)
 
       run_test = True
       # build make command:
       makeargs = ['make', 'all', 'VERBOSE=0']
+      makeargs.append("SEED=%d" % seed)
       if args.dump:
          makeargs.append('DUMP=1')
       for key in test.keys():
