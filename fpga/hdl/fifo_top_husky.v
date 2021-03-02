@@ -377,7 +377,7 @@ module fifo_top_husky(
 
        else begin
           slow_fifo_wr_premask <= slow_fifo_prewr;
-          if (fifo_rst_pre || ~reset_done) begin
+          if (fifo_rst_pre || ~reset_done || ((state == pS_SEGMENT_DONE) && fast_fifo_empty)) begin
              fast_read_count <= 0;
              slow_fifo_prewr <= 0;
           end

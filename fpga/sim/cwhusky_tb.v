@@ -202,39 +202,8 @@ module cwhusky_tb();
    end
 
 
-   /* trigger thread:
-   initial begin
-      trigger_done = 0;
-      #1 wait (setup_done);
-      // randomly choose to use trigger pin or "trigger now"
-      for (trigger_gen_index = 0; trigger_gen_index <= pNUM_SEGMENTS; trigger_gen_index += 1) begin
-         @(posedge clk_adc);
-         trigger_done = 0;
-         if (pSEGMENT_CYCLE_COUNTER_EN && (trigger_gen_index > 0))
-            repeat (pSEGMENT_CYCLES) @(posedge clk_adc);
-         else begin
-            if (pTRIGGER_NOW) begin
-               // TRIGGER_NOW doesn't support segments, but we handle it in this loop for convenience
-               $display("Using 'trigger now'.");
-               write_1byte('h1, 8'h48);
-            end
-            else begin
-               $display("Using trigger pin.");
-               target_io4_reg = 1'b1;
-            end
-         end
-         trigger_counter_value = U_dut.oadc.U_fifo.adc_datain - pPRESAMPLES;
-         #(pCLK_USB_PERIOD*20);
-         target_io4_reg = 1'b0;
-         trigger_done = 1;
-         if (pSEGMENT_CYCLE_COUNTER_EN == 0)
-            wait (read_done);
-      end
-   end
-   */
-
-
    // trigger thread:
+   int dbg;
    initial begin
       trigger_done = 0;
       #1 wait (setup_done);
@@ -256,26 +225,33 @@ module cwhusky_tb();
                   target_io4_reg = 1'b1;
                   trigger_counter_value = U_dut.oadc.U_fifo.adc_datain - pPRESAMPLES;
                   repeat (10) @(posedge clk_adc);
+                  dbg = 1;
                   trigger_done = 1;
                end
                else begin
                   @(posedge clk_adc);
+                  dbg = 2;
                   trigger_done = 0;
-                  repeat (pSEGMENT_CYCLES-11) @(posedge clk_adc);
+                  //repeat (pSEGMENT_CYCLES-11) @(posedge clk_adc);
+                  repeat (pSEGMENT_CYCLES-1) @(posedge clk_adc);
                   trigger_counter_value = U_dut.oadc.U_fifo.adc_datain - pPRESAMPLES;
+                  dbg = 3;
                   trigger_done = 1;
                end
             end
 
             else begin // pSEGMENT_CYCLE_COUNTER_EN == 0
-               @(posedge clk_adc);
+               repeat (10) @(posedge clk_adc);
+               dbg = 4;
                trigger_done = 0;
                repeat ($urandom_range(0, 200)) @(posedge clk_adc);
                target_io4_reg = 1'b1;
                trigger_counter_value = U_dut.oadc.U_fifo.adc_datain - pPRESAMPLES;
                #(pCLK_USB_PERIOD*20);
                target_io4_reg = 1'b0;
+               dbg = 5;
                trigger_done = 1;
+               wait (read_done == 0);
                wait (read_done);
             end
          end
@@ -296,9 +272,7 @@ module cwhusky_tb();
          read_done = 0;
          //wait (U_dut.oadc.U_fifo.slow_fifo_full);
          //#(pCLK_USB_PERIOD*1000);
-         if (pREAD_DELAY) begin
-            repeat (pREAD_DELAY) @(posedge clk_adc);
-         end
+         repeat (pREAD_DELAY) @(posedge clk_adc);
 
          rw_lots_bytes('d3);
          if (pADC_LOW_RES) begin // 8 bits per sample
