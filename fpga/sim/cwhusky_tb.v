@@ -299,9 +299,13 @@ module cwhusky_tb();
          end
 
          else begin // 12 bits per sample
-            for (i = 0; i < pFIFO_SAMPLES/6; i = i + 1) begin
+            //for (i = 0; i < pFIFO_SAMPLES/6; i = i + 1) begin
+            //for (i = 0; i < $ceil(pFIFO_SAMPLES/6); i = i + 1) begin
+            // ahh Verilog why do you have to make this so hard?
+            for (i = 0; i < pFIFO_SAMPLES/6 + (pFIFO_SAMPLES%6? 1:0); i = i + 1) begin
                if (i%100 == 0)
                   $display("heartbeat: read %d samples", i*6);
+               // there must be a better way to code this, but it's not coming to me...
                for (j = 0; j < 9; j = j + 1) begin
                   rdata_r = rdata;
                   read_next_byte(rdata);
@@ -320,6 +324,7 @@ module cwhusky_tb();
                   // for the very first sample, we check against what we peeked when we applied the trigger, with some slop to account for CDCs:
                   if ((i == 0) && (j == 0)) begin
                      // dealing with signed numbers in Verilog is always really fun!
+                     // TODO: there are still some corner cases for which the math is wrong :-(
                      comp_min = {1'b0, trigger_counter_value} - pSLOP; // signed
                      comp_max = {1'b0, trigger_counter_value} + pSLOP; // signed
                      signed_sample = {1'b0, sample[0]};
@@ -354,14 +359,13 @@ module cwhusky_tb();
          end
          read_done = 1;
          #1;
-         // TODO: change these into errors
          if (U_dut.oadc.U_fifo.fast_fifo_empty == 0) begin
-            warnings += 1;
-            $display("WARNING at t=%0t: fast FIFO not empty at the end of a read cycle", $time);
+            errors += 1;
+            $display("ERROR at t=%0t: fast FIFO not empty at the end of a read cycle", $time);
          end
          if (U_dut.oadc.U_fifo.slow_fifo_empty == 0) begin
-            warnings += 1;
-            $display("WARNING at t=%0t: slow FIFO not empty at the end of a read cycle", $time);
+            errors += 1;
+            $display("ERROR at t=%0t: slow FIFO not empty at the end of a read cycle", $time);
          end
       end // for segment_read_index loop
 

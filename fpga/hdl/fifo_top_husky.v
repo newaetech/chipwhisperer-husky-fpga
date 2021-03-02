@@ -79,6 +79,11 @@ module fifo_top_husky(
     reg                 arming;
     reg                 adc_segment_go_r;
 
+    reg [1:0]           fast_read_count;
+    reg [2:0]           fast_write_count;
+    reg                 filling_out_to_done;
+    reg                 filling_out_to_segment;
+
     assign stream_write = (stream_mode) ? adc_capture_go : 1'b1; //In stream mode we don't write until trigger
     assign fifo_overflow = fifo_overflow_reg;
     assign adc_capture_stop = (stream_mode) ? fifo_overflow_int : adc_capture_stop_reg;
@@ -172,6 +177,8 @@ module fifo_top_husky(
           fast_fifo_rd_en <= 1'b0;
           segment_counter <= 0;
           segment_cycle_counter <= 0;
+          filling_out_to_done <= 0;
+          filling_out_to_segment <= 0;
        end
 
        else begin
@@ -185,6 +192,7 @@ module fifo_top_husky(
                 fast_fifo_rd_en <= 1'b0;
                 segment_counter <= 0;
                 segment_cycle_counter <= 0;
+                filling_out_to_done <= 0;
                 if (armed_and_ready && ~adc_capture_stop_reg)
                    if (arm_i & (presample_i > 0))
                       state <= pS_PRESAMP_FILLING;
@@ -224,13 +232,20 @@ module fifo_top_husky(
                 fast_fifo_presample_drain <= 1'b0;
                 fast_fifo_rd_en <= 1'b1;
                 segment_cycle_counter <= segment_cycle_counter + 1;
-                if (stop_capture_conditions || ((sample_counter == (max_samples_i-1)) && (segment_counter == num_segments))) begin
-                   adc_capture_stop_reg <= 1'b1;
-                   state <= pS_DONE;
+                if (stop_capture_conditions || ((sample_counter == (max_samples_i-1)) && (segment_counter == num_segments)) || filling_out_to_done) begin
+                   if (fast_write_count == 5) begin
+                      adc_capture_stop_reg <= 1'b1;
+                      state <= pS_DONE;
+                   end
+                   else
+                      filling_out_to_done <= 1'b1;
                 end
-                else if ( (sample_counter == max_samples_i) && (segment_counter < num_segments) ) begin
+                else if ( ((sample_counter == (max_samples_i-1)) && (segment_counter < num_segments)) || filling_out_to_segment ) begin
                    //adc_capture_stop_reg <= 1'b1;
-                   state <= pS_SEGMENT_DONE;
+                   if (fast_write_count == 5)
+                      state <= pS_SEGMENT_DONE;
+                   else
+                      filling_out_to_segment <= 1'b1;
                 end
                 if (fast_fifo_wr) begin
                    sample_counter <= sample_counter + 1;
@@ -242,6 +257,7 @@ module fifo_top_husky(
 
              pS_SEGMENT_DONE: begin
                 segment_cycle_counter <= segment_cycle_counter + 1;
+                filling_out_to_segment <= 0;
                 //adc_capture_stop_reg <= 1'b0;
                 if (fast_fifo_empty) begin
                    fast_fifo_rd_en <= 1'b0;
@@ -369,7 +385,24 @@ module fifo_top_husky(
        end
     end
 
-    reg [1:0] fast_read_count;
+
+    // Track fast FIFO writes to ensure they're a multiple of 3 by the end of the capture/segment:
+    always @(posedge adc_sampleclk) begin
+       if (reset) begin
+          fast_write_count <= 0;
+       end
+       else begin
+          if ((state == pS_IDLE) || (state == pS_SEGMENT_DONE))
+             // TODO: if it's too hard to meet timing on this, re-code so that timing constraints can be removed, since it's static
+             fast_write_count <= presample_i % 6;
+          if (fast_fifo_wr && (state == pS_TRIGGERED))
+             if (fast_write_count < 5)
+                fast_write_count <= fast_write_count + 1;
+             else
+                fast_write_count <= 0;
+       end
+    end
+
 
     // Write slow FIFO:
     always @(posedge adc_sampleclk) begin
