@@ -16,9 +16,8 @@ module cwhusky_top(
     input wire          USB_RDn,
     input wire          USB_WRn,
     input wire          USB_CEn,
-    //input wire          USB_ALEn,
+    input wire          USB_ALEn,
     input wire          USB_SPARE0,
-    input wire          USB_SPARE1,
 
     input wire          FPGA_BONUS1,
     input wire          FPGA_BONUS2,
@@ -191,6 +190,7 @@ module cwhusky_top(
       .cwusb_rdn        (USB_RDn), 
       .cwusb_wrn        (USB_WRn),
       .cwusb_cen        (USB_CEn),
+      .cwusb_alen       (USB_ALEn),
       .cwusb_addr       (USB_Addr),
       .cwusb_isout      (cmdfifo_isout), 
       .I_drive_data     (1'b0),         // TODO?

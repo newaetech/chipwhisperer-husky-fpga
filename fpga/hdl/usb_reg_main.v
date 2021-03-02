@@ -35,6 +35,7 @@ module usb_reg_main #(
    input  wire         cwusb_rdn,
    input  wire         cwusb_wrn,
    input  wire         cwusb_cen,
+   input  wire         cwusb_alen,
 
  /* Interface to registers */
    input  wire         I_drive_data, // if high, drive data bus no matter what (use with care!)
@@ -55,6 +56,7 @@ module usb_reg_main #(
    reg isoutreg, isoutregdly;
    reg addrvalid_outreg;
    reg cwusb_wrn_rs, cwusb_wrn_rs_dly;
+   reg cwusb_alen_r;
    reg reg_write_dly;
 
    // note: could possibly be simplified, and delays reduced?
@@ -64,6 +66,8 @@ module usb_reg_main #(
 
       isoutreg <= ~cwusb_rdn;
       isoutregdly <= isoutreg;
+
+      cwusb_alen_r <= cwusb_alen;
 
       cwusb_wrn_rs <= cwusb_wrn;
       cwusb_wrn_rs_dly <= cwusb_wrn_rs;
@@ -99,7 +103,8 @@ module usb_reg_main #(
    always @(posedge clk_usb) begin
       if (reset)
          reg_bytecnt <= 0;
-      else if (reg_address != cwusb_addr) begin
+      //else if (reg_address != cwusb_addr) begin
+      else if (~cwusb_alen_r) begin
          reg_bytecnt <= 0;
       end else if ((isoutregdly & !isoutreg) || (reg_write_dly) ) begin
          //roll-over is allowed (only access to use it is FIFO read, where we

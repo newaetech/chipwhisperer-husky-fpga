@@ -965,8 +965,7 @@
                                 "nets": [
                                     {
                                         "name": "oadc/U_fifo/reset_1",
-                                        "isBus": false,
-                                        "parentNetId": 55
+                                        "isBus": false
                                     }
                                 ]
                             },
@@ -1217,7 +1216,7 @@
                                 "portIndex": 11,
                                 "nets": [
                                     {
-                                        "name": "oadc/U_fifo/adc_write_mask",
+                                        "name": "oadc/U_fifo/p_4_in16_in",
                                         "isBus": false
                                     }
                                 ]
@@ -1603,8 +1602,7 @@
                                 "nets": [
                                     {
                                         "name": "oadc/U_fifo/reset",
-                                        "isBus": false,
-                                        "parentNetId": 140
+                                        "isBus": false
                                     }
                                 ]
                             },
@@ -1985,70 +1983,6 @@
                                     {
                                         "name": "oadc/U_fifo/reset_done",
                                         "isBus": false
-                                    }
-                                ]
-                            }
-                        ]
-                    }
-                ],
-                "parent_nets": [
-                    {
-                        "id": 55,
-                        "name": "oadc/U_reg_openadc/SR[0]",
-                        "state_reg": [
-                            {
-                                "name": "oadc/U_fifo/FSM_sequential_state_reg[0]",
-                                "states": [
-                                    {
-                                        "name": "pS_IDLE",
-                                        "val": "000"
-                                    },
-                                    {
-                                        "name": "pS_PRESAMP_FILLING",
-                                        "val": "001"
-                                    },
-                                    {
-                                        "name": "pS_PRESAMP_FULL",
-                                        "val": "010"
-                                    },
-                                    {
-                                        "name": "pS_TRIGGERED",
-                                        "val": "011"
-                                    },
-                                    {
-                                        "name": "pS_DONE",
-                                        "val": "100"
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        "id": 140,
-                        "name": "oadc/U_reg_openadc/SR[0]",
-                        "state_reg": [
-                            {
-                                "name": "oadc/U_fifo/FSM_sequential_state_reg[0]",
-                                "states": [
-                                    {
-                                        "name": "pS_IDLE",
-                                        "val": "000"
-                                    },
-                                    {
-                                        "name": "pS_PRESAMP_FILLING",
-                                        "val": "001"
-                                    },
-                                    {
-                                        "name": "pS_PRESAMP_FULL",
-                                        "val": "010"
-                                    },
-                                    {
-                                        "name": "pS_TRIGGERED",
-                                        "val": "011"
-                                    },
-                                    {
-                                        "name": "pS_DONE",
-                                        "val": "100"
                                     }
                                 ]
                             }

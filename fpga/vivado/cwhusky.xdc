@@ -77,9 +77,9 @@ set_property PACKAGE_PIN C1 [get_ports {USB_Addr[0]}]
 set_property PACKAGE_PIN A5 [get_ports USB_RDn]
 set_property PACKAGE_PIN A4 [get_ports USB_WRn]
 set_property PACKAGE_PIN B4 [get_ports USB_CEn]
+set_property PACKAGE_PIN B5 [get_ports USB_ALEn]
 
 set_property PACKAGE_PIN H2 [get_ports USB_SPARE0]
-set_property PACKAGE_PIN B5 [get_ports USB_SPARE1]
 
 set_property PACKAGE_PIN R1 [get_ports FPGA_BONUS1]
 set_property PACKAGE_PIN P1 [get_ports FPGA_BONUS2]

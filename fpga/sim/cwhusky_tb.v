@@ -38,8 +38,8 @@ module cwhusky_tb();
    reg                  usb_rdn;
    reg                  usb_wrn;
    reg                  usb_cen;
+   reg                  usb_alen;
    reg                  USB_SPARE0;
-   reg                  USB_SPARE1;
 
    wire                 FPGA_BONUS1;
    wire                 FPGA_BONUS2;
@@ -120,6 +120,7 @@ module cwhusky_tb();
       usb_rdn = 1;
       usb_wrn = 1;
       usb_cen = 1;
+      usb_alen = 1;
       target_io4_reg = 0;
 
       #(pCLK_USB_PERIOD*100);
@@ -202,6 +203,39 @@ module cwhusky_tb();
    end
 
 
+   /* trigger thread: basic verification of two back-to-back captures:
+   initial begin
+      trigger_done = 0;
+      #1 wait (setup_done);
+
+      // 1st capture:
+      write_1byte('h1, 8'hc); // arm, trigger level = high
+      target_io4_reg = 1'b1;
+      trigger_counter_value = U_dut.oadc.U_fifo.adc_datain - pPRESAMPLES;
+      #(pCLK_USB_PERIOD*20);
+      target_io4_reg = 1'b0;
+      trigger_done = 1;
+      wait (read_done == 0);
+      wait (read_done);
+      write_1byte('h1, 8'h4); // disarm
+      #(pCLK_USB_PERIOD*100);
+
+      // 2nd capture:
+      write_1byte('h1, 8'hc); // arm, trigger level = high
+      #(pCLK_USB_PERIOD*1000);
+      trigger_done = 0;
+      target_io4_reg = 1'b1;
+      trigger_counter_value = U_dut.oadc.U_fifo.adc_datain - pPRESAMPLES;
+      #(pCLK_USB_PERIOD*20);
+      target_io4_reg = 1'b0;
+      trigger_done = 1;
+      wait (read_done == 0);
+      wait (read_done);
+
+   end
+   */
+
+
    // trigger thread:
    int dbg;
    initial begin
@@ -259,6 +293,7 @@ module cwhusky_tb();
          end
       end
    end
+   //
 
 
 
@@ -401,6 +436,7 @@ module cwhusky_tb();
    wire #1 usb_rdn_out = usb_rdn;
    wire #1 usb_wrn_out = usb_wrn;
    wire #1 usb_cen_out = usb_cen;
+   wire #1 usb_alen_out = usb_alen;
    wire [7:0] #1 usb_addr_out = usb_addr;
 
    reg read_select;
@@ -443,8 +479,8 @@ cwhusky_top U_dut (
     .USB_RDn            (usb_rdn_out  ),
     .USB_WRn            (usb_wrn_out  ),
     .USB_CEn            (usb_cen_out  ),
+    .USB_ALEn           (usb_alen_out ),
     .USB_SPARE0         (USB_SPARE0   ),
-    .USB_SPARE1         (USB_SPARE1   ),
     .FPGA_BONUS1        (FPGA_BONUS1  ),
     .FPGA_BONUS2        (FPGA_BONUS2  ),
     .FPGA_BONUS3        (FPGA_BONUS3  ),
