@@ -19,7 +19,8 @@ module cwhusky_tb();
    parameter pNUM_SEGMENTS = 0;
    parameter pSEGMENT_CYCLES = 0;
    parameter pSEGMENT_CYCLE_COUNTER_EN = 0;
-   parameter pSLOP = 10;
+   parameter pSLOP = 5;
+   parameter pTRIGGER_ADJUST = pTRIGGER_NOW? 2 : 0;
    parameter pSEED = 1;
    parameter pTIMEOUT_CYCLES = 50000;
    parameter pDUMP = 0;
@@ -97,6 +98,7 @@ module cwhusky_tb();
       $display("pFIFO_SAMPLES = %d", pFIFO_SAMPLES);
       $display("pADC_LOW_RES = %d", pADC_LOW_RES);
       $display("pTRIGGER_NOW = %d", pTRIGGER_NOW);
+      $display("pREAD_DELAY = %d", pREAD_DELAY);
       if ((pSLOW_ADC == 0) && (pFAST_ADC == 0) && (pNOM_ADC == 0)) begin
          chosen_clock = $urandom_range(0, 2);
          case (chosen_clock)
@@ -360,8 +362,8 @@ module cwhusky_tb();
                   if ((i == 0) && (j == 0)) begin
                      // dealing with signed numbers in Verilog is always really fun!
                      // TODO: there are still some corner cases for which the math is wrong :-(
-                     comp_min = {1'b0, trigger_counter_value} - pSLOP; // signed
-                     comp_max = {1'b0, trigger_counter_value} + pSLOP; // signed
+                     comp_min = {1'b0, trigger_counter_value} - pSLOP + pTRIGGER_ADJUST; // signed
+                     comp_max = {1'b0, trigger_counter_value} + pSLOP + pTRIGGER_ADJUST; // signed
                      signed_sample = {1'b0, sample[0]};
                      if ( ($signed(signed_sample) >= $signed(comp_min)) && ($signed(signed_sample) <= $signed(comp_max)) ) begin
                         good_reads += 1;
