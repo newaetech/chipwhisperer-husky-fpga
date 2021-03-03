@@ -319,8 +319,11 @@ module cwhusky_tb();
                if (i%1000 == 0)
                   $display("heartbeat: read %d samples", i);
                read_next_byte(rdata);
-               if (i == 0)
+               if (i == 0) begin
                   last_sample = rdata;
+                  sample[0] = rdata;
+                  check_first_sample();
+               end
                else begin
                   if (rdata == (last_sample + 1) % 256)
                      good_reads += 1;
@@ -359,22 +362,8 @@ module cwhusky_tb();
                for (j = 0; j < 6; j += 1) begin
 
                   // for the very first sample, we check against what we peeked when we applied the trigger, with some slop to account for CDCs:
-                  if ((i == 0) && (j == 0)) begin
-                     // dealing with signed numbers in Verilog is always really fun!
-                     // TODO: there are still some corner cases for which the math is wrong :-(
-                     comp_min = {1'b0, trigger_counter_value} - pSLOP + pTRIGGER_ADJUST; // signed
-                     comp_max = {1'b0, trigger_counter_value} + pSLOP + pTRIGGER_ADJUST; // signed
-                     signed_sample = {1'b0, sample[0]};
-                     if ( ($signed(signed_sample) >= $signed(comp_min)) && ($signed(signed_sample) <= $signed(comp_max)) ) begin
-                        good_reads += 1;
-                        $display("Good first read: expected min=%3h, max=%3h, got %3h", comp_min, comp_max, sample[0]);
-                     end
-                     else begin
-                        bad_reads += 1;
-                        errors += 1;
-                        $display("ERROR on first read: expected min=%3h, max=%3h, got %3h", comp_min, comp_max, sample[0]);
-                     end
-                  end
+                  if ((i == 0) && (j == 0))
+                     check_first_sample();
                   
                   else begin
                      if (j == 0)
@@ -509,6 +498,28 @@ cwhusky_top U_dut (
     .FPGA_CDOUT         (1'b0         )
 
 );
+
+
+task check_first_sample;
+   begin
+      if (pADC_LOW_RES)
+         trigger_counter_value = {4'b0, trigger_counter_value[7:0]};
+      // dealing with signed numbers in Verilog is always really fun!
+      // TODO: there are still some corner cases for which the math is wrong :-(
+      comp_min = {1'b0, trigger_counter_value} - pSLOP + pTRIGGER_ADJUST; // signed
+      comp_max = {1'b0, trigger_counter_value} + pSLOP + pTRIGGER_ADJUST; // signed
+      signed_sample = {1'b0, sample[0]};
+      if ( ($signed(signed_sample) >= $signed(comp_min)) && ($signed(signed_sample) <= $signed(comp_max)) ) begin
+         good_reads += 1;
+         $display("Good first read: expected min=%3h, max=%3h, got %3h", comp_min, comp_max, sample[0]);
+      end
+      else begin
+         bad_reads += 1;
+         errors += 1;
+         $display("ERROR on first read: expected min=%3h, max=%3h, got %3h", comp_min, comp_max, sample[0]);
+      end
+   end
+endtask
 
 
 endmodule
