@@ -64,32 +64,22 @@ module reg_openadc_adcfifo #(
    
     
    reg [7:0] reg_datao_reg;
-   reg reg_datao_valid_reg;
    reg reg_read_r;
-   assign reg_datao = (reg_datao_valid_reg /*& reg_read*/) ? reg_datao_reg : 8'd0;
-   
-   
-   always @(posedge clk_usb) begin
-          if (reg_addrvalid) begin
-             case (reg_address)
-                `ADCREAD_ADDR: begin reg_datao_valid_reg <= 1; end
-                `ADC_LOW_RES: begin reg_datao_valid_reg <= 1; end
-                default: begin reg_datao_valid_reg <= 0; end
-             endcase
-          end else begin
-             reg_datao_valid_reg <= 0;
-          end
-   end
-    
+   assign reg_datao = reg_datao_reg;
+
+
+
    //always @(reg_address, reg_addrvalid, reg_bytecnt, fifo_data) begin // TODO XXX verify change to @* works ok
    always @(*) begin
           if (reg_read) begin
              case (reg_address)
                 //`ADCREAD_ADDR: reg_datao_reg <= (reg_bytecnt == 0) ? 8'hAC : fifo_data; 
-                `ADCREAD_ADDR: reg_datao_reg <= fifo_data;  // TODO: unsure why AC byte was needed? should I keep it?
-                default: reg_datao_reg <= 0;
+                `ADCREAD_ADDR: reg_datao_reg = fifo_data;  // TODO: unsure why AC byte was needed? should I keep it? Hmm I think it was for sanity to mark the first received byte
+                default: reg_datao_reg = 0;
              endcase
           end
+          else
+             reg_datao_reg = 0;
    end
 
    always @(posedge clk_usb) begin

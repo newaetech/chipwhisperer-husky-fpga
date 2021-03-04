@@ -252,6 +252,8 @@
 `define NUM_SEGMENTS            32
 `define SEGMENT_CYCLES          33
 
+`define LED_SELECT              34
+
 `define REGISTER_VERSION 1
 
 //`define SCARDCTRL_ADDR 30

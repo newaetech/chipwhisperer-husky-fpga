@@ -80,20 +80,7 @@ module reg_husky_adc #(
    reg [7:0] reg_datao_reg;
    reg [7:0] data_reg;
    reg reg_write_r;
-   reg reg_datao_valid_reg;
-   assign reg_datao = reg_datao_valid_reg? reg_datao_reg : 8'd0;
-
-   always @(posedge clk_usb) begin
-      if (reg_addrvalid) begin
-         case (reg_address)
-            `CW_ADC_CTRL: begin reg_datao_valid_reg <= 1; end
-            `CW_VMAG_CTRL: begin reg_datao_valid_reg <= 1; end
-            default: begin reg_datao_valid_reg <= 0; end
-         endcase
-      end else begin
-         reg_datao_valid_reg <= 0;
-      end
-   end
+   assign reg_datao = reg_datao_reg;
 
    always @(posedge clk_usb) begin
       if (reg_read) begin
@@ -102,6 +89,8 @@ module reg_husky_adc #(
            default: reg_datao_reg <= 0;
          endcase
       end
+      else
+         reg_datao_reg <= 0;
    end  
 
    always @(posedge clk_usb) begin
@@ -141,7 +130,7 @@ module reg_husky_adc #(
 	.probe4         (ADC_OE),       // input wire [0:0]  probe4 
 	.probe5         (ADC_SCLK),     // input wire [0:0]  probe5 
 	.probe6         (data_reg),     // input wire [7:0]  probe6 
-	.probe7         (reg_datao_valid_reg),// input wire [0:0]  probe7 
+	.probe7         (1'b0),         // input wire [0:0]  probe7 
 	.probe8         (reg_write),    // input wire [0:0]  probe8 
 	.probe9         (reg_write_r),  // input wire [0:0]  probe9
         .probe10        (ADC_OVR_SDOUT) // input wire [0:0]  probe10

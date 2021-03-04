@@ -180,6 +180,9 @@ module cwhusky_top(
    wire enable_avrprog;
    wire [11:0] ADC_data;
 
+   wire fifo_error_flag;
+   wire error_flag = fifo_error_flag; // TODO: add other sources as they get created
+
    usb_reg_main #(
       .pBYTECNT_SIZE    (pBYTECNT_SIZE)
    ) U_usb_reg_main (
@@ -210,55 +213,42 @@ module cwhusky_top(
    reg [24:0] usb_hearbeat;
    always @(posedge clk_usb_buf) usb_hearbeat <= usb_hearbeat +  25'd1;
 
-   reg [24:0] clkgen_heartbeat;
-   always @(posedge clkgen) clkgen_heartbeat <= clkgen_heartbeat +  25'd1;
+   wire LED_ADCDCMUnlock;
+   wire LED_CLKGENDCMUnlock;
 
-   reg [24:0] adc_fb_heartbeat;
-   always @(posedge ADC_clk_fb) adc_fb_heartbeat <= adc_fb_heartbeat +  25'd1;
-
-   reg [24:0] adc_out_heartbeat;
-   always @(posedge ADC_clk_out) adc_out_heartbeat <= adc_out_heartbeat +  25'd1;
-
-
-   assign LED_ARMED = usb_hearbeat[24];
-   assign LED_CAP = clkgen_heartbeat[24];
-
-   // TODO-temporary:
-   assign LED_CLK1FAIL = adc_fb_heartbeat[24];
-   assign LED_CLK2FAIL = adc_out_heartbeat[24];
-
+   // fast-flash red LEDs when some internal error has occurred:
+   assign LED_CLK1FAIL = error_flag? usb_hearbeat[22] : LED_ADCDCMUnlock;
+   assign LED_CLK2FAIL = error_flag? usb_hearbeat[22] : LED_CLKGENDCMUnlock;
 
    openadc_interface #(
         .pBYTECNT_SIZE  (pBYTECNT_SIZE)
    ) oadc (
-        .reset_i(reset_i),
-        .clk_usb(clk_usb_buf),
-        .reset_o(reg_rst),
+        .reset_i                (reset_i),
+        .clk_usb                (clk_usb_buf),
+        .reset_o                (reg_rst),
 
-        //.LED_hbeat(LED_CAP),
-        //.LED_armed(LED_ARMED),
-        .LED_hbeat(),
-        .LED_armed(),
-        //.LED_ADCDCMUnlock(LED_CLK1FAIL),
-        //.LED_CLKGENDCMUnlock(LED_CLK2FAIL),
-        .LED_ADCDCMUnlock(),
-        .LED_CLKGENDCMUnlock(),
-        .ADC_data(ADC_data),
-        .ADC_clk_out(ADC_clk_out),
-        .ADC_clk_feedback(ADC_clk_fb),
-        .DUT_CLK_i(extclk_mux),
-        .DUT_trigger_i(ext_trigger),
-        .amp_gain(VDBSPWM),
-        .amp_hilo(),
-        .clkgen(clkgen),
+        .LED_capture            (LED_CAP),
+        .LED_armed              (LED_ARMED),
+        .LED_ADCDCMUnlock       (LED_ADCDCMUnlock),
+        .LED_CLKGENDCMUnlock    (LED_CLKGENDCMUnlock),
+        .ADC_data               (ADC_data),
+        .ADC_clk_out            (ADC_clk_out),
+        .ADC_clk_feedback       (ADC_clk_fb),
+        .DUT_CLK_i              (extclk_mux),
+        .DUT_trigger_i          (ext_trigger),
+        .amp_gain               (VDBSPWM),
+        .amp_hilo               (),
+        .clkgen                 (clkgen),
 
-        .reg_address(reg_address),
-        .reg_bytecnt(reg_bytecnt), 
-        .reg_datao(read_data_openadc), 
-        .reg_datai(write_data), 
-        .reg_read(reg_read), 
-        .reg_write(reg_write), 
-        .reg_addrvalid(reg_addrvalid) 
+        .reg_address            (reg_address),
+        .reg_bytecnt            (reg_bytecnt), 
+        .reg_datao              (read_data_openadc), 
+        .reg_datai              (write_data), 
+        .reg_read               (reg_read), 
+        .reg_write              (reg_write), 
+        .reg_addrvalid          (reg_addrvalid),
+
+        .fifo_error_flag        (fifo_error_flag)
    );
 
    wire enable_output_nrst;

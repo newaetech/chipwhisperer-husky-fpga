@@ -102,7 +102,8 @@ module reg_openadc #(
    input  wire [31:0] maxsamples_i,
    input  wire [31:0] samples_i,
    output wire [12:0] downsample_o,
-   output wire        fifo_stream
+   output wire        fifo_stream,
+   output reg  [1:0]  led_select
 );
 
    wire reset;
@@ -243,8 +244,7 @@ module reg_openadc #(
    end
 
    reg [7:0] reg_datao_reg;
-   reg reg_datao_valid_reg;
-   assign reg_datao = (reg_datao_valid_reg/*& reg_read*/) ? reg_datao_reg : 8'd0;
+   assign reg_datao = reg_datao_reg;
 
    always @(posedge clk_usb) begin
       if (reg_addrvalid) begin
@@ -263,34 +263,6 @@ module reg_openadc #(
          end else begin
             adcclk_locked <= 0;
          end
-      end
-   end
-
-   always @(posedge clk_usb) begin
-      if (reg_addrvalid) begin
-         case (reg_address)
-            `GAIN_ADDR: begin reg_datao_valid_reg <= 1; end
-            `SETTINGS_ADDR: begin reg_datao_valid_reg <= 1; end
-            `STATUS_ADDR: begin reg_datao_valid_reg <= 1; end
-            `ECHO_ADDR: begin reg_datao_valid_reg <= 1; end
-            `EXTFREQ_ADDR: begin reg_datao_valid_reg <= 1; end
-            `ADCFREQ_ADDR: begin reg_datao_valid_reg <= 1; end
-            `PHASE_ADDR: begin reg_datao_valid_reg <= 1; end
-            `VERSION_ADDR: begin reg_datao_valid_reg <= 1; end
-            `DECIMATE_ADDR: begin reg_datao_valid_reg <= 1; end
-            `SAMPLES_ADDR: begin reg_datao_valid_reg <= 1; end
-            `PRESAMPLES_ADDR: begin reg_datao_valid_reg <= 1; end
-            `RETSAMPLES_ADDR: begin reg_datao_valid_reg <= 1; end
-            `OFFSET_ADDR: begin reg_datao_valid_reg <= 1; end
-            `ADVCLOCK_ADDR: begin reg_datao_valid_reg <= 1; end
-            `SYSTEMCLK_ADDR: begin reg_datao_valid_reg <= 1; end
-            `TRIGGER_DUR_ADDR: begin reg_datao_valid_reg <= 1; end
-            `FPGA_BUILDTIME_ADDR: begin reg_datao_valid_reg <= 1; end
-            `DATA_SOURCE_SELECT: begin reg_datao_valid_reg <= 1; end
-            default: begin reg_datao_valid_reg <= 0; end
-         endcase
-      end else begin
-         reg_datao_valid_reg <= 0;
       end
    end
 
@@ -317,9 +289,12 @@ module reg_openadc #(
                 `NUM_SEGMENTS: reg_datao_reg <= num_segments[reg_bytecnt*8 +: 8];
                 `SEGMENT_CYCLES: reg_datao_reg <= segment_cycles[reg_bytecnt*8 +: 8];
                 `DATA_SOURCE_SELECT: reg_datao_reg <= data_source_select;
+                `LED_SELECT: reg_datao_reg <= led_select;
                 default: reg_datao_reg <= 0;
              endcase
           end
+          else
+             reg_datao_reg <= 0;
    end
 
    always @(posedge clk_usb) begin
@@ -335,6 +310,7 @@ module reg_openadc #(
          data_source_select <= 1; // default to ADC
          num_segments <= 0;
          segment_cycles <= 0;
+         led_select <= 0;
       end else if (reg_write) begin
          case (reg_address)
             `GAIN_ADDR: registers_gain <= reg_datai;
@@ -348,6 +324,7 @@ module reg_openadc #(
             `NUM_SEGMENTS: num_segments[reg_bytecnt*8 +: 8] <= reg_datai;
             `SEGMENT_CYCLES: segment_cycles[reg_bytecnt*8 +: 8] <= reg_datai;
             `DATA_SOURCE_SELECT: data_source_select <= reg_datai[0];
+            `LED_SELECT: led_select <= reg_datai[1:0];
             default: ;
          endcase
       end

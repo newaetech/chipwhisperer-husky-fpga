@@ -38,9 +38,8 @@ module openadc_interface #(
     input  wire                         clk_usb, // 96 MHz
     output wire                         reset_o,
 
-    output wire                         LED_hbeat, // Heartbeat LED
-    output wire                         LED_armed, // Armed LED
-    output wire                         LED_capture, // Capture in Progress LED (only illuminate during capture, very quick)
+    output reg                          LED_armed, // Armed LED
+    output reg                          LED_capture, // Capture in Progress LED (only illuminate during capture, very quick)
     output wire                         LED_ADCDCMUnlock, // MMCM for ADC is unlocked
     output wire                         LED_CLKGENDCMUnlock, // MMCM for CLKGEN is unlocked
 
@@ -63,7 +62,9 @@ module openadc_interface #(
     output wire [7:0]                   reg_datao,
     input  wire                         reg_read,
     input  wire                         reg_write,
-    input  wire                         reg_addrvalid
+    input  wire                         reg_addrvalid,
+
+    output wire                         fifo_error_flag
 );
 
     wire        dcm_locked;
@@ -86,6 +87,7 @@ module openadc_interface #(
     wire       fifo_stream;
     wire [15:0] num_segments;
     wire [19:0] segment_cycles;
+    wire [1:0]  led_select;
     wire       data_source_select;
 
     assign reset_o = reset;
@@ -100,10 +102,31 @@ module openadc_interface #(
          timer_heartbeat <= timer_heartbeat +  25'd1;
       end
 
-   //Blink heartbeat LED
-   assign LED_hbeat = timer_heartbeat[24];
-   assign LED_armed = armed;
-   assign LED_capture = adc_capture_go;
+
+   reg [24:0] clkgen_heartbeat;
+   always @(posedge clkgen) clkgen_heartbeat <= clkgen_heartbeat +  25'd1;
+
+   reg [24:0] adc_fb_heartbeat;
+   always @(posedge ADC_clk_feedback) adc_fb_heartbeat <= adc_fb_heartbeat +  25'd1;
+
+   reg [24:0] adc_out_heartbeat;
+   always @(posedge ADC_clk_out) adc_out_heartbeat <= adc_out_heartbeat +  25'd1;
+
+   always @(*) begin
+      if (led_select == 2'b01) begin
+         LED_armed = timer_heartbeat[24];
+         LED_capture = clkgen_heartbeat[24];
+      end
+      else if (led_select == 2'b10) begin
+         LED_armed = adc_fb_heartbeat[24];
+         LED_capture = adc_out_heartbeat[24];
+      end
+      else begin
+         LED_armed = armed;
+         LED_capture = adc_capture_go;
+      end
+   end
+
    assign LED_ADCDCMUnlock = ~dcm_locked;
    assign LED_CLKGENDCMUnlock = ~dcm_gen_locked;
 
@@ -298,7 +321,8 @@ module openadc_interface #(
       .clkblock_gen_locked_i(dcm_gen_locked),
       .fifo_stream(fifo_stream),
       .num_segments(num_segments),
-      .segment_cycles(segment_cycles)
+      .segment_cycles(segment_cycles),
+      .led_select(led_select)
    );
 
    reg_openadc_adcfifo #(
@@ -437,7 +461,8 @@ module openadc_interface #(
       .downsample_i             (downsample),
 
       .fifo_overflow            (reg_status[7]),
-      .stream_mode              (fifo_stream)
+      .stream_mode              (fifo_stream),
+      .error_flag               (fifo_error_flag)
    );
 
 

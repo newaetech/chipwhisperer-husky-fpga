@@ -22,20 +22,21 @@ module fifo_top_husky(
     input wire          low_res_lsb,    // useless except for testing: if set, return the 8 LSB bits when in low_res mode
     input wire          fifo_read_fifoen,
     output wire         fifo_read_fifoempty,
-    output reg   [7:0]  fifo_read_data,
+    output reg  [7:0]   fifo_read_data,
 
-    input wire  [31:0] presample_i,
-    input wire  [31:0] max_samples_i,
-    output wire [31:0] max_samples_o,
-    output wire [31:0] samples_o,
-    input wire  [12:0] downsample_i, //Ignores this many samples inbetween captured measurements
+    input wire  [31:0]  presample_i,
+    input wire  [31:0]  max_samples_i,
+    output wire [31:0]  max_samples_o,
+    output wire [31:0]  samples_o,
+    input wire  [12:0]  downsample_i, //Ignores this many samples inbetween captured measurements
 
-    output wire      fifo_overflow, //If overflow happens (bad during stream mode)
-    input wire       stream_mode //1=Enable stream mode, 0=Normal
+    output wire         fifo_overflow, //If overflow happens (bad during stream mode)
+    input  wire         stream_mode, //1=Enable stream mode, 0=Normal
+    output reg          error_flag
 );
 
     // TODO: TEMPORARY:
-    `define MAX_SAMPLES 2048
+    //`define MAX_SAMPLES 2048
     parameter FIFO_FULL_SIZE = `MAX_SAMPLES - 128; // TODO: adjust?
     parameter FIFO_FULL_SIZE_LARGEWORDS = ((`MAX_SAMPLES - 32) / 3) / 4; // TODO: ?
 
@@ -83,6 +84,7 @@ module fifo_top_husky(
     reg [2:0]           fast_write_count;
     reg                 filling_out_to_done;
     reg                 filling_out_to_segment;
+    reg                 slow_fifo_underflow_sticky;
 
     assign stream_write = (stream_mode) ? adc_capture_go : 1'b1; //In stream mode we don't write until trigger
     assign fifo_overflow = fifo_overflow_reg;
@@ -386,6 +388,25 @@ module fifo_top_husky(
     end
 
 
+    always @(posedge clk_usb) begin
+       if (reset) begin
+          error_flag <= 0;
+          slow_fifo_underflow_sticky <= 0;
+       end
+       else begin
+          if (fifo_rst_start_r)
+             error_flag <= 0;
+          else if (fast_fifo_overflow || fast_fifo_underflow || slow_fifo_overflow || slow_fifo_underflow)
+             error_flag <= 1;
+
+          if (fifo_rst_start_r)
+             slow_fifo_underflow_sticky <= 0;
+          else if (slow_fifo_underflow)
+             slow_fifo_underflow_sticky <= 1;
+       end
+    end
+
+
     // Track fast FIFO writes to ensure they're a multiple of 3 by the end of the capture/segment:
     always @(posedge adc_sampleclk) begin
        if (reset) begin
@@ -487,7 +508,9 @@ module fifo_top_husky(
     end
 
     always @(*) begin
-       if (low_res) begin
+       if (slow_fifo_underflow_sticky)
+          fifo_read_data = 0;
+       else if (low_res) begin
           if (low_res_lsb)
              fifo_read_data = slow_fifo_dout[(2-slow_read_count)*12 +: 8];
           else

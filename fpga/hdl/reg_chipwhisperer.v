@@ -478,23 +478,7 @@ module reg_chipwhisperer #(
   
 
    reg [7:0] reg_datao_reg;
-   reg reg_datao_valid_reg;
-   assign reg_datao = (reg_datao_valid_reg/*& reg_read*/) ? reg_datao_reg : 8'd0;
-
-   always @(posedge clk_usb) begin
-      if (reg_addrvalid) begin
-         case (reg_address)
-            `CW_EXTCLK_ADDR: begin reg_datao_valid_reg <= 1; end
-            `CW_TRIGSRC_ADDR: begin reg_datao_valid_reg <= 1; end
-            `CW_TRIGMOD_ADDR: begin reg_datao_valid_reg <= 1; end
-            `CW_IOROUTE_ADDR: begin reg_datao_valid_reg <= 1; end
-            `CW_IOREAD_ADDR: begin reg_datao_valid_reg <= 1; end
-            default: begin reg_datao_valid_reg <= 0; end
-         endcase
-      end else begin
-         reg_datao_valid_reg <= 0;
-      end
-   end
+   assign reg_datao = reg_datao_reg;
 
    always @(posedge clk_usb) begin
       if (reg_read) begin
@@ -507,6 +491,8 @@ module reg_chipwhisperer #(
            default: reg_datao_reg <= 0;
          endcase
       end
+      else
+         reg_datao_reg <= 0;
    end  
 
    always @(posedge clk_usb) begin
