@@ -138,9 +138,8 @@ module reg_openadc #(
    reg [15:0] registers_downsample;
    reg [31:0] registers_advclocksettings;
    wire [31:0] registers_advclocksettings_read;
-   reg [31:0] registers_extclk_frequency;
-   reg [31:0] registers_adcclk_frequency;
-   reg [31:0] registers_ddr_address;
+   wire [31:0] registers_extclk_frequency;
+   wire [31:0] registers_adcclk_frequency;
    reg [31:0] registers_samples;
    reg [31:0] registers_presamples;
    reg [31:0] registers_offset;
@@ -231,40 +230,11 @@ module reg_openadc #(
    //assign reset_reg_extended = |reset_r;
    assign reset_reg_extended = reset_fromreg;
 
-   always @(posedge clk_usb) begin
-      if (extclk_locked == 0) begin
-         registers_extclk_frequency <= extclk_frequency;
-      end
-   end
-
-   always @(posedge clk_usb) begin
-      if (adcclk_locked == 0) begin
-         registers_adcclk_frequency <= adcclk_frequency;
-      end
-   end
+   assign registers_extclk_frequency = extclk_frequency;
+   assign registers_adcclk_frequency = adcclk_frequency;
 
    reg [7:0] reg_datao_reg;
    assign reg_datao = reg_datao_reg;
-
-   always @(posedge clk_usb) begin
-      if (reg_addrvalid) begin
-         if (reg_address == `EXTFREQ_ADDR) begin
-            extclk_locked <= 1;
-         end else begin
-            extclk_locked <= 0;
-         end
-      end
-   end
-
-   always @(posedge clk_usb) begin
-      if (reg_addrvalid) begin
-         if (reg_address == `ADCFREQ_ADDR) begin
-            adcclk_locked <= 1;
-         end else begin
-            adcclk_locked <= 0;
-         end
-      end
-   end
 
    always @(posedge clk_usb) begin
           if (reg_read) begin

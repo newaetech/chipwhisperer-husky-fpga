@@ -41,7 +41,8 @@ module reg_mmcm_drp #(
    output reg  [15:0]  drp_din,
    input  wire [15:0]  drp_dout,
    input  wire         drp_drdy,
-   output reg          drp_dwe
+   output reg          drp_dwe,
+   output reg          drp_reset
 ); 
 
 
@@ -68,32 +69,42 @@ module reg_mmcm_drp #(
    end  
 
    always @(posedge clk_usb) begin
-      if (reg_write) begin
-         if (reg_address == `DRP_ADDR) begin
-            drp_addr <= reg_datai[6:0];
-            drp_den <= 1'b1;
-            // DRP write:
-            if (reg_datai[7])
-               drp_dwe <= 1'b1;
-            // DRP read:
-            else
+      if (reset_i) begin
+         drp_reset <= 1'b0;
+         drp_dwe <= 1'b0;
+         drp_den <= 1'b0;
+      end
+      else begin
+         if (reg_write) begin
+            if (reg_address == `DRP_ADDR) begin
+               drp_addr <= reg_datai[6:0];
+               drp_den <= 1'b1;
+               // DRP write:
+               if (reg_datai[7])
+                  drp_dwe <= 1'b1;
+               // DRP read:
+               else
+                  drp_dwe <= 1'b0;
+            end
+
+            else if (reg_address == `DRP_RESET)
+               drp_reset <= reg_datai[0];
+
+            else begin
                drp_dwe <= 1'b0;
+               drp_den <= 1'b0;
+               if (reg_address == `DRP_DATA)
+                  drp_din[reg_bytecnt*8 +: 8] <= reg_datai;
+            end
+
          end
 
          else begin
             drp_dwe <= 1'b0;
             drp_den <= 1'b0;
-            if (reg_address == `DRP_DATA)
-               drp_din[reg_bytecnt*8 +: 8] <= reg_datai;
          end
 
       end
-
-      else begin
-         drp_dwe <= 1'b0;
-         drp_den <= 1'b0;
-      end
-
    end
 
 

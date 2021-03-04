@@ -95,11 +95,21 @@ module openadc_interface #(
    //Divide clock by 2^24 for heartbeat LED
    //Divide clock by 2^23 for frequency measurement
    reg [24:0] timer_heartbeat;
+   reg freq_measure;
+   reg timer_heartbeat22r;
    always @(posedge clk_usb)
       if (reset) begin
          timer_heartbeat <= 25'b0;
-      end else begin
+         timer_heartbeat22r <= 1'b0;
+         freq_measure <= 1'b0;
+      end 
+      else begin
          timer_heartbeat <= timer_heartbeat +  25'd1;
+         timer_heartbeat22r <= timer_heartbeat[22];
+         if (timer_heartbeat[22] && ~timer_heartbeat22r)
+            freq_measure <= 1'b1;
+         else
+            freq_measure <= 1'b0;
       end
 
 
@@ -130,41 +140,53 @@ module openadc_interface #(
    assign LED_ADCDCMUnlock = ~dcm_locked;
    assign LED_CLKGENDCMUnlock = ~dcm_gen_locked;
 
-   //Frequency Measurement
-   wire freq_measure;
-   //BUFG buf_freqmeasure (.I(timer_heartbeat[25]), .O(freq_measure));
-   assign freq_measure = timer_heartbeat[23];
+   wire freq_measure_adc;
+   wire freq_measure_ext;
+   cdc_pulse U_freq_measure_adc (
+      .reset_i       (reset),
+      .src_clk       (clk_usb),
+      .src_pulse     (freq_measure),
+      .dst_clk       (ADC_clk_sample),
+      .dst_pulse     (freq_measure_adc)
+   );
+
+   cdc_pulse U_freq_measure_ext (
+      .reset_i       (reset),
+      .src_clk       (clk_usb),
+      .src_pulse     (freq_measure),
+      .dst_clk       (extmeasure_clk),
+      .dst_pulse     (freq_measure_ext)
+   );
+
+
 
    wire extmeasure_clk;
    wire extmeasure_src;
    assign extmeasure_clk = (extmeasure_src) ? clkgen : DUT_CLK_i;
 
    reg [31:0] extclk_frequency_int;
-   always @(posedge extmeasure_clk or negedge freq_measure) begin
-      if (freq_measure == 1'b0) begin
-         extclk_frequency_int <= 32'd0;
-      end else begin
+   reg [31:0] adcclk_frequency_int;
+   reg [31:0] extclk_frequency;
+   reg [31:0] adcclk_frequency;
+
+   always @(posedge extmeasure_clk) begin
+      if (freq_measure_ext) begin
+         extclk_frequency_int <= 32'd1;
+         extclk_frequency <= extclk_frequency_int;
+      end 
+      else begin
          extclk_frequency_int <= extclk_frequency_int + 32'd1;
       end
    end
 
-   reg [31:0] adcclk_frequency_int;
-   always @(posedge ADC_clk_sample or negedge freq_measure) begin
-      if (freq_measure == 1'b0) begin
-         adcclk_frequency_int <= 32'd0;
-      end else begin
+   always @(posedge ADC_clk_sample) begin
+      if (freq_measure_adc) begin
+         adcclk_frequency_int <= 32'd1;
+         adcclk_frequency <= adcclk_frequency_int;
+      end 
+      else begin
          adcclk_frequency_int <= adcclk_frequency_int + 32'd1;
       end
-   end
-
-   reg [31:0] extclk_frequency;
-   always @(negedge freq_measure) begin
-      extclk_frequency <= extclk_frequency_int;
-   end
-
-   reg [31:0] adcclk_frequency;
-   always @(negedge freq_measure) begin
-      adcclk_frequency <= adcclk_frequency_int;
    end
 
 

@@ -168,13 +168,13 @@ set_property PACKAGE_PIN E13 [get_ports ADC_clk_fbn]
 
 
 # No spec for these, seems sensible:
+set_input_delay -clock clk_usb 2.000 [get_ports USB_ALEn]
 set_input_delay -clock clk_usb 2.000 [get_ports USB_CEn]
 set_input_delay -clock clk_usb 2.000 [get_ports USB_RDn]
 set_input_delay -clock clk_usb 2.000 [get_ports USB_WRn]
 set_input_delay -clock clk_usb 2.000 [get_ports USB_Data]
 set_input_delay -clock clk_usb 2.000 [get_ports USB_Addr]
 set_input_delay -clock clk_usb 2.000 [get_ports USB_SPARE0]
-set_input_delay -clock clk_usb 2.000 [get_ports USB_SPARE1]
 
 # TODO: lots of constraints missing still
 
