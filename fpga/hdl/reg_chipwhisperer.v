@@ -41,7 +41,6 @@ module reg_chipwhisperer #(
    output wire        extclk_o,
    
    /* Extern Trigger Connections */
-   input  wire        adc_sample_clk,       // TODO XXX note this wasn't driven by anything
    input  wire        trigger_io1_i,
    input  wire        trigger_io2_i,
    input  wire        trigger_io3_i,

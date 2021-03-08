@@ -120,23 +120,6 @@ module fifo_top_husky(
     assign max_samples_o = FIFO_FULL_SIZE ;
 
 
-    /* TODO: this logic is obsolete
-    // Keep fifo write enabled until we reach number of samples
-    always @(posedge adc_sampleclk) begin
-       if (~adc_capture_go)
-          presample_counter <= FIFO_FULL_SIZE-6; //max_samples_i
-       else if (downsample_max & adc_write_mask)
-          presample_counter <= presample_counter - 32'd1;
-    end
-
-    always @(posedge adc_sampleclk) begin
-       if((presample_counter == presample_i) && (stream_mode == 1'b0))
-          adc_capture_stop_reg <= 1'b1;
-       else
-          adc_capture_stop_reg <= 1'b0;
-    end
-    */
-
     // Presample logic: when armed, we always write to the fast FIFO. When
     // we reach the requested number of presamples, we start to also read
     // and discard, so as to keep exactly the requested number of presamples

@@ -132,7 +132,7 @@ module trigger_unit(
    wire int_reset_capture;
    assign int_reset_capture = adc_capture_done | reset | (~arm_i);
 
-   always @(posedge adc_clk or posedge int_reset_capture) begin // TODO XXX
+   always @(posedge adc_clk) begin
       if (int_reset_capture) begin
          adc_capture_go <= 0;
          segment_go <= 0;

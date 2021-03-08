@@ -197,21 +197,6 @@ module openadc_interface #(
    always @(posedge ADC_clk_sample) begin
       ADC_data_tofifo <= data_source_select? ADC_data : datacounter;
       datacounter <= datacounter + 1;
-      //ADC_data_tofifo <= ADC_data;
-
-      //Input Validation Test #1: Uncomment the following
-      //ADC_data_tofifo <= 12'h3AA;
-
-      //Input Validation Test #2: uncomment following, which should
-      //put a perfect ramp. Tests FIFO & USB interface for proper
-      //syncronization
-      //ADC_data_tofifo <= ADC_data_tofifo + 12'd1;
-
-      //Input Validation Test #3: used for checking trigger location
-      //if (DUT_trigger_i == 0)
-      //   ADC_data_tofifo <= 12'd512;
-      //else
-      //   ADC_data_tofifo <= ADC_data_tofifo + 12'd1;
    end
 
    wire [7:0] reg_status;
@@ -277,10 +262,6 @@ module openadc_interface #(
 
    wire clockreset;
 
-   wire [7:0] clkgen_mul;
-   wire [7:0] clkgen_div;
-   wire clkgen_load;
-   wire clkgen_done;
    wire clkgen_reset;
 
    wire [12:0] downsample;
@@ -325,10 +306,6 @@ module openadc_interface #(
       .phase_ld_o(phase_load),
       .phase_i(phase_actual),
       .phase_done_i(phase_done),
-      .clkgen_mul(clkgen_mul),
-      .clkgen_div(clkgen_div),
-      .clkgen_load(clkgen_load),
-      .clkgen_done(clkgen_done),
       .presamples_o(presamples),
       .maxsamples_i(maxsamples_limit),
       .maxsamples_o(maxsamples),
@@ -382,10 +359,6 @@ module openadc_interface #(
       .phase_load(phase_load),
       .phase_done(phase_done),
       .clkgen_reset(reset | clkgen_reset),
-      .clkgen_mul(clkgen_mul),
-      .clkgen_div(clkgen_div),
-      .clkgen_load(clkgen_load),
-      .clkgen_done(clkgen_done),
       .dcm_adc_locked(dcm_locked),
       .dcm_gen_locked(dcm_gen_locked),
 
@@ -413,36 +386,7 @@ module openadc_interface #(
    assign reg_status[4] = 1'b0;
    assign reg_status[5] = 1'b0;
 
-   /* Segment trigger counter - independant) */
-   reg [17:0] segment_trigger_count;
-   reg segment_trigger_go;
-
-   //Used to detect trigger transition in segment mode (segment mode only supports rising edge)
-   reg DUT_trigger_i_old;
-   always @(posedge ADC_clk_sample) begin
-      DUT_trigger_i_old <= DUT_trigger_i;
-   end
-
-   // TODO - clean this up:
-   // Maxsamples will be limited to FIFO size. The addition of +18'd1 on the ending point
-   // is because the initial version of this had an off-by-one, to avoid API changes we just
-   // continue this. The returned segment size is still smaller than expected by 1 but we
-   // just let it ride baby!
-   always @(posedge ADC_clk_sample) begin
-      if ((DUT_trigger_i == 1'b1) && (DUT_trigger_i_old == 1'b0)) begin
-        segment_trigger_go <= 1'b1;
-      end else if (segment_trigger_count == (maxsamples[17:0]+18'd1)) begin
-        segment_trigger_go <= 1'b0;
-      end
-   end
-
    /*
-   always @(posedge ADC_clk_sample)
-      if (segment_trigger_go == 1'b0)
-        segment_trigger_count <= 18'd0;
-      else
-        segment_trigger_count <= segment_trigger_count + 18'd1;
-
    wire adc_write_mask;
    wire adc_write_mask_int;
    

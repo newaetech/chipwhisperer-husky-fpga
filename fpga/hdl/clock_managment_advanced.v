@@ -34,17 +34,12 @@ module clock_managment_advanced #(
     /* Clock selection */
     input  wire [2:0]     clkadc_source,
     input  wire           clkgen_source,
-    
+
     /* Clock to System compensates for wire delay of ADC clock */
     output wire           systemsample_clk,
-    
-    /* Mul/Div Control for Generated clock */
-    input  wire           clkgen_reset,
-    input  wire [7:0]     clkgen_mul,
-    input  wire [7:0]     clkgen_div,
-    input  wire           clkgen_load,
-    output wire           clkgen_done,
-    
+
+    input  wire           clkgen_reset, // TODO ? 
+
     /* Phase shift control for external clock (clock: clk_usb) */
     input  wire [8:0]     phase_requested,
     output wire [8:0]     phase_actual,
@@ -91,23 +86,6 @@ module clock_managment_advanced #(
                                    .dcm_psincdec_o(dcm_psincdec),
                                    .dcm_psdone_i(dcm_psdone),
                                    .dcm_status_i(dcm_status));
-
-    wire clkgen_progdone;
-    wire clkgen_progdata;
-    wire clkgen_progen;
-
-    // TODO: remove
-    dcm_clkgen_load clkgenload(
-       .clk_usb(clk_usb),
-       .reset_i(clkgen_reset),
-       .mult(clkgen_mul),
-       .div(clkgen_div),
-       .load(clkgen_load),
-       .done(clkgen_done),
-       .PROGDONE(clkgen_progdone),
-       .PROGDATA(clkgen_progdata),
-       .PROGEN(clkgen_progen)
-    );
 
    reg_mmcm_drp #(
       .pBYTECNT_SIZE    (pBYTECNT_SIZE)
@@ -313,7 +291,6 @@ module clock_managment_advanced #(
     assign adc_clk_out = ADC_clk_sample;
 
     assign systemsample_clk = adc_clk_feedback;
-    //assign systemsample_clk = ADC_clk_sample; //TODO-temp! YYY
 
 endmodule
 `default_nettype wire

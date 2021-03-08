@@ -57,7 +57,6 @@ module cwhusky_top(
 
     /*  TODO-later:
     USERIO
-    VDBSPWM (to AD8330)
     */
 
     //input wire          FPGA_CCLK,
@@ -141,9 +140,7 @@ module cwhusky_top(
 
    wire         reg_rst;
 
-   // TODO: cleaup
-   wire reset_i;
-   assign reset_i = 0;
+   wire reset_i = 0;
 
    wire clk_usb_buf;
    wire ADC_clk_fb;
@@ -298,7 +295,6 @@ module cwhusky_top(
         .target_hs1(target_hs1),
         .target_hs2(target_hs2),
         .extclk_o(extclk_mux),
-        .adc_sample_clk(1'b0), // XXX TODO? this came from openadc_interface, but it wasn't defined
         .trigger_io1_i(target_io1),
         .trigger_io2_i(target_io2),
         .trigger_io3_i(target_io3),
@@ -334,10 +330,7 @@ module cwhusky_top(
         .targetpower_off(target_npower),
 
         .trigger_o(ext_trigger)
-        //.trigger_o()
    );
-   // TODO-TEMPORARY: otherwise comb loop error?
-   //assign ext_trigger = 1'b0;
 
 
    reg_clockglitch #(

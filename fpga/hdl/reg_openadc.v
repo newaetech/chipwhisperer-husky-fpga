@@ -79,12 +79,6 @@ module reg_openadc #(
    input  wire [8:0]   phase_i,
    input  wire         phase_done_i,
 
-   /* Interface to clkgen module */
-   output wire [7:0] clkgen_mul,        //Mult-1 (e.g.: value of 1 means Mult=2)
-   output wire [7:0] clkgen_div,         //Div-1 (e.g.: value of 1 means Div=2)
-   output reg        clkgen_load,
-   input wire        clkgen_done,
-
    /* Interface to fifo/capture module */
    output reg  [15:0] num_segments,
    output reg  [19:0] segment_cycles,
@@ -195,28 +189,7 @@ module reg_openadc #(
 
    assign downsample_o = registers_downsample[12:0];
 
-   wire clkgen_load_reg;
-   reg clkgen_load_reg_int;
-   reg clkgen_done_reg;
-
-   //Make load 1-cycle only
-   always @(posedge clk_usb) begin
-          clkgen_load_reg_int <= clkgen_load_reg;
-          clkgen_load <= clkgen_load_reg & ~clkgen_load_reg_int;
-   end
-
-   //Make done latched until cleared by load
-   always @(posedge clk_usb) begin
-      if (clkgen_load | registers_advclocksettings[26])
-         clkgen_done_reg <= 'b0;
-      else if (clkgen_done)
-         clkgen_done_reg <= 'b1;
-   end
-
-   assign clkgen_mul = registers_advclocksettings[15:8];
-   assign clkgen_div = registers_advclocksettings[23:16];
-   assign clkgen_load_reg = registers_advclocksettings[24];
-   assign registers_advclocksettings_read[25] = clkgen_done_reg;
+   assign registers_advclocksettings_read[25] = 1'b0;
 
    assign gain = registers_gain;
    assign maxsamples_o = registers_samples;
