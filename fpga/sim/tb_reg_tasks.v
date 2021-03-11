@@ -1,5 +1,3 @@
-parameter pSLOW_READS = 0;
-
 task write_byte;
    input [pADDR_WIDTH-1:0] address;
    input [7:0] data;
@@ -95,14 +93,22 @@ task read_next_byte;
    usb_cen = 0;
    @(posedge usb_clk);
    usb_cen = 1;
-   @(posedge usb_clk);
-   #1 data = usb_data;
-   @(posedge usb_clk);
-   usb_rdn = 1;
-   repeat (1) @(posedge usb_clk);
-   if (pSLOW_READS)
-      repeat($urandom_range(2, 20)) @(posedge usb_clk);
+   if (pSTREAM) begin
+      usb_rdn = 1;
+      data = usb_data;
+      repeat(1) @(posedge usb_clk);
+   end
+   else begin
+      @(posedge usb_clk);
+      #1 data = usb_data;
+      @(posedge usb_clk);
+      usb_rdn = 1;
+      repeat (1) @(posedge usb_clk);
+      if (pSLOW_READS)
+         repeat($urandom_range(2, 20)) @(posedge usb_clk);
+   end
 endtask
+
 
 task write_next_byte;
    input [7:0] data;

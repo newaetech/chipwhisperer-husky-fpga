@@ -53,24 +53,27 @@ module reg_openadc_adcfifo #(
    input  wire [7:0]   fifo_data,
    output wire         fifo_rd_en,
    output reg          low_res,
-   output reg          low_res_lsb
+   output reg          low_res_lsb,
+   output reg          fast_fifo_read_mode
 );
 
    wire  reset;
    assign reset = reset_i;
-   
+
    reg fifo_rd_en_reg;
-   assign fifo_rd_en = fifo_rd_en_reg;
-   
-    
+
+   // in fast FIFO read mode, need to shave off a clock cycle:
+   assign fifo_rd_en = fast_fifo_read_mode? reg_read : fifo_rd_en_reg;
+
    reg [7:0] reg_datao_reg;
    reg reg_read_r;
    assign reg_datao = reg_datao_reg;
 
 
-
    always @(*) begin
-      if (reg_read) begin
+      if (fast_fifo_read_mode)
+         reg_datao_reg = fifo_data;
+      else if (reg_read) begin
          case (reg_address)
             `ADCREAD_ADDR: reg_datao_reg = fifo_data;
             default: reg_datao_reg = 0;
@@ -84,6 +87,7 @@ module reg_openadc_adcfifo #(
       if (reset) begin
          low_res <= 0;
          low_res_lsb <= 0;
+         //fast_fifo_read_mode <= 1'b0;
       end 
       else if (reg_write) begin
          case (reg_address)
@@ -91,11 +95,23 @@ module reg_openadc_adcfifo #(
                low_res <= reg_datai[0];
                low_res_lsb <= reg_datai[1];
             end
+            //`FAST_FIFO_READ_MODE: fast_fifo_read_mode <= reg_datai[0];
             default: ;
          endcase
       end
    end
 
+   always @(posedge clk_usb) begin
+      if (reset) begin
+         fast_fifo_read_mode <= 1'b0;
+      end
+      else if (reg_write) begin
+         if (reg_address == `FAST_FIFO_READ_MODE)
+            fast_fifo_read_mode <= reg_datai[0];
+         else if (fast_fifo_read_mode) // need to clear it on any other write!
+            fast_fifo_read_mode <= 1'b0;
+      end
+   end
 
 /*
 	 always @(negedge clk_usb, negedge reg_read) begin

@@ -23,6 +23,7 @@ module fifo_top_husky(
     input wire          fifo_read_fifoen,
     output wire         fifo_read_fifoempty,
     output reg  [7:0]   fifo_read_data,
+    input  wire         fast_fifo_read_mode, // not to be confused with the ADC fast FIFO, this denote fast reading of the *slow* FIFO
 
     input wire  [31:0]  presample_i,
     input wire  [31:0]  max_samples_i,
@@ -54,7 +55,9 @@ module fifo_top_husky(
     reg                 slow_fifo_prewr = 1'b0;
     reg                 slow_fifo_wr_premask = 1'b0;
     wire                slow_fifo_wr;
-    reg                 slow_fifo_rd;
+    wire                slow_fifo_rd;
+    reg                 slow_fifo_rd_slow;
+    wire                slow_fifo_rd_fast;
     wire [35:0]         slow_fifo_dout;
     reg  [3:0]          slow_fifo_dout_r;
     wire                slow_fifo_full;
@@ -456,7 +459,7 @@ module fifo_top_husky(
     always @(posedge clk_usb) begin
        if (reset || ~reset_done) begin
           slow_read_count <= 0;
-          slow_fifo_rd <= 1'b0;
+          slow_fifo_rd_slow <= 1'b0;
           slow_fifo_dout_r <= 0;
        end
 
@@ -464,11 +467,11 @@ module fifo_top_husky(
           if (low_res) begin // return 8 bits per sample
              if (slow_read_count < 2) begin
                 slow_read_count <= slow_read_count + 1;
-                slow_fifo_rd <= 1'b0;
+                slow_fifo_rd_slow <= 1'b0;
              end
              else begin
                 slow_read_count <= 0;
-                slow_fifo_rd <= 1'b1;
+                slow_fifo_rd_slow <= 1'b1;
              end
           end
 
@@ -478,42 +481,49 @@ module fifo_top_husky(
              else
                 slow_read_count <= 0;
              if ((slow_read_count == 8) || (slow_read_count == 3)) begin
-                slow_fifo_rd <= 1;
+                slow_fifo_rd_slow <= 1;
                 slow_fifo_dout_r <= slow_fifo_dout[3:0];
              end
              else
-                slow_fifo_rd <= 0;
+                slow_fifo_rd_slow <= 0;
           end
 
        end
        else
-          slow_fifo_rd <= 1'b0;
+          slow_fifo_rd_slow <= 1'b0;
     end
 
+    assign slow_fifo_rd_fast = fifo_read_fifoen && ((slow_read_count == 2) || (slow_read_count == 7));
+    assign slow_fifo_rd = fast_fifo_read_mode? slow_fifo_rd_fast : slow_fifo_rd_slow;
+
+    reg [7:0] fifo_read_data_pre;
     always @(*) begin
        if (slow_fifo_underflow_sticky)
-          fifo_read_data = 0;
+          fifo_read_data_pre = 0;
        else if (low_res) begin
           if (low_res_lsb)
-             fifo_read_data = slow_fifo_dout[(2-slow_read_count)*12 +: 8];
+             fifo_read_data_pre = slow_fifo_dout[(2-slow_read_count)*12 +: 8];
           else
-             fifo_read_data = slow_fifo_dout[(2-slow_read_count)*12 + 4 +: 8];
+             fifo_read_data_pre = slow_fifo_dout[(2-slow_read_count)*12 + 4 +: 8];
        end
        else begin
           case (slow_read_count)
-             0: fifo_read_data = slow_fifo_dout[35:28];
-             1: fifo_read_data = slow_fifo_dout[27:20];
-             2: fifo_read_data = slow_fifo_dout[19:12];
-             3: fifo_read_data = slow_fifo_dout[11:4];
-             4: fifo_read_data = {slow_fifo_dout_r, slow_fifo_dout[35:32]};
-             5: fifo_read_data = slow_fifo_dout[31:24];
-             6: fifo_read_data = slow_fifo_dout[23:16];
-             7: fifo_read_data = slow_fifo_dout[15:8];
-             8: fifo_read_data = slow_fifo_dout[7:0];
-             default: fifo_read_data = 8'h00;
+             0: fifo_read_data_pre = slow_fifo_dout[35:28];
+             1: fifo_read_data_pre = slow_fifo_dout[27:20];
+             2: fifo_read_data_pre = slow_fifo_dout[19:12];
+             3: fifo_read_data_pre = slow_fifo_dout[11:4];
+             4: fifo_read_data_pre = {slow_fifo_dout_r, slow_fifo_dout[35:32]};
+             5: fifo_read_data_pre = slow_fifo_dout[31:24];
+             6: fifo_read_data_pre = slow_fifo_dout[23:16];
+             7: fifo_read_data_pre = slow_fifo_dout[15:8];
+             8: fifo_read_data_pre = slow_fifo_dout[7:0];
+             default: fifo_read_data_pre = 8'h00;
           endcase
        end
     end
+    // TODO: maybe registering the output can help meet timing / have more reliable reads for the SAM3U?
+    //always @(posedge clk_usb) fifo_read_data <= fifo_read_data_pre;
+    always @(*) fifo_read_data = fifo_read_data_pre;
 
     assign fast_fifo_rd = fast_fifo_presample_drain || (fast_fifo_rd_en && !slow_fifo_full && !fast_fifo_empty);
 

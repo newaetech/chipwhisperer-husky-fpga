@@ -3,8 +3,8 @@
 // Tool Version: Vivado v.2019.2 (win64) Build 2708876 Wed Nov  6 21:40:23 MST 2019
 // Date        : Tue Mar  2 15:24:41 2021
 // Host        : qed running 64-bit major release  (build 9200)
-// Command     : write_verilog -force -mode funcsim
-//               C:/Users/jp/GitHub/OpenTitan/husky/fpga/vivado/cwhusky.srcs/sources_1/ip/adc_fast_fifo/adc_fast_fifo_sim_netlist.v
+// Command     : write_verilog -force -mode funcsim -rename_top adc_fast_fifo -prefix
+//               adc_fast_fifo_ adc_fast_fifo_sim_netlist.v
 // Design      : adc_fast_fifo
 // Purpose     : This verilog netlist is a functional simulation representation of the design and should not be modified
 //               or synthesized. This netlist cannot be used for SDF annotated simulation.
@@ -604,7 +604,6 @@ module adc_fast_fifo
         .wr_rst_busy(NLW_U0_wr_rst_busy_UNCONNECTED));
 endmodule
 
-(* ORIG_REF_NAME = "builtin_extdepth_v6" *) 
 module adc_fast_fifo_builtin_extdepth_v6
    (full,
     overflow,
@@ -893,7 +892,6 @@ module adc_fast_fifo_builtin_extdepth_v6_1
         .O(dbr_as_reg));
 endmodule
 
-(* ORIG_REF_NAME = "builtin_prim_v6" *) 
 module adc_fast_fifo_builtin_prim_v6
    (DO,
     e_3,
@@ -2735,7 +2733,6 @@ module adc_fast_fifo_builtin_prim_v6__parameterized0_7
         .O(rden_fifo__0));
 endmodule
 
-(* ORIG_REF_NAME = "builtin_top_v6" *) 
 module adc_fast_fifo_builtin_top_v6
    (full,
     overflow,
@@ -2805,7 +2802,6 @@ module adc_fast_fifo_builtin_top_v6
         .R(1'b0));
 endmodule
 
-(* ORIG_REF_NAME = "fifo_generator_top" *) 
 module adc_fast_fifo_fifo_generator_top
    (full,
     overflow,
@@ -2919,7 +2915,7 @@ endmodule
 (* C_WR_DEPTH_WRCH = "16" *) (* C_WR_FREQ = "1" *) (* C_WR_PNTR_WIDTH = "15" *) 
 (* C_WR_PNTR_WIDTH_AXIS = "10" *) (* C_WR_PNTR_WIDTH_RACH = "4" *) (* C_WR_PNTR_WIDTH_RDCH = "10" *) 
 (* C_WR_PNTR_WIDTH_WACH = "4" *) (* C_WR_PNTR_WIDTH_WDCH = "10" *) (* C_WR_PNTR_WIDTH_WRCH = "4" *) 
-(* C_WR_RESPONSE_LATENCY = "1" *) (* ORIG_REF_NAME = "fifo_generator_v13_2_5" *) 
+(* C_WR_RESPONSE_LATENCY = "1" *) 
 module adc_fast_fifo_fifo_generator_v13_2_5
    (backup,
     backup_marker,
@@ -3952,7 +3948,6 @@ module adc_fast_fifo_fifo_generator_v13_2_5
         .wr_en(wr_en));
 endmodule
 
-(* ORIG_REF_NAME = "fifo_generator_v13_2_5_builtin" *) 
 module adc_fast_fifo_fifo_generator_v13_2_5_builtin
    (full,
     overflow,
@@ -4004,7 +3999,6 @@ module adc_fast_fifo_fifo_generator_v13_2_5_builtin
         .wr_en(wr_en));
 endmodule
 
-(* ORIG_REF_NAME = "fifo_generator_v13_2_5_synth" *) 
 module adc_fast_fifo_fifo_generator_v13_2_5_synth
    (full,
     overflow,
@@ -4051,7 +4045,6 @@ module adc_fast_fifo_fifo_generator_v13_2_5_synth
         .wr_en(wr_en));
 endmodule
 
-(* ORIG_REF_NAME = "reset_builtin" *) 
 module adc_fast_fifo_reset_builtin
    (rd_rst_i,
     clk,

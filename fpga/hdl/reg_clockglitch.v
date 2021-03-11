@@ -296,6 +296,8 @@ module reg_clockglitch #(
             default: begin reg_datao_reg <= 0; end
          endcase
       end
+      else
+         reg_datao_reg <= 0;
    end
 
    /* Know when all settings have been written successfully */

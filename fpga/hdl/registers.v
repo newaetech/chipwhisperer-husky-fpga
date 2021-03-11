@@ -254,6 +254,7 @@
 `define SEGMENT_CYCLES          33
 
 `define LED_SELECT              34
+`define FAST_FIFO_READ_MODE     36
 
 `define REGISTER_VERSION 1
 

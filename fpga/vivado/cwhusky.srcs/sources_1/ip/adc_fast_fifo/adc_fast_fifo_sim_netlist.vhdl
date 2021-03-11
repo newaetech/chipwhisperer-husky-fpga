@@ -3,8 +3,8 @@
 -- Tool Version: Vivado v.2019.2 (win64) Build 2708876 Wed Nov  6 21:40:23 MST 2019
 -- Date        : Tue Mar  2 15:24:41 2021
 -- Host        : qed running 64-bit major release  (build 9200)
--- Command     : write_vhdl -force -mode funcsim
---               C:/Users/jp/GitHub/OpenTitan/husky/fpga/vivado/cwhusky.srcs/sources_1/ip/adc_fast_fifo/adc_fast_fifo_sim_netlist.vhdl
+-- Command     : write_vhdl -force -mode funcsim -rename_top adc_fast_fifo -prefix
+--               adc_fast_fifo_ adc_fast_fifo_sim_netlist.vhdl
 -- Design      : adc_fast_fifo
 -- Purpose     : This VHDL netlist is a functional simulation representation of the design and should not be modified or
 --               synthesized. This netlist cannot be used for SDF annotated simulation.
@@ -24,8 +24,6 @@ entity adc_fast_fifo_builtin_prim_v6 is
     din : in STD_LOGIC_VECTOR ( 3 downto 0 );
     ful_2 : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of adc_fast_fifo_builtin_prim_v6 : entity is "builtin_prim_v6";
 end adc_fast_fifo_builtin_prim_v6;
 
 architecture STRUCTURE of adc_fast_fifo_builtin_prim_v6 is
@@ -2318,8 +2316,6 @@ entity adc_fast_fifo_reset_builtin is
     clk : in STD_LOGIC;
     rst : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of adc_fast_fifo_reset_builtin : entity is "reset_builtin";
 end adc_fast_fifo_reset_builtin;
 
 architecture STRUCTURE of adc_fast_fifo_reset_builtin is
@@ -2602,8 +2598,6 @@ entity adc_fast_fifo_builtin_extdepth_v6 is
     din : in STD_LOGIC_VECTOR ( 3 downto 0 );
     rd_en : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of adc_fast_fifo_builtin_extdepth_v6 : entity is "builtin_extdepth_v6";
 end adc_fast_fifo_builtin_extdepth_v6;
 
 architecture STRUCTURE of adc_fast_fifo_builtin_extdepth_v6 is
@@ -2961,8 +2955,6 @@ entity adc_fast_fifo_builtin_top_v6 is
     din : in STD_LOGIC_VECTOR ( 11 downto 0 );
     rd_en : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of adc_fast_fifo_builtin_top_v6 : entity is "builtin_top_v6";
 end adc_fast_fifo_builtin_top_v6;
 
 architecture STRUCTURE of adc_fast_fifo_builtin_top_v6 is
@@ -3028,8 +3020,6 @@ entity adc_fast_fifo_fifo_generator_v13_2_5_builtin is
     rst : in STD_LOGIC;
     rd_en : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of adc_fast_fifo_fifo_generator_v13_2_5_builtin : entity is "fifo_generator_v13_2_5_builtin";
 end adc_fast_fifo_fifo_generator_v13_2_5_builtin;
 
 architecture STRUCTURE of adc_fast_fifo_fifo_generator_v13_2_5_builtin is
@@ -3072,8 +3062,6 @@ entity adc_fast_fifo_fifo_generator_top is
     rst : in STD_LOGIC;
     rd_en : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of adc_fast_fifo_fifo_generator_top : entity is "fifo_generator_top";
 end adc_fast_fifo_fifo_generator_top;
 
 architecture STRUCTURE of adc_fast_fifo_fifo_generator_top is
@@ -3109,8 +3097,6 @@ entity adc_fast_fifo_fifo_generator_v13_2_5_synth is
     rst : in STD_LOGIC;
     rd_en : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of adc_fast_fifo_fifo_generator_v13_2_5_synth : entity is "fifo_generator_v13_2_5_synth";
 end adc_fast_fifo_fifo_generator_v13_2_5_synth;
 
 architecture STRUCTURE of adc_fast_fifo_fifo_generator_v13_2_5_synth is
@@ -3771,8 +3757,6 @@ entity adc_fast_fifo_fifo_generator_v13_2_5 is
   attribute C_WR_PNTR_WIDTH_WRCH of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 4;
   attribute C_WR_RESPONSE_LATENCY : integer;
   attribute C_WR_RESPONSE_LATENCY of adc_fast_fifo_fifo_generator_v13_2_5 : entity is 1;
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of adc_fast_fifo_fifo_generator_v13_2_5 : entity is "fifo_generator_v13_2_5";
 end adc_fast_fifo_fifo_generator_v13_2_5;
 
 architecture STRUCTURE of adc_fast_fifo_fifo_generator_v13_2_5 is

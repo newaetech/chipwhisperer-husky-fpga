@@ -63,6 +63,7 @@ module openadc_interface #(
     input  wire                         reg_read,
     input  wire                         reg_write,
     input  wire                         reg_addrvalid,
+    output wire                         fast_fifo_read,
 
     output wire                         fifo_error_flag
 );
@@ -246,12 +247,9 @@ module openadc_interface #(
    wire [2:0] ADC_clk_selection; //0=internal, 1=external
    wire clkgen_selection;
 
-   wire ddr_read_req;
-   wire ddr_read_done;
-   wire [31:0] ddr_read_address;
-   wire [7:0]  ddrfifo_dout;
-   wire ddrfifo_empty;
-   wire ddrfifo_rd_en;
+   wire [7:0]  fifo_dout;
+   wire fifo_empty;
+   wire fifo_rd_en;
    wire low_res;
    wire low_res_lsb;
 
@@ -327,20 +325,21 @@ module openadc_interface #(
    reg_openadc_adcfifo #(
       .pBYTECNT_SIZE    (pBYTECNT_SIZE)
    ) U_reg_openadc_adcfifo (
-      .reset_i(reset_i),
-      .clk_usb(clk_usb),
-      .reg_address(reg_address), 
-      .reg_bytecnt(reg_bytecnt), 
-      .reg_datao(reg_datao_fifo), 
-      .reg_datai(reg_datai), 
-      .reg_read(reg_read), 
-      .reg_write(reg_write), 
-      .reg_addrvalid(reg_addrvalid), 
-      .fifo_empty(ddrfifo_empty),
-      .fifo_data(ddrfifo_dout),
-      .fifo_rd_en(ddrfifo_rd_en),
-      .low_res(low_res),
-      .low_res_lsb(low_res_lsb)
+      .reset_i              (reset),
+      .clk_usb              (clk_usb),
+      .reg_address          (reg_address), 
+      .reg_bytecnt          (reg_bytecnt), 
+      .reg_datao            (reg_datao_fifo), 
+      .reg_datai            (reg_datai), 
+      .reg_read             (reg_read), 
+      .reg_write            (reg_write), 
+      .reg_addrvalid        (reg_addrvalid), 
+      .fifo_empty           (fifo_empty),
+      .fifo_data            (fifo_dout),
+      .fifo_rd_en           (fifo_rd_en),
+      .low_res              (low_res),
+      .low_res_lsb          (low_res_lsb),
+      .fast_fifo_read_mode  (fast_fifo_read)
    );
 
 
@@ -414,11 +413,12 @@ module openadc_interface #(
       .segment_cycles           (segment_cycles),
 
       .clk_usb                  (clk_usb),
-      .fifo_read_fifoen         (ddrfifo_rd_en),
-      .fifo_read_fifoempty      (ddrfifo_empty),
-      .fifo_read_data           (ddrfifo_dout),
+      .fifo_read_fifoen         (fifo_rd_en),
+      .fifo_read_fifoempty      (fifo_empty),
+      .fifo_read_data           (fifo_dout),
       .low_res                  (low_res),
       .low_res_lsb              (low_res_lsb),
+      .fast_fifo_read_mode      (fast_fifo_read),
 
       .presample_i              (presamples),
       .max_samples_i            (maxsamples),

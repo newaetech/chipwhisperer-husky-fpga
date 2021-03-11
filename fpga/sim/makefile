@@ -10,6 +10,7 @@ NUM_SEGMENTS = 0
 SEGMENT_CYCLES = 0
 SEGMENT_CYCLE_COUNTER_EN = 0
 TRIGGER_NOW=0
+STREAM=0
 LOGFILE=make.log
 WAVEFORMAT=fst
 SEED=1
@@ -36,6 +37,7 @@ compile:
 	-P cwhusky_tb.pSEGMENT_CYCLES=$(SEGMENT_CYCLES) \
 	-P cwhusky_tb.pSEGMENT_CYCLE_COUNTER_EN=$(SEGMENT_CYCLE_COUNTER_EN) \
 	-P cwhusky_tb.pTRIGGER_NOW=$(TRIGGER_NOW) \
+	-P cwhusky_tb.pSTREAM=$(STREAM) \
 	-P cwhusky_tb.pTIMEOUT_CYCLES=$(TIMEOUT_CYCLES) \
 	-P cwhusky_tb.pDUMP=$(DUMP) \
 	-P cwhusky_tb.pSEED=$(SEED) \

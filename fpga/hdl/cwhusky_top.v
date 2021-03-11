@@ -55,9 +55,8 @@ module cwhusky_top(
     output wire [4:0]   VMAG_D,
     output wire         VDBSPWM,
 
-    /*  TODO-later:
-    USERIO
-    */
+    output wire [7:0]   USERIO_D,
+    input  wire         USERIO_CLK,
 
     //input wire          FPGA_CCLK,
     input wire          FPGA_CDOUT, /* Input FROM SAM3U */
@@ -179,6 +178,7 @@ module cwhusky_top(
 
    wire fifo_error_flag;
    wire error_flag = fifo_error_flag; // TODO: add other sources as they get created
+   wire fast_fifo_read;
 
    usb_reg_main #(
       .pBYTECNT_SIZE    (pBYTECNT_SIZE)
@@ -193,7 +193,7 @@ module cwhusky_top(
       .cwusb_alen       (USB_ALEn),
       .cwusb_addr       (USB_Addr),
       .cwusb_isout      (cmdfifo_isout), 
-      .I_drive_data     (1'b0),         // TODO?
+      .fast_fifo_read   (fast_fifo_read),
       .reg_address      (reg_address), 
       .reg_bytecnt      (reg_bytecnt), 
       .reg_datao        (write_data), 
@@ -202,6 +202,20 @@ module cwhusky_top(
       .reg_write        (reg_write), 
       .reg_addrvalid    (reg_addrvalid)
    );
+
+   // TODO: temporary, for debug:
+   assign USERIO_D[0] = reg_read;
+   // synthesize a half-rate register read signal, so that my logic analyzer
+   // can catch it:
+   reg reg_read_half = 1'b0;
+   reg reg_read_r;
+   always @ (posedge clk_usb_buf) begin
+      reg_read_r <= reg_read;
+      if (reg_read & ~reg_read_r)
+         reg_read_half <= ~reg_read_half;
+   end
+   assign USERIO_D[1] = reg_read_half;
+   assign USERIO_D[7:2] = 7'bz;
 
    assign USB_Data = cmdfifo_isout ? cmdfifo_dout : 8'bZ;
    assign cmdfifo_din = USB_Data;
@@ -244,6 +258,7 @@ module cwhusky_top(
         .reg_read               (reg_read), 
         .reg_write              (reg_write), 
         .reg_addrvalid          (reg_addrvalid),
+        .fast_fifo_read         (fast_fifo_read),
 
         .fifo_error_flag        (fifo_error_flag)
    );

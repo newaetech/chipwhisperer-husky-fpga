@@ -19,12 +19,15 @@ module cwhusky_tb();
    parameter pNUM_SEGMENTS = 0;
    parameter pSEGMENT_CYCLES = 0;
    parameter pSEGMENT_CYCLE_COUNTER_EN = 0;
+   parameter pSTREAM = 0;
    parameter pSLOP = 5;
    parameter pTRIGGER_ADJUST = pTRIGGER_NOW? 2 : 0;
    parameter pSEED = 1;
    parameter pTIMEOUT_CYCLES = 50000;
    parameter pDUMP = 0;
+   parameter pSLOW_READS = 0;
 
+   `include "tb_reg_tasks.v"
 
    reg                  clk_usb;
    reg                  clk_adc_slow;
@@ -313,6 +316,10 @@ module cwhusky_tb();
          //#(pCLK_USB_PERIOD*1000);
          repeat (pREAD_DELAY) @(posedge clk_adc);
 
+         // TODO: clean up:
+         if (pSTREAM)
+            write_1byte('d36, 1);
+
          rw_lots_bytes('d3);
          if (pADC_LOW_RES) begin // 8 bits per sample
             for (i = 0; i < pFIFO_SAMPLES; i = i + 1) begin
@@ -395,6 +402,15 @@ module cwhusky_tb();
          end
       end // for segment_read_index loop
 
+      // TODO-temporary to see if fast reads get disabled:
+      write_1byte(4, 155);
+      read_1byte(4, rdata);
+      $display("Read %d", rdata);
+
+      if (pSTREAM)
+         // clear stream mode:
+         write_1byte('d36, 0);
+
       //#(pCLK_USB_PERIOD*20);
       #(pCLK_USB_PERIOD*500);
 
@@ -433,7 +449,6 @@ module cwhusky_tb();
    reg read_select;
 
    wire usb_clk = clk_usb;
-   `include "tb_reg_tasks.v"
 
    assign usb_data = read_select? 8'bz : usb_wdata;
 
@@ -495,7 +510,9 @@ cwhusky_top U_dut (
     .FPGA_TRIGOUT       (FPGA_TRIGOUT ),
     .USBIOHS2           (USBIOHS2     ),
     .ADC_OVR_SDOUT      (1'b0         ),
-    .FPGA_CDOUT         (1'b0         )
+    .FPGA_CDOUT         (1'b0         ),
+    .USERIO_D           (             ),
+    .USERIO_CLK         (1'b0         )
 
 );
 

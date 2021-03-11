@@ -3,8 +3,8 @@
 // Tool Version: Vivado v.2019.2 (win64) Build 2708876 Wed Nov  6 21:40:23 MST 2019
 // Date        : Tue Mar  2 15:24:41 2021
 // Host        : qed running 64-bit major release  (build 9200)
-// Command     : write_verilog -force -mode synth_stub
-//               C:/Users/jp/GitHub/OpenTitan/husky/fpga/vivado/cwhusky.srcs/sources_1/ip/adc_fast_fifo/adc_fast_fifo_stub.v
+// Command     : write_verilog -force -mode synth_stub -rename_top adc_fast_fifo -prefix
+//               adc_fast_fifo_ adc_fast_fifo_stub.v
 // Design      : adc_fast_fifo
 // Purpose     : Stub declaration of top-level module interface
 // Device      : xc7a35tftg256-2

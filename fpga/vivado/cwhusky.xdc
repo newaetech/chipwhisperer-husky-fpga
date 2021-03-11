@@ -100,6 +100,18 @@ set_property PACKAGE_PIN C2 [get_ports target_MOSI]
 set_property PACKAGE_PIN A2 [get_ports target_nRST]
 set_property PACKAGE_PIN F5 [get_ports target_hs1]
 
+# USERIO:
+set_property PACKAGE_PIN T15 [get_ports {USERIO_D[0]}]
+set_property PACKAGE_PIN T14 [get_ports {USERIO_D[1]}]
+set_property PACKAGE_PIN R13 [get_ports {USERIO_D[2]}]
+set_property PACKAGE_PIN T13 [get_ports {USERIO_D[3]}]
+set_property PACKAGE_PIN R12 [get_ports {USERIO_D[4]}]
+set_property PACKAGE_PIN T12 [get_ports {USERIO_D[5]}]
+set_property PACKAGE_PIN R11 [get_ports {USERIO_D[6]}]
+set_property PACKAGE_PIN T10 [get_ports {USERIO_D[7]}]
+set_property PACKAGE_PIN N12 [get_ports USERIO_CLK]
+
+
 # MCX:
 set_property PACKAGE_PIN R15 [get_ports FPGA_TRIGOUT]
 set_property PACKAGE_PIN N14 [get_ports USBIOHS2]
@@ -175,6 +187,8 @@ set_input_delay -clock clk_usb 2.000 [get_ports USB_WRn]
 set_input_delay -clock clk_usb 2.000 [get_ports USB_Data]
 set_input_delay -clock clk_usb 2.000 [get_ports USB_Addr]
 set_input_delay -clock clk_usb 2.000 [get_ports USB_SPARE0]
+
+set_output_delay -clock clk_usb 1.000 [get_ports USB_Data]
 
 # TODO: lots of constraints missing still
 
