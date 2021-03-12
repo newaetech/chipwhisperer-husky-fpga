@@ -522,6 +522,7 @@ module fifo_top_husky(
        end
     end
     // TODO: maybe registering the output can help meet timing / have more reliable reads for the SAM3U?
+    // ** it does! but it makes data too late to be read properly :-(
     //always @(posedge clk_usb) fifo_read_data <= fifo_read_data_pre;
     always @(*) fifo_read_data = fifo_read_data_pre;
 

@@ -63,7 +63,7 @@ module reg_openadc_adcfifo #(
    reg fifo_rd_en_reg;
 
    // in fast FIFO read mode, need to shave off a clock cycle:
-   assign fifo_rd_en = fast_fifo_read_mode? reg_read : fifo_rd_en_reg;
+   assign fifo_rd_en = fast_fifo_read_mode? reg_read & ~reg_read_r : fifo_rd_en_reg;
 
    reg [7:0] reg_datao_reg;
    reg reg_read_r;

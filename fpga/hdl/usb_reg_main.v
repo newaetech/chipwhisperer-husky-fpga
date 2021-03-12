@@ -81,7 +81,8 @@ module usb_reg_main #(
    //TODO: this should be synchronous to device clock, but is phase OK? Might need to
    //use resyncronized version...
    //assign reg_read = cwusb_isout;
-   assign reg_read = fast_fifo_read? ~cwusb_rdn : isoutreg;
+   //assign reg_read = fast_fifo_read? ~cwusb_rdn : isoutreg;
+   assign reg_read = isoutreg;
    //assign cwusb_dout = fast_fifo_read? reg_datai_r : reg_datai;
    assign cwusb_dout = reg_datai;
 

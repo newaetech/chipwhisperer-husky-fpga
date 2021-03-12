@@ -188,7 +188,8 @@ set_input_delay -clock clk_usb 2.000 [get_ports USB_Data]
 set_input_delay -clock clk_usb 2.000 [get_ports USB_Addr]
 set_input_delay -clock clk_usb 2.000 [get_ports USB_SPARE0]
 
-set_output_delay -clock clk_usb 1.000 [get_ports USB_Data]
+# Not from any spec, but the result is no timing violations and reads work:
+set_output_delay -clock clk_usb -1.200 [get_ports USB_Data]
 
 # TODO: lots of constraints missing still
 
