@@ -493,7 +493,7 @@ module fifo_top_husky(
           slow_fifo_rd_slow <= 1'b0;
     end
 
-    assign slow_fifo_rd_fast = fifo_read_fifoen && ((slow_read_count == 2) || (slow_read_count == 7));
+    assign slow_fifo_rd_fast = fifo_read_fifoen && (low_res? (slow_read_count == 2) : ((slow_read_count == 3) || (slow_read_count == 8)));
     assign slow_fifo_rd = fast_fifo_read_mode? slow_fifo_rd_fast : slow_fifo_rd_slow;
 
     reg [7:0] fifo_read_data_pre;

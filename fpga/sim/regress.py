@@ -55,13 +55,13 @@ tests.append(dict(name  = 'nopresamples',
              description = 'No pre-trigger samples.'))
 
 tests.append(dict(name  = 'stream',
-             frequency = 2,
+             frequency = 1,
              STREAM = 1,
              PRESAMPLES = 0,
              FIFO_SAMPLES = 3000, # TODO- later increase this beyond the internal storage
              TRIGGER_DELAY = [1500, 1600],
              READ_DELAY = [100, 500],
-             ADC_LOW_RES = 1,
+             ADC_LOW_RES = [0, 1],
              NOM_ADC = 1, # TODO-temporary, until to prevent underflow, until it's handled
              TIMEOUT_CYCLES= 1000000,
              description = 'Emulate streaming mode.'))
