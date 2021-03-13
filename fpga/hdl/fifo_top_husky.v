@@ -314,8 +314,7 @@ module fifo_top_husky(
        end
     end
 
-    // TODO: check on fast_fifo_full is temporary, probably need to detect and flag overflow events
-    assign fast_fifo_wr = downsample_wr_en & fsm_fast_wr_en & stream_write & adc_write_mask & reset_done & !fifo_rst_pre & !fast_fifo_full;
+    assign fast_fifo_wr = downsample_wr_en & fsm_fast_wr_en & stream_write & adc_write_mask & reset_done & !fifo_rst_pre;
     //assign fast_fifo_rd = fast_fifo_rd_en & reset_done & !fifo_rst_pre;
     //assign slow_fifo_wr = slow_fifo_wr_premask & reset_done & !fifo_rst_pre;
     assign slow_fifo_wr = slow_fifo_prewr & reset_done & !fifo_rst_pre;
@@ -531,7 +530,9 @@ module fifo_top_husky(
 
     `ifdef NOFIFO
        //for clean iverilog compilation
+
     `elsif TINYFIFO
+       //for faster corner case simulation
        tiny_adc_fast_fifo U_adc_fast_fifo(
           .clk          (adc_sampleclk),
           .rst          (fifo_rst),
@@ -561,6 +562,7 @@ module fifo_top_husky(
 
 
     `else
+       //normal case
        adc_fast_fifo U_adc_fast_fifo(
           .clk          (adc_sampleclk),
           .rst          (fifo_rst),
