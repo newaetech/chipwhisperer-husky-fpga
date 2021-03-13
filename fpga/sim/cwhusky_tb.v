@@ -440,6 +440,14 @@ module cwhusky_tb();
       $finish;
    end
 
+
+   // monitor internal errors to help debug:
+   always @(posedge U_dut.oadc.U_fifo.error_flag) begin
+      errors += 1;
+      $display("ERROR: internal FIFO at t = %t", $time);
+   end
+
+
    always #(pCLK_USB_PERIOD/2) clk_usb = !clk_usb;
    always #(pCLK_ADC_FAST_PERIOD/2) clk_adc_fast = !clk_adc_fast;
    always #(pCLK_ADC_SLOW_PERIOD/2) clk_adc_slow = !clk_adc_slow;
