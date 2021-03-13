@@ -4,7 +4,7 @@
 module cwhusky_tb();
    parameter pCLK_USB_PERIOD = 10;
    parameter pCLK_ADC_FAST_PERIOD = 5.5;
-   parameter pCLK_ADC_SLOW_PERIOD = 21.0;
+   parameter pCLK_ADC_SLOW_PERIOD = 16.0;
    parameter pCLK_ADC_NOM_PERIOD = 11.0;
    parameter pADDR_WIDTH = 8;
    parameter pADC_LOW_RES = 1;
@@ -91,6 +91,9 @@ module cwhusky_tb();
    int good_reads, bad_reads, errors, warnings;
    int seed;
 
+   real prFIFO_SAMPLES = pFIFO_SAMPLES;
+   int FIFO_SAMPLES_MUL6;
+
 
    // initialization thread:
    initial begin
@@ -102,6 +105,7 @@ module cwhusky_tb();
       $display("pADC_LOW_RES = %d", pADC_LOW_RES);
       $display("pTRIGGER_NOW = %d", pTRIGGER_NOW);
       $display("pREAD_DELAY = %d", pREAD_DELAY);
+      $display("pSEGMENT_CYCLES = %d", pSEGMENT_CYCLES);
       if ((pSLOW_ADC == 0) && (pFAST_ADC == 0) && (pNOM_ADC == 0)) begin
          chosen_clock = $urandom_range(0, 2);
          case (chosen_clock)
@@ -305,24 +309,25 @@ module cwhusky_tb();
    // read thread:
    initial begin
       read_done = 0;
+      good_reads = 0;
+      bad_reads = 0;
       for (segment_read_index = 0; segment_read_index <= pNUM_SEGMENTS; segment_read_index += 1) begin
          #1 wait (trigger_done == 0);
          #1 wait (trigger_done);
          repeat (10) @(posedge clk_adc);
-         good_reads = 0;
-         bad_reads = 0;
          read_done = 0;
          //wait (U_dut.oadc.U_fifo.slow_fifo_full);
          //#(pCLK_USB_PERIOD*1000);
          repeat (pREAD_DELAY) @(posedge clk_adc);
 
-         // TODO: clean up:
          if (pSTREAM)
             write_1byte('d36, 1);
 
          rw_lots_bytes('d3);
          if (pADC_LOW_RES) begin // 8 bits per sample
-            for (i = 0; i < pFIFO_SAMPLES; i = i + 1) begin
+            // round up to a multiple of 6 (Verilog why do you make this so awkward?)
+            FIFO_SAMPLES_MUL6 = $ceil(prFIFO_SAMPLES/6)*6;
+            for (i = 0; i < FIFO_SAMPLES_MUL6; i = i + 1) begin
                if (i%1000 == 0)
                   $display("heartbeat: read %d samples", i);
                read_next_byte(rdata);
@@ -522,10 +527,14 @@ task check_first_sample;
       if (pADC_LOW_RES)
          trigger_counter_value = {4'b0, trigger_counter_value[7:0]};
       // dealing with signed numbers in Verilog is always really fun!
-      // TODO: there are still some corner cases for which the math is wrong :-(
       comp_min = {1'b0, trigger_counter_value} - pSLOP + pTRIGGER_ADJUST; // signed
       comp_max = {1'b0, trigger_counter_value} + pSLOP + pTRIGGER_ADJUST; // signed
       signed_sample = {1'b0, sample[0]};
+      // adjust MSB if we went past the sample range:
+      if (pADC_LOW_RES)
+         signed_sample[8] = comp_max[8];
+      else
+         signed_sample[12] = comp_max[12];
       if ( ($signed(signed_sample) >= $signed(comp_min)) && ($signed(signed_sample) <= $signed(comp_max)) ) begin
          good_reads += 1;
          $display("Good first read: expected min=%3h, max=%3h, got %3h", comp_min, comp_max, sample[0]);

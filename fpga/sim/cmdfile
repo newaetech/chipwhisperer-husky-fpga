@@ -23,5 +23,7 @@ cwhusky_tb.v
 ../vivado/cwhusky.srcs/sources_1/ip/cwlite_shallow_fifo/cwlite_shallow_fifo_sim_netlist.v
 ../vivado/cwhusky.srcs/sources_1/ip/adc_fast_fifo/adc_fast_fifo_sim_netlist.v
 ../vivado/cwhusky.srcs/sources_1/ip/usb_slow_fifo/usb_slow_fifo_sim_netlist.v
+../vivado/cwhusky.srcs/sources_1/ip/tiny_adc_fast_fifo/tiny_adc_fast_fifo_sim_netlist.v
+../vivado/cwhusky.srcs/sources_1/ip/tiny_usb_slow_fifo/tiny_usb_slow_fifo_sim_netlist.v
 -y/mnt/c/Xilinx/Vivado/2019.2/ids_lite/ISE/verilog/src/unisims/
 

@@ -250,6 +250,7 @@ module fifo_top_husky(
                 if (fast_fifo_empty) begin
                    fast_fifo_rd_en <= 1'b0;
                    if (presample_i > 0) begin
+                      // TODO- why waiting for slow fifo to be empty before proceeding? this won't work!
                       if (slow_fifo_empty) begin
                          segment_counter <= segment_counter + 1;
                          sample_counter <= 0;
@@ -530,6 +531,35 @@ module fifo_top_husky(
 
     `ifdef NOFIFO
        //for clean iverilog compilation
+    `elsif TINYFIFO
+       tiny_adc_fast_fifo U_adc_fast_fifo(
+          .clk          (adc_sampleclk),
+          .rst          (fifo_rst),
+          .din          (adc_datain),
+          .wr_en        (fast_fifo_wr),
+          .rd_en        (fast_fifo_rd),
+          .dout         (fast_fifo_dout),
+          .full         (fast_fifo_full),
+          .empty        (fast_fifo_empty),
+          .overflow     (fast_fifo_overflow),
+          .underflow    (fast_fifo_underflow)
+       );
+
+       tiny_usb_slow_fifo U_usb_slow_fifo(
+          .rst          (fifo_rst),
+          .wr_clk       (adc_sampleclk),
+          .rd_clk       (clk_usb),
+          .din          (slow_fifo_din),
+          .wr_en        (slow_fifo_wr),
+          .rd_en        (slow_fifo_rd),
+          .dout         (slow_fifo_dout),
+          .full         (slow_fifo_full),
+          .empty        (slow_fifo_empty),
+          .overflow     (slow_fifo_overflow),
+          .underflow    (slow_fifo_underflow)
+       );
+
+
     `else
        adc_fast_fifo U_adc_fast_fifo(
           .clk          (adc_sampleclk),

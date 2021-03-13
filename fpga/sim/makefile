@@ -16,6 +16,7 @@ WAVEFORMAT=fst
 SEED=1
 TIMEOUT_CYCLES= 50000
 DUMP=0
+FIFOSIZE=REGULARFIFO
 
 all: compile run
 
@@ -25,6 +26,7 @@ compile:
 	-I../hdl \
 	-Wportbind \
 	-Wselect-range \
+	-D$(FIFOSIZE) \
 	-P cwhusky_tb.pADC_LOW_RES=$(ADC_LOW_RES) \
 	-P cwhusky_tb.pSLOW_ADC=$(SLOW_ADC) \
 	-P cwhusky_tb.pFAST_ADC=$(FAST_ADC) \
