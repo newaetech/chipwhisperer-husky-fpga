@@ -4,7 +4,7 @@
 `define UART_CLK 96000000
 `define UART_BAUD 512000
 `define MAX_SAMPLES 131072
-`define HW_TYPE 9
+`define HW_TYPE 10
 `define HW_VER 0
 `define SYSTEM_CLK 96000000
 `define CLOCK_ADVANCED 
