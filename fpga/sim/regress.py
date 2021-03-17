@@ -64,25 +64,25 @@ tests.append(dict(name  = 'quick_stream',
              TRIGGER_DELAY = [1500, 1600],
              READ_DELAY = [100, 500],
              ADC_LOW_RES = [0, 1],
-             NOM_ADC = 1, # TODO-temporary, until to prevent underflow, until it's handled
-             TIMEOUT_CYCLES= 1000000,
+             TIMEOUT_CYCLES = 50000,
              description = 'Emulate streaming mode, few samples.'))
 
 tests.append(dict(name  = 'medium_stream',
              frequency = 5,
              STREAM = 1,
+             STREAM_SEGMENT_SIZE = [1024, 8192],
              PRESAMPLES = 0,
              FIFO_SAMPLES = 40000,
              TRIGGER_DELAY = [1500, 1600],
              READ_DELAY = [100, 500],
              ADC_LOW_RES = [0, 1],
-             NOM_ADC = 1, # TODO-temporary, until to prevent underflow, until it's handled
-             TIMEOUT_CYCLES= 1000000,
+             TIMEOUT_CYCLES = 200000,
              description = 'Emulate streaming mode, moderate amount of samples.'))
 
 tests.append(dict(name  = 'full_stream',
              frequency = 5,
              STREAM = 1,
+             STREAM_SEGMENT_SIZE = 128,
              FIFOSIZE = "TINYFIFO",
              PRESAMPLES = 0,
              FIFO_SAMPLES = 15000,
@@ -90,8 +90,8 @@ tests.append(dict(name  = 'full_stream',
              READ_DELAY = [100, 500],
              #ADC_LOW_RES = [0, 1],
              ADC_LOW_RES = 1, # TODO-temporary for now, to prevent over/underflow
-             SLOW_ADC = 1, # TODO-temporary, until to prevent over/underflow, until it's handled
-             TIMEOUT_CYCLES= 1000000,
+             SLOW_ADC = 1, # TODO-temporary, to prevent fast FIFO overflow
+             TIMEOUT_CYCLES = 100000,
              description = 'Emulate streaming mode, reading past the internal storage capacity, using tiny FIFOs to manage the run time.'))
 
 
@@ -116,7 +116,7 @@ tests.append(dict(name  = 'segments_counter',
              NUM_SEGMENTS = [1,4],
              TRIGGER_DELAY = [2500, 4000],
              TRIGGER_NOW = 0,
-             TIMEOUT_CYCLES = 70000,
+             TIMEOUT_CYCLES = 100000,
              description = 'Segmented capture, by cycle counter.'))
 
 tests.append(dict(name  = 'segments_trigger',

@@ -4,7 +4,8 @@
 module cwhusky_tb();
    parameter pCLK_USB_PERIOD = 10;
    parameter pCLK_ADC_FAST_PERIOD = 5.5;
-   parameter pCLK_ADC_SLOW_PERIOD = 16.0;
+   //parameter pCLK_ADC_SLOW_PERIOD = 16.0;
+   parameter pCLK_ADC_SLOW_PERIOD = 31.0;
    parameter pCLK_ADC_NOM_PERIOD = 11.0;
    parameter pADDR_WIDTH = 8;
    parameter pADC_LOW_RES = 1;
@@ -20,6 +21,7 @@ module cwhusky_tb();
    parameter pSEGMENT_CYCLES = 0;
    parameter pSEGMENT_CYCLE_COUNTER_EN = 0;
    parameter pSTREAM = 0;
+   parameter pSTREAM_SEGMENT_SIZE = 0;
    parameter pSLOP = 5;
    parameter pTRIGGER_ADJUST = pTRIGGER_NOW? 2 : 0;
    parameter pSEED = 1;
@@ -43,7 +45,7 @@ module cwhusky_tb();
    reg                  usb_wrn;
    reg                  usb_cen;
    reg                  usb_alen;
-   reg                  USB_SPARE0;
+   wire                 stream_segment_available;
 
    wire                 FPGA_BONUS1;
    wire                 FPGA_BONUS2;
@@ -204,6 +206,14 @@ module cwhusky_tb();
          write_next_byte((pSEGMENT_CYCLES & 32'h00FF_0000)>>16);
       end
 
+      if (pSTREAM) begin
+         rw_lots_bytes(35);
+         write_next_byte((pSTREAM_SEGMENT_SIZE & 32'h0000_00FF));
+         write_next_byte((pSTREAM_SEGMENT_SIZE & 32'h0000_FF00)>>8);
+         write_next_byte((pSTREAM_SEGMENT_SIZE & 32'h00FF_0000)>>16);
+         write_next_byte((pSTREAM_SEGMENT_SIZE & 32'hFF00_0000)>>24);
+      end
+
       // it takes up to ~700 clock cycles after reset for things to get going again:
       #(pCLK_USB_PERIOD*900);
 
@@ -330,6 +340,8 @@ module cwhusky_tb();
             for (i = 0; i < FIFO_SAMPLES_MUL6; i = i + 1) begin
                if (i%1000 == 0)
                   $display("heartbeat: read %d samples", i);
+               if (pSTREAM)
+                  wait (stream_segment_available);
                read_next_byte(rdata);
                if (i == 0) begin
                   last_sample = rdata;
@@ -360,6 +372,8 @@ module cwhusky_tb();
                // there must be a better way to code this, but it's not coming to me...
                for (j = 0; j < 9; j = j + 1) begin
                   rdata_r = rdata;
+                  if (pSTREAM)
+                     wait (stream_segment_available);
                   read_next_byte(rdata);
                   //$display("XXX: read %2h", rdata);
                   case (j)
@@ -499,7 +513,7 @@ cwhusky_top U_dut (
     .USB_WRn            (usb_wrn_out  ),
     .USB_CEn            (usb_cen_out  ),
     .USB_ALEn           (usb_alen_out ),
-    .USB_SPARE0         (USB_SPARE0   ),
+    .USB_SPARE0         (stream_segment_available),
     .FPGA_BONUS1        (FPGA_BONUS1  ),
     .FPGA_BONUS2        (FPGA_BONUS2  ),
     .FPGA_BONUS3        (FPGA_BONUS3  ),

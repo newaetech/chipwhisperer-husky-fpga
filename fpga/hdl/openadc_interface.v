@@ -65,7 +65,8 @@ module openadc_interface #(
     input  wire                         reg_addrvalid,
     output wire                         fast_fifo_read,
 
-    output wire                         fifo_error_flag
+    output wire                         fifo_error_flag,
+    output wire                         stream_segment_available
 );
 
     wire        dcm_locked;
@@ -252,6 +253,7 @@ module openadc_interface #(
    wire fifo_rd_en;
    wire low_res;
    wire low_res_lsb;
+   wire [31:0] stream_segment_size;
 
    wire [31:0] presamples;
    wire [31:0] samples_cnt;
@@ -339,7 +341,8 @@ module openadc_interface #(
       .fifo_rd_en           (fifo_rd_en),
       .low_res              (low_res),
       .low_res_lsb          (low_res_lsb),
-      .fast_fifo_read_mode  (fast_fifo_read)
+      .fast_fifo_read_mode  (fast_fifo_read),
+      .stream_segment_size  (stream_segment_size)
    );
 
 
@@ -419,6 +422,7 @@ module openadc_interface #(
       .low_res                  (low_res),
       .low_res_lsb              (low_res_lsb),
       .fast_fifo_read_mode      (fast_fifo_read),
+      .stream_segment_size      (stream_segment_size),
 
       .presample_i              (presamples),
       .max_samples_i            (maxsamples),
@@ -428,7 +432,8 @@ module openadc_interface #(
 
       .fifo_overflow            (reg_status[7]),
       .stream_mode              (fifo_stream),
-      .error_flag               (fifo_error_flag)
+      .error_flag               (fifo_error_flag),
+      .stream_segment_available (stream_segment_available)
    );
 
 

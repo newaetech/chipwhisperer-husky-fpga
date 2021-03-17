@@ -20,6 +20,7 @@ module fifo_top_husky(
     input wire          clk_usb,
     input wire          low_res,        // if set, return just 8 bits per sample; if clear return all 12 bits per sample
     input wire          low_res_lsb,    // useless except for testing: if set, return the 8 LSB bits when in low_res mode
+    input wire [31:0]   stream_segment_size,
     input wire          fifo_read_fifoen,
     output wire         fifo_read_fifoempty,
     output reg  [7:0]   fifo_read_data,
@@ -33,7 +34,8 @@ module fifo_top_husky(
 
     output wire         fifo_overflow, //If overflow happens (bad during stream mode)
     input  wire         stream_mode, //1=Enable stream mode, 0=Normal
-    output reg          error_flag
+    output reg          error_flag,
+    output reg          stream_segment_available
 );
 
     // TODO: TEMPORARY:
@@ -382,7 +384,7 @@ module fifo_top_husky(
        else begin
           if (fifo_rst_start_r)
              error_flag <= 0;
-          else if (fast_fifo_overflow || fast_fifo_underflow || slow_fifo_overflow || slow_fifo_underflow)
+          else if (fast_fifo_overflow || fast_fifo_underflow || slow_fifo_overflow || (slow_fifo_underflow & ~stream_segment_available))
              error_flag <= 1;
 
           if (fifo_rst_start_r)
@@ -591,6 +593,61 @@ module fifo_top_husky(
        );
 
     `endif
+
+   reg read_update;
+   wire read_update_usb;
+   reg [31:0] write_count;
+   (* ASYNC_REG = "TRUE" *) reg [31:0] write_count_to_usb;
+   reg [5:0] write_cycle_count = 0;
+   reg [31:0] read_count;
+
+   // track how many FIFO entries (roughly) are available to be read; tricky because of two clock domains!
+   always @(posedge adc_sampleclk) begin
+      if (fifo_rst) begin
+         write_count <= 0;
+         write_count_to_usb <= 0;
+         read_update <= 1'b0;
+      end
+      else begin
+         write_cycle_count <= write_cycle_count + 1;
+         if (slow_fifo_wr)
+            write_count <= write_count + 3;
+         if (write_cycle_count == 0) begin
+            read_update <= 1'b1;
+            write_count_to_usb <= write_count;
+         end
+         else
+            read_update <= 1'b0;
+      end
+   end
+
+   always @(posedge clk_usb) begin
+      if (fifo_rst) begin
+         read_count <= 0;
+         stream_segment_available <= 1'b0;
+      end
+      else begin
+         if (slow_fifo_rd)
+            read_count <= read_count + 3;
+         if (read_update_usb) begin
+            if (write_count_to_usb > read_count)
+               stream_segment_available <= ( (write_count_to_usb - read_count > stream_segment_size) || (write_count_to_usb >= max_samples_i) );
+            else
+               stream_segment_available <= 1'b0;
+         end
+      end
+   end
+
+
+   cdc_pulse U_read_update_cdc (
+      .reset_i       (reset),
+      .src_clk       (adc_sampleclk),
+      .src_pulse     (read_update),
+      .dst_clk       (clk_usb),
+      .dst_pulse     (read_update_usb)
+   );
+
+
 
    `ifdef ILA_FIFO
        ila_fast_fifo U_ila_fast_fifo (

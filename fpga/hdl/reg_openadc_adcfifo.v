@@ -54,7 +54,8 @@ module reg_openadc_adcfifo #(
    output wire         fifo_rd_en,
    output reg          low_res,
    output reg          low_res_lsb,
-   output reg          fast_fifo_read_mode
+   output reg          fast_fifo_read_mode,
+   output reg  [31:0]  stream_segment_size
 );
 
    wire  reset;
@@ -87,6 +88,7 @@ module reg_openadc_adcfifo #(
       if (reset) begin
          low_res <= 0;
          low_res_lsb <= 0;
+         stream_segment_size <= 32;
          //fast_fifo_read_mode <= 1'b0;
       end 
       else if (reg_write) begin
@@ -95,6 +97,8 @@ module reg_openadc_adcfifo #(
                low_res <= reg_datai[0];
                low_res_lsb <= reg_datai[1];
             end
+            `STREAM_SEGMENT_SIZE:
+               stream_segment_size[reg_bytecnt*8 +: 8] <= reg_datai; 
             //`FAST_FIFO_READ_MODE: fast_fifo_read_mode <= reg_datai[0];
             default: ;
          endcase

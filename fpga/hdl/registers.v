@@ -248,13 +248,14 @@
 
 `define DRP_ADDR                30
 `define DRP_DATA                31
-`define DRP_RESET               35
 
 `define NUM_SEGMENTS            32
 `define SEGMENT_CYCLES          33
 
 `define LED_SELECT              34
 `define FAST_FIFO_READ_MODE     36
+
+`define STREAM_SEGMENT_SIZE     35
 
 `define REGISTER_VERSION 1
 

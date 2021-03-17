@@ -17,7 +17,7 @@ module cwhusky_top(
     input wire          USB_WRn,
     input wire          USB_CEn,
     input wire          USB_ALEn,
-    input wire          USB_SPARE0,
+    output wire         USB_SPARE0,
 
     input wire          FPGA_BONUS1,
     input wire          FPGA_BONUS2,
@@ -38,18 +38,6 @@ module cwhusky_top(
     input wire          ADC_OVR_SDOUT,
     input wire [5:0]    ADC_DP,
     input wire [5:0]    ADC_DN,
-    //input wire          ADC_D0_P,
-    //input wire          ADC_D0_N,
-    //input wire          ADC_D2_P,
-    //input wire          ADC_D2_N,
-    //input wire          ADC_D4_P,
-    //input wire          ADC_D4_N,
-    //input wire          ADC_D6_P,
-    //input wire          ADC_D6_N,
-    //input wire          ADC_D8_P,
-    //input wire          ADC_D8_N,
-    //input wire          ADC_D10_P,
-    //input wire          ADC_D10_N,
 
     // VGA
     output wire [4:0]   VMAG_D,
@@ -260,7 +248,8 @@ module cwhusky_top(
         .reg_addrvalid          (reg_addrvalid),
         .fast_fifo_read         (fast_fifo_read),
 
-        .fifo_error_flag        (fifo_error_flag)
+        .fifo_error_flag        (fifo_error_flag),
+        .stream_segment_available (USB_SPARE0)
    );
 
    wire enable_output_nrst;
@@ -440,38 +429,6 @@ module cwhusky_top(
          .O                (ADC_clk_fb)
       );
    `endif
-
-   /*
-   wire [1:0] ADC_data;
-   wire ADC_DDR_D0;
-
-   // TODO: are these the best settings?
-   IBUFDS #(
-      .DIFF_TERM          ("FALSE"),
-      .IBUF_LOW_PWR       ("FALSE"),
-      .IOSTANDARD         ("LVDS_25")
-   ) U_adc_ibufds (
-      .O                  (ADC_DDR_D0),
-      .I                  (ADC_D0_P),
-      .IB                 (ADC_D0_N)
-   );
-
-   // TODO: are these the best settings?
-   IDDR #(
-      .DDR_CLK_EDGE     ("OPPOSITE_EDGE"),
-      .INIT_Q1          (0),
-      .INIT_Q2          (0),
-      .SRTYPE           ("SYNC")
-   ) U_adc_iddr (
-      .Q1               (ADC_data[0]),
-      .Q2               (ADC_data[1]),
-      .D                (ADC_DDR_D0),
-      .CE               (1'b1),
-      .C                (ADC_clk_fb),
-      .S                (1'b0),
-      .R                (1'b0)
-   );
-   */
 
 
    `ifdef __ICARUS__
