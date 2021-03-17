@@ -41,8 +41,7 @@ module reg_mmcm_drp #(
    output reg  [15:0]  drp_din,
    input  wire [15:0]  drp_dout,
    input  wire         drp_drdy,
-   output reg          drp_dwe,
-   output reg          drp_reset
+   output reg          drp_dwe
 ); 
 
 
@@ -70,7 +69,6 @@ module reg_mmcm_drp #(
 
    always @(posedge clk_usb) begin
       if (reset_i) begin
-         drp_reset <= 1'b0;
          drp_dwe <= 1'b0;
          drp_den <= 1'b0;
       end
@@ -86,9 +84,6 @@ module reg_mmcm_drp #(
                else
                   drp_dwe <= 1'b0;
             end
-
-            else if (reg_address == `DRP_RESET)
-               drp_reset <= reg_datai[0];
 
             else begin
                drp_dwe <= 1'b0;

@@ -68,7 +68,6 @@ module clock_managment_advanced #(
     wire [15:0] drp_dout;
     wire drp_drdy;
     wire drp_dwe;
-    wire drp_reset;
     
     wire dcm_psen;
     wire dcm_psincdec;
@@ -105,8 +104,7 @@ module clock_managment_advanced #(
       .drp_din          (drp_din  ),
       .drp_dout         (drp_dout ),
       .drp_drdy         (drp_drdy ),
-      .drp_dwe          (drp_dwe  ),
-      .drp_reset        (drp_reset)
+      .drp_dwe          (drp_dwe  )
    ); 
 
 
@@ -217,7 +215,7 @@ module clock_managment_advanced #(
 
     `else
     MMCM_clkgen U_clkgen (
-       .reset           (reset),
+       .reset           (reset || clkgen_reset),
        .clk_in1         (clkgenfx_in),
        .clk_out1        (clkgenfx_out),
        .locked          (dcm2_locked_int), // TODO: rename more descriptively
