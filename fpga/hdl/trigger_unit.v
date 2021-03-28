@@ -184,5 +184,18 @@ module trigger_unit(
 
    assign trigger_length_o = trigger_length;
 
+   `ifdef ILA_TRIG
+       ila_trig U_ila_trig (
+          .clk            (adc_clk),              // input wire clk
+          .probe0         (adc_capture_done),     // input wire [0:0]  probe0  
+          .probe1         (adc_capture_go),       // input wire [0:0]  probe1 
+          .probe2         (trigger_now),          // input wire [0:0]  probe2 
+          .probe3         (trigger),              // input wire [0:0]  probe3 
+          .probe4         (arm_i),                // input wire [0:0]  probe4 
+          .probe5         (armed)                 // input wire [0:0]  probe5 
+       );
+   `endif
+
+
 endmodule
 `default_nettype wire

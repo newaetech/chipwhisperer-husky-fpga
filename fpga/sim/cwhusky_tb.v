@@ -18,8 +18,9 @@ module cwhusky_tb();
    parameter pTRIGGER_NOW = 0;
    parameter pREAD_DELAY = 0;
    parameter pNUM_SEGMENTS = 0;
-   parameter pSEGMENT_CYCLES = 0;
+   parameter pSEGMENT_CYCLES = 1;
    parameter pSEGMENT_CYCLE_COUNTER_EN = 0;
+   parameter pCAPTURE_WHILE_HIGH = 0;
    parameter pSTREAM = 0;
    parameter pSTREAM_SEGMENT_SIZE = 0;
    parameter pSLOP = 5;
@@ -76,25 +77,30 @@ module cwhusky_tb();
 
    reg  [7:0] rdata;
    reg  [7:0] rdata_r;
-   reg  [11:0] sample[0:5];
+   reg  [11:0] sample;
    reg  [11:0] last_sample;
-   reg  [11:0] comp;
-   reg  [11:0] trigger_counter_value;
+   reg  [11:0] expected;
+   reg  [11:0] trigger_counter_value[0:15];
+   wire [11:0] trigger_counter_value0 = trigger_counter_value[0];
+   wire [11:0] trigger_counter_value1 = trigger_counter_value[1];
+   wire [11:0] trigger_counter_value2 = trigger_counter_value[2];
    int comp_min;
    int comp_max;
    int signed_sample;
    reg  setup_done;
    reg  trigger_done;
-   reg  read_done;
    reg  target_io4_reg;
    int i, j;
+   reg i12BitReadCount;
    int trigger_gen_index;
    int segment_read_index;
    int good_reads, bad_reads, errors, warnings;
    int seed;
 
-   real prFIFO_SAMPLES = pFIFO_SAMPLES;
+   real prFIFO_SAMPLES;
+   int fifo_samples;
    int FIFO_SAMPLES_MUL6;
+   int samples_to_read;
 
 
    // initialization thread:
@@ -104,9 +110,17 @@ module cwhusky_tb();
       rdata = $urandom(seed);
       $display("pPRESAMPLES = %d", pPRESAMPLES);
       $display("pFIFO_SAMPLES = %d", pFIFO_SAMPLES);
+      if ((pNUM_SEGMENTS > 1) && (pPRESAMPLES > 0) && (pFIFO_SAMPLES %3)) begin
+         fifo_samples = pFIFO_SAMPLES - (pFIFO_SAMPLES%3);
+         $display("Info: when using segments with presamples, the number of samples per segment must be a multiple of 3; adjusting from %0d to %0d", pFIFO_SAMPLES, fifo_samples);
+      end
+      else
+         fifo_samples = pFIFO_SAMPLES;
+      prFIFO_SAMPLES = fifo_samples;
       $display("pADC_LOW_RES = %d", pADC_LOW_RES);
       $display("pTRIGGER_NOW = %d", pTRIGGER_NOW);
       $display("pREAD_DELAY = %d", pREAD_DELAY);
+      $display("pNUM_SEGMENTS = %d", pNUM_SEGMENTS);
       $display("pSEGMENT_CYCLES = %d", pSEGMENT_CYCLES);
       if ((pSLOW_ADC == 0) && (pFAST_ADC == 0) && (pNOM_ADC == 0)) begin
          chosen_clock = $urandom_range(0, 2);
@@ -177,10 +191,10 @@ module cwhusky_tb();
       write_next_byte((pPRESAMPLES & 32'hFF00_0000)>>24);
 
       rw_lots_bytes('h10);
-      write_next_byte((pFIFO_SAMPLES & 32'h0000_00FF));
-      write_next_byte((pFIFO_SAMPLES & 32'h0000_FF00)>>8);
-      write_next_byte((pFIFO_SAMPLES & 32'h00FF_0000)>>16);
-      write_next_byte((pFIFO_SAMPLES & 32'hFF00_0000)>>24);
+      write_next_byte((fifo_samples & 32'h0000_00FF));
+      write_next_byte((fifo_samples & 32'h0000_FF00)>>8);
+      write_next_byte((fifo_samples & 32'h00FF_0000)>>16);
+      write_next_byte((fifo_samples & 32'hFF00_0000)>>24);
 
 
       write_1byte('h1, 8'hc); // arm, trigger level = high
@@ -194,6 +208,7 @@ module cwhusky_tb();
          repeat (pTRIGGER_DELAY) @(posedge clk_adc);
       end
 
+      // TODO: what's this?!? enabling external clock? cleanup required
       write_1byte(38, 8'h63);
 
       // number of segments - 1 (0 = 1 segment, 1 = 2 segments,...)
@@ -222,209 +237,117 @@ module cwhusky_tb();
    end
 
 
-   /* trigger thread: basic verification of two back-to-back captures:
-   initial begin
-      trigger_done = 0;
-      #1 wait (setup_done);
-
-      // 1st capture:
-      write_1byte('h1, 8'hc); // arm, trigger level = high
-      target_io4_reg = 1'b1;
-      trigger_counter_value = U_dut.oadc.U_fifo.adc_datain - pPRESAMPLES;
-      #(pCLK_USB_PERIOD*20);
-      target_io4_reg = 1'b0;
-      trigger_done = 1;
-      wait (read_done == 0);
-      wait (read_done);
-      write_1byte('h1, 8'h4); // disarm
-      #(pCLK_USB_PERIOD*100);
-
-      // 2nd capture:
-      write_1byte('h1, 8'hc); // arm, trigger level = high
-      #(pCLK_USB_PERIOD*1000);
-      trigger_done = 0;
-      target_io4_reg = 1'b1;
-      trigger_counter_value = U_dut.oadc.U_fifo.adc_datain - pPRESAMPLES;
-      #(pCLK_USB_PERIOD*20);
-      target_io4_reg = 1'b0;
-      trigger_done = 1;
-      wait (read_done == 0);
-      wait (read_done);
-
-   end
-   */
-
 
    // trigger thread:
-   int dbg;
+   /* Capture options:
+    * 1. pTRIGGER_NOW: use register write mechanism (1) vs IO4 (0) to initiate capture.
+    * 2. pNUM_SEGMENTS: number of segments to capture
+    * 3. pSEGMENT_CYCLE_COUNTER_EN: if set, after the initial trigger, start a new segment every pSEGMENT_CYCLES cycles;
+    *    otherwise, start a new segment when IO4 transitions from 0 to 1; this is done for pNUM_SEGMENTS segments. Note that
+    *    when pSEGMENT_CYCLE_COUNTER_EN = 0, by convenience the testbench still waits for pSEGMENT_CYCLES in between trigger
+    *    assertions (however pSEGMENT_CYCLES is not programmed to the DUT!)
+    * 4. pCAPTURE_WHILE_HIGH: if set, capture whenever IO4 is high, independent of all other parameters above.
+    * 5. In all cases, capture stops when the *total* requested number of samples (pFIFO_SAMPLES) have been collected.
+   */
    initial begin
       trigger_done = 0;
       #1 wait (setup_done);
-      if (pTRIGGER_NOW) begin
-         write_1byte('h1, 8'h48);
-         trigger_counter_value = U_dut.oadc.U_fifo.adc_datain - pPRESAMPLES;
-         #(pCLK_USB_PERIOD*20);
-         trigger_done = 1;
-         // trigger now doesn't support segments, so we're done here
-      end
+      for (trigger_gen_index = 0; trigger_gen_index < pNUM_SEGMENTS; trigger_gen_index += 1) begin
 
-      else begin
-         for (trigger_gen_index = 0; trigger_gen_index <= pNUM_SEGMENTS; trigger_gen_index += 1) begin
-            // If capture is triggered by the testbench, we carefully handshake between this trigger thread and the read thread, to keep them
-            // in sync. If segments are triggered by fixed cycle counts, then we just count cycles - can't have any waits to sync with the read thread, 
-            // otherwise we'll actually be out of sync from what the hardware's doing!
-            if (pSEGMENT_CYCLE_COUNTER_EN) begin
-               if (trigger_gen_index == 0) begin
-                  target_io4_reg = 1'b1;
-                  trigger_counter_value = U_dut.oadc.U_fifo.adc_datain - pPRESAMPLES;
-                  repeat (10) @(posedge clk_adc);
-                  dbg = 1;
-                  trigger_done = 1;
-               end
-               else begin
-                  @(posedge clk_adc);
-                  dbg = 2;
-                  trigger_done = 0;
-                  //repeat (pSEGMENT_CYCLES-11) @(posedge clk_adc);
-                  repeat (pSEGMENT_CYCLES-1) @(posedge clk_adc);
-                  trigger_counter_value = U_dut.oadc.U_fifo.adc_datain - pPRESAMPLES;
-                  dbg = 3;
-                  trigger_done = 1;
-               end
-            end
-
-            else begin // pSEGMENT_CYCLE_COUNTER_EN == 0
-               repeat (10) @(posedge clk_adc);
-               dbg = 4;
-               trigger_done = 0;
-               repeat ($urandom_range(0, 200)) @(posedge clk_adc);
-               if (pPRESAMPLES)
-                  repeat (500+pPRESAMPLES*2) @(posedge clk_adc);
+         if (trigger_gen_index == 0) begin
+            if (pTRIGGER_NOW)
+               write_1byte('h1, 8'h48);
+            else
                target_io4_reg = 1'b1;
-               trigger_counter_value = U_dut.oadc.U_fifo.adc_datain - pPRESAMPLES;
-               #(pCLK_USB_PERIOD*20);
-               target_io4_reg = 1'b0;
-               dbg = 5;
-               trigger_done = 1;
-               wait (read_done == 0);
-               wait (read_done);
-            end
+         end
+         else if (pSEGMENT_CYCLE_COUNTER_EN == 0)
+            target_io4_reg = 1'b1;
+
+         trigger_counter_value[trigger_gen_index] = U_dut.oadc.U_fifo.adc_datain - pPRESAMPLES;
+         repeat (10) @(posedge clk_adc);
+         target_io4_reg = 1'b0;
+         if (pSEGMENT_CYCLES > 10)
+            repeat (pSEGMENT_CYCLES-10) @(posedge clk_adc);
+         else begin
+            $display("ERROR: pSEGMENT_CYCLES too small!");
+            errors += 1;
          end
       end
+      trigger_done = 1;
    end
-   //
 
 
 
-   // read thread:
+   // NEW read thread:
    initial begin
-      read_done = 0;
       good_reads = 0;
       bad_reads = 0;
-      for (segment_read_index = 0; segment_read_index <= pNUM_SEGMENTS; segment_read_index += 1) begin
+      i12BitReadCount = 0;
+
+      // Figure out the total number of samples to read.
+      // It's the total number of samples, accounting for segments, rounded up to a multiple of 6.
+      samples_to_read = $ceil(prFIFO_SAMPLES*pNUM_SEGMENTS/3)*3;
+
+      if (pSTREAM) begin
+         wait (setup_done);
+         repeat (pREAD_DELAY) @(posedge clk_adc);
+         write_1byte('d36, 1);
+         wait (stream_segment_available);
+      end
+      
+
+      else begin
          #1 wait (trigger_done == 0);
          #1 wait (trigger_done);
-         repeat (10) @(posedge clk_adc);
-         read_done = 0;
-         //wait (U_dut.oadc.U_fifo.slow_fifo_full);
-         //#(pCLK_USB_PERIOD*1000);
-         repeat (pREAD_DELAY) @(posedge clk_adc);
+         // wait for the last segment's samples to get captured:
+         repeat(fifo_samples) @(posedge clk_adc);
+      end
 
+      rw_lots_bytes('d3);
+      $display("XXX samples_to_read: %d", samples_to_read);
+      segment_read_index = 0;
+
+      for (i = 0; i < samples_to_read; i = i + 1) begin
          if (pSTREAM)
-            write_1byte('d36, 1);
+            // TODO: technically we shouldn't be checking before every single read...
+            wait (stream_segment_available);
+         read_next_sample(sample);
+         //$display("Read %h", sample);
 
-         rw_lots_bytes('d3);
-         if (pADC_LOW_RES) begin // 8 bits per sample
-            // round up to a multiple of 6 (Verilog why do you make this so awkward?)
-            FIFO_SAMPLES_MUL6 = $ceil(prFIFO_SAMPLES/6)*6;
-            for (i = 0; i < FIFO_SAMPLES_MUL6; i = i + 1) begin
-               if (i%1000 == 0)
-                  $display("heartbeat: read %d samples", i);
-               if (pSTREAM)
-                  wait (stream_segment_available);
-               read_next_byte(rdata);
-               if (i == 0) begin
-                  last_sample = rdata;
-                  sample[0] = rdata;
-                  check_first_sample();
-               end
-               else begin
-                  if (rdata == (last_sample + 1) % 256)
-                     good_reads += 1;
-                  else begin
-                     bad_reads += 1;
-                     errors += 1;
-                     $display("ERROR %2d: expected %2h, got %2h", i, (last_sample + 1)%256, rdata);
-                  end
-                  //$display("%2d: last=%2h, read %2h", i, last_sample, rdata);
-                  last_sample = rdata;
-               end
+         if ((i % fifo_samples == 0) && (i < fifo_samples*pNUM_SEGMENTS)) begin
+            //$display("Checking first segment index (i=%d)", i);
+            check_first_sample(trigger_counter_value[segment_read_index]);
+            segment_read_index += 1;
+         end
+
+         else begin
+            expected = (last_sample + 1) % (pADC_LOW_RES? 2**8:2**12);
+            if (sample == expected)
+               good_reads += 1;
+            else begin
+               bad_reads += 1;
+               errors += 1;
+               $display("ERROR %2d: expected %2h, got %2h", i, expected, sample);
             end
+            //$display("%2d: last=%2h, read %2h", i, last_sample, rdata);
          end
+         last_sample = sample;
+      end
 
-         else begin // 12 bits per sample
-            //for (i = 0; i < pFIFO_SAMPLES/6; i = i + 1) begin
-            //for (i = 0; i < $ceil(pFIFO_SAMPLES/6); i = i + 1) begin
-            // ahh Verilog why do you have to make this so hard?
-            for (i = 0; i < pFIFO_SAMPLES/6 + (pFIFO_SAMPLES%6? 1:0); i = i + 1) begin
-               if (i%100 == 0)
-                  $display("heartbeat: read %d samples", i*6);
-               // there must be a better way to code this, but it's not coming to me...
-               for (j = 0; j < 9; j = j + 1) begin
-                  rdata_r = rdata;
-                  if (pSTREAM)
-                     wait (stream_segment_available);
-                  read_next_byte(rdata);
-                  //$display("XXX: read %2h", rdata);
-                  case (j)
-                     1: sample[0] = {rdata_r, rdata[7:4]};
-                     2: sample[1] = {rdata_r[3:0], rdata};
-                     4: sample[2] = {rdata_r, rdata[7:4]};
-                     5: sample[3] = {rdata_r[3:0], rdata};
-                     7: sample[4] = {rdata_r, rdata[7:4]};
-                     8: sample[5] = {rdata_r[3:0], rdata};
-                  endcase
-               end
-               for (j = 0; j < 6; j += 1) begin
+      #1;
+      if (U_dut.oadc.U_fifo.fast_fifo_empty == 0) begin
+         errors += 1;
+         $display("ERROR at t=%0t: fast FIFO not empty at the end of a read cycle", $time);
+      end
+      if (U_dut.oadc.U_fifo.slow_fifo_empty == 0) begin
+         errors += 1;
+         $display("ERROR at t=%0t: slow FIFO not empty at the end of a read cycle", $time);
+      end
 
-                  // for the very first sample, we check against what we peeked when we applied the trigger, with some slop to account for CDCs:
-                  if ((i == 0) && (j == 0))
-                     check_first_sample();
-                  
-                  else begin
-                     if (j == 0)
-                        comp = last_sample;
-                     else
-                        comp = sample[j-1];
-                     if (sample[j] == (comp + 1) % 2**12)
-                        good_reads += 1;
-                     else begin
-                        bad_reads += 1;
-                        errors += 1;
-                        $display("ERROR %2d: expected %3h, got %3h", i*6+j, (comp + 1) % 2**12, sample[j]);
-                     end
-                  end
-
-               end
-               last_sample = sample[5];
-            end
-         end
-         read_done = 1;
-         #1;
-         if (U_dut.oadc.U_fifo.fast_fifo_empty == 0) begin
-            errors += 1;
-            $display("ERROR at t=%0t: fast FIFO not empty at the end of a read cycle", $time);
-         end
-         if (U_dut.oadc.U_fifo.slow_fifo_empty == 0) begin
-            errors += 1;
-            $display("ERROR at t=%0t: slow FIFO not empty at the end of a read cycle", $time);
-         end
-      end // for segment_read_index loop
-
-      // TODO-temporary to see if fast reads get disabled:
+      // TODO-temporary to manually verify if fast reads get disabled: (clean up later)
       write_1byte(4, 155);
       read_1byte(4, rdata);
-      $display("Read %d", rdata);
+      //$display("Read %d", rdata);
 
       if (pSTREAM)
          // clear stream mode:
@@ -486,9 +409,9 @@ module cwhusky_tb();
          read_select = 1'b1;
    end
 
-assign target_io4 = target_io4_reg;
+assign #1 target_io4 = target_io4_reg;
 
-assign adc_clocks = {clk_adc_slow, clk_adc_fast, clk_adc_nom};
+assign adc_clocks = {clk_adc_nom, clk_adc_fast, clk_adc_slow};
 
 assign clk_adc = pSLOW_ADC? clk_adc_slow :
                  pFAST_ADC? clk_adc_fast : 
@@ -544,27 +467,33 @@ cwhusky_top U_dut (
 );
 
 
+
 task check_first_sample;
+   input [11:0] expected_value;
    begin
       if (pADC_LOW_RES)
-         trigger_counter_value = {4'b0, trigger_counter_value[7:0]};
+         expected_value = {4'b0, expected_value[7:0]};
       // dealing with signed numbers in Verilog is always really fun!
-      comp_min = {1'b0, trigger_counter_value} - pSLOP + pTRIGGER_ADJUST; // signed
-      comp_max = {1'b0, trigger_counter_value} + pSLOP + pTRIGGER_ADJUST; // signed
-      signed_sample = {1'b0, sample[0]};
+      comp_min = {1'b0, expected_value} - pSLOP + pTRIGGER_ADJUST; // signed
+      comp_max = {1'b0, expected_value} + pSLOP + pTRIGGER_ADJUST; // signed
+      signed_sample = {1'b0, sample};
+
       // adjust MSB if we went past the sample range:
-      if (pADC_LOW_RES)
-         signed_sample[8] = comp_max[8];
-      else
-         signed_sample[12] = comp_max[12];
+      if ($signed(signed_sample) < $signed(comp_min)) begin
+         if (pADC_LOW_RES)
+            signed_sample[8] = comp_max[8];
+         else
+            signed_sample[12] = comp_max[12];
+      end
+
       if ( ($signed(signed_sample) >= $signed(comp_min)) && ($signed(signed_sample) <= $signed(comp_max)) ) begin
          good_reads += 1;
-         $display("Good first read: expected min=%3h, max=%3h, got %3h", comp_min, comp_max, sample[0]);
+         $display("\nGood first read: expected min=%3h, max=%3h, got %3h", comp_min, comp_max, sample);
       end
       else begin
          bad_reads += 1;
          errors += 1;
-         $display("ERROR on first read: expected min=%3h, max=%3h, got %3h", comp_min, comp_max, sample[0]);
+         $display("\nERROR on first read: expected min=%3h, max=%3h, got %3h, signed=%h", comp_min, comp_max, sample, signed_sample);
       end
    end
 endtask

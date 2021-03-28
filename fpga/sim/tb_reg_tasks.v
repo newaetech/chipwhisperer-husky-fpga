@@ -109,6 +109,30 @@ task read_next_byte;
    end
 endtask
 
+task read_next_sample;
+   output [11:0] sample;
+   begin
+      if (pADC_LOW_RES) begin
+         read_next_byte(rdata);
+         sample = {4'b0, rdata};
+      end
+      else begin
+         // we need either one or two fifo reads:
+         if (i12BitReadCount == 0) begin
+            read_next_byte(rdata_r);
+            read_next_byte(rdata);
+            sample = {rdata_r, rdata[7:4]};
+         end
+         else begin
+            rdata_r = rdata;
+            read_next_byte(rdata);
+            sample = {rdata_r[3:0], rdata};
+         end
+         i12BitReadCount = ~i12BitReadCount;
+      end
+   end
+endtask
+
 
 task write_next_byte;
    input [7:0] data;

@@ -251,7 +251,7 @@ module reg_openadc #(
          registers_advclocksettings <= 32'h00000102;
          registers_downsample <= 0;
          data_source_select <= 1; // default to ADC
-         num_segments <= 0;
+         num_segments <= 1;
          segment_cycles <= 0;
          led_select <= 0;
       end else if (reg_write) begin
