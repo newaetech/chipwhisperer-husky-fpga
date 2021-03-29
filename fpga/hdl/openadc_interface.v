@@ -265,7 +265,6 @@ module openadc_interface #(
    wire clkgen_reset;
 
    wire [12:0] downsample;
-   wire [1:0] fifo_mode;
    wire [7:0] reg_datao_oadc;
    wire [7:0] reg_datao_fifo;
    wire [7:0] reg_datao_mmcm_drp;
@@ -298,7 +297,6 @@ module openadc_interface #(
       .trigger_now(trigger_now),
       .trigger_offset(trigger_offset),
       .trigger_length(trigger_length),
-      .fifo_mode(fifo_mode),
       .extclk_frequency(extclk_frequency),
       .extclk_measure_src(extmeasure_src),
       .adcclk_frequency(adcclk_frequency),
@@ -388,26 +386,12 @@ module openadc_interface #(
    assign reg_status[4] = 1'b0;
    assign reg_status[5] = 1'b0;
 
-   /*
-   wire adc_write_mask;
-   wire adc_write_mask_int;
-   
-   assign adc_write_mask_int = (fifo_mode == 2'b00) ? 1'b1 :
-                               (fifo_mode == 2'b01) ? DUT_trigger_i :
-                               (fifo_mode == 2'b10) ? segment_trigger_go :
-                               1'b1;
-
-   assign adc_write_mask = adc_write_mask_int | trigger_now;
-   */
-   wire adc_write_mask = 1'b1; // TODO: clean up / remove if no longer required
-
 
    fifo_top_husky U_fifo(
       .reset                    (reset),
 
       .adc_datain               (ADC_data_tofifo),
       .adc_sampleclk            (ADC_clk_sample),
-      .adc_write_mask           (adc_write_mask),
       .adc_capture_go           (adc_capture_go), //Set to '1' to start capture, keep at 1 until adc_capture_stop goes high
       .adc_segment_go           (adc_segment_go),
       .adc_capture_stop         (adc_capture_done),

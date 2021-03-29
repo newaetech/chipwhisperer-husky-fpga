@@ -8,7 +8,6 @@ module fifo_top_husky(
     //ADC Sample Input
     input wire [11:0]   adc_datain,
     input wire          adc_sampleclk,
-    input wire          adc_write_mask,
     input wire          adc_capture_go, //Set to '1' to start capture, keep at 1 until adc_capture_stop goes high
     input wire          adc_segment_go,
     output wire         adc_capture_stop,
@@ -194,7 +193,7 @@ module fifo_top_husky(
                 if (stop_capture_conditions)
                    state <= pS_DONE;
                 // TODO: flag if we were unable to capture enough presamples - which is definitely possible with segmenting
-                else if ( (adc_capture_go && (segment_counter == 0)) || (adc_segment_go && (segment_counter > 0)) || (segment_cycle_counter == (segment_cycles-1)) )
+                else if ( (adc_capture_go && (segment_counter == 0)) || (adc_segment_go && (segment_counter > 0)) || ((segment_cycle_counter == (segment_cycles-1) && (segment_cycles>0))) )
                    state <= pS_TRIGGERED;
                 else if (presample_counter == (presample_i-2))
                    state <= pS_PRESAMP_FULL;
@@ -208,7 +207,7 @@ module fifo_top_husky(
                 if (stop_capture_conditions)
                    state <= pS_DONE;
                 //else if (adc_capture_go) begin
-                else if ( (adc_capture_go && (segment_counter == 0)) || (adc_segment_go && (segment_counter > 0)) || (segment_cycle_counter == (segment_cycles-1)) ) begin
+                else if ( (adc_capture_go && (segment_counter == 0)) || (adc_segment_go && (segment_counter > 0)) || ((segment_cycle_counter == (segment_cycles-1)) && (segment_cycles>0)) ) begin
                    segment_cycle_counter <= 0;
                    sample_counter <= presample_i;
                    state <= pS_TRIGGERED;
@@ -256,7 +255,7 @@ module fifo_top_husky(
                       presample_counter <= 0;
                       state <= pS_PRESAMP_FILLING;
                    end
-                   else if ((adc_segment_go && ~adc_segment_go_r) || (segment_cycle_counter == (segment_cycles-1))) begin
+                   else if ( (adc_segment_go && ~adc_segment_go_r) || ((segment_cycle_counter == (segment_cycles-1)) && (segment_cycles>0)) ) begin
                       segment_counter <= segment_counter + 1;
                       segment_cycle_counter <= 0;
                       sample_counter <= 0;
@@ -311,7 +310,7 @@ module fifo_top_husky(
        end
     end
 
-    assign fast_fifo_wr = downsample_wr_en & fsm_fast_wr_en & stream_write & adc_write_mask & reset_done & !fifo_rst_pre;
+    assign fast_fifo_wr = downsample_wr_en & fsm_fast_wr_en & stream_write & reset_done & !fifo_rst_pre;
     //assign fast_fifo_rd = fast_fifo_rd_en & reset_done & !fifo_rst_pre;
     //assign slow_fifo_wr = slow_fifo_wr_premask & reset_done & !fifo_rst_pre;
     assign slow_fifo_wr = slow_fifo_prewr & reset_done & !fifo_rst_pre;
@@ -659,7 +658,7 @@ module fifo_top_husky(
           .probe8         (fast_fifo_underflow),  // input wire [0:0]  probe8 
           .probe9         (downsample_wr_en),     // input wire [0:0]  probe9 
           .probe10        (stream_write),         // input wire [0:0]  probe10 
-          .probe11        (adc_write_mask),       // input wire [0:0]  probe11 
+          .probe11        (1'b0),                 // input wire [0:0]  probe11 
           .probe12        (reset_done),           // input wire [0:0]  probe12 
           
           .probe13        (fifo_rst_start_r),     // input wire [0:0]  probe13 

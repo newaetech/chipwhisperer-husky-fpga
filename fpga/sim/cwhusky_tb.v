@@ -20,7 +20,6 @@ module cwhusky_tb();
    parameter pNUM_SEGMENTS = 0;
    parameter pSEGMENT_CYCLES = 1;
    parameter pSEGMENT_CYCLE_COUNTER_EN = 0;
-   parameter pCAPTURE_WHILE_HIGH = 0;
    parameter pSTREAM = 0;
    parameter pSTREAM_SEGMENT_SIZE = 0;
    parameter pSLOP = 5;
@@ -246,8 +245,7 @@ module cwhusky_tb();
     *    otherwise, start a new segment when IO4 transitions from 0 to 1; this is done for pNUM_SEGMENTS segments. Note that
     *    when pSEGMENT_CYCLE_COUNTER_EN = 0, by convenience the testbench still waits for pSEGMENT_CYCLES in between trigger
     *    assertions (however pSEGMENT_CYCLES is not programmed to the DUT!)
-    * 4. pCAPTURE_WHILE_HIGH: if set, capture whenever IO4 is high, independent of all other parameters above.
-    * 5. In all cases, capture stops when the *total* requested number of samples (pFIFO_SAMPLES) have been collected.
+    * 4. In all cases, capture stops when the *total* requested number of samples (pFIFO_SAMPLES) have been collected.
    */
    initial begin
       trigger_done = 0;

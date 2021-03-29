@@ -138,11 +138,6 @@
           0 = EXTCLKIn Input
           1 = CLKGEN Output Block
 
-       FS = (Bit 5:4) FIFO Segmentation Mode
-          00 = Normal
-          01 = Enable Mode
-          10 = Segment Mode
-
 
 0x07 - System Clock (4 Bytes) - Read Only
    Clock frequency in Hz
