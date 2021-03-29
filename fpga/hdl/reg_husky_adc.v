@@ -86,6 +86,7 @@ module reg_husky_adc #(
       if (reg_read) begin
          case (reg_address)
            `CW_ADC_CTRL: reg_datao_reg <= data_reg;
+           `CW_VMAG_CTRL: reg_datao_reg <= VMAG_D;
            default: reg_datao_reg <= 0;
          endcase
       end
