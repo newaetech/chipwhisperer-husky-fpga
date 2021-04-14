@@ -3,7 +3,9 @@ set_property IOSTANDARD LVCMOS25 [get_ports ADC*]
 set_property IOSTANDARD LVDS_25 [get_ports ADC_clk_fb*]
 set_property IOSTANDARD LVDS_25 [get_ports ADC_CLK*]
 set_property IOSTANDARD LVDS_25 [get_ports ADC_D*]
+set_property IOSTANDARD LVDS_25 [get_ports PLLFPGA*]
 set_property IOSTANDARD LVCMOS25 [get_ports ADC_DFS]
+set_property IOSTANDARD LVCMOS25 [get_ports PLL_STATUS]
 set_property CFGBVS VCCO [current_design]
 set_property CONFIG_VOLTAGE 3.3 [current_design]
 #set_property CONFIG_VOLTAGE 2.5 [current_design]
@@ -160,6 +162,11 @@ set_property PACKAGE_PIN D14 [get_ports ADC_DP[4]]
 set_property PACKAGE_PIN D15 [get_ports ADC_DN[4]]
 set_property PACKAGE_PIN F15 [get_ports ADC_DP[5]]
 set_property PACKAGE_PIN E15 [get_ports ADC_DN[5]]
+
+#PLL:
+set_property PACKAGE_PIN C11 [get_ports PLL_STATUS]
+set_property PACKAGE_PIN D13 [get_ports PLLFPGAP]
+set_property PACKAGE_PIN C13 [get_ports PLLFPGAN]
 
 #VGA:
 set_property PACKAGE_PIN L15 [get_ports VMAG_D[4]]

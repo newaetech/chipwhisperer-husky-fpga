@@ -47,6 +47,8 @@ module openadc_interface #(
     input  wire [11:0]                  ADC_data,
     output wire                         ADC_clk_out,
     input  wire                         ADC_clk_feedback, // Feedback path for ADC Clock. If unused connect to ADC_clk_out
+    input  wire                         pll_fpga_clk,
+    input  wire                         PLL_STATUS,
     input  wire                         DUT_CLK_i, // target_hs1
     input  wire                         DUT_trigger_i,
     output wire                         amp_gain,
@@ -124,6 +126,10 @@ module openadc_interface #(
    reg [24:0] adc_out_heartbeat;
    always @(posedge ADC_clk_out) adc_out_heartbeat <= adc_out_heartbeat +  25'd1;
 
+   reg [24:0] pll_fpga_clk_heartbeat;
+   always @(posedge pll_fpga_clk) pll_fpga_clk_heartbeat <= pll_fpga_clk_heartbeat +  25'd1;
+
+
    always @(*) begin
       if (led_select == 2'b01) begin
          LED_armed = timer_heartbeat[24];
@@ -132,6 +138,10 @@ module openadc_interface #(
       else if (led_select == 2'b10) begin
          LED_armed = adc_fb_heartbeat[24];
          LED_capture = adc_out_heartbeat[24];
+      end
+      else if (led_select == 2'b11) begin
+         LED_armed = pll_fpga_clk_heartbeat[24];
+         LED_capture = PLL_STATUS;
       end
       else begin
          LED_armed = armed;

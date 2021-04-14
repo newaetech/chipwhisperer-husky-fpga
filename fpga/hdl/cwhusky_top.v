@@ -43,6 +43,11 @@ module cwhusky_top(
     output wire [4:0]   VMAG_D,
     output wire         VDBSPWM,
 
+    // PLL
+    input wire          PLL_STATUS,
+    input wire          PLLFPGAP,
+    input wire          PLLFPGAN,
+
     output wire [7:0]   USERIO_D,
     input  wire         USERIO_CLK,
 
@@ -131,6 +136,7 @@ module cwhusky_top(
 
    wire clk_usb_buf;
    wire ADC_clk_fb;
+   wire pll_fpga_clk;
 
    `ifdef __ICARUS__
       assign clk_usb_buf = clk_usb;
@@ -233,6 +239,8 @@ module cwhusky_top(
         .ADC_data               (ADC_data),
         .ADC_clk_out            (ADC_clk_out),
         .ADC_clk_feedback       (ADC_clk_fb),
+        .pll_fpga_clk           (pll_fpga_clk),
+        .PLL_STATUS             (PLL_STATUS),
         .DUT_CLK_i              (extclk_mux),
         .DUT_trigger_i          (ext_trigger),
         .amp_gain               (VDBSPWM),
@@ -429,6 +437,24 @@ module cwhusky_top(
          .O                (ADC_clk_fb)
       );
    `endif
+
+
+   // take in PLL input differential clock
+   `ifdef __ICARUS__
+      assign pll_fpga_clk = PLLFPGAP;
+
+   `else
+      IBUFDS #(
+         .DIFF_TERM        ("FALSE"),
+         .IBUF_LOW_PWR     ("FALSE"),
+         .IOSTANDARD       ("LVDS_25")
+      ) U_IBUFDS_pll_fpga_clk (
+         .I                (PLLFPGAP),
+         .IB               (PLLFPGAN),
+         .O                (pll_fpga_clk)
+      );
+   `endif
+
 
 
    `ifdef __ICARUS__
