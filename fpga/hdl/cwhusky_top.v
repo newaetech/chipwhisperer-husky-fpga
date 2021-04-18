@@ -81,8 +81,8 @@ module cwhusky_top(
     /*
     output wire         glitchout_highpwr, // high-speed glitch output
     output wire         glitchout_lowpwr, // high-speed glitch output 
-    output wire         target_npower,
     */
+    output wire         target_poweron,
 
     output wire         FPGA_TRIGOUT, //trigger out MCX
     inout  wire         USBIOHS2  //clock MCX
@@ -335,8 +335,8 @@ module cwhusky_top(
         .enable_output_pdic(enable_output_pdic),
         .output_pdic(output_pdic),
 
-        .uart_tx_i(1'b0),
-        .uart_rx_o(),
+        .uart_tx_i(FPGA_CDOUT),
+        .uart_rx_o(FPGA_CDIN),
         .usi_out_i(1'b0),
         .usi_in_o(),
         .targetpower_off(target_npower),
@@ -358,7 +358,8 @@ module cwhusky_top(
         .reg_write      (reg_write), 
         .reg_addrvalid  (reg_addrvalid), 
         .target_hs1     (target_hs1),
-        .clkgen         (clkgen),
+        //.clkgen         (clkgen),
+        .clkgen         (pll_fpga_clk),
         //.glitchclk      (glitchclk),
         .glitchclk      (), // TODO-temp
         .exttrigger     (ext_trigger)
@@ -369,6 +370,7 @@ module cwhusky_top(
    //assign FPGA_TRIGOUT = 1'b0;
 
    wire target_highz = target_npower;
+   assign target_poweron = ~target_npower;
 
    assign target_PDID = (target_highz) ? 1'bZ :
                         (enable_output_pdid) ? output_pdid : 1'bZ;

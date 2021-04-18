@@ -79,6 +79,7 @@ set_property -dict { PACKAGE_PIN P3  IOSTANDARD LVCMOS33 } [get_ports target_PDI
 set_property -dict { PACKAGE_PIN C2  IOSTANDARD LVCMOS33 } [get_ports target_MOSI]
 set_property -dict { PACKAGE_PIN A2  IOSTANDARD LVCMOS33 } [get_ports target_nRST]
 set_property -dict { PACKAGE_PIN F5  IOSTANDARD LVCMOS33 } [get_ports target_hs1]
+set_property -dict { PACKAGE_PIN H3  IOSTANDARD LVCMOS33 } [get_ports target_poweron]
 
 # USERIO:
 set_property -dict { PACKAGE_PIN T15 IOSTANDARD LVCMOS33 }  [get_ports {USERIO_D[0]}]
@@ -182,10 +183,12 @@ set_output_delay -clock clk_usb 0.000 [get_ports target_io1]
 set_output_delay -clock clk_usb 0.000 [get_ports target_io2]
 set_output_delay -clock clk_usb 0.000 [get_ports target_io3]
 set_output_delay -clock clk_usb 0.000 [get_ports target_io4]
+set_output_delay -clock clk_usb 0.000 [get_ports target_poweron]
 set_false_path -to [get_ports target_io1]
 set_false_path -to [get_ports target_io2]
 set_false_path -to [get_ports target_io3]
 set_false_path -to [get_ports target_io4]
+set_false_path -to [get_ports target_poweron]
 
 
 set_input_delay -clock clk_usb 0.000 [get_ports ADC_OVR_SDOUT]
