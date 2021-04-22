@@ -36,6 +36,7 @@ module reg_chipwhisperer #(
    input  wire         reg_addrvalid,// Address valid flag
    
    /* External Clock */
+   input  wire        usbiohs2,
    input  wire        target_hs1,
    output wire        target_hs2,
    output wire        extclk_o,
@@ -53,7 +54,7 @@ module reg_chipwhisperer #(
    input  wire        trigger_anapattern_i,
    
    /* Clock Sources */
-   input  wire        clkgen,
+   input  wire        pll_fpga_clk,
    input  wire        glitchclk,
    
    /* GPIO Pins & Routing */
@@ -84,9 +85,7 @@ module reg_chipwhisperer #(
    output wire        targetpower_off,
    
    /* Main trigger connections */
-   output wire        trigger_o, /* Trigger signal to capture system */
-   output wire        led_auxi,
-   output wire        led_auxo
+   output wire        trigger_o /* Trigger signal to capture system */
 ); 
 
    wire reset;
@@ -97,126 +96,112 @@ module reg_chipwhisperer #(
    `define CW_TRIGMOD_ADDR      40
    `define CW_IOROUTE_ADDR      55
    `define CW_IOREAD_ADDR       59
- 
- /*  0xXX - External Clock Connections (One Byte)
-	 
-	   [  X RO RO FA FA S  S  S ]
-	     
-		  S S S = 000 Front Panel Channel A / Aux SMA
-					 001 Front Panel Channel B
-					 010 Front Panel PLL Input
-		          011 Rear TargetIO - High Speed Input
-					 100 Rear TargetIO - High Speed Output
 
-			FA = 00 Front Panel A: High-Z (REQUIRED if using as input)
-			     01 Front Panel A: CLKGEN
-				  10 Front Panel A: Glitch Module
+ /*  
+CW_EXTCLK_ADDR, address 38 (0x26) - External Clock Connections (One Byte)
 
-			RO = (Bit 6/Bit 5) Rear Clock Out Source
-       		  00 : Disabled (constant)
-				  10 : CLKGEN
-				  11 : Glitch Module
-				  
-   
-     0xXX - External Trigger Connections (One Byte)
-	 
-	   [  M  M  R4  R3  R2  R1  FB FA ]
-	     All external triggers are combined into a single
-		  trigger signal, which can then be passed into one
-		  of the enabled 'trigger modules'
-		  
-		  FA = Front Panel Channel A / Aux SMA
-		  FB = Front Panel Channel B
-		  R1 = Rear TargetIO - Line 1
-		  R2 = Rear TargetIO - Line 2
-		  R3 = Rear TargetIO - Line 3
-		  R4 = Rear TargetIO - Line 4
-		  MM = Mode to combine multiple channels
-		    00 = OR
-			 01 = AND
+    [  X RO RO FA FA S  S  S ]
+    
+    [2:0]
+    S S S = 000: AUX MCX
+            011: HS1
+    [4:3]
+    FA = 00 Front Panel A: High-Z (REQUIRED if using as input)
+         01 Front Panel A: CLKGEN
+         10 Front Panel A: Glitch Module
+    [6:5]
+    RO = (Bit 6/Bit 5) Rear Clock Out Source
+         00 : Disabled (constant)
+         10 : CLKGEN
+         11 : Glitch Module
 
-	  0xXX - Trigger Module Enabled
-	  
-	   [ X  X  X  FB FA M  M  M ]
-		  M M M = 000 Normal Edge-Mode Trigger
-		          001 Advanced IO Pattern Trigger
-					 010 Advanced SAD Trigger
-					 
-		  FA = Output trigger to Front Panel A / Aux SMA
-		  FB = Output trigger to Front Panel B
-		  
-	  0xXX - GPIO Pin Routing [8 bytes]
-	   
-		IMPORTANT: Only a single IO can be assigned
-		           to any input. e.g. you can't assign
-					  both GPIO1 and GPIO3 to 'RX'. 
-					  
-					  The system assigns priority to lower
-					  numbered GPIOs.
-					  
-					  Similarly if you attempt to assign multiple
-					  outputs to a single TargetIO it will use the
-					  lowest bit as the actual output.
+CW_TRIGSRC_ADDR, address 39 (0x27) - External Trigger Connections (One Byte)
+    [  M  M  R4  R3  R2  R1  FB FA ]
+    All external triggers are combined into a single
+    trigger signal, which can then be passed into one
+    of the enabled 'trigger modules'
+    FA = Front Panel Channel A / Aux SMA
+    FB = Front Panel Channel B
+    R1 = Rear TargetIO - Line 1
+    R2 = Rear TargetIO - Line 2
+    R3 = Rear TargetIO - Line 3
+    R4 = Rear TargetIO - Line 4
+    MM = Mode to combine multiple channels
+        00 = OR
+        01 = AND
 
-		GPIO1:
-		  [ E G   X     X  USII USIO RX TX ]
-		  
-		GPIO2:
-		  [ E G   X     X  USII USIO RX TX ]
-		  
-		GPIO3:
-		  [ E G  TXO USOC  USII USIO RX TX ]  --> USOC means USIO but with Open Collector drive
-		  
-		GPIO4:
-		  [ X X   X     X    X    X  X   X ]
-		 
-	   GLITCH:
-		  [ X X   X     X    X    X  B   A ]
-		  
-		  	A  = (Bit 0) Glitch Output A
-			     0  : Disabled
-				  1  : Glitch Module
-				  
-			B  = (Bit 1) Glitch Output B
-			     0  : Disabled
-				  1  : Glitch Module
+CW_TRIGMOD_ADDR, address 40 (0x28) - Trigger Module Enabled
+    [ X  X  X  FB FA M  M  M ]
+    M M M = 000 Normal Edge-Mode Trigger
+            001 Advanced IO Pattern Trigger
+            010 Advanced SAD Trigger
+    FA = Output trigger to Front Panel A / Aux SMA
+    FB = Output trigger to Front Panel B
 
-		EXTRA:
-		  [ X X   SC    SC    X    S  P   A ]
-		  
-		  A = (Bit 0) AVR Programming Enable
-				  0  : Disabled (High-Z)
-				  1  : Enabled (Connected to SAM3U)
-				  
-		  P = (Bit 1) Target Power Disable
-		        0  : Power On
-				  1  : Power Off
-				  
-		  S = (Bit 2) Target Power Switch Type
-		        0  : Slow-Start (safer)
-				  1  : Fast-Start
-				  
-		  SC = (Bit 5 - 4) Smart-Card Interface Setup (CW1200 Only)
-		  
-		       00  : High-Z (Not Used)
-				 01  : 
-				 10  :
-				 11  :
-		  
-		EXTRA GPIO:
-		  [ X X   PC  PCE   PD   PDE  N  NE ]
-		  
-		  NE  =  nRST Enable as GPIO
-		  N   =   nRST state
-		  PDE = PDID Enable as GPIO
-		  PD  = PDID State
-		  PCE = PDIC Enable as GPIO
-		  PC  = PDIC State
-		  
-		  
-		RESERVED:
-		  [ X X   X     X    X    X  X   X ]
-		  
+CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
+    IMPORTANT: Only a single IO can be assigned
+               to any input. e.g. you can't assign
+               both GPIO1 and GPIO3 to 'RX'. 
+               The system assigns priority to lower
+               numbered GPIOs.
+               Similarly if you attempt to assign multiple
+               outputs to a single TargetIO it will use the
+               lowest bit as the actual output.
+    GPIO1:
+    [ E G   X     X  USII USIO RX TX ]
+
+    GPIO2:
+    [ E G   X     X  USII USIO RX TX ]
+
+    GPIO3:
+    [ E G  TXO USOC  USII USIO RX TX ]  --> USOC means USIO but with Open Collector drive
+
+    GPIO4:
+    [ X X   X     X    X    X  X   X ]
+
+    GLITCH:
+    [ X X   X     X    X    X  B   A ]
+
+    A  = (Bit 0) Glitch Output A
+        0  : Disabled
+        1  : Glitch Module
+    B  = (Bit 1) Glitch Output B
+        0  : Disabled
+        1  : Glitch Module
+
+    EXTRA:
+    [ X X   SC    SC    X    S  P   A ]
+
+    A = (Bit 0) AVR Programming Enable
+        0  : Disabled (High-Z)
+        1  : Enabled (Connected to SAM3U)
+
+    P = (Bit 1) Target Power Disable
+        0  : Power On
+        1  : Power Off
+
+    S = (Bit 2) Target Power Switch Type
+        0  : Slow-Start (safer)
+        1  : Fast-Start
+
+    SC = (Bit 5 - 4) Smart-Card Interface Setup (CW1200 Only)
+        00  : High-Z (Not Used)
+        01  : 
+        10  :
+        11  :
+
+    EXTRA GPIO:
+    [ X X   PC  PCE   PD   PDE  N  NE ]
+        NE  =  nRST Enable as GPIO
+        N   =   nRST state
+        PDE = PDID Enable as GPIO
+        PD  = PDID State
+        PCE = PDIC Enable as GPIO
+        PC  = PDIC State
+
+    RESERVED:
+    [ X X   X     X    X    X  X   X ]
+
  */
 
    reg [7:0] registers_cwextclk;
@@ -227,15 +212,9 @@ module reg_chipwhisperer #(
 
    wire targetio_highz;
 
-   assign led_auxi = registers_cwtrigsrc[0];
-   assign led_auxo = registers_cwextclk[4] | registers_cwextclk[3] | registers_cwtrigmod[3];
-
    //Do to no assumed phase relationship we use regular old fabric for switching
-   assign extclk_o =  /* (registers_cwextclk[2:0] == 3'b000) ? extclk_fpa_io :  */
-                     (registers_cwextclk[2:0] == 3'b001) ? 1'b0 : // XXX TODO
-                     (registers_cwextclk[2:0] == 3'b010) ? 1'b0 : // XXX TODO, used to be extclk_pll_i : 
+   assign extclk_o = (registers_cwextclk[2:0] == 3'b000) ? usbiohs2 :
                      (registers_cwextclk[2:0] == 3'b011) ? target_hs1 : 
-                     //(registers_cwextclk[2:0] == 3'b100) ? target_hs2 : 
                      1'b0;
 
    //TODO: Should use a mux?
@@ -247,14 +226,14 @@ module reg_chipwhisperer #(
    wire rearclk;
 
         `ifdef __ICARUS__
-           assign rearclk = registers_cwextclk[5]? clkgen : glitchclk;
+           assign rearclk = registers_cwextclk[5]? pll_fpga_clk : glitchclk;
         `else
    BUFGMUX #(
    .CLK_SEL_TYPE("ASYNC") // Glitchles ("SYNC") or fast ("ASYNC") clock switch-over
    )
    clkgenfx_mux (
    .O(rearclk), // 1-bit output: Clock buffer output
-   .I0(clkgen), // 1-bit input: Clock buffer input (S=0)
+   .I0(pll_fpga_clk), // 1-bit input: Clock buffer input (S=0)
    .I1(glitchclk), // 1-bit input: Clock buffer input (S=1)
    .S(registers_cwextclk[5]) // 1-bit input: Clock buffer select
    );

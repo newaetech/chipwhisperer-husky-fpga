@@ -23,6 +23,11 @@ set_clock_groups -asynchronous \
                  -group [get_clocks ADC_clk] \
                  -group [get_clocks ADC_clk_times4]
 
+set_clock_groups -asynchronous \
+                 -group [get_clocks clk_usb] \
+                 -group [get_clocks pll_fpga_clk]
+
+
 
 
 # *****************************************************************************

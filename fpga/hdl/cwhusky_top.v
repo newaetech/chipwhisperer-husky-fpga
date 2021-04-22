@@ -245,7 +245,7 @@ module cwhusky_top(
         .DUT_trigger_i          (ext_trigger),
         .amp_gain               (VDBSPWM),
         .amp_hilo               (),
-        .clkgen                 (clkgen),
+        .clkgen                 (), // TODO: unnused?
 
         .reg_address            (reg_address),
         .reg_bytecnt            (reg_bytecnt), 
@@ -294,54 +294,55 @@ module cwhusky_top(
    reg_chipwhisperer  #(
         .pBYTECNT_SIZE  (pBYTECNT_SIZE)
    ) reg_chipwhisperer (
-        .reset_i(reg_rst),
-        .clk_usb(clk_usb_buf),
-        .reg_address(reg_address[5:0]), 
-        .reg_bytecnt(reg_bytecnt), 
-        .reg_datao(read_data_cw), 
-        .reg_datai(write_data), 
-        .reg_read(reg_read), 
-        .reg_write(reg_write), 
-        .reg_addrvalid(reg_addrvalid), 
+        .reset_i                (reg_rst),
+        .clk_usb                (clk_usb_buf),
+        .reg_address            (reg_address[5:0]), 
+        .reg_bytecnt            (reg_bytecnt), 
+        .reg_datao              (read_data_cw), 
+        .reg_datai              (write_data), 
+        .reg_read               (reg_read), 
+        .reg_write              (reg_write), 
+        .reg_addrvalid          (reg_addrvalid), 
 
-        .target_hs1(target_hs1),
-        .target_hs2(target_hs2),
-        .extclk_o(extclk_mux),
-        .trigger_io1_i(target_io1),
-        .trigger_io2_i(target_io2),
-        .trigger_io3_i(target_io3),
-        .trigger_io4_i(target_io4),
+        .usbiohs2               (USBIOHS2),
+        .target_hs1             (target_hs1),
+        .target_hs2             (target_hs2),
+        .extclk_o               (extclk_mux),
+        .trigger_io1_i          (target_io1),
+        .trigger_io2_i          (target_io2),
+        .trigger_io3_i          (target_io3),
+        .trigger_io4_i          (target_io4),
         //.trigger_ext_o(advio_trigger_line), // XXX TODO?: cw1200 has this
-        .trigger_advio_i(1'b0),
-        .trigger_anapattern_i(1'b0),
-        .trigger_decodedio_i(1'b0),
-        .clkgen(clkgen),
-        .glitchclk(glitchclk),
+        .trigger_advio_i        (1'b0),
+        .trigger_anapattern_i   (1'b0),
+        .trigger_decodedio_i    (1'b0),
+        .pll_fpga_clk           (pll_fpga_clk),
+        .glitchclk              (glitchclk),
 
-        .targetio1_io(target_io1),
-        .targetio2_io(target_io2),
-        .targetio3_io(target_io3),
-        .targetio4_io(target_io4),
+        .targetio1_io           (target_io1),
+        .targetio2_io           (target_io2),
+        .targetio3_io           (target_io3),
+        .targetio4_io           (target_io4),
 
-        .hsglitcha_o(glitchout_highpwr),
-        .hsglitchb_o(glitchout_lowpwr),
+        .hsglitcha_o            (glitchout_highpwr),
+        .hsglitchb_o            (glitchout_lowpwr),
 
-        .enable_avrprog(enable_avrprog),
+        .enable_avrprog         (enable_avrprog),
 
-        .enable_output_nrst(enable_output_nrst),
-        .output_nrst(output_nrst),
-        .enable_output_pdid(enable_output_pdid),
-        .output_pdid(output_pdid),
-        .enable_output_pdic(enable_output_pdic),
-        .output_pdic(output_pdic),
+        .enable_output_nrst     (enable_output_nrst),
+        .output_nrst            (output_nrst),
+        .enable_output_pdid     (enable_output_pdid),
+        .output_pdid            (output_pdid),
+        .enable_output_pdic     (enable_output_pdic),
+        .output_pdic            (output_pdic),
 
-        .uart_tx_i(FPGA_CDOUT),
-        .uart_rx_o(FPGA_CDIN),
-        .usi_out_i(1'b0),
-        .usi_in_o(),
-        .targetpower_off(target_npower),
+        .uart_tx_i              (FPGA_CDOUT),
+        .uart_rx_o              (FPGA_CDIN),
+        .usi_out_i              (1'b0),
+        .usi_in_o               (),
+        .targetpower_off        (target_npower),
 
-        .trigger_o(ext_trigger)
+        .trigger_o              (ext_trigger)
    );
 
 
@@ -358,8 +359,7 @@ module cwhusky_top(
         .reg_write      (reg_write), 
         .reg_addrvalid  (reg_addrvalid), 
         .target_hs1     (target_hs1),
-        //.clkgen         (clkgen),
-        .clkgen         (pll_fpga_clk),
+        .clkgen         (pll_fpga_clk), // TODO-later: used to be clkgen, what now?
         //.glitchclk      (glitchclk),
         .glitchclk      (), // TODO-temp
         .exttrigger     (ext_trigger)
