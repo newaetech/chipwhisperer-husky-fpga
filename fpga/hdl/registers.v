@@ -252,6 +252,10 @@
 
 `define STREAM_SEGMENT_SIZE     35
 
+`define XADC_DRP_ADDR           41
+`define XADC_DRP_DATA           42
+`define XADC_STAT               43
+
 `define REGISTER_VERSION 1
 
 //`define SCARDCTRL_ADDR 30

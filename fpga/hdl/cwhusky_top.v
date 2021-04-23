@@ -162,7 +162,8 @@ module cwhusky_top(
    wire [7:0] read_data_cw;
    wire [7:0] read_data_adc;
    wire [7:0] read_data_glitch;
-   assign read_data = read_data_openadc | read_data_cw | read_data_adc | read_data_glitch;
+   wire [7:0] read_data_xadc;
+   assign read_data = read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc;
 
    wire ext_trigger;
    wire extclk_mux;
@@ -171,7 +172,8 @@ module cwhusky_top(
    wire [11:0] ADC_data;
 
    wire fifo_error_flag;
-   wire error_flag = fifo_error_flag; // TODO: add other sources as they get created
+   wire xadc_error_flag;
+   wire error_flag = fifo_error_flag | xadc_error_flag; // TODO: add other sources as they get created
    wire fast_fifo_read;
 
    usb_reg_main #(
@@ -495,6 +497,23 @@ module cwhusky_top(
    endgenerate
    `endif
 
+   `ifdef XADC_EN
+       xadc #(
+          .pBYTECNT_SIZE    (pBYTECNT_SIZE)
+       ) U_xadc (
+          .reset_i          (reg_rst),
+          .clk_usb          (clk_usb_buf),
+          .reg_address      (reg_address), 
+          .reg_bytecnt      (reg_bytecnt), 
+          .reg_datao        (read_data_xadc), 
+          .reg_datai        (write_data), 
+          .reg_read         (reg_read), 
+          .reg_write        (reg_write), 
+          .reg_addrvalid    (reg_addrvalid),
+          .xadc_error       (xadc_error_flag)
+       ); 
+
+   `endif
 
 
 endmodule
