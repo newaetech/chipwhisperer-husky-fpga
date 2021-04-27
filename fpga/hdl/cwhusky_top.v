@@ -513,6 +513,8 @@ module cwhusky_top(
           .xadc_error       (xadc_error_flag)
        ); 
 
+   `else
+      assign read_data_xadc = 0;
    `endif
 
 
