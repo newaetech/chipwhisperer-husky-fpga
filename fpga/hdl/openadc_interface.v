@@ -93,7 +93,8 @@ module openadc_interface #(
     wire [19:0] segment_cycles;
     wire [1:0]  led_select;
     wire       data_source_select;
-    wire [4:0] fifo_error_stat;
+    wire [5:0] fifo_error_stat;
+    wire       no_clip_errors;
 
     assign reset_o = reset;
 
@@ -226,23 +227,23 @@ module openadc_interface #(
    wire [31:0] trigger_length;
 
    trigger_unit tu_inst(
-      .reset(reset),
-      .adc_clk(ADC_clk_sample),
-      .adc_data(ADC_data_tofifo[9:0]), // TODO
+      .reset                (reset),
+      .adc_clk              (ADC_clk_sample),
+      .adc_data             (ADC_data_tofifo[9:0]), // TODO
 
-      .ext_trigger_i(DUT_trigger_i),
-      .trigger_level_i(trigger_mode),
-      .trigger_wait_i(trigger_wait),
-      .trigger_adclevel_i(trigger_level),
-      .trigger_source_i(trigger_source),
-      .trigger_now_i(trigger_now),
-      .arm_i(cmd_arm),
-      .arm_o(armed),
-      .trigger_offset_i(trigger_offset),
-      .trigger_length_o(trigger_length),
-      .capture_go_o(adc_capture_go),
-      .segment_go_o(adc_segment_go),
-      .capture_done_i(adc_capture_done)
+      .ext_trigger_i        (DUT_trigger_i),
+      .trigger_level_i      (trigger_mode),
+      .trigger_wait_i       (trigger_wait),
+      .trigger_adclevel_i   (trigger_level),
+      .trigger_source_i     (trigger_source),
+      .trigger_now_i        (trigger_now),
+      .arm_i                (cmd_arm),
+      .arm_o                (armed),
+      .trigger_offset_i     (trigger_offset),
+      .trigger_length_o     (trigger_length),
+      .capture_go_o         (adc_capture_go),
+      .segment_go_o         (adc_segment_go),
+      .capture_done_i       (adc_capture_done)
    );
 
    assign reg_status[0] = armed;
@@ -285,52 +286,53 @@ module openadc_interface #(
    reg_openadc #(
       .pBYTECNT_SIZE    (pBYTECNT_SIZE)
    ) U_reg_openadc (
-      .reset_i(reset_i),
-      .reset_o(reset),
-      .clk_usb(clk_usb),
-      .adc_sampleclk(ADC_clk_sample),
-      .reg_address(reg_address), 
-      .reg_bytecnt(reg_bytecnt), 
-      .reg_datao(reg_datao_oadc), 
-      .reg_datai(reg_datai), 
-      .reg_read(reg_read), 
-      .reg_write(reg_write), 
-      .reg_addrvalid(reg_addrvalid), 
+      .reset_i                      (reset_i),
+      .reset_o                      (reset),
+      .clk_usb                      (clk_usb),
+      .adc_sampleclk                (ADC_clk_sample),
+      .reg_address                  (reg_address), 
+      .reg_bytecnt                  (reg_bytecnt), 
+      .reg_datao                    (reg_datao_oadc), 
+      .reg_datai                    (reg_datai), 
+      .reg_read                     (reg_read), 
+      .reg_write                    (reg_write), 
+      .reg_addrvalid                (reg_addrvalid), 
 
-      .gain(PWM_incr),
-      .hilow(amp_hilo), // TODO- obsolete
-      .status(reg_status),         
-      .cmd_arm(cmd_arm),
-      .trigger_mode(trigger_mode),
-      .trigger_wait(trigger_wait),  
-      .trigger_source(trigger_source),
-      .trigger_level(trigger_level),
-      .trigger_now(trigger_now),
-      .trigger_offset(trigger_offset),
-      .trigger_length(trigger_length),
-      .extclk_frequency(extclk_frequency),
-      .extclk_measure_src(extmeasure_src),
-      .adcclk_frequency(adcclk_frequency),
-      .phase_o(phase_requested),
-      .phase_ld_o(phase_load),
-      .phase_i(phase_actual),
-      .phase_done_i(phase_done),
-      .presamples_o(presamples),
-      .maxsamples_i(maxsamples_limit),
-      .maxsamples_o(maxsamples),
-      .samples_i(samples_cnt),
-      .downsample_o(downsample),
-      .data_source_select(data_source_select),
-      .adc_clk_src_o(ADC_clk_selection),
-      .clkgen_src_o(clkgen_selection),
-      .clkblock_dcm_reset_o(clockreset),
-      .clkblock_gen_reset_o(clkgen_reset),
-      .clkblock_dcm_locked_i(dcm_locked),
-      .clkblock_gen_locked_i(dcm_gen_locked),
-      .fifo_stream(fifo_stream),
-      .num_segments(num_segments),
-      .segment_cycles(segment_cycles),
-      .led_select(led_select)
+      .gain                         (PWM_incr),
+      .hilow                        (amp_hilo), // TODO- obsolete
+      .status                       (reg_status),         
+      .cmd_arm                      (cmd_arm),
+      .trigger_mode                 (trigger_mode),
+      .trigger_wait                 (trigger_wait),  
+      .trigger_source               (trigger_source),
+      .trigger_level                (trigger_level),
+      .trigger_now                  (trigger_now),
+      .trigger_offset               (trigger_offset),
+      .trigger_length               (trigger_length),
+      .extclk_frequency             (extclk_frequency),
+      .extclk_measure_src           (extmeasure_src),
+      .adcclk_frequency             (adcclk_frequency),
+      .phase_o                      (phase_requested),
+      .phase_ld_o                   (phase_load),
+      .phase_i                      (phase_actual),
+      .phase_done_i                 (phase_done),
+      .presamples_o                 (presamples),
+      .maxsamples_i                 (maxsamples_limit),
+      .maxsamples_o                 (maxsamples),
+      .samples_i                    (samples_cnt),
+      .downsample_o                 (downsample),
+      .data_source_select           (data_source_select),
+      .adc_clk_src_o                (ADC_clk_selection),
+      .clkgen_src_o                 (clkgen_selection),
+      .clkblock_dcm_reset_o         (clockreset),
+      .clkblock_gen_reset_o         (clkgen_reset),
+      .clkblock_dcm_locked_i        (dcm_locked),
+      .clkblock_gen_locked_i        (dcm_gen_locked),
+      .fifo_stream                  (fifo_stream),
+      .num_segments                 (num_segments),
+      .segment_cycles               (segment_cycles),
+      .led_select                   (led_select),
+      .no_clip_errors               (no_clip_errors)
    );
 
    reg_openadc_adcfifo #(
@@ -357,30 +359,30 @@ module openadc_interface #(
 
 
    clock_managment_advanced genclocks(
-      .reset(reset | clockreset),
-      .clk_usb(clk_usb),
-      .clk_ext(DUT_CLK_i),   
-      .adc_clk_out(ADC_clk_out),
-      .adc_clk_feedback(ADC_clk_feedback),
-      .clkgen(clkgen),
-      .clkadc_source(ADC_clk_selection),
-      .clkgen_source(clkgen_selection),
-      .systemsample_clk(ADC_clk_sample),
-      .phase_requested(phase_requested),
-      .phase_actual(phase_actual),
-      .phase_load(phase_load),
-      .phase_done(phase_done),
-      .clkgen_reset(reset | clkgen_reset),
-      .dcm_adc_locked(dcm_locked),
-      .dcm_gen_locked(dcm_gen_locked),
+      .reset                (reset | clockreset),
+      .clk_usb              (clk_usb),
+      .clk_ext              (DUT_CLK_i),   
+      .adc_clk_out          (ADC_clk_out),
+      .adc_clk_feedback     (ADC_clk_feedback),
+      .clkgen               (clkgen),
+      .clkadc_source        (ADC_clk_selection),
+      .clkgen_source        (clkgen_selection),
+      .systemsample_clk     (ADC_clk_sample),
+      .phase_requested      (phase_requested),
+      .phase_actual         (phase_actual),
+      .phase_load           (phase_load),
+      .phase_done           (phase_done),
+      .clkgen_reset         (reset | clkgen_reset),
+      .dcm_adc_locked       (dcm_locked),
+      .dcm_gen_locked       (dcm_gen_locked),
 
-      .reg_address(reg_address),
-      .reg_bytecnt(reg_bytecnt), 
-      .reg_datao(reg_datao_mmcm_drp), 
-      .reg_datai(reg_datai), 
-      .reg_read(reg_read), 
-      .reg_write(reg_write), 
-      .reg_addrvalid(reg_addrvalid) 
+      .reg_address          (reg_address),
+      .reg_bytecnt          (reg_bytecnt), 
+      .reg_datao            (reg_datao_mmcm_drp), 
+      .reg_datai            (reg_datai), 
+      .reg_read             (reg_read), 
+      .reg_write            (reg_write), 
+      .reg_addrvalid        (reg_addrvalid) 
 
     );
 
@@ -430,7 +432,8 @@ module openadc_interface #(
       .stream_mode              (fifo_stream),
       .error_flag               (fifo_error_flag),
       .error_stat               (fifo_error_stat),
-      .stream_segment_available (stream_segment_available)
+      .stream_segment_available (stream_segment_available),
+      .no_clip_errors           (no_clip_errors)
    );
 
 

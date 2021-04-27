@@ -219,10 +219,11 @@
    [ MSB ] (Byte 3)
 
 0x2c - FIFO status (1 byte)
-   [  0 0 E P O1 U1 O2 U2 ]
+   [  E 0 C P O1 U1 O2 U2 ]
 
        0 = Always '0'
        E = FIFO empty
+       C = ADC clipped
        P = presample error: couldn't collect requested number of presamples before trigger
        O1 = Fast FIFO overflow
        U1 = Fast FIFO underflow
@@ -268,6 +269,7 @@
 `define XADC_DRP_DATA           42
 `define XADC_STAT               43
 `define FIFO_STAT               44
+`define NO_CLIP_ERRORS          45
 
 `define REGISTER_VERSION 1
 

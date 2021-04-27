@@ -96,7 +96,8 @@ module reg_openadc #(
    input  wire [31:0] samples_i,
    output wire [12:0] downsample_o,
    output wire        fifo_stream,
-   output reg  [1:0]  led_select
+   output reg  [1:0]  led_select,
+   output reg         no_clip_errors
 );
 
    wire reset;
@@ -231,6 +232,7 @@ module reg_openadc #(
                 `SEGMENT_CYCLES: reg_datao_reg <= segment_cycles[reg_bytecnt*8 +: 8];
                 `DATA_SOURCE_SELECT: reg_datao_reg <= data_source_select;
                 `LED_SELECT: reg_datao_reg <= led_select;
+                `NO_CLIP_ERRORS: reg_datao_reg <= no_clip_errors;
                 default: reg_datao_reg <= 0;
              endcase
           end
@@ -252,6 +254,7 @@ module reg_openadc #(
          num_segments <= 1;
          segment_cycles <= 0;
          led_select <= 0;
+         no_clip_errors <= 0;
       end else if (reg_write) begin
          case (reg_address)
             `GAIN_ADDR: registers_gain <= reg_datai;
@@ -266,6 +269,7 @@ module reg_openadc #(
             `SEGMENT_CYCLES: segment_cycles[reg_bytecnt*8 +: 8] <= reg_datai;
             `DATA_SOURCE_SELECT: data_source_select <= reg_datai[0];
             `LED_SELECT: led_select <= reg_datai[1:0];
+            `NO_CLIP_ERRORS: no_clip_errors <= reg_datai[0];
             default: ;
          endcase
       end

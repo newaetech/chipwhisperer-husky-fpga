@@ -34,8 +34,9 @@ module fifo_top_husky(
     output wire         fifo_overflow, //If overflow happens (bad during stream mode)
     input  wire         stream_mode, //1=Enable stream mode, 0=Normal
     output reg          error_flag,
-    output reg [4:0]    error_stat,
-    output reg          stream_segment_available
+    output reg [5:0]    error_stat,
+    output reg          stream_segment_available,
+    input  wire         no_clip_errors
 );
 
     // TODO: TEMPORARY:
@@ -157,6 +158,7 @@ module fifo_top_husky(
 
     wire presamp_done = ( (adc_capture_go && (segment_counter == 0)) || (adc_segment_go && (segment_counter > 0)) || ((segment_cycle_counter == (segment_cycles-1)) && (segment_cycles>0)) );
     wire presamp_error = presamp_done && (state == pS_PRESAMP_FILLING);
+    wire clip_error = ~no_clip_errors && fast_fifo_wr && ( (adc_datain == {12{1'b1}}) || (adc_datain == {12{1'b0}}) );
 
     always @ (posedge adc_sampleclk) begin
        if (reset) begin
@@ -384,8 +386,8 @@ module fifo_top_husky(
              error_stat <= 0;
              error_flag <= 0;
           end
-          else if (presamp_error || fast_fifo_overflow || fast_fifo_underflow || slow_fifo_overflow || (slow_fifo_underflow & ~(stream_mode & stream_segment_available))) begin
-             error_stat <= {presamp_error, fast_fifo_overflow, fast_fifo_underflow, slow_fifo_overflow, slow_fifo_underflow};
+          else if (clip_error || presamp_error || fast_fifo_overflow || fast_fifo_underflow || slow_fifo_overflow || (slow_fifo_underflow & ~(stream_mode & stream_segment_available))) begin
+             error_stat <= {clip_error, presamp_error, fast_fifo_overflow, fast_fifo_underflow, slow_fifo_overflow, slow_fifo_underflow};
              error_flag <= 1;
           end
 
