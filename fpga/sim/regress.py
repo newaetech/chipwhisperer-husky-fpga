@@ -106,6 +106,22 @@ tests.append(dict(name  = 'both_fifos',
              TIMEOUT_CYCLES = 500000,
              FIFO_SAMPLES = 4096))
 
+tests.append(dict(name  = 'presamp_error',
+             frequency = 10,
+             ERRORS_OK = 1,
+             PRESAMP_ERROR = 1,
+             PRESAMPLES = 100,
+             FIFO_SAMPLES = 200,
+             READ_DELAY = [100, 500],
+             SEGMENT_CYCLES = 250,
+             SEGMENT_CYCLE_COUNTER_EN = 1,
+             NUM_SEGMENTS = 2,
+             TRIGGER_DELAY = [2500, 4000],
+             TRIGGER_NOW = 0,
+             SLOW_ADC = 1,
+             description = 'Too many presamples before trigger.'))
+
+
 tests.append(dict(name  = 'segments_counter',
              frequency = 3,
              #frequency = 0,

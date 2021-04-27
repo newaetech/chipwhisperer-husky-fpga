@@ -93,6 +93,7 @@ module openadc_interface #(
     wire [19:0] segment_cycles;
     wire [1:0]  led_select;
     wire       data_source_select;
+    wire [4:0] fifo_error_stat;
 
     assign reset_o = reset;
 
@@ -350,7 +351,8 @@ module openadc_interface #(
       .low_res              (low_res),
       .low_res_lsb          (low_res_lsb),
       .fast_fifo_read_mode  (fast_fifo_read),
-      .stream_segment_size  (stream_segment_size)
+      .stream_segment_size  (stream_segment_size),
+      .fifo_error_stat      (fifo_error_stat)
    );
 
 
@@ -427,6 +429,7 @@ module openadc_interface #(
       .fifo_overflow            (reg_status[7]),
       .stream_mode              (fifo_stream),
       .error_flag               (fifo_error_flag),
+      .error_stat               (fifo_error_stat),
       .stream_segment_available (stream_segment_available)
    );
 

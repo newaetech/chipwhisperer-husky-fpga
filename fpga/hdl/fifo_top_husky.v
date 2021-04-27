@@ -34,6 +34,7 @@ module fifo_top_husky(
     output wire         fifo_overflow, //If overflow happens (bad during stream mode)
     input  wire         stream_mode, //1=Enable stream mode, 0=Normal
     output reg          error_flag,
+    output reg [4:0]    error_stat,
     output reg          stream_segment_available
 );
 
@@ -154,6 +155,9 @@ module fifo_top_husky(
 
     assign fsm_fast_wr_en = ((state == pS_PRESAMP_FILLING) || (state == pS_PRESAMP_FULL) || (state == pS_TRIGGERED));
 
+    wire presamp_done = ( (adc_capture_go && (segment_counter == 0)) || (adc_segment_go && (segment_counter > 0)) || ((segment_cycle_counter == (segment_cycles-1)) && (segment_cycles>0)) );
+    wire presamp_error = presamp_done && (state == pS_PRESAMP_FILLING);
+
     always @ (posedge adc_sampleclk) begin
        if (reset) begin
           state <= pS_IDLE;
@@ -193,7 +197,7 @@ module fifo_top_husky(
                 if (stop_capture_conditions)
                    state <= pS_DONE;
                 // TODO: flag if we were unable to capture enough presamples - which is definitely possible with segmenting
-                else if ( (adc_capture_go && (segment_counter == 0)) || (adc_segment_go && (segment_counter > 0)) || ((segment_cycle_counter == (segment_cycles-1) && (segment_cycles>0))) )
+                else if (presamp_done)
                    state <= pS_TRIGGERED;
                 else if (presample_counter == (presample_i-2))
                    state <= pS_PRESAMP_FULL;
@@ -206,8 +210,7 @@ module fifo_top_husky(
                    segment_cycle_counter <= segment_cycle_counter + 1;
                 if (stop_capture_conditions)
                    state <= pS_DONE;
-                //else if (adc_capture_go) begin
-                else if ( (adc_capture_go && (segment_counter == 0)) || (adc_segment_go && (segment_counter > 0)) || ((segment_cycle_counter == (segment_cycles-1)) && (segment_cycles>0)) ) begin
+                else if (presamp_done) begin
                    segment_cycle_counter <= 0;
                    sample_counter <= presample_i;
                    state <= pS_TRIGGERED;
@@ -373,13 +376,18 @@ module fifo_top_husky(
     always @(posedge clk_usb) begin
        if (reset) begin
           error_flag <= 0;
+          error_stat <= 0;
           slow_fifo_underflow_sticky <= 0;
        end
        else begin
-          if (fifo_rst_start_r)
+          if (fifo_rst_start_r) begin
+             error_stat <= 0;
              error_flag <= 0;
-          else if (fast_fifo_overflow || fast_fifo_underflow || slow_fifo_overflow || (slow_fifo_underflow & ~(stream_mode & stream_segment_available)))
+          end
+          else if (presamp_error || fast_fifo_overflow || fast_fifo_underflow || slow_fifo_overflow || (slow_fifo_underflow & ~(stream_mode & stream_segment_available))) begin
+             error_stat <= {presamp_error, fast_fifo_overflow, fast_fifo_underflow, slow_fifo_overflow, slow_fifo_underflow};
              error_flag <= 1;
+          end
 
           if (fifo_rst_start_r)
              slow_fifo_underflow_sticky <= 0;

@@ -28,6 +28,8 @@ module cwhusky_tb();
    parameter pTIMEOUT_CYCLES = 50000;
    parameter pDUMP = 0;
    parameter pSLOW_READS = 0;
+   parameter pERRORS_OK = 0;
+   parameter pPRESAMP_ERROR = 0;
 
    `include "tb_reg_tasks.v"
 
@@ -324,7 +326,7 @@ module cwhusky_tb();
                good_reads += 1;
             else begin
                bad_reads += 1;
-               errors += 1;
+               if (!pERRORS_OK) errors += 1;
                $display("ERROR %2d: expected %2h, got %2h", i, expected, sample);
             end
             //$display("%2d: last=%2h, read %2h", i, last_sample, rdata);
@@ -334,11 +336,11 @@ module cwhusky_tb();
 
       #1;
       if (U_dut.oadc.U_fifo.fast_fifo_empty == 0) begin
-         errors += 1;
+         if (!pERRORS_OK) errors += 1;
          $display("ERROR at t=%0t: fast FIFO not empty at the end of a read cycle", $time);
       end
       if (U_dut.oadc.U_fifo.slow_fifo_empty == 0) begin
-         errors += 1;
+         if (!pERRORS_OK) errors += 1;
          $display("ERROR at t=%0t: slow FIFO not empty at the end of a read cycle", $time);
       end
 
@@ -353,6 +355,19 @@ module cwhusky_tb();
 
       //#(pCLK_USB_PERIOD*20);
       #(pCLK_USB_PERIOD*500);
+      
+      // check no errors:
+      read_1byte(44, rdata);
+      if (pPRESAMP_ERROR) begin
+         if (rdata[4] != 1'b1) begin
+            errors += 1;
+            $display("ERROR: FIFO status error (%d).", rdata[4:0]);
+         end
+      end
+      else if (rdata[4:0] != 5'b0) begin
+         errors += 1;
+         $display("ERROR: FIFO status error (%d).", rdata[4:0]);
+      end
 
       $display("Done reading.");
       $display("Good reads: %d", good_reads);
@@ -378,8 +393,10 @@ module cwhusky_tb();
 
    // monitor internal errors to help debug:
    always @(posedge U_dut.oadc.U_fifo.error_flag) begin
-      errors += 1;
-      $display("ERROR: internal FIFO at t = %t", $time);
+      if (!pERRORS_OK) begin
+         errors += 1;
+         $display("ERROR: internal FIFO at t = %t", $time);
+      end
    end
 
 
@@ -492,7 +509,7 @@ task check_first_sample;
       end
       else begin
          bad_reads += 1;
-         errors += 1;
+         if (!pERRORS_OK) errors += 1;
          $display("\nERROR on first read: expected min=%3h, max=%3h, got %3h, signed=%h", comp_min, comp_max, sample, signed_sample);
       end
    end

@@ -217,6 +217,18 @@
    [     ] (Byte 1)
    [     ] (Byte 2)
    [ MSB ] (Byte 3)
+
+0x2c - FIFO status (1 byte)
+   [  0 0 E P O1 U1 O2 U2 ]
+
+       0 = Always '0'
+       E = FIFO empty
+       P = presample error: couldn't collect requested number of presamples before trigger
+       O1 = Fast FIFO overflow
+       U1 = Fast FIFO underflow
+       O2 = Slow FIFO overflow
+       U2 = Slow FIFO underflow
+
  */
  
 `define GAIN_ADDR               0
@@ -255,6 +267,7 @@
 `define XADC_DRP_ADDR           41
 `define XADC_DRP_DATA           42
 `define XADC_STAT               43
+`define FIFO_STAT               44
 
 `define REGISTER_VERSION 1
 
