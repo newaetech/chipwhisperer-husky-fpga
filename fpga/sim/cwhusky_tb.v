@@ -184,6 +184,8 @@ module cwhusky_tb();
       else
          write_1byte('d29, 0);
 
+      write_1byte('d45, 8'h1); // no clip errors
+
       // program number of samples:
       rw_lots_bytes('h11);
       write_next_byte((pPRESAMPLES & 32'h0000_00FF));
