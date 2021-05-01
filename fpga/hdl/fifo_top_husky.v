@@ -69,9 +69,7 @@ module fifo_top_husky(
     wire                slow_fifo_underflow;
 
     reg                 adc_capture_stop_reg;
-    wire                fifo_overflow_int;      // TODO: need to drive this, for streaming mode
     reg                 fifo_overflow_reg;
-    wire                stream_write;
     reg  [31:0]         presample_counter;      // TODO: reduced size as required when FIFOs are finalized
     reg  [31:0]         sample_counter;         // TODO: reduced size as required when FIFOs are finalized
     reg  [15:0]         segment_counter;
@@ -91,9 +89,8 @@ module fifo_top_husky(
     reg                 filling_out_to_done;
     reg                 slow_fifo_underflow_sticky;
 
-    assign stream_write = (stream_mode) ? adc_capture_go : 1'b1; //In stream mode we don't write until trigger
     assign fifo_overflow = fifo_overflow_reg;
-    assign adc_capture_stop = (stream_mode) ? fifo_overflow_int : adc_capture_stop_reg;
+    assign adc_capture_stop = adc_capture_stop_reg;
     assign fifo_read_fifoempty = slow_fifo_empty;
 
     //Counter for downsampling (NOT proper decimation)
@@ -315,7 +312,7 @@ module fifo_top_husky(
        end
     end
 
-    assign fast_fifo_wr = downsample_wr_en & fsm_fast_wr_en & stream_write & reset_done & !fifo_rst_pre;
+    assign fast_fifo_wr = downsample_wr_en & fsm_fast_wr_en & reset_done & !fifo_rst_pre;
     //assign fast_fifo_rd = fast_fifo_rd_en & reset_done & !fifo_rst_pre;
     //assign slow_fifo_wr = slow_fifo_wr_premask & reset_done & !fifo_rst_pre;
     assign slow_fifo_wr = slow_fifo_prewr & reset_done & !fifo_rst_pre;
@@ -667,8 +664,8 @@ module fifo_top_husky(
           .probe7         (fast_fifo_overflow),   // input wire [0:0]  probe7 
           .probe8         (fast_fifo_underflow),  // input wire [0:0]  probe8 
           .probe9         (downsample_wr_en),     // input wire [0:0]  probe9 
-          .probe10        (stream_write),         // input wire [0:0]  probe10 
-          .probe11        (1'b0),                 // input wire [0:0]  probe11 
+          .probe10        (fast_fifo_read_mode),  // input wire [0:0]  probe10 
+          .probe11        (stream_segment_available), // input wire [0:0]  probe11 
           .probe12        (reset_done),           // input wire [0:0]  probe12 
           
           .probe13        (fifo_rst_start_r),     // input wire [0:0]  probe13 
@@ -699,7 +696,12 @@ module fifo_top_husky(
           .probe7         (slow_fifo_overflow),   // input wire [0:0]  probe7 
           .probe8         (slow_fifo_underflow),  // input wire [0:0]  probe8 
           .probe9         (fifo_rst),             // input wire [0:0]  probe9
-          .probe10        (reset_done)            // input wire [0:0]  probe10
+          .probe10        (reset_done),           // input wire [0:0]  probe10
+          .probe11        (slow_fifo_rd_fast),    // input wire [0:0]  probe11
+          .probe12        (fifo_read_fifoen),     // input wire [0:0]  probe12
+          .probe13        (slow_read_count),      // input wire [3:0]  probe13
+          .probe14        (stream_segment_available), // input wire [0:0]  probe14
+          .probe15        (fast_fifo_read_mode)   // input wire [0:0]  probe15
        );
 
 
