@@ -93,7 +93,6 @@ module reg_openadc #(
    output wire [31:0] presamples_o,
    output wire [31:0] maxsamples_o,
    input  wire [31:0] maxsamples_i,
-   input  wire [31:0] samples_i,
    output wire [12:0] downsample_o,
    output wire        fifo_stream,
    output reg  [1:0]  led_select,
@@ -222,7 +221,6 @@ module reg_openadc #(
                 `DECIMATE_ADDR: reg_datao_reg <= registers_downsample[reg_bytecnt*8 +: 8];
                 `SAMPLES_ADDR: reg_datao_reg <= registers_samples[reg_bytecnt*8 +: 8];
                 `PRESAMPLES_ADDR: reg_datao_reg <= registers_presamples[reg_bytecnt*8 +: 8];
-                `RETSAMPLES_ADDR: reg_datao_reg <= samples_i[reg_bytecnt*8 +: 8];
                 `OFFSET_ADDR: reg_datao_reg <= registers_offset[reg_bytecnt*8 +: 8];
                 `ADVCLOCK_ADDR: reg_datao_reg <= registers_advclocksettings_read[reg_bytecnt*8 +: 8];
                 `SYSTEMCLK_ADDR: reg_datao_reg <= system_frequency[reg_bytecnt*8 +: 8];

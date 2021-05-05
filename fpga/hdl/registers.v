@@ -247,7 +247,6 @@
 `define DECIMATE_ADDR           15
 `define SAMPLES_ADDR            16
 `define PRESAMPLES_ADDR         17
-`define RETSAMPLES_ADDR         18
 `define TRIGGER_DUR_ADDR        20
 `define OFFSET_ADDR             26
 `define DATA_SOURCE_SELECT      27

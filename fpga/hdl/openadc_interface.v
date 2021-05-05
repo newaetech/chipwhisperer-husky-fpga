@@ -273,7 +273,6 @@ module openadc_interface #(
    wire [31:0] stream_segment_size;
 
    wire [31:0] presamples;
-   wire [31:0] samples_cnt;
    wire [31:0] maxsamples_limit;
    wire [31:0] maxsamples;
 
@@ -324,7 +323,6 @@ module openadc_interface #(
       .presamples_o                 (presamples),
       .maxsamples_i                 (maxsamples_limit),
       .maxsamples_o                 (maxsamples),
-      .samples_i                    (samples_cnt),
       .downsample_o                 (downsample),
       .data_source_select           (data_source_select),
       .adc_clk_src_o                (ADC_clk_selection),
@@ -430,7 +428,6 @@ module openadc_interface #(
       .presample_i              (presamples),
       .max_samples_i            (maxsamples),
       .max_samples_o            (maxsamples_limit),
-      .samples_o                (samples_cnt),
       .downsample_i             (downsample),
 
       .fifo_overflow            (reg_status[7]),

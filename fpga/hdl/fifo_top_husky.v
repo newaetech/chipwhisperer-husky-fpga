@@ -28,7 +28,6 @@ module fifo_top_husky(
     input wire  [31:0]  presample_i,
     input wire  [31:0]  max_samples_i,
     output wire [31:0]  max_samples_o,
-    output wire [31:0]  samples_o,  // TODO: unused?
     input wire  [12:0]  downsample_i, //Ignores this many samples inbetween captured measurements
 
     output wire         fifo_overflow, //If overflow happens (bad during stream mode)
@@ -47,10 +46,7 @@ module fifo_top_husky(
     //wire                slow_fifo_wr;
     //wire                slow_fifo_rd;
 
-    // TODO: TEMPORARY:
-    //`define MAX_SAMPLES 2048
-    parameter FIFO_FULL_SIZE = `MAX_SAMPLES - 128; // TODO: adjust?
-    parameter FIFO_FULL_SIZE_LARGEWORDS = ((`MAX_SAMPLES - 32) / 3) / 4; // TODO: ?
+    parameter FIFO_FULL_SIZE = `MAX_SAMPLES;
 
     wire                fast_fifo_wr;
     reg                 fast_fifo_presample_drain = 1'b0;
@@ -78,7 +74,7 @@ module fifo_top_husky(
     reg                 adc_capture_stop_reg;
     reg                 fifo_overflow_reg;
     reg  [31:0]         presample_counter;      // TODO: reduced size as required when FIFOs are finalized
-    reg  [31:0]         sample_counter;         // TODO: reduced size as required when FIFOs are finalized
+    reg  [31:0]         sample_counter;
     reg  [15:0]         segment_counter;
     reg  [19:0]         segment_cycle_counter;
     reg                 fifo_capture_en;
@@ -128,8 +124,7 @@ module fifo_top_husky(
        end
     end
 
-    //TODO: return correct value
-    assign max_samples_o = FIFO_FULL_SIZE ;
+    assign max_samples_o = FIFO_FULL_SIZE;
 
 
     // Presample logic: when armed, we always write to the fast FIFO. When
@@ -213,7 +208,6 @@ module fifo_top_husky(
                    segment_cycle_counter <= segment_cycle_counter + 1;
                 if (stop_capture_conditions)
                    state <= pS_DONE;
-                // TODO: flag if we were unable to capture enough presamples - which is definitely possible with segmenting
                 else if (presamp_done)
                    state <= pS_TRIGGERED;
                 else if (presample_counter == (presample_i-2))
@@ -426,7 +420,7 @@ module fifo_top_husky(
        end
        else begin
           if (state == pS_IDLE)
-             // TODO: if it's too hard to meet timing on this, re-code so that timing constraints can be removed, since it's static
+             // note: if it's too hard to meet timing on this, re-code so that timing constraints can be removed, since it's static
              fast_write_count <= presample_i % 3;
           if (fast_fifo_wr && (state == pS_TRIGGERED))
              if (fast_write_count < 2)
@@ -551,8 +545,8 @@ module fifo_top_husky(
           endcase
        end
     end
-    // TODO: maybe registering the output can help meet timing / have more reliable reads for the SAM3U?
-    // ** it does! but it makes data too late to be read properly :-(
+    // note: registering the output can help meet timing / have more reliable reads for the SAM3U,
+    // but it makes data too late to be read properly :-(
     //always @(posedge clk_usb) fifo_read_data <= fifo_read_data_pre;
     always @(*) fifo_read_data = fifo_read_data_pre;
 
