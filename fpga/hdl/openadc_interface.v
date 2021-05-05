@@ -284,6 +284,9 @@ module openadc_interface #(
    wire [7:0] reg_datao_fifo;
    wire [7:0] reg_datao_mmcm_drp;
 
+   wire [31:0] fifo_read_count;
+   wire [31:0] fifo_read_count_error_freeze;
+
    assign reg_datao = reg_datao_oadc | reg_datao_fifo | reg_datao_mmcm_drp;
 
    reg_openadc #(
@@ -355,7 +358,9 @@ module openadc_interface #(
       .low_res_lsb          (low_res_lsb),
       .fast_fifo_read_mode  (fast_fifo_read),
       .stream_segment_size  (stream_segment_size),
-      .fifo_error_stat      (fifo_error_stat)
+      .fifo_error_stat      (fifo_error_stat),
+      .fifo_read_count      (fifo_read_count),
+      .fifo_read_count_error_freeze (fifo_read_count_error_freeze)
    );
 
 
@@ -435,7 +440,9 @@ module openadc_interface #(
       .no_clip_errors           (no_clip_errors),
 
       .slow_fifo_wr             (slow_fifo_wr),
-      .slow_fifo_rd             (slow_fifo_rd)
+      .slow_fifo_rd             (slow_fifo_rd),
+      .fifo_read_count          (fifo_read_count),
+      .fifo_read_count_error_freeze (fifo_read_count_error_freeze)
    );
 
 

@@ -269,6 +269,8 @@
 `define XADC_STAT               43
 `define FIFO_STAT               44
 `define NO_CLIP_ERRORS          45
+`define DEBUG_FIFO_READS        46
+`define DEBUG_FIFO_READS_FREEZE 47
 
 `define REGISTER_VERSION 1
 

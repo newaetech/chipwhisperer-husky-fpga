@@ -39,7 +39,9 @@ module fifo_top_husky(
 
     // for debug only:
     output wire         slow_fifo_wr,
-    output wire         slow_fifo_rd
+    output wire         slow_fifo_rd,
+    output reg  [31:0]  fifo_read_count,
+    output reg  [31:0]  fifo_read_count_error_freeze
 
 );
 
@@ -657,6 +659,19 @@ module fifo_top_husky(
             else
                stream_segment_available <= 1'b0;
          end
+      end
+   end
+
+   // for debug: count FIFO reads
+   always @(posedge clk_usb) begin
+      if (fifo_rst) begin
+         fifo_read_count <= 0;
+         fifo_read_count_error_freeze <= 0;
+      end
+      else if (slow_fifo_rd) begin
+         fifo_read_count <= fifo_read_count + 1;
+         if (!error_flag)
+            fifo_read_count_error_freeze <= fifo_read_count_error_freeze + 1;
       end
    end
 
