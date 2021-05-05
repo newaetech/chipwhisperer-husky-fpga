@@ -52,7 +52,6 @@ module openadc_interface #(
     input  wire                         DUT_CLK_i, // target_hs1
     input  wire                         DUT_trigger_i,
     output wire                         amp_gain,
-    output wire                         amp_hilo,
 
     // Generated Clock for other uses
     output wire                         clkgen,
@@ -211,7 +210,7 @@ module openadc_interface #(
 
    reg [11:0] ADC_data_tofifo;
    reg [11:0] datacounter = 0;
-   wire [9:0] trigger_level; // TODO: 12 bits
+   wire [11:0] trigger_level;
 
    always @(posedge ADC_clk_sample) begin
       ADC_data_tofifo <= data_source_select? ADC_data : datacounter;
@@ -234,7 +233,7 @@ module openadc_interface #(
    trigger_unit tu_inst(
       .reset                (reset),
       .adc_clk              (ADC_clk_sample),
-      .adc_data             (ADC_data_tofifo[9:0]), // TODO
+      .adc_data             (ADC_data_tofifo),
 
       .ext_trigger_i        (DUT_trigger_i),
       .trigger_level_i      (trigger_mode),
@@ -303,7 +302,6 @@ module openadc_interface #(
       .reg_addrvalid                (reg_addrvalid), 
 
       .gain                         (PWM_incr),
-      .hilow                        (amp_hilo), // TODO- obsolete
       .status                       (reg_status),         
       .cmd_arm                      (cmd_arm),
       .trigger_mode                 (trigger_mode),
@@ -397,7 +395,6 @@ module openadc_interface #(
          PWM_accumulator <= PWM_accumulator[7:0] + PWM_incr;
    end
 
-   //assign amp_hilo = 1'b0;
    assign amp_gain = PWM_accumulator[8];
 
    assign reg_status[4] = 1'b0;

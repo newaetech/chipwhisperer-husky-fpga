@@ -272,7 +272,6 @@ module cwhusky_top(
         .DUT_CLK_i              (extclk_mux),
         .DUT_trigger_i          (ext_trigger),
         .amp_gain               (VDBSPWM),
-        .amp_hilo               (),
         .clkgen                 (), // TODO: unnused?
 
         .reg_address            (reg_address),

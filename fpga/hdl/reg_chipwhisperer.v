@@ -22,6 +22,7 @@ Author: Colin O'Flynn <coflynn@newae.com>
   You should have received a copy of the GNU General Public License
   along with chipwhisperer.  If not, see <http://www.gnu.org/licenses/>.
 *************************************************************************/
+
 module reg_chipwhisperer #(
    parameter pBYTECNT_SIZE = 7
 )(
@@ -34,63 +35,63 @@ module reg_chipwhisperer #(
    input  wire         reg_read,     // Read flag
    input  wire         reg_write,    // Write flag
    input  wire         reg_addrvalid,// Address valid flag
-   
+
    /* External Clock */
    input  wire        usbiohs2,
    input  wire        target_hs1,
    output wire        target_hs2,
    output wire        extclk_o,
-   
+
    /* Extern Trigger Connections */
    input  wire        trigger_io1_i,
    input  wire        trigger_io2_i,
    input  wire        trigger_io3_i,
    input  wire        trigger_io4_i,
-   
+
    /* Advanced IO Trigger Connections */
    output wire        trigger_ext_o,
    input  wire        trigger_advio_i, 
    input  wire        trigger_decodedio_i,
    input  wire        trigger_anapattern_i,
-   
+
    /* Clock Sources */
    input  wire        pll_fpga_clk,
    input  wire        glitchclk,
-   
+
    /* GPIO Pins & Routing */
    inout  wire        targetio1_io,
    inout  wire        targetio2_io,
    inout  wire        targetio3_io,
    inout  wire        targetio4_io,
-   
+
    output wire        hsglitcha_o,
    output wire        hsglitchb_o,
-   
+
    output wire        enable_avrprog,
-   
+
    output wire        enable_output_nrst,
    output wire        output_nrst,
    output wire        enable_output_pdid,
    output wire        output_pdid,
    output wire        enable_output_pdic,
    output wire        output_pdic,
-   
-   // TODO: no longer exists
+
    input  wire        uart_tx_i,
    output wire        uart_rx_o,
-   
+
+   // TODO: no longer exists
    input  wire        usi_out_i,
    output wire        usi_in_o,
-   
+
    output wire        targetpower_off,
-   
+
    /* Main trigger connections */
    output wire        trigger_o /* Trigger signal to capture system */
 ); 
 
    wire reset;
    assign reset = reset_i;
-   
+
    `define CW_EXTCLK_ADDR       38
    `define CW_TRIGSRC_ADDR      39
    `define CW_TRIGMOD_ADDR      40

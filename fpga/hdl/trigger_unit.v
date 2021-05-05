@@ -35,14 +35,14 @@ module trigger_unit(
     input wire               reset,          //system reset
 
     input wire               adc_clk,        //ADC sample clock
-    input wire [9:0]         adc_data,       //ADC data
+    input wire [11:0]        adc_data,       //ADC data
 
     input wire               ext_trigger_i,
     input wire               trigger_level_i,    //1 = trigger on high or rising edge
                                                          //0 = trigger on low or falling edge
     input wire               trigger_wait_i,     //1 = wait for trigger to go to 'inactive' state first (e.g.: edge sensitive)
                                                          //0 = don't wait
-    input wire [9:0]         trigger_adclevel_i, //Internal (e.g.: from ADC) trigger level 
+    input wire [11:0]        trigger_adclevel_i, //Internal (e.g.: from ADC) trigger level 
     input wire               trigger_source_i,   //0 = External trigger, 1 = internal trigger
     input wire               trigger_now_i,      //1 = Trigger immediatly when armed
     input wire               arm_i,              //1 = arm, edge-sensitive so must be reset to 0 before arming again. Wait until the

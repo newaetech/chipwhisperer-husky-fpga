@@ -60,7 +60,6 @@ module usb_reg_main #(
    reg reg_write_dly;
    reg drive_data_out;
    reg fast_fifo_read_r;
-   //reg [7:0] reg_datai_r; TODO: clean up?
 
    // note: could possibly be simplified, and delays reduced?
    always @(posedge clk_usb) begin
@@ -78,12 +77,7 @@ module usb_reg_main #(
    end
 
 
-   //TODO: this should be synchronous to device clock, but is phase OK? Might need to
-   //use resyncronized version...
-   //assign reg_read = cwusb_isout;
-   //assign reg_read = fast_fifo_read? ~cwusb_rdn : isoutreg;
    assign reg_read = isoutreg;
-   //assign cwusb_dout = fast_fifo_read? reg_datai_r : reg_datai;
    assign cwusb_dout = reg_datai;
 
    assign reg_addrvalid = 1'b1;
@@ -95,31 +89,23 @@ module usb_reg_main #(
    // give it up when we see a write start:
    always @(posedge clk_usb) begin
       fast_fifo_read_r <= fast_fifo_read;
+      reg_address <= cwusb_addr;
+
+      if (~cwusb_cen & ~cwusb_wrn_rs)
+         reg_datao <= cwusb_din;
+
       if (~cwusb_wrn)
          drive_data_out <= 1'b0;
       else if (fast_fifo_read & ~fast_fifo_read_r)
          drive_data_out <= 1'b1;
    end
 
-   always @(posedge clk_usb) begin
-      reg_address <= cwusb_addr;
-      //reg_datai_r <= reg_datai;
-   end
-
-   always @(posedge clk_usb) begin
-      //if (~cwusb_cen & ~cwusb_wrn) begin
-      if (~cwusb_cen & ~cwusb_wrn_rs) begin
-         reg_datao <= cwusb_din;
-      end
-   end
-
-   /* Byte count block. We need to increment after a read or after a write */
+   // Byte count block. We need to increment after a read or after a write
    always @(posedge clk_usb) reg_write_dly <= reg_write;
 
    always @(posedge clk_usb) begin
       if (reset)
          reg_bytecnt <= 0;
-      //else if (reg_address != cwusb_addr) begin
       else if (~cwusb_alen_r) begin
          reg_bytecnt <= 0;
       end else if ((isoutregdly & !isoutreg) || (reg_write_dly) ) begin

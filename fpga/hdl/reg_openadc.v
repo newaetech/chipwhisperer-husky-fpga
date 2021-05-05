@@ -61,7 +61,7 @@ module reg_openadc #(
    output wire         cmd_arm,
    output wire         trigger_mode,
    output wire         trigger_wait,
-   output wire [9:0]   trigger_level,
+   output wire [11:0]  trigger_level,
    output wire         trigger_source,
    output wire         trigger_now,
    output wire [31:0]  trigger_offset,
@@ -102,6 +102,8 @@ module reg_openadc #(
    wire reset;
    wire  reset_reg_extended;
    wire cmd_arm_usb;
+
+   assign  trigger_level = 12'b0; // TODO: add register?
 
    (* ASYNC_REG = "TRUE" *) reg[1:0] arm_pipe;
    reg arm_r;
