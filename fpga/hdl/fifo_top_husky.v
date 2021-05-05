@@ -34,7 +34,7 @@ module fifo_top_husky(
     output wire         fifo_overflow, //If overflow happens (bad during stream mode)
     input  wire         stream_mode, //1=Enable stream mode, 0=Normal
     output reg          error_flag,
-    output reg [5:0]    error_stat,
+    output reg [6:0]    error_stat,
     output reg          stream_segment_available,
     input  wire         no_clip_errors
 );
@@ -51,6 +51,7 @@ module fifo_top_husky(
     wire [11:0]         fast_fifo_dout;
     wire                fast_fifo_full;
     wire                fast_fifo_empty;
+    reg                 fast_fifo_empty_r;
     wire                fast_fifo_overflow;
     wire                fast_fifo_underflow;
 
@@ -88,6 +89,9 @@ module fifo_top_husky(
     reg [2:0]           fast_write_count;
     reg                 filling_out_to_done;
     reg                 slow_fifo_underflow_sticky;
+
+    reg  [3:0]          done_wait_count;
+    reg                 downsample_error;
 
     assign fifo_overflow = fifo_overflow_reg;
     assign adc_capture_stop = adc_capture_stop_reg;
@@ -168,6 +172,7 @@ module fifo_top_husky(
           segment_counter <= 0;
           segment_cycle_counter <= 0;
           filling_out_to_done <= 0;
+          downsample_error <= 1'b0;
        end
 
        else begin
@@ -182,11 +187,18 @@ module fifo_top_husky(
                 segment_counter <= 0;
                 segment_cycle_counter <= 0;
                 filling_out_to_done <= 0;
-                if (armed_and_ready && ~adc_capture_stop_reg)
+
+                if ((downsample_i > 0) && ((presample_i > 0) || (num_segments > 1)))
+                   downsample_error <= 1'b1;
+                else
+                   downsample_error <= 1'b0;
+
+                if (armed_and_ready && ~adc_capture_stop_reg) begin
                    if (arm_i & (presample_i > 0))
                       state <= pS_PRESAMP_FILLING;
                    else if (adc_capture_go)
                       state <= pS_TRIGGERED;
+                end
              end
 
              pS_PRESAMP_FILLING: begin
@@ -225,16 +237,17 @@ module fifo_top_husky(
                 fast_fifo_rd_en <= 1'b1;
                 segment_cycle_counter <= segment_cycle_counter + 1;
 
-                if (stop_capture_conditions || ((sample_counter == (max_samples_i-1)) && (segment_counter == (num_segments-1))) || filling_out_to_done) begin
+                if (stop_capture_conditions || ((sample_counter == (max_samples_i-1)) && fast_fifo_wr && (segment_counter == (num_segments-1))) || (filling_out_to_done && fast_fifo_wr)) begin
                    if (fast_write_count == 2) begin
                       adc_capture_stop_reg <= 1'b1;
+                      done_wait_count <= 10;  // established by trial/error to account for the latency in the Xilinx FIFO updating its empty flag
                       state <= pS_DONE;
                    end
                    else
                       filling_out_to_done <= 1'b1;
                 end
 
-                else if ((sample_counter == (max_samples_i-1)) && (segment_counter < (num_segments-1))) begin
+                else if ((sample_counter == (max_samples_i-1)) && (segment_counter < (num_segments-1)) && fast_fifo_wr) begin
                    state <= pS_SEGMENT_DONE;
                 end
 
@@ -270,10 +283,14 @@ module fifo_top_husky(
                 // serves two purposes:
                 // 1. wait for fast FIFO to empty;
                 // 2. wait state so that we don't get back out of idle right away
-                if (fast_fifo_empty) begin
+                //if (fast_fifo_empty) begin
+                //if (fast_fifo_empty && fast_fifo_empty_r) begin
+                if (fast_fifo_empty && (done_wait_count == 0)) begin
                    fast_fifo_rd_en <= 1'b0;
                    state <= pS_IDLE;
                 end
+                else
+                   done_wait_count <= done_wait_count - 1;
              end
 
           endcase
@@ -383,8 +400,8 @@ module fifo_top_husky(
              error_stat <= 0;
              error_flag <= 0;
           end
-          else if (clip_error || presamp_error || fast_fifo_overflow || fast_fifo_underflow || slow_fifo_overflow || (slow_fifo_underflow & ~(stream_mode & stream_segment_available))) begin
-             error_stat <= {clip_error, presamp_error, fast_fifo_overflow, fast_fifo_underflow, slow_fifo_overflow, slow_fifo_underflow};
+          else if (downsample_error || clip_error || presamp_error || fast_fifo_overflow || fast_fifo_underflow || slow_fifo_overflow || (slow_fifo_underflow & ~(stream_mode & stream_segment_available))) begin
+             error_stat <= {downsample_error, clip_error, presamp_error, fast_fifo_overflow, fast_fifo_underflow, slow_fifo_overflow, slow_fifo_underflow};
              error_flag <= 1;
           end
 
@@ -420,10 +437,13 @@ module fifo_top_husky(
           fast_read_count <= 0;
           slow_fifo_prewr <= 1'b0;
           slow_fifo_wr_premask <= 1'b0;
+          //fast_fifo_empty <= 1'b0;
+          fast_fifo_empty_r <= 1'b0;
        end
 
        else begin
           slow_fifo_wr_premask <= slow_fifo_prewr;
+          fast_fifo_empty_r <= fast_fifo_empty;
 
           if (fifo_rst_pre || ~reset_done || ((state == pS_SEGMENT_DONE) && fast_fifo_empty)) begin
              slow_fifo_prewr <= 0;
@@ -652,37 +672,59 @@ module fifo_top_husky(
 
 
    `ifdef ILA_FIFO
-       ila_fast_fifo U_ila_fast_fifo (
-          .clk            (adc_sampleclk),        // input wire clk
-          .probe0         (reset),                // input wire [0:0]  probe0  
-          .probe1         (adc_datain),           // input wire [11:0] probe1 
-          .probe2         (fast_fifo_wr),         // input wire [0:0]  probe2 
-          .probe3         (fast_fifo_rd),         // input wire [7:0]  probe3 
-          .probe4         (fast_fifo_dout),       // input wire [11:0] probe4 
-          .probe5         (fast_fifo_full),       // input wire [0:0]  probe5 
-          .probe6         (fast_fifo_empty),      // input wire [0:0]  probe6 
-          .probe7         (fast_fifo_overflow),   // input wire [0:0]  probe7 
-          .probe8         (fast_fifo_underflow),  // input wire [0:0]  probe8 
-          .probe9         (downsample_wr_en),     // input wire [0:0]  probe9 
-          .probe10        (fast_fifo_read_mode),  // input wire [0:0]  probe10 
-          .probe11        (stream_segment_available), // input wire [0:0]  probe11 
-          .probe12        (reset_done),           // input wire [0:0]  probe12 
-          
-          .probe13        (fifo_rst_start_r),     // input wire [0:0]  probe13 
-          .probe14        (reset_hi_count),       // input wire [6:0]  probe14 
-          .probe15        (reset_lo_count),       // input wire [9:0]  probe15 
-          .probe16        (fifo_rst),             // input wire [0:0]  probe16 
-          .probe17        (adc_capture_go),       // input wire [0:0]  probe17 
+       `ifdef ILA_DEBUG_FAST_FIFO
+           ila_fast_fifo U_ila_fast_fifo (
+              .clk            (adc_sampleclk),        // input wire clk
+              .probe0         (reset),                // input wire [0:0]  probe0  
+              .probe1         (adc_datain),           // input wire [11:0] probe1 
+              .probe2         (fast_fifo_wr),         // input wire [0:0]  probe2 
+              .probe3         (fast_fifo_rd),         // input wire [7:0]  probe3 
+              .probe4         (fast_fifo_dout),       // input wire [11:0] probe4 
+              .probe5         (fast_fifo_full),       // input wire [0:0]  probe5 
+              .probe6         (fast_fifo_empty),      // input wire [0:0]  probe6 
+              .probe7         (fast_fifo_overflow),   // input wire [0:0]  probe7 
+              .probe8         (fast_fifo_underflow),  // input wire [0:0]  probe8 
+              .probe9         (downsample_wr_en),     // input wire [0:0]  probe9 
+              .probe10        (fast_fifo_read_mode),  // input wire [0:0]  probe10 
+              .probe11        (stream_segment_available), // input wire [0:0]  probe11 
+              .probe12        (reset_done),           // input wire [0:0]  probe12 
+              
+              .probe13        (fifo_rst_start_r),     // input wire [0:0]  probe13 
+              .probe14        (reset_hi_count),       // input wire [6:0]  probe14 
+              .probe15        (reset_lo_count),       // input wire [9:0]  probe15 
+              .probe16        (fifo_rst),             // input wire [0:0]  probe16 
+              .probe17        (adc_capture_go),       // input wire [0:0]  probe17 
 
-          .probe18        (adc_capture_stop),     // input wire [0:0]  probe18 
-          .probe19        (presample_counter[11:0]), // input wire [11:0] probe19 
-          .probe20        (sample_counter[11:0]),    // input wire [11:0] probe20 
-          .probe21        (state_idle),           // input wire [0:0]  probe21
-          .probe22        (state_presamp_filling),// input wire [0:0]  probe22
-          .probe23        (state_presamp_full),   // input wire [0:0]  probe23
-          .probe24        (state_triggered),      // input wire [0:0]  probe24
-          .probe25        (state_done)            // input wire [0:0]  probe25
-       );
+              .probe18        (adc_capture_stop),     // input wire [0:0]  probe18 
+              .probe19        (presample_counter[11:0]), // input wire [11:0] probe19 
+              .probe20        (sample_counter[11:0]),    // input wire [11:0] probe20 
+              .probe21        (state_idle),           // input wire [0:0]  probe21
+              .probe22        (state_presamp_filling),// input wire [0:0]  probe22
+              .probe23        (state_presamp_full),   // input wire [0:0]  probe23
+              .probe24        (state_triggered),      // input wire [0:0]  probe24
+              .probe25        (state_done)            // input wire [0:0]  probe25
+           );
+       `else
+           ila_lean_fast_fifo U_ila_fast_fifo (
+              .clk            (adc_sampleclk),        // input wire clk
+              .probe0         (reset),                // input wire [0:0]  probe0  
+              .probe1         (fast_fifo_wr),         // input wire [0:0]  probe1 
+              .probe2         (fast_fifo_rd),         // input wire [0:0]  probe2 
+              .probe3         (fast_fifo_dout),       // input wire [11:0] probe3 
+              .probe4         (fast_fifo_full),       // input wire [0:0]  probe4 
+              .probe5         (fast_fifo_empty),      // input wire [0:0]  probe5 
+              .probe6         (fast_fifo_overflow),   // input wire [0:0]  probe6 
+              .probe7         (fast_fifo_underflow),  // input wire [0:0]  probe7 
+              .probe8         (adc_capture_go),       // input wire [0:0]  probe8 
+              .probe9         (adc_capture_stop),     // input wire [0:0]  probe9 
+              .probe10        (state_idle),           // input wire [0:0]  probe10
+              .probe11        (state_presamp_filling),// input wire [0:0]  probe11
+              .probe12        (state_presamp_full),   // input wire [0:0]  probe12
+              .probe13        (state_triggered),      // input wire [0:0]  probe13
+              .probe14        (state_done)            // input wire [0:0]  probe14
+           );
+       `endif
+
 
        ila_slow_fifo U_ila_slow_fifo (
           .clk            (clk_usb),              // input wire clk
@@ -703,6 +745,20 @@ module fifo_top_husky(
           .probe14        (stream_segment_available), // input wire [0:0]  probe14
           .probe15        (fast_fifo_read_mode)   // input wire [0:0]  probe15
        );
+
+       ila_long_fifo U_ila_long_fifo (
+          .clk            (clk_usb),              // input wire clk
+          .probe0         (slow_fifo_wr),         // input wire [0:0]  probe0 
+          .probe1         (slow_fifo_rd),         // input wire [0:0]  probe1 
+          .probe2         (slow_fifo_full),       // input wire [0:0]  probe2 
+          .probe3         (slow_fifo_empty),      // input wire [0:0]  probe3 
+          .probe4         (slow_fifo_overflow),   // input wire [0:0]  probe4 
+          .probe5         (slow_fifo_underflow),  // input wire [0:0]  probe5 
+          .probe6         (stream_segment_available), // input wire [0:0]  probe6
+          .probe7         (fast_fifo_overflow),   // input wire [0:0]  probe7 
+          .probe8         (fast_fifo_underflow)   // input wire [0:0]  probe8 
+       );
+
 
 
    `endif

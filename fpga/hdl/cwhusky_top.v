@@ -211,7 +211,8 @@ module cwhusky_top(
          reg_read_half <= ~reg_read_half;
    end
    assign USERIO_D[1] = reg_read_half;
-   assign USERIO_D[7:2] = 7'bz;
+   assign USERIO_D[2] = USB_SPARE0;
+   assign USERIO_D[7:3] = 7'bz;
 
    assign USB_Data = cmdfifo_isout ? cmdfifo_dout : 8'bZ;
    assign cmdfifo_din = USB_Data;

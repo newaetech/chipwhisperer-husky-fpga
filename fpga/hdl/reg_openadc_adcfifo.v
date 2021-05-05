@@ -56,7 +56,7 @@ module reg_openadc_adcfifo #(
    output reg          low_res_lsb,
    output reg          fast_fifo_read_mode,
    output reg  [31:0]  stream_segment_size,
-   input  wire [5:0]   fifo_error_stat
+   input  wire [6:0]   fifo_error_stat
 );
 
    wire  reset;
@@ -78,7 +78,7 @@ module reg_openadc_adcfifo #(
       else if (reg_read) begin
          case (reg_address)
             `ADCREAD_ADDR: reg_datao_reg = fifo_data;
-            `FIFO_STAT: reg_datao_reg = {fifo_empty, 1'b0, fifo_error_stat};
+            `FIFO_STAT: reg_datao_reg = {fifo_empty, fifo_error_stat};
             default: reg_datao_reg = 0;
          endcase
       end

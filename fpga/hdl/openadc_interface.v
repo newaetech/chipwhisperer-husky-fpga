@@ -93,7 +93,7 @@ module openadc_interface #(
     wire [19:0] segment_cycles;
     wire [1:0]  led_select;
     wire       data_source_select;
-    wire [5:0] fifo_error_stat;
+    wire [6:0] fifo_error_stat;
     wire       no_clip_errors;
 
     assign reset_o = reset;

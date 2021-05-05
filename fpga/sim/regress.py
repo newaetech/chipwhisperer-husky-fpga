@@ -165,6 +165,13 @@ tests.append(dict(name  = 'segments_presamples',
              TIMEOUT_CYCLES = 100000,
              description = 'Segmented capture, by external trigger.'))
 
+tests.append(dict(name  = 'downsample',
+             frequency = 2,
+             FIFO_SAMPLES = [30,500],
+             DOWNSAMPLE = [1, 50],
+             TIMEOUT_CYCLES = 1000000,
+             description = 'Downsample.'))
+
 
 
 def print_tests():

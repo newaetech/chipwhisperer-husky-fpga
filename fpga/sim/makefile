@@ -20,6 +20,7 @@ DUMP=0
 FIFOSIZE=REGULARFIFO
 ERRORS_OK=0
 PRESAMP_ERROR=0
+DOWNSAMPLE=0
 
 all: compile run
 
@@ -48,6 +49,7 @@ compile:
 	-P cwhusky_tb.pTIMEOUT_CYCLES=$(TIMEOUT_CYCLES) \
 	-P cwhusky_tb.pERRORS_OK=$(ERRORS_OK) \
 	-P cwhusky_tb.pPRESAMP_ERROR=$(PRESAMP_ERROR) \
+	-P cwhusky_tb.pDOWNSAMPLE=$(DOWNSAMPLE) \
 	-P cwhusky_tb.pDUMP=$(DUMP) \
 	-P cwhusky_tb.pSEED=$(SEED) \
 

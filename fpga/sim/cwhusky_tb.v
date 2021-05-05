@@ -30,6 +30,7 @@ module cwhusky_tb();
    parameter pSLOW_READS = 0;
    parameter pERRORS_OK = 0;
    parameter pPRESAMP_ERROR = 0;
+   parameter pDOWNSAMPLE = 0;
 
    `include "tb_reg_tasks.v"
 
@@ -111,6 +112,7 @@ module cwhusky_tb();
       rdata = $urandom(seed);
       $display("pPRESAMPLES = %d", pPRESAMPLES);
       $display("pFIFO_SAMPLES = %d", pFIFO_SAMPLES);
+      $display("pDOWNSAMPLE = %d", pDOWNSAMPLE);
       if ((pNUM_SEGMENTS > 1) && (pPRESAMPLES > 0) && (pFIFO_SAMPLES %3)) begin
          fifo_samples = pFIFO_SAMPLES - (pFIFO_SAMPLES%3);
          $display("Info: when using segments with presamples, the number of samples per segment must be a multiple of 3; adjusting from %0d to %0d", pFIFO_SAMPLES, fifo_samples);
@@ -199,6 +201,9 @@ module cwhusky_tb();
       write_next_byte((fifo_samples & 32'h00FF_0000)>>16);
       write_next_byte((fifo_samples & 32'hFF00_0000)>>24);
 
+      rw_lots_bytes('d15);
+      write_next_byte((pDOWNSAMPLE & 16'h00FF));
+      write_next_byte((pDOWNSAMPLE & 16'hFF00)>>8);
 
       write_1byte('h1, 8'hc); // arm, trigger level = high
 
@@ -287,7 +292,7 @@ module cwhusky_tb();
       i12BitReadCount = 0;
 
       // Figure out the total number of samples to read.
-      // It's the total number of samples, accounting for segments, rounded up to a multiple of 6.
+      // It's the total number of samples, accounting for segments, rounded up to a multiple of 3.
       samples_to_read = $ceil(prFIFO_SAMPLES*pNUM_SEGMENTS/3)*3;
 
       if (pSTREAM) begin
@@ -302,7 +307,7 @@ module cwhusky_tb();
          #1 wait (trigger_done == 0);
          #1 wait (trigger_done);
          // wait for the last segment's samples to get captured:
-         repeat(fifo_samples) @(posedge clk_adc);
+         repeat(fifo_samples*(pDOWNSAMPLE+1)) @(posedge clk_adc);
       end
 
       rw_lots_bytes('d3);
@@ -323,7 +328,7 @@ module cwhusky_tb();
          end
 
          else begin
-            expected = (last_sample + 1) % (pADC_LOW_RES? 2**8:2**12);
+            expected = (last_sample + (pDOWNSAMPLE+1)) % (pADC_LOW_RES? 2**8:2**12);
             if (sample == expected)
                good_reads += 1;
             else begin
@@ -494,7 +499,7 @@ task check_first_sample;
          expected_value = {4'b0, expected_value[7:0]};
       // dealing with signed numbers in Verilog is always really fun!
       comp_min = {1'b0, expected_value} - pSLOP + pTRIGGER_ADJUST; // signed
-      comp_max = {1'b0, expected_value} + pSLOP + pTRIGGER_ADJUST; // signed
+      comp_max = {1'b0, expected_value} + pSLOP + pTRIGGER_ADJUST + pDOWNSAMPLE; // signed
       signed_sample = {1'b0, sample};
 
       // adjust MSB if we went past the sample range:
