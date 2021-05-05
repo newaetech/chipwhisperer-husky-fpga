@@ -36,8 +36,16 @@ module fifo_top_husky(
     output reg          error_flag,
     output reg [6:0]    error_stat,
     output reg          stream_segment_available,
-    input  wire         no_clip_errors
+    input  wire         no_clip_errors,
+
+    // for debug only:
+    output wire         slow_fifo_wr,
+    output wire         slow_fifo_rd
+
 );
+
+    //wire                slow_fifo_wr;
+    //wire                slow_fifo_rd;
 
     // TODO: TEMPORARY:
     //`define MAX_SAMPLES 2048
@@ -58,8 +66,6 @@ module fifo_top_husky(
     reg  [35:0]         slow_fifo_din;
     reg                 slow_fifo_prewr = 1'b0;
     reg                 slow_fifo_wr_premask = 1'b0;
-    wire                slow_fifo_wr;
-    wire                slow_fifo_rd;
     reg                 slow_fifo_rd_slow;
     wire                slow_fifo_rd_fast;
     wire [35:0]         slow_fifo_dout;

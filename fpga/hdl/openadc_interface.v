@@ -68,7 +68,12 @@ module openadc_interface #(
     output wire                         fast_fifo_read,
 
     output wire                         fifo_error_flag,
-    output wire                         stream_segment_available
+    output wire                         stream_segment_available,
+
+    // for debug only:
+    output wire                         slow_fifo_wr,
+    output wire                         slow_fifo_rd
+
 );
 
     wire        dcm_locked;
@@ -433,7 +438,10 @@ module openadc_interface #(
       .error_flag               (fifo_error_flag),
       .error_stat               (fifo_error_stat),
       .stream_segment_available (stream_segment_available),
-      .no_clip_errors           (no_clip_errors)
+      .no_clip_errors           (no_clip_errors),
+
+      .slow_fifo_wr             (slow_fifo_wr),
+      .slow_fifo_rd             (slow_fifo_rd)
    );
 
 

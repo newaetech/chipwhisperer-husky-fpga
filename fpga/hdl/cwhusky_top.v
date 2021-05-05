@@ -16,8 +16,8 @@ module cwhusky_top(
     input wire          USB_RDn,
     input wire          USB_WRn,
     input wire          USB_CEn,
-    input wire          USB_ALEn,
-    output wire         USB_SPARE0,
+    input wire          USB_ALEn,                   // USB_SPARE1
+    output wire         stream_segment_available,   // USB_SPARE0
 
     input wire          FPGA_BONUS1,
     input wire          FPGA_BONUS2,
@@ -176,6 +176,9 @@ module cwhusky_top(
    wire error_flag = fifo_error_flag | xadc_error_flag; // TODO: add other sources as they get created
    wire fast_fifo_read;
 
+   wire slow_fifo_wr;
+   wire slow_fifo_rd;
+
    usb_reg_main #(
       .pBYTECNT_SIZE    (pBYTECNT_SIZE)
    ) U_usb_reg_main (
@@ -199,20 +202,42 @@ module cwhusky_top(
       .reg_addrvalid    (reg_addrvalid)
    );
 
-   // TODO: temporary, for debug:
-   assign USERIO_D[0] = reg_read;
-   // synthesize a half-rate register read signal, so that my logic analyzer
-   // can catch it:
-   reg reg_read_half = 1'b0;
-   reg reg_read_r;
-   always @ (posedge clk_usb_buf) begin
-      reg_read_r <= reg_read;
-      if (reg_read & ~reg_read_r)
-         reg_read_half <= ~reg_read_half;
-   end
-   assign USERIO_D[1] = reg_read_half;
-   assign USERIO_D[2] = USB_SPARE0;
-   assign USERIO_D[7:3] = 7'bz;
+   `ifdef USERIO_DEBUG
+      // synthesize slower debug signals, so that slower logic analyzers can catch them:
+      wire reg_read_slow;
+      wire slow_fifo_wr_slow;
+      wire slow_fifo_rd_slow;
+
+      slow_debug U_slow_reg_read (
+         .clk           (clk_usb_buf),
+         .I_fast        (reg_read),
+         .O_slow        (reg_read_slow)
+      );
+
+      slow_debug U_slow_fifo_wr (
+         .clk           (ADC_clk_fb),
+         .I_fast        (slow_fifo_wr),
+         .O_slow        (slow_fifo_wr_slow)
+      );
+
+      slow_debug U_slow_fifo_rd (
+         .clk           (clk_usb_buf),
+         .I_fast        (slow_fifo_rd),
+         .O_slow        (slow_fifo_rd_slow)
+      );
+
+      assign USERIO_D[0] = stream_segment_available;
+      assign USERIO_D[1] = slow_fifo_wr_slow;
+      assign USERIO_D[2] = slow_fifo_rd_slow;
+      assign USERIO_D[3] = reg_read_slow;
+      assign USERIO_D[4] = fast_fifo_read;
+      assign USERIO_D[5] = fifo_error_flag;
+      assign USERIO_D[6] = 1'bz;
+      assign USERIO_D[7] = 1'bz;
+
+   `else
+      assign USERIO_D[7:0] = 8'bz;
+   `endif
 
    assign USB_Data = cmdfifo_isout ? cmdfifo_dout : 8'bZ;
    assign cmdfifo_din = USB_Data;
@@ -260,7 +285,11 @@ module cwhusky_top(
         .fast_fifo_read         (fast_fifo_read),
 
         .fifo_error_flag        (fifo_error_flag),
-        .stream_segment_available (USB_SPARE0)
+        .stream_segment_available (stream_segment_available),
+
+        .slow_fifo_wr           (slow_fifo_wr),
+        .slow_fifo_rd           (slow_fifo_rd)
+
    );
 
    wire enable_output_nrst;
