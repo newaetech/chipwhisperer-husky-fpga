@@ -138,6 +138,7 @@ module usb_reg_main #(
    `endif
 
    `ifdef ILA_USB_LITE
+       //wire fifo_read_address = (reg_address == `ADCREAD_ADDR);
        ila_usb_lite U_ila_usb (
 	    .clk            (clk_usb),      // input wire clk
 	    .probe0         (cwusb_dout),   // input wire [7:0]  probe0 
@@ -148,7 +149,9 @@ module usb_reg_main #(
         .probe5         (reg_read),     // input wire [0:0]  probe5
         .probe6         (reg_write),    // input wire [0:0]  probe6
         .probe7         (fast_fifo_read),// input wire [0:0]  probe7
-        .probe8         (drive_data_out)// input wire [0:0]  probe8
+        .probe8         (drive_data_out),// input wire [0:0]  probe8
+        //.probe9         (fifo_read_address)// input wire [0:0]  probe9
+        .probe9         (reg_address)    // input wire [7:0]  probe9
        );
    `endif
 

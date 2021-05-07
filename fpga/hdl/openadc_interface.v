@@ -99,6 +99,7 @@ module openadc_interface #(
     wire       data_source_select;
     wire [6:0] fifo_error_stat;
     wire       no_clip_errors;
+    wire       clear_fifo_errors;
 
     assign reset_o = reset;
 
@@ -360,7 +361,8 @@ module openadc_interface #(
       .stream_segment_size  (stream_segment_size),
       .fifo_error_stat      (fifo_error_stat),
       .fifo_read_count      (fifo_read_count),
-      .fifo_read_count_error_freeze (fifo_read_count_error_freeze)
+      .fifo_read_count_error_freeze (fifo_read_count_error_freeze),
+      .clear_fifo_errors    (clear_fifo_errors)
    );
 
 
@@ -436,6 +438,7 @@ module openadc_interface #(
       .stream_mode              (fifo_stream),
       .error_flag               (fifo_error_flag),
       .error_stat               (fifo_error_stat),
+      .clear_fifo_errors        (clear_fifo_errors),
       .stream_segment_available (stream_segment_available),
       .no_clip_errors           (no_clip_errors),
 

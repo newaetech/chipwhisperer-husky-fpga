@@ -57,6 +57,7 @@ module reg_openadc_adcfifo #(
    output reg          fast_fifo_read_mode,
    output reg  [31:0]  stream_segment_size,
    input  wire [6:0]   fifo_error_stat,
+   output reg          clear_fifo_errors,
 
    // for debug only:
    input  wire [31:0]  fifo_read_count,
@@ -96,6 +97,7 @@ module reg_openadc_adcfifo #(
       if (reset) begin
          low_res <= 0;
          low_res_lsb <= 0;
+         clear_fifo_errors <= 1'b0;
          stream_segment_size <= 32;
          //fast_fifo_read_mode <= 1'b0;
       end 
@@ -108,9 +110,13 @@ module reg_openadc_adcfifo #(
             `STREAM_SEGMENT_SIZE:
                stream_segment_size[reg_bytecnt*8 +: 8] <= reg_datai; 
             //`FAST_FIFO_READ_MODE: fast_fifo_read_mode <= reg_datai[0];
+            `FIFO_STAT:
+               clear_fifo_errors <= 1'b1;
             default: ;
          endcase
       end
+      else
+         clear_fifo_errors <= 1'b0;
    end
 
    always @(posedge clk_usb) begin

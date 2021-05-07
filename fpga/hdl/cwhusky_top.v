@@ -232,7 +232,7 @@ module cwhusky_top(
       assign USERIO_D[3] = reg_read_slow;
       assign USERIO_D[4] = fast_fifo_read;
       assign USERIO_D[5] = fifo_error_flag;
-      assign USERIO_D[6] = 1'bz;
+      assign USERIO_D[6] = ADC_clk_fb;
       assign USERIO_D[7] = 1'bz;
 
    `else
@@ -250,7 +250,8 @@ module cwhusky_top(
    wire LED_CLKGENDCMUnlock;
 
    // fast-flash red LEDs when some internal error has occurred:
-   assign LED_CLK1FAIL = error_flag? usb_hearbeat[22] : LED_ADCDCMUnlock;
+   //assign LED_CLK1FAIL = error_flag? usb_hearbeat[22] : LED_ADCDCMUnlock;
+   assign LED_CLK1FAIL = error_flag? usb_hearbeat[22] : ~PLL_STATUS;
    assign LED_CLK2FAIL = error_flag? usb_hearbeat[22] : LED_CLKGENDCMUnlock;
 
    openadc_interface #(

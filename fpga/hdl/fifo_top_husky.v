@@ -34,6 +34,7 @@ module fifo_top_husky(
     input  wire         stream_mode, //1=Enable stream mode, 0=Normal
     output reg          error_flag,
     output reg [6:0]    error_stat,
+    input  wire         clear_fifo_errors,
     output reg          stream_segment_available,
     input  wire         no_clip_errors,
 
@@ -398,7 +399,7 @@ module fifo_top_husky(
           slow_fifo_underflow_sticky <= 0;
        end
        else begin
-          if (fifo_rst_start_r) begin
+          if (fifo_rst_start_r || clear_fifo_errors) begin
              error_stat <= 0;
              error_flag <= 0;
           end
@@ -774,8 +775,22 @@ module fifo_top_husky(
           .probe8         (fast_fifo_underflow)   // input wire [0:0]  probe8 
        );
 
+   `endif
 
-
+   `ifdef ILA_FIFO_COUNTS
+       ila_fifo_counts U_ila_fifo_counts (
+          .clk            (clk_usb),              // input wire clk
+          .probe0         (stream_segment_available),  // input wire [0:0]   probe0 
+          .probe1         (write_count_to_usb[18:0]),  // input wire [18:0]  probe1 
+          .probe2         (read_count[18:0]),          // input wire [18:0]  probe2 
+          .probe3         (slow_fifo_rd),         // input wire [0:0]  probe3 
+          .probe4         (slow_fifo_wr),         // input wire [0:0]  probe4 
+          .probe5         (slow_fifo_full),       // input wire [0:0]  probe5 
+          .probe6         (slow_fifo_empty),      // input wire [0:0]  probe6 
+          .probe7         (slow_fifo_overflow),   // input wire [0:0]  probe7 
+          .probe8         (slow_fifo_underflow),  // input wire [0:0]  probe8 
+          .probe9         (error_flag)            // input wire [0:0]  probe9 
+       );
    `endif
 
 
