@@ -156,8 +156,6 @@ module cwhusky_tb();
       // manually reset with new register:
       write_1byte('d28, 8'h1);
       write_1byte('d28, 8'h0);
-      //write_1byte('h1, 8'h1);
-      //write_1byte('h1, 8'h0);
 
       write_1byte('d60, 'h41);
       write_1byte('d60, 'h01);
@@ -173,8 +171,6 @@ module cwhusky_tb();
       // reset again:
       write_1byte('d28, 8'h1);
       write_1byte('d28, 8'h0);
-      //write_1byte('h1, 8'h1);
-      //write_1byte('h1, 8'h0);
       #(pCLK_USB_PERIOD*1000);
 
       write_1byte('d61, 'hff);
@@ -256,16 +252,24 @@ module cwhusky_tb();
     *    assertions (however pSEGMENT_CYCLES is not programmed to the DUT!)
     * 4. In all cases, capture stops when the *total* requested number of samples (pFIFO_SAMPLES) have been collected.
    */
+   reg [7:0] settings = 0;
    initial begin
       trigger_done = 0;
       #1 wait (setup_done);
       for (trigger_gen_index = 0; trigger_gen_index < pNUM_SEGMENTS; trigger_gen_index += 1) begin
 
          if (trigger_gen_index == 0) begin
-            if (pTRIGGER_NOW)
-               write_1byte('h1, 8'h48);
-            else
+            settings[4] = pSTREAM;
+            settings[2] = 1'b1; // high trigger polarity
+            if (pTRIGGER_NOW) begin
+               settings[3] = 1'b1; // arm
+               settings[6] = 1'b1; // trigger now
+               write_1byte('h1, settings);
+            end
+            else begin
+               write_1byte('h1, settings);
                target_io4_reg = 1'b1;
+            end
          end
          else if (pSEGMENT_CYCLE_COUNTER_EN == 0)
             target_io4_reg = 1'b1;
@@ -285,7 +289,7 @@ module cwhusky_tb();
 
 
 
-   // NEW read thread:
+   // read thread:
    initial begin
       good_reads = 0;
       bad_reads = 0;

@@ -94,6 +94,7 @@ module fifo_top_husky(
     reg [2:0]           fast_write_count;
     reg                 filling_out_to_done;
     reg                 slow_fifo_underflow_sticky;
+    reg                 slow_fifo_underflow_masked;
 
     reg  [3:0]          done_wait_count;
     reg                 downsample_error;
@@ -392,6 +393,14 @@ module fifo_top_husky(
     end
 
 
+    always @(*) begin
+       if (stream_mode)
+          slow_fifo_underflow_masked = slow_fifo_underflow && (read_count < max_samples_i);
+       else
+          slow_fifo_underflow_masked = slow_fifo_underflow;
+    end
+
+
     always @(posedge clk_usb) begin
        if (reset) begin
           error_flag <= 0;
@@ -403,8 +412,8 @@ module fifo_top_husky(
              error_stat <= 0;
              error_flag <= 0;
           end
-          else if (downsample_error || clip_error || presamp_error || fast_fifo_overflow || fast_fifo_underflow || slow_fifo_overflow || (slow_fifo_underflow & ~(stream_mode & stream_segment_available))) begin
-             error_stat <= {downsample_error, clip_error, presamp_error, fast_fifo_overflow, fast_fifo_underflow, slow_fifo_overflow, slow_fifo_underflow};
+          else if (downsample_error || clip_error || presamp_error || fast_fifo_overflow || fast_fifo_underflow || slow_fifo_overflow || slow_fifo_underflow_masked) begin
+             error_stat <= {downsample_error, clip_error, presamp_error, fast_fifo_overflow, fast_fifo_underflow, slow_fifo_overflow, slow_fifo_underflow_masked};
              error_flag <= 1;
           end
 

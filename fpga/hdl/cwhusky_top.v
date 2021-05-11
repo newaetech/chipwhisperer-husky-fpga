@@ -232,7 +232,7 @@ module cwhusky_top(
       assign USERIO_D[3] = reg_read_slow;
       assign USERIO_D[4] = fast_fifo_read;
       assign USERIO_D[5] = fifo_error_flag;
-      assign USERIO_D[6] = ADC_clk_fb;
+      assign USERIO_D[6] = 1'bz;
       assign USERIO_D[7] = 1'bz;
 
    `else
