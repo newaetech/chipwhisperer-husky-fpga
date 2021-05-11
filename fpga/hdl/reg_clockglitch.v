@@ -51,26 +51,12 @@ module reg_clockglitch #(
    output wire         glitchclk,
    input wire          exttrigger,
    
-   output wire         dcm_unlocked,
-   output wire         led_glitch
+   output wire         dcm_unlocked,    // TODO- unused
+   output wire         led_glitch       // TODO- unused
 );
-   
+
    wire  reset;
    assign reset = reset_i;
-
-`ifdef CHIPSCOPE
-   wire [127:0] cs_data;   
-   wire [35:0]  chipscope_control;
-  coregen_icon icon (
-    .CONTROL0(chipscope_control) // INOUT BUS [35:0]
-   ); 
-
-   coregen_ila ila (
-    .CONTROL(chipscope_control), // INOUT BUS [35:0]
-    .CLK(clk_usb), // IN
-    .TRIG0(cs_data) // IN BUS [127:0]
-   );  
-`endif
 
 
   /* Controls width of pulse */
@@ -78,7 +64,7 @@ module reg_clockglitch #(
    wire [8:0] phase1_actual;
    wire phase1_load;
    wire phase1_done;
-  
+
    /* Controls delay between falling edge of glitch & risinge edge of clock */
    wire [8:0] phase2_requested;
    wire [8:0] phase2_actual;
@@ -110,12 +96,12 @@ module reg_clockglitch #(
    // i.e., 5.6% = 5 (integer) + 60 (fraction)
    //
    //
-   
-   
-   
+
+
+
    reg [63:0]  clockglitch_settings_reg;
    wire [63:0] clockglitch_settings_read;
-  
+
    reg [31:0] clockglitch_offset_reg;
 
    reg [7:0] reg_datao_reg;
@@ -123,24 +109,24 @@ module reg_clockglitch #(
 
    wire [8:0] glitchwidth_phase;
    wire glitchwidth_load;
-   
+
    wire [8:0] glitchdelay_phase;
    wire       glitchdelay_load;
-   
+
    reg [8:0] phase2_in;
    reg [8:0] phase1_in;
-   
+
    wire dcm1_locked;
    wire dcm2_locked;
-   
+
    reg phase2_done_reg;
    reg phase1_done_reg;
-   
+
    assign phase1_requested = clockglitch_settings_reg[8:0];
    assign phase2_requested = clockglitch_settings_reg[17:9];
-   
+
    wire dcm_rst;
-   
+
    assign dcm_unlocked = ~(dcm1_locked & dcm2_locked); 
 
 /*
@@ -148,8 +134,8 @@ module reg_clockglitch #(
     [8..0]  = Glitch Offset Fine Phase 
     [17..9] = Glitch Width Fine Phase
     [18] = Load Phases
-    [..19] =  Glitch Offset current setting
-    [36..] =  Glitch Width current setting
+    [27..19] =  Glitch Offset current setting
+    [36..28] =  Glitch Width current setting
     [37] = Offset Fine loaded
     [38] = Width Fine loaded
     [39] (Byte 4, Bit 7)  = Offset DCM Locked
@@ -193,11 +179,11 @@ module reg_clockglitch #(
    
    wire sourceclk;
    assign sourceclk = (clockglitch_settings_reg[57:56] == 2'b01) ? clkgen : target_hs1;
-                    //(clockglitch_settings_reg[57:56] == 1'b01) ? clkgen 
+
    reg manual;
    always @(posedge clk_usb)
       manual <= clockglitch_settings_reg[47];
-   
+
    reg manual_rs1, manual_rs2;
    reg manual_dly;
    always @(posedge sourceclk) begin
@@ -212,9 +198,9 @@ module reg_clockglitch #(
    reg glitch_trigger;
    wire exttrigger_resync;
    //reg exttrigger_resync_dly;
-   
+
    reg oneshot;
-   
+
    always @(posedge sourceclk) begin
       if (glitch_trigger_src == 2'b10)
          glitch_trigger <= 1'b1;
@@ -225,14 +211,14 @@ module reg_clockglitch #(
       else if (glitch_trigger_src == 2'b11)
          glitch_trigger <= exttrigger_resync & oneshot;
    end 
-   
+
    always @(posedge sourceclk) begin
       if (manual_rs2 & manual_dly)
          oneshot <= 1'b1;
       else if (exttrigger_resync)
          oneshot <= 1'b0;
    end
-  
+
    reg [7:0] glitch_cnt;
    reg glitch_go;
    always @(posedge sourceclk) begin
@@ -241,7 +227,7 @@ module reg_clockglitch #(
       else if (glitch_cnt >= max_glitches)
          glitch_go <= 'b0;
    end
-  
+
    always @(posedge sourceclk) begin
       if (glitch_go)
          glitch_cnt <= glitch_cnt + 8'd1;
@@ -257,7 +243,7 @@ module reg_clockglitch #(
    else*/ if (glitch_go)
       clockglitch_cnt <= clockglitch_cnt + 32'd1;
    end
-   
+
    assign clockglitch_settings_read[18:0] = clockglitch_settings_reg[18:0];
    assign clockglitch_settings_read[36:19] = {phase2_actual, phase1_actual};
    assign clockglitch_settings_read[37] = phase1_done_reg;
@@ -266,7 +252,7 @@ module reg_clockglitch #(
    assign clockglitch_settings_read[40] = dcm2_locked;
    assign clockglitch_settings_read[63:41] = clockglitch_settings_reg[63:41];
    assign dcm_rst = clockglitch_settings_reg[41];
-  
+
    always @(posedge clk_usb) begin
       if (phase1_load)
          phase1_done_reg <= 'b0;
@@ -312,10 +298,10 @@ module reg_clockglitch #(
   	end
   end
   */
-   
+
    assign phase2_load  = clockglitch_settings_reg[18];
    assign phase1_load  = clockglitch_settings_reg[18];
-   
+
    always @(posedge clk_usb) begin
       if (reset) begin
          clockglitch_settings_reg <= 0;
@@ -344,31 +330,31 @@ module reg_clockglitch #(
 //      exttrigger_resync_dly <= exttrigger_resync;
 
    trigger_resync resync(
-   .reset(reset),
-   .clk(sourceclk),
-   .exttrig(exttrigger),
-   .offset(clockglitch_offset_reg),
-   .exttrigger_resync(exttrigger_resync)
+      .reset                (reset),
+      .clk                  (sourceclk),
+      .exttrig              (exttrigger),
+      .offset               (clockglitch_offset_reg),
+      .exttrigger_resync    (exttrigger_resync)
    );
 
  /* Glitch Hardware */
  clockglitch_s6 gc(
-    .source_clk(sourceclk),
-    .glitched_clk(glitchclk),
-    .glitch_next(glitch_go),
-    .glitch_type(glitch_type),
-    .clk_usb(clk_usb),
-    .dcm_rst(dcm_rst),
-    .phase1_requested(phase1_requested),
-    .phase1_actual(phase1_actual),
-    .phase1_load(phase1_load),
-    .phase1_done(phase1_done),
-    .dcm1_locked(dcm1_locked),
-    .phase2_requested(phase2_requested),
-    .phase2_actual(phase2_actual),
-    .phase2_load(phase2_load),
-    .phase2_done(phase2_done),
-    .dcm2_locked(dcm2_locked)
+    .source_clk             (sourceclk),
+    .glitched_clk           (glitchclk),
+    .glitch_next            (glitch_go),
+    .glitch_type            (glitch_type),
+    .clk_usb                (clk_usb),
+    .dcm_rst                (dcm_rst),
+    .phase1_requested       (phase1_requested),
+    .phase1_actual          (phase1_actual),
+    .phase1_load            (phase1_load),
+    .phase1_done            (phase1_done),
+    .dcm1_locked            (dcm1_locked),
+    .phase2_requested       (phase2_requested),
+    .phase2_actual          (phase2_actual),
+    .phase2_load            (phase2_load),
+    .phase2_done            (phase2_done),
+    .dcm2_locked            (dcm2_locked)
 );
 
 /* LED lighty up thing */
@@ -393,3 +379,4 @@ assign led_glitch = led_on;
 
 endmodule
 `default_nettype wire
+

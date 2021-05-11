@@ -57,19 +57,19 @@ module dcm_phaseshift_interface(
     reg [3:0]           state = `RESET;
     reg signed [8:0]    dcm_ps_count;
     reg signed [8:0]    dcm_ps_target;
-    
+
     reg                 dcm_psen;
     reg                 dcm_psincdec;
     reg                 done;
     reg signed [8:0]    value;
-    
+
     assign dcm_psen_o = dcm_psen;
     assign dcm_psincdec_o = dcm_psincdec;
     assign done_o = done;
     assign value_o = value;
-    
+
     reg last_psincdec;
-    
+
     always @(posedge clk_usb or posedge reset_i)
     begin
       if (reset_i == 1) begin

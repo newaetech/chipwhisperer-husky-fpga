@@ -73,3 +73,4 @@ module trigger_resync(
 
 endmodule
 `default_nettype wire
+

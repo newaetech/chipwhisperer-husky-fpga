@@ -226,100 +226,81 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
    wire rearclk;
 
-        `ifdef __ICARUS__
-           assign rearclk = registers_cwextclk[5]? pll_fpga_clk : glitchclk;
-        `else
+`ifdef __ICARUS__
+   assign rearclk = registers_cwextclk[5]? pll_fpga_clk : glitchclk;
+`else
    BUFGMUX #(
-   .CLK_SEL_TYPE("ASYNC") // Glitchles ("SYNC") or fast ("ASYNC") clock switch-over
+      .CLK_SEL_TYPE     ("ASYNC")               // Glitchles ("SYNC") or fast ("ASYNC") clock switch-over
    )
    clkgenfx_mux (
-   .O(rearclk), // 1-bit output: Clock buffer output
-   .I0(pll_fpga_clk), // 1-bit input: Clock buffer input (S=0)
-   .I1(glitchclk), // 1-bit input: Clock buffer input (S=1)
-   .S(registers_cwextclk[5]) // 1-bit input: Clock buffer select
+      .O                (rearclk),              // 1-bit output: Clock buffer output
+      .I0               (pll_fpga_clk),         // 1-bit input: Clock buffer input (S=0)
+      .I1               (glitchclk),            // 1-bit input: Clock buffer input (S=1)
+      .S                (registers_cwextclk[5]) // 1-bit input: Clock buffer select
    );
-   `endif
+`endif
    
 
-   //NB: Normally ODDR2 used for clock output. This won't work as this clock
+   //NB: Normally ODDR used for clock output. This won't work as this clock
    //can have glitches, which screws up the ODDR2 block. Because we don't care
    //about variations in synchronization of this clock to source clock, this
    //should be OK.
-   /*
-   ODDR2 #(
-      // The following parameters specify the behavior
-      // of the component.
-      .DDR_ALIGNMENT("NONE"), // Sets output alignment to "NONE", "C0" or "C1"
-      .INIT(1'b0),    // Sets initial state of the Q output to 1'b0 or 1'b1
-      .SRTYPE("ASYNC") // Specifies "SYNC" or "ASYNC" set/reset
-   )
-   ODDR2_rearclk (
-      .Q(target_hs2),   // 1-bit DDR output data
-      .C0(rearclk), // 1-bit clock input
-      .C1(~rearclk), // 1-bit clock input
-      .CE(registers_cwextclk[6]), // 1-bit clock enable input
-      .D0(1'b1), // 1-bit data input (associated with C0)
-      .D1(1'b0), // 1-bit data input (associated with C1)
-      .R(~registers_cwextclk[6]),   // 1-bit reset input
-      .S(1'b0)    // 1-bit set input
-   );
-   */
-
    assign target_hs2 = (registers_cwextclk[6] & (~targetio_highz)) ? rearclk : 1'bZ;
 
-        `ifdef __ICARUS__
-           // XXX TODO
+   //TODO: Should use a mux?
+   /*
+   assign target_hs2 = (registers_cwextclk[6:5] == 2'b01) ? clkgen :
+                       (registers_cwextclk[6:5] == 2'b10) ? glitchclk :
+                       1'bZ;
+   */
 
-        `else
-   //Output clock using DDR2 block (recommended for Spartan-6 device)
-   ODDR2 #(
-      // The following parameters specify the behavior
-      // of the component.
-      .DDR_ALIGNMENT("NONE"), // Sets output alignment to "NONE", "C0" or "C1"
-      .INIT(1'b0),    // Sets initial state of the Q output to 1'b0 or 1'b1
-      .SRTYPE("ASYNC") // Specifies "SYNC" or "ASYNC" set/reset
+
+`ifdef __ICARUS__
+   assign hsglitcha_o = registers_iorouting[32]? glitchclk : 1'b0;
+   assign hsglitchb_o = registers_iorouting[33]? glitchclk : 1'b0;
+
+`else
+   ODDR #(
+      .DDR_CLK_EDGE ("OPPOSITE_EDGE"),
+      .INIT         (1'b0),
+      .SRTYPE       ("ASYNC")
    )
-   ODDR2_hsglitcha (
-      .Q(hsglitcha_o),   // 1-bit DDR output data
-      .C0(glitchclk), // 1-bit clock input
-      .C1(~glitchclk), // 1-bit clock input
-      .CE(registers_iorouting[32]), // 1-bit clock enable input
-      .D0(1'b1), // 1-bit data input (associated with C0)
-      .D1(1'b0), // 1-bit data input (associated with C1)
-      .R(~registers_iorouting[32]),   // 1-bit reset input
-      .S(1'b0)    // 1-bit set input
+   ODDR_hsglitcha (
+      .Q            (hsglitcha_o),
+      .C            (glitchclk),
+      .CE           (registers_iorouting[32]),
+      .D1           (1'b1),
+      .D2           (1'b0),
+      .R            (~registers_iorouting[32]),
+      .S            (1'b0)
    );
 
-   //Output clock using DDR2 block (recommended for Spartan-6 device)
-   ODDR2 #(
-      // The following parameters specify the behavior
-      // of the component.
-      .DDR_ALIGNMENT("NONE"), // Sets output alignment to "NONE", "C0" or "C1"
-      .INIT(1'b0),    // Sets initial state of the Q output to 1'b0 or 1'b1
-      .SRTYPE("ASYNC") // Specifies "SYNC" or "ASYNC" set/reset
+   ODDR #(
+      .DDR_CLK_EDGE ("OPPOSITE_EDGE"),
+      .INIT         (1'b0),
+      .SRTYPE       ("ASYNC")
    )
-   ODDR2_hsglitchb (
-      .Q(hsglitchb_o),   // 1-bit DDR output data
-      .C0(glitchclk), // 1-bit clock input
-      .C1(~glitchclk), // 1-bit clock input
-      .CE(registers_iorouting[33]), // 1-bit clock enable input
-      .D0(1'b1), // 1-bit data input (associated with C0)
-      .D1(1'b0), // 1-bit data input (associated with C1)
-      .R(~registers_iorouting[33]),   // 1-bit reset input
-      .S(1'b0)    // 1-bit set input
+   ODDR_hsglitchb (
+      .Q            (hsglitchb_o),
+      .C            (glitchclk),
+      .CE           (registers_iorouting[33]),
+      .D1           (1'b1),
+      .D2           (1'b0),
+      .R            (~registers_iorouting[33]),
+      .S            (1'b0)
    );
-        `endif
+
+`endif
 
 
    assign enable_avrprog = registers_iorouting[40];
 
    /* Target Power */
-   
    reg reg_targetpower_off;
    reg reg_targetpower_off_prev;
    always @(posedge clk_usb) begin
       reg_targetpower_off <= registers_iorouting[41];
-           reg_targetpower_off_prev <= reg_targetpower_off;
+      reg_targetpower_off_prev <= reg_targetpower_off;
    end
 
    /* Target power switched ON from OFF state using PWM for programmable soft-start.
@@ -333,12 +314,12 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
              targetpower_soft_on <= 1'b0;
           end
    end
-   
+
    reg [10:0] soft_start_pwm;
    always @(posedge clk_usb) begin
           soft_start_pwm <= soft_start_pwm + 11'd1;
    end
-   
+
    reg output_src_pwm;
    reg [13:0] soft_start_cnt;
    always @(posedge clk_usb) begin
@@ -352,22 +333,17 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
              output_src_pwm <= 1'b1;
           end
    end
-   
+
    wire targetpower_slow = ~registers_iorouting[42];
    assign targetpower_off_pwm = (soft_start_pwm < 1400) ? 1'b1 : 1'b0; 
    assign targetpower_off = (output_src_pwm & targetpower_slow) ? targetpower_off_pwm : reg_targetpower_off;
+
 `else
    assign targetpower_off = reg_targetpower_off;
+
 `endif
 
    assign targetio_highz = reg_targetpower_off;
-
-   //TODO: Should use a mux?
-   /*
-   assign target_hs2 = (registers_cwextclk[6:5] == 2'b01) ? clkgen :
-                       (registers_cwextclk[6:5] == 2'b10) ? glitchclk :
-                       1'bZ;
-   */
 
    wire trigger_and;
    wire trigger_or;

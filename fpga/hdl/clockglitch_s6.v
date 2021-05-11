@@ -34,10 +34,10 @@ POSSIBILITY OF SUCH DAMAGE.
 module clockglitch_s6(
    /* Source Clock */
     input wire  source_clk, // HS1 or clkgen
- 
+
     /* Glitchy Clock */
     output wire  glitched_clk,
-    
+
     /* Glitch request */
     input wire        glitch_next,
     input wire [2:0]  glitch_type,
@@ -48,25 +48,25 @@ module clockglitch_s6(
      011 = Clock Only 
      100 = Glitch only, based on enable reg only (output active during entire clock cycle)
     */
-   
+
     /* ??? */
     input wire   clk_usb,
     input wire   dcm_rst,
-   
+
     /* Controls width of pulse */
     input wire [8:0]  phase1_requested,
     output wire [8:0] phase1_actual,
     input wire phase1_load,
     output wire phase1_done,
     output wire dcm1_locked,
-   
+
     /* Controls delay between falling edge of glitch & risinge edge of clock */
     input wire [8:0]  phase2_requested,
     output wire [8:0] phase2_actual,
     input wire phase2_load,
     output wire phase2_done,
     output wire       dcm2_locked
-    );
+);
 
 
     wire dcm1_psen;
@@ -74,47 +74,51 @@ module clockglitch_s6(
     wire dcm1_psdone;
     wire [7:0] dcm1_status;
 
-    dcm_phaseshift_interface dcmps1(.clk_usb(clk_usb),
-      .reset_i(dcm_rst),
-      .default_value_i(9'd0),
-      .value_i(phase1_requested),
-      .load_i(phase1_load),
-      .value_o(phase1_actual),
-      .done_o(phase1_done),
-      .dcm_psen_o(dcm1_psen),
-      .dcm_psincdec_o(dcm1_psincdec),
-      .dcm_psdone_i(dcm1_psdone),
-      .dcm_status_i(dcm1_status));
+    dcm_phaseshift_interface dcmps1(
+      .clk_usb          (clk_usb),
+      .reset_i          (dcm_rst),
+      .default_value_i  (9'd0),
+      .value_i          (phase1_requested),
+      .load_i           (phase1_load),
+      .value_o          (phase1_actual),
+      .done_o           (phase1_done),
+      .dcm_psen_o       (dcm1_psen),
+      .dcm_psincdec_o   (dcm1_psincdec),
+      .dcm_psdone_i     (dcm1_psdone),
+      .dcm_status_i     (dcm1_status)
+    );
 
    wire dcm2_psen;
    wire dcm2_psincdec;
    wire dcm2_psdone;
    wire [7:0] dcm2_status;
-   
-   dcm_phaseshift_interface dcmps2(.clk_usb(clk_usb),
-      .reset_i(dcm_rst),
-      .default_value_i(9'd0),
-      .value_i(phase2_requested),
-      .load_i(phase2_load),
-      .value_o(phase2_actual),
-      .done_o(phase2_done),
-      .dcm_psen_o(dcm2_psen),
-      .dcm_psincdec_o(dcm2_psincdec),
-      .dcm_psdone_i(dcm2_psdone),
-      .dcm_status_i(dcm2_status));
+
+   dcm_phaseshift_interface dcmps2(
+      .clk_usb          (clk_usb),
+      .reset_i          (dcm_rst),
+      .default_value_i  (9'd0),
+      .value_i          (phase2_requested),
+      .load_i           (phase2_load),
+      .value_o          (phase2_actual),
+      .done_o           (phase2_done),
+      .dcm_psen_o       (dcm2_psen),
+      .dcm_psincdec_o   (dcm2_psincdec),
+      .dcm_psdone_i     (dcm2_psdone),
+      .dcm_status_i     (dcm2_status)
+   );
 
    wire dcm1_locked_int;
    wire dcm2_locked_int;
-   
+
    //Cannot monitor status[2] bit if not using clkfx output
    assign dcm1_locked = dcm1_locked_int; // & (~dcm1_status[2]);
    assign dcm2_locked = dcm2_locked_int; //& (~dcm2_status[2]);
-   
+
    wire dcm1_clk;
    wire dcm2_clk;
    wire dcm1_clk_out;
    wire dcm2_clk_out;
-   
+
    wire glitchstream;
 
    reg glitch_next_reg;
@@ -126,14 +130,14 @@ module clockglitch_s6(
       glitch_next_reg1 <= glitch_next;
       glitch_next_reg <= glitch_next_reg1;
    end
-   
+
    clk2glitch clk2glitch_inst(
-      .clk1(dcm1_clk_out),
-      .clk2(dcm2_clk_out),
-      .enable(glitch_next_reg),
-      .glitchout(glitchstream)
+      .clk1         (dcm1_clk_out),
+      .clk2         (dcm2_clk_out),
+      .enable       (glitch_next_reg),
+      .glitchout    (glitchstream)
    );
-   
+
    assign glitched_clk = (glitch_type == 3'b000) ? source_clk ^ glitchstream :
                          (glitch_type == 3'b001) ? source_clk | glitchstream :
                          (glitch_type == 3'b010) ? glitchstream :
@@ -226,26 +230,23 @@ endmodule
 
 module clk2glitch(
    input wire   clk1,
-  
    input wire   clk2,
-   
    input wire   enable,
-   
    output wire  glitchout
-   );
-   
+);
+
    wire clk1buf, clk2buf;
-   
+
    //If using BUFG - not used as requires too many resources, not sure if
    //actually required anyway...
    //BUFG bufclk1 (.I(clk1), .O(clk1buf));
    //BUFG bufclk2 (.I(clk2), .O(clk2buf));
-   
+
    //Otherwise 
    assign clk1buf = clk1;
    assign clk2buf = clk2;
-   
+
    assign glitchout = (clk1buf & clk2buf) & enable;
-   
+
 endmodule
 `default_nettype wire
