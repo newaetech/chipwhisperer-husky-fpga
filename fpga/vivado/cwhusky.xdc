@@ -155,6 +155,9 @@ set_property -dict { PACKAGE_PIN N16  IOSTANDARD LVCMOS33 }  [get_ports VMAG_D[1
 set_property -dict { PACKAGE_PIN P16  IOSTANDARD LVCMOS33 }  [get_ports VMAG_D[0]]
 set_property -dict { PACKAGE_PIN R16  IOSTANDARD LVCMOS33 }  [get_ports VDBSPWM]
 
+set_property -dict { PACKAGE_PIN C4   IOSTANDARD LVCMOS33 }  [get_ports glitchout_highpwr]
+set_property -dict { PACKAGE_PIN E3   IOSTANDARD LVCMOS33 }  [get_ports glitchout_lowpwr]
+
 
 # No spec for these, seems sensible:
 set_input_delay -clock clk_usb 2.000 [get_ports USB_ALEn]

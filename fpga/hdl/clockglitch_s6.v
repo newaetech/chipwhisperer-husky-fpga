@@ -131,12 +131,8 @@ module clockglitch_s6(
       glitch_next_reg <= glitch_next_reg1;
    end
 
-   clk2glitch clk2glitch_inst(
-      .clk1         (dcm1_clk_out),
-      .clk2         (dcm2_clk_out),
-      .enable       (glitch_next_reg),
-      .glitchout    (glitchstream)
-   );
+   // TODO: maybe BUFG on dcm1_clk_out and dcm2_clk_out?
+   assign glitchstream = (dcm1_clk_out & dcm2_clk_out) & glitch_next_reg;
 
    assign glitched_clk = (glitch_type == 3'b000) ? source_clk ^ glitchstream :
                          (glitch_type == 3'b001) ? source_clk | glitchstream :
@@ -145,108 +141,88 @@ module clockglitch_s6(
                          (glitch_type == 3'b100) ? glitch_next_reg :
                          1'b0;
 
-        assign dcm1_clk_out = source_clk;
-        assign dcm1_psdone = 1'b1;
-        assign dcm2_clk_out = dcm1_clk_out;
-        assign dcm2_psdone = 1'b1;
+   // TEMPORARY!! until DCM_SP's are replaced
+   assign dcm1_clk_out = source_clk;
+   assign dcm1_psdone = 1'b1;
+   assign dcm2_clk_out = dcm1_clk_out;
+   assign dcm2_psdone = 1'b1;
 
 
-        /* XX TODO
-        `ifdef __ICARUS__
-        `else
-        // DCM_SP: Digital Clock Manager
-        // Spartan-6
-        // Xilinx HDL Libraries Guide, version 13.2
-        DCM_SP #(
-        .CLKFX_DIVIDE(2), // Divide value on CLKFX outputs - D - (1-32)
-        .CLKFX_MULTIPLY(2), // Multiply value on CLKFX outputs - M - (2-32)
-        .CLKIN_DIVIDE_BY_2("FALSE"), // CLKIN divide by two (TRUE/FALSE)
-        .CLKIN_PERIOD(15.0), // Input clock period specified in nS
-        .CLKOUT_PHASE_SHIFT("VARIABLE"), // Output phase shift (NONE, FIXED, VARIABLE)
-        .CLK_FEEDBACK("2X"), // Feedback source (NONE, 1X, 2X)
-        .DESKEW_ADJUST("SYSTEM_SYNCHRONOUS"), // SYSTEM_SYNCHRNOUS or SOURCE_SYNCHRONOUS
-        .PHASE_SHIFT(0), // Amount of fixed phase shift (-255 to 255)
-        .STARTUP_WAIT("FALSE") // Delay config DONE until DCM_SP LOCKED (TRUE/FALSE)
-        )
-        DCM_extclock_gen (
-        .CLK2X(dcm1_clk),
-        .CLK0(),
-        .CLK2X180(),
-        .CLK90(),
-        .CLK180(dcm1_clk_out),
-        .CLK270(),
-        .CLKFX(),
-        .CLKFX180(),
-        .CLKDV(),
-        .LOCKED(dcm1_locked_int), // 1-bit output: DCM_SP Lock Output
-        .PSDONE(dcm1_psdone), // 1-bit output: Phase shift done output
-        .STATUS(dcm1_status), // 8-bit output: DCM_SP status output
-        .CLKFB(dcm1_clk), // 1-bit input: Clock feedback input
-        .CLKIN(source_clk), // 1-bit input: Clock input
-        .PSCLK(clk_usb), // 1-bit input: Phase shift clock input
-        .PSEN(dcm1_psen), // 1-bit input: Phase shift enable
-        .PSINCDEC(dcm1_psincdec), // 1-bit input: Phase shift increment/decrement input
-        .RST(dcm_rst) // 1-bit input: Active high reset input
-        );
+   /* XX TODO
+   `ifdef __ICARUS__
+   `else
+   // DCM_SP: Digital Clock Manager
+   // Spartan-6
+   // Xilinx HDL Libraries Guide, version 13.2
+   DCM_SP #(
+   .CLKFX_DIVIDE(2), // Divide value on CLKFX outputs - D - (1-32)
+   .CLKFX_MULTIPLY(2), // Multiply value on CLKFX outputs - M - (2-32)
+   .CLKIN_DIVIDE_BY_2("FALSE"), // CLKIN divide by two (TRUE/FALSE)
+   .CLKIN_PERIOD(15.0), // Input clock period specified in nS
+   .CLKOUT_PHASE_SHIFT("VARIABLE"), // Output phase shift (NONE, FIXED, VARIABLE)
+   .CLK_FEEDBACK("2X"), // Feedback source (NONE, 1X, 2X)
+   .DESKEW_ADJUST("SYSTEM_SYNCHRONOUS"), // SYSTEM_SYNCHRNOUS or SOURCE_SYNCHRONOUS
+   .PHASE_SHIFT(0), // Amount of fixed phase shift (-255 to 255)
+   .STARTUP_WAIT("FALSE") // Delay config DONE until DCM_SP LOCKED (TRUE/FALSE)
+   )
+   DCM_extclock_gen (
+   .CLK2X(dcm1_clk),
+   .CLK0(),
+   .CLK2X180(),
+   .CLK90(),
+   .CLK180(dcm1_clk_out),
+   .CLK270(),
+   .CLKFX(),
+   .CLKFX180(),
+   .CLKDV(),
+   .LOCKED(dcm1_locked_int), // 1-bit output: DCM_SP Lock Output
+   .PSDONE(dcm1_psdone), // 1-bit output: Phase shift done output
+   .STATUS(dcm1_status), // 8-bit output: DCM_SP status output
+   .CLKFB(dcm1_clk), // 1-bit input: Clock feedback input
+   .CLKIN(source_clk), // 1-bit input: Clock input
+   .PSCLK(clk_usb), // 1-bit input: Phase shift clock input
+   .PSEN(dcm1_psen), // 1-bit input: Phase shift enable
+   .PSINCDEC(dcm1_psincdec), // 1-bit input: Phase shift increment/decrement input
+   .RST(dcm_rst) // 1-bit input: Active high reset input
+   );
 
-        // DCM_SP: Digital Clock Manager
-        // Spartan-6
-        // Xilinx HDL Libraries Guide, version 13.2
-        DCM_SP #(
-        .CLKFX_DIVIDE(2), // Divide value on CLKFX outputs - D - (1-32)
-        .CLKFX_MULTIPLY(2), // Multiply value on CLKFX outputs - M - (2-32)
-        .CLKIN_DIVIDE_BY_2("FALSE"), // CLKIN divide by two (TRUE/FALSE)
-        .CLKIN_PERIOD(15.0), // Input clock period specified in nS
-        .CLKOUT_PHASE_SHIFT("VARIABLE"), // Output phase shift (NONE, FIXED, VARIABLE)
-        .CLK_FEEDBACK("2X"), // Feedback source (NONE, 1X, 2X)
-        .DESKEW_ADJUST("SYSTEM_SYNCHRONOUS"), // SYSTEM_SYNCHRNOUS or SOURCE_SYNCHRONOUS
-        .PHASE_SHIFT(63), // Amount of fixed phase shift (-255 to 255)
-        .STARTUP_WAIT("FALSE") // Delay config DONE until DCM_SP LOCKED (TRUE/FALSE)
-        )
-        DCM_extclock_gen2 (
-        .CLK2X(dcm2_clk),
-        .CLK0(dcm2_clk_out),
-        .CLK2X180(),
-        .CLK90(),
-        .CLK180(), //dcm2_clk_out
-        .CLK270(),
-        .CLKFX(),
-        .CLKFX180(),
-        .CLKDV(),
-        .LOCKED(dcm2_locked_int), // 1-bit output: DCM_SP Lock Output
-        .PSDONE(dcm2_psdone), // 1-bit output: Phase shift done output
-        .STATUS(dcm2_status), // 8-bit output: DCM_SP status output
-        .CLKFB(dcm2_clk), // 1-bit input: Clock feedback input
-        .CLKIN(dcm1_clk_out), // 1-bit input: Clock input
-        .PSCLK(clk_usb), // 1-bit input: Phase shift clock input
-        .PSEN(dcm2_psen), // 1-bit input: Phase shift enable
-        .PSINCDEC(dcm2_psincdec), // 1-bit input: Phase shift increment/decrement input
-        .RST(dcm_rst) // 1-bit input: Active high reset input
-        );
-        `endif
-        */
-
-endmodule
-
-module clk2glitch(
-   input wire   clk1,
-   input wire   clk2,
-   input wire   enable,
-   output wire  glitchout
-);
-
-   wire clk1buf, clk2buf;
-
-   //If using BUFG - not used as requires too many resources, not sure if
-   //actually required anyway...
-   //BUFG bufclk1 (.I(clk1), .O(clk1buf));
-   //BUFG bufclk2 (.I(clk2), .O(clk2buf));
-
-   //Otherwise 
-   assign clk1buf = clk1;
-   assign clk2buf = clk2;
-
-   assign glitchout = (clk1buf & clk2buf) & enable;
+   // DCM_SP: Digital Clock Manager
+   // Spartan-6
+   // Xilinx HDL Libraries Guide, version 13.2
+   DCM_SP #(
+   .CLKFX_DIVIDE(2), // Divide value on CLKFX outputs - D - (1-32)
+   .CLKFX_MULTIPLY(2), // Multiply value on CLKFX outputs - M - (2-32)
+   .CLKIN_DIVIDE_BY_2("FALSE"), // CLKIN divide by two (TRUE/FALSE)
+   .CLKIN_PERIOD(15.0), // Input clock period specified in nS
+   .CLKOUT_PHASE_SHIFT("VARIABLE"), // Output phase shift (NONE, FIXED, VARIABLE)
+   .CLK_FEEDBACK("2X"), // Feedback source (NONE, 1X, 2X)
+   .DESKEW_ADJUST("SYSTEM_SYNCHRONOUS"), // SYSTEM_SYNCHRNOUS or SOURCE_SYNCHRONOUS
+   .PHASE_SHIFT(63), // Amount of fixed phase shift (-255 to 255)
+   .STARTUP_WAIT("FALSE") // Delay config DONE until DCM_SP LOCKED (TRUE/FALSE)
+   )
+   DCM_extclock_gen2 (
+   .CLK2X(dcm2_clk),
+   .CLK0(dcm2_clk_out),
+   .CLK2X180(),
+   .CLK90(),
+   .CLK180(), //dcm2_clk_out
+   .CLK270(),
+   .CLKFX(),
+   .CLKFX180(),
+   .CLKDV(),
+   .LOCKED(dcm2_locked_int), // 1-bit output: DCM_SP Lock Output
+   .PSDONE(dcm2_psdone), // 1-bit output: Phase shift done output
+   .STATUS(dcm2_status), // 8-bit output: DCM_SP status output
+   .CLKFB(dcm2_clk), // 1-bit input: Clock feedback input
+   .CLKIN(dcm1_clk_out), // 1-bit input: Clock input
+   .PSCLK(clk_usb), // 1-bit input: Phase shift clock input
+   .PSEN(dcm2_psen), // 1-bit input: Phase shift enable
+   .PSINCDEC(dcm2_psincdec), // 1-bit input: Phase shift increment/decrement input
+   .RST(dcm_rst) // 1-bit input: Active high reset input
+   );
+   `endif
+   */
 
 endmodule
+
 `default_nettype wire

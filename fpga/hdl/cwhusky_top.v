@@ -78,10 +78,9 @@ module cwhusky_top(
     inout wire          target_hs1, // Clock from victim device
     inout wire          target_hs2, // Clock to victim device
 
-    /*
     output wire         glitchout_highpwr, // high-speed glitch output
     output wire         glitchout_lowpwr, // high-speed glitch output 
-    */
+
     output wire         target_poweron,
 
     output wire         FPGA_TRIGOUT, //trigger out MCX
@@ -125,8 +124,6 @@ module cwhusky_top(
 
    // TEMPORARY, until I/Os are added / cleaned up:
    wire         ADC_clk_out;
-   wire         glitchout_highpwr;
-   wire         glitchout_lowpwr;
    wire         target_npower;
    wire         USB_treset_i; // ? came from SAM3U
 

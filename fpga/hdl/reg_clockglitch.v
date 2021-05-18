@@ -32,6 +32,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 *************************************************************************/
+
 module reg_clockglitch #(
    parameter pBYTECNT_SIZE = 7
 )(
@@ -44,15 +45,15 @@ module reg_clockglitch #(
    input  wire         reg_read,     // Read flag
    input  wire         reg_write,    // Write flag
    input  wire         reg_addrvalid,// Address valid flag
-   
+
    input wire          target_hs1,
    input wire          clkgen,
-   
+
    output wire         glitchclk,
    input wire          exttrigger,
-   
+
    output wire         dcm_unlocked,    // TODO- unused
-   output wire         led_glitch       // TODO- unused
+   output reg          led_glitch       // TODO- unused
 );
 
    wire  reset;
@@ -71,16 +72,16 @@ module reg_clockglitch #(
    wire phase2_load;
    wire phase2_done;
 
-   `define CLOCKGLITCH_SETTINGS	51
-   `define CLOCKGLITCH_LEN      8
-   `define CLOCKGLITCH_OFFSET    25
-   `define CLOCKGLITCH_OFFSET_LEN 8
+   `define CLOCKGLITCH_SETTINGS     51
+   `define CLOCKGLITCH_LEN          8
+   `define CLOCKGLITCH_OFFSET       25
+   `define CLOCKGLITCH_OFFSET_LEN   8
    
 `ifdef SUPPORT_GLITCH_READBACK
-   `define GLITCHCYCLES_CNT 19
-   `define GLITCHCYCLES_CNT_LEN 4
-   `define GLITCH_RECONFIG_RB_ADDR 56
-   `define GLITCH_RECONFIG_RB_LEN 16
+   `define GLITCHCYCLES_CNT         19
+   `define GLITCHCYCLES_CNT_LEN     4
+   `define GLITCH_RECONFIG_RB_ADDR  56
+   `define GLITCH_RECONFIG_RB_LEN   16
     reg [127:0] clockglitch_readback_reg;
 `endif
 
@@ -96,7 +97,6 @@ module reg_clockglitch #(
    // i.e., 5.6% = 5 (integer) + 60 (fraction)
    //
    //
-
 
 
    reg [63:0]  clockglitch_settings_reg;
@@ -170,22 +170,23 @@ module reg_clockglitch #(
 */
 
    wire [2:0] glitch_type;
-   assign glitch_type = clockglitch_settings_reg[46:44];
    wire [1:0] glitch_trigger_src;
-   assign glitch_trigger_src = clockglitch_settings_reg[43:42];
-   
    wire [7:0] max_glitches;
-   assign max_glitches = clockglitch_settings_reg[55:48];
-   
    wire sourceclk;
+
+   assign glitch_type = clockglitch_settings_reg[46:44];
+   assign glitch_trigger_src = clockglitch_settings_reg[43:42];
+   assign max_glitches = clockglitch_settings_reg[55:48];
    assign sourceclk = (clockglitch_settings_reg[57:56] == 2'b01) ? clkgen : target_hs1;
 
+   // manual glitch logic:
    reg manual;
    always @(posedge clk_usb)
       manual <= clockglitch_settings_reg[47];
 
    reg manual_rs1, manual_rs2;
    reg manual_dly;
+   // TODO: add ASYNC's here
    always @(posedge sourceclk) begin
       //Resync with double-FF
       manual_rs1 <= manual;
@@ -197,7 +198,6 @@ module reg_clockglitch #(
 
    reg glitch_trigger;
    wire exttrigger_resync;
-   //reg exttrigger_resync_dly;
 
    reg oneshot;
 
@@ -207,7 +207,7 @@ module reg_clockglitch #(
       else if (glitch_trigger_src == 2'b00)
          glitch_trigger <= manual_rs2 & manual_dly;
       else if (glitch_trigger_src == 2'b01)
-         glitch_trigger <= exttrigger_resync; //exttrigger_resync & ~exttrigger_resync_dly;
+         glitch_trigger <= exttrigger_resync;
       else if (glitch_trigger_src == 2'b11)
          glitch_trigger <= exttrigger_resync & oneshot;
    end 
@@ -226,14 +226,14 @@ module reg_clockglitch #(
          glitch_go <= 'b1;
       else if (glitch_cnt >= max_glitches)
          glitch_go <= 'b0;
-   end
 
-   always @(posedge sourceclk) begin
       if (glitch_go)
          glitch_cnt <= glitch_cnt + 8'd1;
       else
          glitch_cnt <= 0;
+
    end
+
 
    reg [31:0] clockglitch_cnt;
    reg clockglitch_cnt_rst;
@@ -267,14 +267,12 @@ module reg_clockglitch #(
          phase2_done_reg <= 'b1;
    end 
 
-   wire [63:0] clockglitch_offset_read_reg;
-   assign clockglitch_offset_read_reg[31:0] = clockglitch_offset_reg;
 
    always @(posedge clk_usb) begin
       if (reg_read) begin
          case (reg_address)
             `CLOCKGLITCH_SETTINGS: begin reg_datao_reg <= clockglitch_settings_read[reg_bytecnt*8 +: 8]; end
-            `CLOCKGLITCH_OFFSET: begin reg_datao_reg <= clockglitch_offset_read_reg[reg_bytecnt*8 +: 8]; end
+            `CLOCKGLITCH_OFFSET: begin reg_datao_reg <= clockglitch_offset_reg[reg_bytecnt*8 +: 8]; end
 `ifdef SUPPORT_GLITCH_READBACK
             `GLITCH_RECONFIG_RB_ADDR: begin reg_datao_reg <= clockglitch_readback_reg[reg_bytecnt*8 +: 8]; end
             `GLITCHCYCLES_CNT: begin reg_datao_reg <= clockglitch_cnt[reg_bytecnt*8 +: 8]; end
@@ -326,8 +324,6 @@ module reg_clockglitch #(
       end
    end
 
-//   always @(posedge sourceclk)
-//      exttrigger_resync_dly <= exttrigger_resync;
 
    trigger_resync resync(
       .reset                (reset),
@@ -359,23 +355,19 @@ module reg_clockglitch #(
 
 /* LED lighty up thing */
 reg [18:0] led_extend;
-reg led_on;
 always @(posedge sourceclk) begin
    if (glitch_go) begin
       led_extend <= 0;   
-   end else if (led_on == 1'b1) begin
-      led_extend <= led_extend + 19'b1;
+      led_glitch <= 1'b1;
+   end 
+   else begin
+      if (led_glitch == 1'b1)
+         led_extend <= led_extend + 19'b1;
+      if (led_extend == 19'h7FFFF)
+         led_glitch <= 1'b0;
    end
 end
 
-always@(posedge sourceclk) begin
-   if (glitch_go)
-      led_on <= 1'b1;
-   else if (led_extend == 19'h7FFFF)
-      led_on <= 1'b0;
-end
-
-assign led_glitch = led_on;
 
 endmodule
 `default_nettype wire

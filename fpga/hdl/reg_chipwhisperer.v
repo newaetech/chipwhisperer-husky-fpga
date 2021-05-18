@@ -247,13 +247,6 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    //should be OK.
    assign target_hs2 = (registers_cwextclk[6] & (~targetio_highz)) ? rearclk : 1'bZ;
 
-   //TODO: Should use a mux?
-   /*
-   assign target_hs2 = (registers_cwextclk[6:5] == 2'b01) ? clkgen :
-                       (registers_cwextclk[6:5] == 2'b10) ? glitchclk :
-                       1'bZ;
-   */
-
 
 `ifdef __ICARUS__
    assign hsglitcha_o = registers_iorouting[32]? glitchclk : 1'b0;

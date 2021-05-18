@@ -169,6 +169,7 @@ module clock_managment_advanced #(
        .psdone          (dcm_psdone)
     );
     /* OG DCM_SP: Digital Clock Manager
+     * TODO: remove later
     // Spartan-6
     // Xilinx HDL Libraries Guide, version 13.2
     DCM_SP #(
