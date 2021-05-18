@@ -4,7 +4,7 @@
 
 /***********************************************************************
 This file is part of the ChipWhisperer Project. See www.newae.com for more details,
-or the codebase at http://www.assembla.com/spaces/chipwhisperer .
+or the codebase at https://github.com/newaetech/chipwhisperer .
 
 Copyright (c) 2013-2021, Colin O'Flynn <coflynn@newae.com>. All rights reserved.
 This project (and file) is released under the 2-Clause BSD License:
@@ -126,7 +126,7 @@ module clockglitch_s6(
    //Need to think carefully about which clock to syncronize this too, and
    //which edge. Lots of trouble as different options on outputs & adjustable
    //phase
-   always @(negedge source_clk) begin
+   always @(negedge dcm1_clk_out) begin
       glitch_next_reg1 <= glitch_next;
       glitch_next_reg <= glitch_next_reg1;
    end

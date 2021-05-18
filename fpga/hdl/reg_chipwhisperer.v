@@ -47,6 +47,7 @@ module reg_chipwhisperer #(
    input  wire        trigger_io2_i,
    input  wire        trigger_io3_i,
    input  wire        trigger_io4_i,
+   input  wire        trigger_nrst_i,
 
    /* Advanced IO Trigger Connections */
    output wire        trigger_ext_o,
@@ -117,12 +118,12 @@ CW_EXTCLK_ADDR, address 38 (0x26) - External Clock Connections (One Byte)
          11 : Glitch Module
 
 CW_TRIGSRC_ADDR, address 39 (0x27) - External Trigger Connections (One Byte)
-    [  M  M  R4  R3  R2  R1  FB FA ]
+    [  M  M  R4  R3  R2  R1  NR FA ]
     All external triggers are combined into a single
     trigger signal, which can then be passed into one
     of the enabled 'trigger modules'
     FA = Front Panel Channel A / Aux SMA
-    FB = Front Panel Channel B
+    NR = nRESET Pin
     R1 = Rear TargetIO - Line 1
     R2 = Rear TargetIO - Line 2
     R3 = Rear TargetIO - Line 3
@@ -132,12 +133,11 @@ CW_TRIGSRC_ADDR, address 39 (0x27) - External Trigger Connections (One Byte)
         01 = AND
 
 CW_TRIGMOD_ADDR, address 40 (0x28) - Trigger Module Enabled
-    [ X  X  X  FB FA M  M  M ]
+    [ X  X  X  X  FA M  M  M ]
     M M M = 000 Normal Edge-Mode Trigger
             001 Advanced IO Pattern Trigger
             010 Advanced SAD Trigger
     FA = Output trigger to Front Panel A / Aux SMA
-    FB = Output trigger to Front Panel B
 
 CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
     IMPORTANT: Only a single IO can be assigned
@@ -342,14 +342,16 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    wire trigger_or;
    wire trigger_ext;
    
-   assign trigger_and = ((registers_cwtrigsrc[2] & trigger_io1_i) | ~registers_cwtrigsrc[2]) &
-                        ((registers_cwtrigsrc[3] & trigger_io2_i) | ~registers_cwtrigsrc[3]) &
-                        ((registers_cwtrigsrc[4] & trigger_io3_i) | ~registers_cwtrigsrc[4]) &
-                        ((registers_cwtrigsrc[5] & trigger_io4_i) | ~registers_cwtrigsrc[5]);
+   assign trigger_and = ((registers_cwtrigsrc[1] & trigger_nrst_i) | ~registers_cwtrigsrc[1]) &
+                        ((registers_cwtrigsrc[2] & trigger_io1_i)  | ~registers_cwtrigsrc[2]) &
+                        ((registers_cwtrigsrc[3] & trigger_io2_i)  | ~registers_cwtrigsrc[3]) &
+                        ((registers_cwtrigsrc[4] & trigger_io3_i)  | ~registers_cwtrigsrc[4]) &
+                        ((registers_cwtrigsrc[5] & trigger_io4_i)  | ~registers_cwtrigsrc[5]);
 
-   assign trigger_or  = (registers_cwtrigsrc[2] & trigger_io1_i) |
-                        (registers_cwtrigsrc[3] & trigger_io2_i) |
-                        (registers_cwtrigsrc[4] & trigger_io3_i) |
+   assign trigger_or  = (registers_cwtrigsrc[1] & trigger_nrst_i) |
+                        (registers_cwtrigsrc[2] & trigger_io1_i)  |
+                        (registers_cwtrigsrc[3] & trigger_io2_i)  |
+                        (registers_cwtrigsrc[4] & trigger_io3_i)  |
                         (registers_cwtrigsrc[5] & trigger_io4_i);
 
    assign trigger_ext =  (registers_cwtrigsrc[7:6] == 2'b00) ? trigger_or :

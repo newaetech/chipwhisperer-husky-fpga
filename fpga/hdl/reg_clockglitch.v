@@ -4,7 +4,7 @@
 
 /***********************************************************************
 This file is part of the ChipWhisperer Project. See www.newae.com for more details,
-or the codebase at http://www.assembla.com/spaces/openadc .
+or the codebase at https://github.com/newaetech/chipwhisperer .
 
 This file is the ChipWhisperer Clock Glitcher registers
 
@@ -158,25 +158,27 @@ module reg_clockglitch #(
     [47] (Byte 5, Bit 7) = Manual Glitch. Set to 1 then 0, glitch on rising edge
 
     [55..48] (Byte 6, Bits [7..0])
-         Cycles to glitch-1 (e.g. 0 means 1 glitch)
+         Cycles to glitch-1 (e.g. 0 means 1 glitch) (lower 8 bits)
 
     [57..56] (Byte 7, Bits [1..0]) = Glitch Clock Source
           00 = Source 0 (HS1)
           01 = Source 1 (clkgen)
 
-    [63..58] (Byte 7, Bits [7..2]) = Unused
+    [62..58] (Byte 7, Bits [6..2]) = Cycles to glitch (top 5 bits)
+
+    [63] (Byte 7, Bit 7) = Unused (reads as 0, used to later expand if needed)
     
     
 */
 
    wire [2:0] glitch_type;
    wire [1:0] glitch_trigger_src;
-   wire [7:0] max_glitches;
+   wire [12:0] max_glitches;
    wire sourceclk;
 
    assign glitch_type = clockglitch_settings_reg[46:44];
    assign glitch_trigger_src = clockglitch_settings_reg[43:42];
-   assign max_glitches = clockglitch_settings_reg[55:48];
+   assign max_glitches = {clockglitch_settings_reg[62:58], clockglitch_settings_reg[55:48]};
    assign sourceclk = (clockglitch_settings_reg[57:56] == 2'b01) ? clkgen : target_hs1;
 
    // manual glitch logic:
@@ -219,7 +221,7 @@ module reg_clockglitch #(
          oneshot <= 1'b0;
    end
 
-   reg [7:0] glitch_cnt;
+   reg [12:0] glitch_cnt;
    reg glitch_go;
    always @(posedge sourceclk) begin
       if (glitch_trigger)
@@ -228,7 +230,7 @@ module reg_clockglitch #(
          glitch_go <= 'b0;
 
       if (glitch_go)
-         glitch_cnt <= glitch_cnt + 8'd1;
+         glitch_cnt <= glitch_cnt + 13'd1;
       else
          glitch_cnt <= 0;
 
