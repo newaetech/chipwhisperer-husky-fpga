@@ -389,7 +389,7 @@ module cwhusky_top(
         .reg_write      (reg_write), 
         .reg_addrvalid  (reg_addrvalid), 
         .target_hs1     (target_hs1),
-        .clkgen         (pll_fpga_clk), // TODO-later: used to be clkgen, what now?
+        .clkgen         (pll_fpga_clk),
         //.glitchclk      (glitchclk),
         .glitchclk      (), // TODO-temp
         .exttrigger     (ext_trigger)

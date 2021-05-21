@@ -52,7 +52,7 @@ module reg_clockglitch #(
    output wire         glitchclk,
    input wire          exttrigger,
 
-   output wire         dcm_unlocked,    // TODO- unused
+   output wire         mmcm_unlocked,    // TODO- unused
    output reg          led_glitch       // TODO- unused
 );
 
@@ -107,17 +107,8 @@ module reg_clockglitch #(
    reg [7:0] reg_datao_reg;
    assign reg_datao = reg_datao_reg;
 
-   wire [8:0] glitchwidth_phase;
-   wire glitchwidth_load;
-
-   wire [8:0] glitchdelay_phase;
-   wire       glitchdelay_load;
-
-   reg [8:0] phase2_in;
-   reg [8:0] phase1_in;
-
-   wire dcm1_locked;
-   wire dcm2_locked;
+   wire mmcm1_locked;
+   wire mmcm2_locked;
 
    reg phase2_done_reg;
    reg phase1_done_reg;
@@ -125,9 +116,9 @@ module reg_clockglitch #(
    assign phase1_requested = clockglitch_settings_reg[8:0];
    assign phase2_requested = clockglitch_settings_reg[17:9];
 
-   wire dcm_rst;
+   wire mmcm_rst;
 
-   assign dcm_unlocked = ~(dcm1_locked & dcm2_locked); 
+   assign mmcm_unlocked = ~(mmcm1_locked & mmcm2_locked); 
 
 /*
     Clock-glitch settings main registers (address 51)
@@ -250,10 +241,10 @@ module reg_clockglitch #(
    assign clockglitch_settings_read[36:19] = {phase2_actual, phase1_actual};
    assign clockglitch_settings_read[37] = phase1_done_reg;
    assign clockglitch_settings_read[38] = phase2_done_reg;
-   assign clockglitch_settings_read[39] = dcm1_locked;
-   assign clockglitch_settings_read[40] = dcm2_locked;
+   assign clockglitch_settings_read[39] = mmcm1_locked;
+   assign clockglitch_settings_read[40] = mmcm2_locked;
    assign clockglitch_settings_read[63:41] = clockglitch_settings_reg[63:41];
-   assign dcm_rst = clockglitch_settings_reg[41];
+   assign mmcm_rst = clockglitch_settings_reg[41];
 
    always @(posedge clk_usb) begin
       if (phase1_load)
@@ -336,23 +327,23 @@ module reg_clockglitch #(
    );
 
  /* Glitch Hardware */
- clockglitch_s6 gc(
+ clockglitch_a7 gc(
     .source_clk             (sourceclk),
     .glitched_clk           (glitchclk),
     .glitch_next            (glitch_go),
     .glitch_type            (glitch_type),
     .clk_usb                (clk_usb),
-    .dcm_rst                (dcm_rst),
+    .mmcm_rst               (mmcm_rst),
     .phase1_requested       (phase1_requested),
     .phase1_actual          (phase1_actual),
     .phase1_load            (phase1_load),
     .phase1_done            (phase1_done),
-    .dcm1_locked            (dcm1_locked),
+    .mmcm1_locked           (mmcm1_locked),
     .phase2_requested       (phase2_requested),
     .phase2_actual          (phase2_actual),
     .phase2_load            (phase2_load),
     .phase2_done            (phase2_done),
-    .dcm2_locked            (dcm2_locked)
+    .mmcm2_locked           (mmcm2_locked)
 );
 
 /* LED lighty up thing */
