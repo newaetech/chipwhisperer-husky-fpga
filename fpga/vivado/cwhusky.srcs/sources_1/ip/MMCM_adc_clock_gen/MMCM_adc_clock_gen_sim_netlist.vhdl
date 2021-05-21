@@ -1,7 +1,7 @@
 -- Copyright 1986-2019 Xilinx, Inc. All Rights Reserved.
 -- --------------------------------------------------------------------------------
 -- Tool Version: Vivado v.2019.2 (win64) Build 2708876 Wed Nov  6 21:40:23 MST 2019
--- Date        : Tue Feb 16 21:55:12 2021
+-- Date        : Fri May 21 13:58:20 2021
 -- Host        : qed running 64-bit major release  (build 9200)
 -- Command     : write_vhdl -force -mode funcsim
 --               C:/Users/jp/GitHub/OpenTitan/husky/fpga/vivado/cwhusky.srcs/sources_1/ip/MMCM_adc_clock_gen/MMCM_adc_clock_gen_sim_netlist.vhdl
@@ -25,6 +25,7 @@ entity MMCM_adc_clock_gen_MMCM_adc_clock_gen_clk_wiz is
     psincdec : in STD_LOGIC;
     psdone : out STD_LOGIC;
     reset : in STD_LOGIC;
+    power_down : in STD_LOGIC;
     locked : out STD_LOGIC;
     clk_in1 : in STD_LOGIC
   );
@@ -140,7 +141,7 @@ mmcm_adv_inst: unisim.vcomponents.MMCME2_ADV
       PSDONE => psdone,
       PSEN => psen,
       PSINCDEC => psincdec,
-      PWRDWN => '0',
+      PWRDWN => power_down,
       RST => reset
     );
 end STRUCTURE;
@@ -159,6 +160,7 @@ entity MMCM_adc_clock_gen is
     psincdec : in STD_LOGIC;
     psdone : out STD_LOGIC;
     reset : in STD_LOGIC;
+    power_down : in STD_LOGIC;
     locked : out STD_LOGIC;
     clk_in1 : in STD_LOGIC
   );
@@ -176,6 +178,7 @@ inst: entity work.MMCM_adc_clock_gen_MMCM_adc_clock_gen_clk_wiz
       clkfb_in => clkfb_in,
       clkfb_out => clkfb_out,
       locked => locked,
+      power_down => power_down,
       psclk => psclk,
       psdone => psdone,
       psen => psen,

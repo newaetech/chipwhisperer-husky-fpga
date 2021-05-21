@@ -82,6 +82,7 @@
     .dwe(dwe), // output dwe
     // Status and control signals
     .reset(reset), // input reset
+    .power_down(power_down),   // input power_down
     .locked(locked),       // output locked
    // Clock in ports
     .clk_in1(clk_in1));      // input clk_in1

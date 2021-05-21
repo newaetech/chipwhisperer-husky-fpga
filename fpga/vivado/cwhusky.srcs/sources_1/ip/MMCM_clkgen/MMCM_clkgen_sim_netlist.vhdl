@@ -1,7 +1,7 @@
 -- Copyright 1986-2019 Xilinx, Inc. All Rights Reserved.
 -- --------------------------------------------------------------------------------
 -- Tool Version: Vivado v.2019.2 (win64) Build 2708876 Wed Nov  6 21:40:23 MST 2019
--- Date        : Wed Feb 24 10:16:04 2021
+-- Date        : Fri May 21 13:56:11 2021
 -- Host        : qed running 64-bit major release  (build 9200)
 -- Command     : write_vhdl -force -mode funcsim
 --               C:/Users/jp/GitHub/OpenTitan/husky/fpga/vivado/cwhusky.srcs/sources_1/ip/MMCM_clkgen/MMCM_clkgen_sim_netlist.vhdl
@@ -25,6 +25,7 @@ entity MMCM_clkgen_MMCM_clkgen_clk_wiz is
     drdy : out STD_LOGIC;
     dwe : in STD_LOGIC;
     reset : in STD_LOGIC;
+    power_down : in STD_LOGIC;
     locked : out STD_LOGIC;
     clk_in1 : in STD_LOGIC
   );
@@ -155,7 +156,7 @@ mmcm_adv_inst: unisim.vcomponents.MMCME2_ADV
       PSDONE => NLW_mmcm_adv_inst_PSDONE_UNCONNECTED,
       PSEN => '0',
       PSINCDEC => '0',
-      PWRDWN => '0',
+      PWRDWN => power_down,
       RST => reset
     );
 end STRUCTURE;
@@ -174,6 +175,7 @@ entity MMCM_clkgen is
     drdy : out STD_LOGIC;
     dwe : in STD_LOGIC;
     reset : in STD_LOGIC;
+    power_down : in STD_LOGIC;
     locked : out STD_LOGIC;
     clk_in1 : in STD_LOGIC
   );
@@ -195,6 +197,7 @@ inst: entity work.MMCM_clkgen_MMCM_clkgen_clk_wiz
       drdy => drdy,
       dwe => dwe,
       locked => locked,
+      power_down => power_down,
       reset => reset
     );
 end STRUCTURE;

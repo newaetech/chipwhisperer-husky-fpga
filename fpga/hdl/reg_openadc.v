@@ -96,7 +96,11 @@ module reg_openadc #(
    output wire [12:0] downsample_o,
    output wire        fifo_stream,
    output reg  [1:0]  led_select,
-   output reg         no_clip_errors
+   output reg         no_clip_errors,
+
+   output reg         adc_clkgen_power_down,
+   output reg         clkgen_power_down 
+
 );
 
    wire reset;
@@ -233,6 +237,7 @@ module reg_openadc #(
                 `DATA_SOURCE_SELECT: reg_datao_reg <= data_source_select;
                 `LED_SELECT: reg_datao_reg <= led_select;
                 `NO_CLIP_ERRORS: reg_datao_reg <= no_clip_errors;
+                `CLKGEN_POWERDOWN: reg_datao_reg <= {6'b0, adc_clkgen_power_down, clkgen_power_down};
                 default: reg_datao_reg <= 0;
              endcase
           end
@@ -255,6 +260,9 @@ module reg_openadc #(
          segment_cycles <= 0;
          led_select <= 0;
          no_clip_errors <= 0;
+         // CLKGEN MMCMs are powered down by default, because we can get too hot if all MMCMs are kept on:
+         adc_clkgen_power_down <= 1;
+         clkgen_power_down <= 1;
       end else if (reg_write) begin
          case (reg_address)
             `GAIN_ADDR: registers_gain <= reg_datai;
@@ -270,6 +278,7 @@ module reg_openadc #(
             `DATA_SOURCE_SELECT: data_source_select <= reg_datai[0];
             `LED_SELECT: led_select <= reg_datai[1:0];
             `NO_CLIP_ERRORS: no_clip_errors <= reg_datai[0];
+            `CLKGEN_POWERDOWN: {adc_clkgen_power_down, clkgen_power_down} <= reg_datai[1:0];
             default: ;
          endcase
       end

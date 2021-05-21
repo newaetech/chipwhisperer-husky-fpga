@@ -1,7 +1,7 @@
 // Copyright 1986-2019 Xilinx, Inc. All Rights Reserved.
 // --------------------------------------------------------------------------------
 // Tool Version: Vivado v.2019.2 (win64) Build 2708876 Wed Nov  6 21:40:23 MST 2019
-// Date        : Tue Feb 16 21:55:12 2021
+// Date        : Fri May 21 13:58:20 2021
 // Host        : qed running 64-bit major release  (build 9200)
 // Command     : write_verilog -force -mode funcsim
 //               C:/Users/jp/GitHub/OpenTitan/husky/fpga/vivado/cwhusky.srcs/sources_1/ip/MMCM_adc_clock_gen/MMCM_adc_clock_gen_sim_netlist.v
@@ -23,6 +23,7 @@ module MMCM_adc_clock_gen
     psincdec,
     psdone,
     reset,
+    power_down,
     locked,
     clk_in1);
   input clkfb_in;
@@ -34,6 +35,7 @@ module MMCM_adc_clock_gen
   input psincdec;
   output psdone;
   input reset;
+  input power_down;
   output locked;
   input clk_in1;
 
@@ -43,6 +45,7 @@ module MMCM_adc_clock_gen
   wire clkfb_in;
   wire clkfb_out;
   wire locked;
+  wire power_down;
   wire psclk;
   wire psdone;
   wire psen;
@@ -56,6 +59,7 @@ module MMCM_adc_clock_gen
         .clkfb_in(clkfb_in),
         .clkfb_out(clkfb_out),
         .locked(locked),
+        .power_down(power_down),
         .psclk(psclk),
         .psdone(psdone),
         .psen(psen),
@@ -74,6 +78,7 @@ module MMCM_adc_clock_gen_MMCM_adc_clock_gen_clk_wiz
     psincdec,
     psdone,
     reset,
+    power_down,
     locked,
     clk_in1);
   input clkfb_in;
@@ -85,6 +90,7 @@ module MMCM_adc_clock_gen_MMCM_adc_clock_gen_clk_wiz
   input psincdec;
   output psdone;
   input reset;
+  input power_down;
   output locked;
   input clk_in1;
 
@@ -95,6 +101,7 @@ module MMCM_adc_clock_gen_MMCM_adc_clock_gen_clk_wiz
   wire clkfb_in;
   wire clkfb_out;
   wire locked;
+  wire power_down;
   wire psclk;
   wire psdone;
   wire psen;
@@ -201,7 +208,7 @@ module MMCM_adc_clock_gen_MMCM_adc_clock_gen_clk_wiz
         .PSDONE(psdone),
         .PSEN(psen),
         .PSINCDEC(psincdec),
-        .PWRDWN(1'b0),
+        .PWRDWN(power_down),
         .RST(reset));
 endmodule
 `ifndef GLBL

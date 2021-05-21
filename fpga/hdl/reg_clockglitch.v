@@ -76,6 +76,7 @@ module reg_clockglitch #(
    `define CLOCKGLITCH_LEN          8
    `define CLOCKGLITCH_OFFSET       25
    `define CLOCKGLITCH_OFFSET_LEN   8
+   `define CLOCKGLITCH_POWERDOWN    49
    
 `ifdef SUPPORT_GLITCH_READBACK
    `define GLITCHCYCLES_CNT         19
@@ -103,6 +104,7 @@ module reg_clockglitch #(
    wire [63:0] clockglitch_settings_read;
 
    reg [31:0] clockglitch_offset_reg;
+   reg clockglitch_powerdown;
 
    reg [7:0] reg_datao_reg;
    assign reg_datao = reg_datao_reg;
@@ -264,13 +266,14 @@ module reg_clockglitch #(
    always @(posedge clk_usb) begin
       if (reg_read) begin
          case (reg_address)
-            `CLOCKGLITCH_SETTINGS: begin reg_datao_reg <= clockglitch_settings_read[reg_bytecnt*8 +: 8]; end
-            `CLOCKGLITCH_OFFSET: begin reg_datao_reg <= clockglitch_offset_reg[reg_bytecnt*8 +: 8]; end
+            `CLOCKGLITCH_SETTINGS: reg_datao_reg <= clockglitch_settings_read[reg_bytecnt*8 +: 8];
+            `CLOCKGLITCH_OFFSET: reg_datao_reg <= clockglitch_offset_reg[reg_bytecnt*8 +: 8];
+            `CLOCKGLITCH_POWERDOWN: reg_datao_reg <= clockglitch_powerdown;
 `ifdef SUPPORT_GLITCH_READBACK
-            `GLITCH_RECONFIG_RB_ADDR: begin reg_datao_reg <= clockglitch_readback_reg[reg_bytecnt*8 +: 8]; end
-            `GLITCHCYCLES_CNT: begin reg_datao_reg <= clockglitch_cnt[reg_bytecnt*8 +: 8]; end
+            `GLITCH_RECONFIG_RB_ADDR: reg_datao_reg <= clockglitch_readback_reg[reg_bytecnt*8 +: 8];
+            `GLITCHCYCLES_CNT: reg_datao_reg <= clockglitch_cnt[reg_bytecnt*8 +: 8];
 `endif
-            default: begin reg_datao_reg <= 0; end
+            default: reg_datao_reg <= 0;
          endcase
       end
       else
@@ -298,6 +301,7 @@ module reg_clockglitch #(
          clockglitch_settings_reg <= 0;
          clockglitch_offset_reg <= 0;
          clockglitch_cnt_rst <= 0;
+         clockglitch_powerdown <= 0;
 `ifdef SUPPORT_GLITCH_READBACK
          clockglitch_readback_reg <= {8'd0, 8'd10, 8'd0, 8'd10, 16'd0, 16'd0};
 `endif
@@ -308,6 +312,7 @@ module reg_clockglitch #(
          case (reg_address)
             `CLOCKGLITCH_SETTINGS: clockglitch_settings_reg[reg_bytecnt*8 +: 8] <= reg_datai;      
             `CLOCKGLITCH_OFFSET: clockglitch_offset_reg[reg_bytecnt*8 +: 8] <= reg_datai;      
+            `CLOCKGLITCH_POWERDOWN: clockglitch_powerdown <= reg_datai[0];
 `ifdef SUPPORT_GLITCH_READBACK
             `GLITCHCYCLES_CNT: clockglitch_cnt_rst <= reg_datai[0];
             `GLITCH_RECONFIG_RB_ADDR: clockglitch_readback_reg[reg_bytecnt*8 +: 8] <= reg_datai;
@@ -343,7 +348,8 @@ module reg_clockglitch #(
     .phase2_actual          (phase2_actual),
     .phase2_load            (phase2_load),
     .phase2_done            (phase2_done),
-    .mmcm2_locked           (mmcm2_locked)
+    .mmcm2_locked           (mmcm2_locked),
+    .I_mmcm_powerdown       (clockglitch_powerdown)
 );
 
 /* LED lighty up thing */

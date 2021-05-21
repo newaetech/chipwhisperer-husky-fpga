@@ -271,6 +271,7 @@
 `define NO_CLIP_ERRORS          45
 `define DEBUG_FIFO_READS        46
 `define DEBUG_FIFO_READS_FREEZE 47
+`define CLKGEN_POWERDOWN        48
 
 `define REGISTER_VERSION 1
 

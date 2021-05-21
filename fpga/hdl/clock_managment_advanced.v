@@ -56,7 +56,11 @@ module clock_managment_advanced #(
     output wire [7:0]                   reg_datao,
     input  wire                         reg_read,
     input  wire                         reg_write,
-    input  wire                         reg_addrvalid
+    input  wire                         reg_addrvalid,
+
+    // MMCM control
+    input  wire                         adc_clkgen_power_down,
+    input  wire                         clkgen_power_down 
     );
  
     wire ADC_clk_extsrc;
@@ -74,6 +78,8 @@ module clock_managment_advanced #(
     wire dcm_psdone;
     wire [7:0] dcm_status;
 
+
+    // TODO: remove/clean up!
     dcm_phaseshift_interface dcmps(.clk_usb(clk_usb),
                                    .reset_i(reset),
                                    .default_value_i(9'd0),
@@ -161,6 +167,7 @@ module clock_managment_advanced #(
        .clk_out1        (ADC_clk),
        .clk_out2        (ADC_clk_times4),
        .locked          (dcm_locked_int),
+       .power_down      (adc_clkgen_power_down),
        .clkfb_in        (adcfb),
        .clkfb_out       (adcfb),
        .psclk           (clk_usb),
@@ -220,6 +227,7 @@ module clock_managment_advanced #(
        .clk_in1         (clkgenfx_in),
        .clk_out1        (clkgenfx_out),
        .locked          (dcm2_locked_int), // TODO: rename more descriptively
+       .power_down      (clkgen_power_down),
        // Dynamic reconfiguration ports:
        .daddr           (drp_addr),    // input [6:0] daddr
        .dclk            (clk_usb),         // input dclk

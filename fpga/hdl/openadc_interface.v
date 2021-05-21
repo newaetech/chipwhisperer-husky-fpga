@@ -288,6 +288,9 @@ module openadc_interface #(
    wire [31:0] fifo_read_count;
    wire [31:0] fifo_read_count_error_freeze;
 
+   wire adc_clkgen_power_down;
+   wire clkgen_power_down;
+
    assign reg_datao = reg_datao_oadc | reg_datao_fifo | reg_datao_mmcm_drp;
 
    reg_openadc #(
@@ -337,7 +340,10 @@ module openadc_interface #(
       .num_segments                 (num_segments),
       .segment_cycles               (segment_cycles),
       .led_select                   (led_select),
-      .no_clip_errors               (no_clip_errors)
+      .no_clip_errors               (no_clip_errors),
+      .adc_clkgen_power_down        (adc_clkgen_power_down),
+      .clkgen_power_down            (clkgen_power_down    )
+
    );
 
    reg_openadc_adcfifo #(
@@ -390,7 +396,10 @@ module openadc_interface #(
       .reg_datai            (reg_datai), 
       .reg_read             (reg_read), 
       .reg_write            (reg_write), 
-      .reg_addrvalid        (reg_addrvalid) 
+      .reg_addrvalid        (reg_addrvalid),
+
+      .adc_clkgen_power_down(adc_clkgen_power_down),
+      .clkgen_power_down    (clkgen_power_down    )
 
     );
 

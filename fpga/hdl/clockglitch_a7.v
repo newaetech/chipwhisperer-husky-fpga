@@ -64,10 +64,11 @@ module clockglitch_a7(
     output wire [8:0]   phase2_actual,
     input wire          phase2_load,
     output wire         phase2_done,
-    output wire         mmcm2_locked
+    output wire         mmcm2_locked,
+
+    input wire          I_mmcm_powerdown
 );
 
-    wire I_mmcm_powerdown = 1'b0; // TODO-later
 
     wire mmcm1_clk_out;
     wire mmcm1_clkfbstopped;

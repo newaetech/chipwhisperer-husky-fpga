@@ -1,7 +1,7 @@
 -- Copyright 1986-2019 Xilinx, Inc. All Rights Reserved.
 -- --------------------------------------------------------------------------------
 -- Tool Version: Vivado v.2019.2 (win64) Build 2708876 Wed Nov  6 21:40:23 MST 2019
--- Date        : Wed Feb 24 10:16:04 2021
+-- Date        : Fri May 21 13:56:11 2021
 -- Host        : qed running 64-bit major release  (build 9200)
 -- Command     : write_vhdl -force -mode synth_stub
 --               C:/Users/jp/GitHub/OpenTitan/husky/fpga/vivado/cwhusky.srcs/sources_1/ip/MMCM_clkgen/MMCM_clkgen_stub.vhdl
@@ -23,6 +23,7 @@ entity MMCM_clkgen is
     drdy : out STD_LOGIC;
     dwe : in STD_LOGIC;
     reset : in STD_LOGIC;
+    power_down : in STD_LOGIC;
     locked : out STD_LOGIC;
     clk_in1 : in STD_LOGIC
   );
@@ -33,6 +34,6 @@ architecture stub of MMCM_clkgen is
 attribute syn_black_box : boolean;
 attribute black_box_pad_pin : string;
 attribute syn_black_box of stub : architecture is true;
-attribute black_box_pad_pin of stub : architecture is "clk_out1,daddr[6:0],dclk,den,din[15:0],dout[15:0],drdy,dwe,reset,locked,clk_in1";
+attribute black_box_pad_pin of stub : architecture is "clk_out1,daddr[6:0],dclk,den,din[15:0],dout[15:0],drdy,dwe,reset,power_down,locked,clk_in1";
 begin
 end;

@@ -81,6 +81,7 @@ module MMCM_adc_clock_gen_clk_wiz
   output        psdone,
   // Status and control signals
   input         reset,
+  input         power_down,
   output        locked,
   input         clk_in1
  );
@@ -185,7 +186,7 @@ wire clk_in2_MMCM_adc_clock_gen;
     .LOCKED              (locked_int),
     .CLKINSTOPPED        (clkinstopped_unused),
     .CLKFBSTOPPED        (clkfbstopped_unused),
-    .PWRDWN              (1'b0),
+    .PWRDWN              (power_down),
     .RST                 (reset_high));
   assign reset_high = reset; 
 

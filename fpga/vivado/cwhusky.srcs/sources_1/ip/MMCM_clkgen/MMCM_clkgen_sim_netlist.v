@@ -1,7 +1,7 @@
 // Copyright 1986-2019 Xilinx, Inc. All Rights Reserved.
 // --------------------------------------------------------------------------------
 // Tool Version: Vivado v.2019.2 (win64) Build 2708876 Wed Nov  6 21:40:23 MST 2019
-// Date        : Wed Feb 24 10:16:04 2021
+// Date        : Fri May 21 13:56:11 2021
 // Host        : qed running 64-bit major release  (build 9200)
 // Command     : write_verilog -force -mode funcsim
 //               C:/Users/jp/GitHub/OpenTitan/husky/fpga/vivado/cwhusky.srcs/sources_1/ip/MMCM_clkgen/MMCM_clkgen_sim_netlist.v
@@ -23,6 +23,7 @@ module MMCM_clkgen
     drdy,
     dwe,
     reset,
+    power_down,
     locked,
     clk_in1);
   output clk_out1;
@@ -34,6 +35,7 @@ module MMCM_clkgen
   output drdy;
   input dwe;
   input reset;
+  input power_down;
   output locked;
   input clk_in1;
 
@@ -47,6 +49,7 @@ module MMCM_clkgen
   wire drdy;
   wire dwe;
   wire locked;
+  wire power_down;
   wire reset;
 
   MMCM_clkgen_MMCM_clkgen_clk_wiz inst
@@ -60,6 +63,7 @@ module MMCM_clkgen
         .drdy(drdy),
         .dwe(dwe),
         .locked(locked),
+        .power_down(power_down),
         .reset(reset));
 endmodule
 
@@ -74,6 +78,7 @@ module MMCM_clkgen_MMCM_clkgen_clk_wiz
     drdy,
     dwe,
     reset,
+    power_down,
     locked,
     clk_in1);
   output clk_out1;
@@ -85,6 +90,7 @@ module MMCM_clkgen_MMCM_clkgen_clk_wiz
   output drdy;
   input dwe;
   input reset;
+  input power_down;
   output locked;
   input clk_in1;
 
@@ -102,6 +108,7 @@ module MMCM_clkgen_MMCM_clkgen_clk_wiz
   wire drdy;
   wire dwe;
   wire locked;
+  wire power_down;
   wire reset;
   wire NLW_mmcm_adv_inst_CLKFBOUTB_UNCONNECTED;
   wire NLW_mmcm_adv_inst_CLKFBSTOPPED_UNCONNECTED;
@@ -212,7 +219,7 @@ module MMCM_clkgen_MMCM_clkgen_clk_wiz
         .PSDONE(NLW_mmcm_adv_inst_PSDONE_UNCONNECTED),
         .PSEN(1'b0),
         .PSINCDEC(1'b0),
-        .PWRDWN(1'b0),
+        .PWRDWN(power_down),
         .RST(reset));
 endmodule
 `ifndef GLBL
