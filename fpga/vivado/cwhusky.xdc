@@ -27,14 +27,20 @@ set_clock_groups -asynchronous \
                  -group [get_clocks clk_usb] \
                  -group [get_clocks pll_fpga_clk]
 
+set_clock_groups -asynchronous \
+                 -group [get_clocks clk_usb] \
+                 -group [get_clocks glitch_mmcm1_clk_out]
 
+set_clock_groups -asynchronous \
+                 -group [get_clocks clk_usb] \
+                 -group [get_clocks glitch_mmcm2_clk_out]
 
 
 # *****************************************************************************
 
 # LEDs
-set_property -dict { PACKAGE_PIN C7  DRIVE 8  IOSTANDARD LVCMOS33 } [get_ports LED_CLK1FAIL]
-set_property -dict { PACKAGE_PIN C6  DRIVE 8  IOSTANDARD LVCMOS33 } [get_ports LED_CLK2FAIL]
+set_property -dict { PACKAGE_PIN C7  DRIVE 8  IOSTANDARD LVCMOS33 } [get_ports LED_ADC]
+set_property -dict { PACKAGE_PIN C6  DRIVE 8  IOSTANDARD LVCMOS33 } [get_ports LED_GLITCH]
 set_property -dict { PACKAGE_PIN D3  DRIVE 8  IOSTANDARD LVCMOS33 } [get_ports LED_ARMED]
 set_property -dict { PACKAGE_PIN C3  DRIVE 8  IOSTANDARD LVCMOS33 } [get_ports LED_CAP]
 
@@ -202,12 +208,12 @@ set_false_path -to [get_ports target_poweron]
 set_input_delay -clock clk_usb 0.000 [get_ports ADC_OVR_SDOUT]
 set_false_path -from [get_ports ADC_OVR_SDOUT]
 
-set_output_delay -clock clk_usb 0.000 [get_ports LED_CLK1FAIL]
-set_output_delay -clock clk_usb 0.000 [get_ports LED_CLK2FAIL]
+set_output_delay -clock clk_usb 0.000 [get_ports LED_ADC]
+set_output_delay -clock clk_usb 0.000 [get_ports LED_GLITCH]
 set_output_delay -clock clk_usb 0.000 [get_ports LED_ARMED]
 set_output_delay -clock clk_usb 0.000 [get_ports LED_CAP]
-set_false_path -to [get_ports LED_CLK1FAIL]
-set_false_path -to [get_ports LED_CLK2FAIL]
+set_false_path -to [get_ports LED_ADC]
+set_false_path -to [get_ports LED_GLITCH]
 set_false_path -to [get_ports LED_ARMED]
 set_false_path -to [get_ports LED_CAP]
 
@@ -277,7 +283,6 @@ set_false_path -to [get_ports FPGA_TRIGOUT]
 
 # Not from any spec, but the result is no timing violations and reads work:
 set_output_delay -clock clk_usb -1.200 [get_ports USB_Data]
-
 
 set_property BITSTREAM.CONFIG.USR_ACCESS TIMESTAMP [current_design]
 set_property C_CLK_INPUT_FREQ_HZ 300000000 [get_debug_cores dbg_hub]

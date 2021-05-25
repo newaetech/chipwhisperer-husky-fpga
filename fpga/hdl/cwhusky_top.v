@@ -5,8 +5,8 @@
 module cwhusky_top(  
     input wire         clk_usb,
 
-    output wire        LED_CLK1FAIL,
-    output wire        LED_CLK2FAIL,
+    output wire        LED_ADC, //  LED_CLK1FAIL on schematic,
+    output wire        LED_GLITCH, // LED_CLK2FAIL on schematic
     output wire        LED_ARMED,
     output wire        LED_CAP,
 
@@ -229,7 +229,7 @@ module cwhusky_top(
       assign USERIO_D[3] = reg_read_slow;
       assign USERIO_D[4] = fast_fifo_read;
       assign USERIO_D[5] = fifo_error_flag;
-      assign USERIO_D[6] = 1'bz;
+      assign USERIO_D[6] = glitchclk;
       assign USERIO_D[7] = 1'bz;
 
    `else
@@ -245,11 +245,15 @@ module cwhusky_top(
 
    wire LED_ADCDCMUnlock;
    wire LED_CLKGENDCMUnlock;
+   wire led_glitch;
 
    // fast-flash red LEDs when some internal error has occurred:
    //assign LED_CLK1FAIL = error_flag? usb_hearbeat[22] : LED_ADCDCMUnlock;
-   assign LED_CLK1FAIL = error_flag? usb_hearbeat[22] : ~PLL_STATUS;
-   assign LED_CLK2FAIL = error_flag? usb_hearbeat[22] : LED_CLKGENDCMUnlock;
+   //assign LED_CLK1FAIL = error_flag? usb_hearbeat[22] : ~PLL_STATUS;
+   //assign LED_CLK2FAIL = error_flag? usb_hearbeat[22] : LED_CLKGENDCMUnlock;
+
+   assign LED_ADC = error_flag? usb_hearbeat[22] : ~PLL_STATUS;
+   assign LED_GLITCH = error_flag? usb_hearbeat[22] : led_glitch;
 
    openadc_interface #(
         .pBYTECNT_SIZE  (pBYTECNT_SIZE)
@@ -390,11 +394,10 @@ module cwhusky_top(
         .reg_addrvalid  (reg_addrvalid), 
         .target_hs1     (target_hs1),
         .clkgen         (pll_fpga_clk),
-        //.glitchclk      (glitchclk),
-        .glitchclk      (), // TODO-temp
-        .exttrigger     (ext_trigger)
+        .glitchclk      (glitchclk),
+        .exttrigger     (ext_trigger),
+        .led_glitch     (led_glitch)
    );
-   assign glitchclk = 1'b0; // TODO-temp
 
    assign FPGA_TRIGOUT = ext_trigger;
    //assign FPGA_TRIGOUT = 1'b0;

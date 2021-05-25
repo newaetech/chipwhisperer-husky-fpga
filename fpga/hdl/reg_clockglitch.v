@@ -53,7 +53,7 @@ module reg_clockglitch #(
    input wire          exttrigger,
 
    output wire         mmcm_unlocked,    // TODO- unused
-   output reg          led_glitch       // TODO- unused
+   output reg          led_glitch
 );
 
    wire  reset;

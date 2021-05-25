@@ -72,8 +72,8 @@ module cwhusky_tb();
    wire                 target_hs2;
    wire                 FPGA_TRIGOUT;
    wire                 USBIOHS2;
-   wire                 LED_CLK1FAIL;
-   wire                 LED_CLK2FAIL;
+   wire                 LED_ADC;
+   wire                 LED_GLITCH;
    wire                 LED_ARMED;
    wire                 LED_CAP;
 
@@ -452,8 +452,8 @@ cwhusky_top U_dut (
     .ADC_DN             (6'b0         ),
     .ADC_CLKP           (             ),
     .ADC_CLKN           (             ),
-    .LED_CLK1FAIL       (LED_CLK1FAIL ),
-    .LED_CLK2FAIL       (LED_CLK2FAIL ),
+    .LED_ADC            (LED_ADC      ),
+    .LED_GLITCH         (LED_GLITCH   ),
     .LED_ARMED          (LED_ARMED    ),
     .LED_CAP            (LED_CAP      ),
     .USB_Data           (usb_data     ),

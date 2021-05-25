@@ -70,7 +70,7 @@ module clockglitch_a7(
 );
 
 
-    wire mmcm1_clk_out;
+    wire glitch_mmcm1_clk_out;
     wire mmcm1_clkfbstopped;
     wire mmcm1_clkinstopped;
     wire mmcm1_clkfb;
@@ -84,7 +84,7 @@ module clockglitch_a7(
     wire mmcm1_PSINCDEC;
     wire mmcm1_PSDONE;
 
-    wire mmcm2_clk_out;
+    wire glitch_mmcm2_clk_out;
     wire mmcm2_clkfbstopped;
     wire mmcm2_clkinstopped;
     wire mmcm2_clkfb;
@@ -138,13 +138,29 @@ module clockglitch_a7(
    //Need to think carefully about which clock to syncronize this too, and
    //which edge. Lots of trouble as different options on outputs & adjustable
    //phase
-   always @(negedge mmcm1_clk_out) begin
+   always @(negedge glitch_mmcm1_clk_out_buf) begin
       glitch_next_reg1 <= glitch_next;
       glitch_next_reg2 <= glitch_next_reg1;
    end
 
-   // TODO: maybe BUFG on mmcm1_clk_out and mmcm2_clk_out?
-   assign glitchstream = (mmcm1_clk_out & mmcm2_clk_out) & glitch_next_reg2;
+   wire glitch_mmcm1_clk_out_buf;
+   wire glitch_mmcm2_clk_out_buf;
+
+`ifdef __ICARUS__
+   assign glitch_mmcm1_clk_out_buf = ~glitch_mmcm1_clk_out;
+   assign glitch_mmcm2_clk_out_buf = glitch_mmcm2_clk_out;
+`else
+   BUFG ubuf1(
+      .I    (~glitch_mmcm1_clk_out),
+      .O    (glitch_mmcm1_clk_out_buf)
+   );
+   BUFG ubuf2(
+      .I    (glitch_mmcm2_clk_out),
+      .O    (glitch_mmcm2_clk_out_buf)
+   );
+`endif
+
+   assign glitchstream = (glitch_mmcm1_clk_out_buf & glitch_mmcm2_clk_out_buf) & glitch_next_reg2;
 
    assign glitched_clk = (glitch_type == 3'b000) ? source_clk ^ glitchstream :  // glitch XORd with clock
                          (glitch_type == 3'b001) ? source_clk | glitchstream :  // glitch ORd with clock
@@ -156,22 +172,26 @@ module clockglitch_a7(
 `ifndef __ICARUS__
    MMCME2_ADV #(
       .BANDWIDTH                    ("OPTIMIZED"), // Jitter programming (OPTIMIZED, HIGH, LOW)
-      .CLKFBOUT_MULT_F              (60.0), // Multiply value for all CLKOUT (2.000-64.000)
-      .CLKOUT0_DIVIDE_F             (60.0),
+      .CLKFBOUT_MULT_F              (6.0), // Multiply value for all CLKOUT (2.000-64.000)
+      .CLKOUT0_DIVIDE_F             (6.0),
       .CLKFBOUT_PHASE               (0.0), // Phase offset in degrees of CLKFB (-360.000-360.000).
       .CLKIN1_PERIOD                (100.0),
       .CLKOUT0_DUTY_CYCLE           (0.5),
       .CLKOUT0_PHASE                (0.0),  // Phase offset for CLKOUT outputs (-360.000-360.000).
       .CLKOUT4_CASCADE              ("FALSE"), // Cascade CLKOUT4 counter with CLKOUT6 (FALSE, TRUE)
-      .COMPENSATION                 ("ZHOLD"), // ZHOLD, BUF_IN, EXTERNAL, INTERNAL
+      .COMPENSATION                 ("INTERNAL"), // ZHOLD, BUF_IN, EXTERNAL, INTERNAL
       .DIVCLK_DIVIDE                (1), // Master division value (1-106)
       .STARTUP_WAIT                 ("FALSE"), // Delays DONE until MMCM is locked (FALSE, TRUE)
       .CLKFBOUT_USE_FINE_PS         ("FALSE"),
       .CLKOUT0_USE_FINE_PS          ("TRUE")
    ) U_mmcm1 (
       // Clock Outputs:
-      .CLKOUT0                      (),
-      .CLKOUT0B                     (mmcm1_clk_out),
+      //.CLKOUT0                      (),
+      //.CLKOUT0B                     (glitch_mmcm1_clk_out), 
+      // would be nice to use this but Vivado won't let us cascade MMCM's from here...
+      // so, instead we'll invert this one :shrugs:
+      .CLKOUT0                      (glitch_mmcm1_clk_out), 
+      .CLKOUT0B                     (),
       .CLKOUT1                      (),
       .CLKOUT1B                     (),
       .CLKOUT2                      (),
@@ -214,21 +234,21 @@ module clockglitch_a7(
 
    MMCME2_ADV #(
       .BANDWIDTH                    ("OPTIMIZED"), // Jitter programming (OPTIMIZED, HIGH, LOW)
-      .CLKFBOUT_MULT_F              (60.0), // Multiply value for all CLKOUT (2.000-64.000)
-      .CLKOUT0_DIVIDE_F             (60.0),
+      .CLKFBOUT_MULT_F              (6.0), // Multiply value for all CLKOUT (2.000-64.000)
+      .CLKOUT0_DIVIDE_F             (6.0),
       .CLKFBOUT_PHASE               (0.0), // Phase offset in degrees of CLKFB (-360.000-360.000).
       .CLKIN1_PERIOD                (100.0),
       .CLKOUT0_DUTY_CYCLE           (0.5),
       .CLKOUT0_PHASE                (0.0),  // Phase offset for CLKOUT outputs (-360.000-360.000).
       .CLKOUT4_CASCADE              ("FALSE"), // Cascade CLKOUT4 counter with CLKOUT6 (FALSE, TRUE)
-      .COMPENSATION                 ("ZHOLD"), // ZHOLD, BUF_IN, EXTERNAL, INTERNAL
+      .COMPENSATION                 ("INTERNAL"), // ZHOLD, BUF_IN, EXTERNAL, INTERNAL
       .DIVCLK_DIVIDE                (1), // Master division value (1-106)
       .STARTUP_WAIT                 ("FALSE"), // Delays DONE until MMCM is locked (FALSE, TRUE)
       .CLKFBOUT_USE_FINE_PS         ("FALSE"),
       .CLKOUT0_USE_FINE_PS          ("TRUE")
    ) U_mmcm2 (
       // Clock Outputs:
-      .CLKOUT0                      (mmcm2_clk_out),
+      .CLKOUT0                      (glitch_mmcm2_clk_out),
       .CLKOUT0B                     (),
       .CLKOUT1                      (),
       .CLKOUT1B                     (),
@@ -247,7 +267,7 @@ module clockglitch_a7(
       .CLKINSTOPPED                 (mmcm2_clkinstopped),
       .LOCKED                       (mmcm2_locked),
       // Clock Inputs:
-      .CLKIN1                       (source_clk),
+      .CLKIN1                       (~glitch_mmcm1_clk_out),
       .CLKIN2                       (1'b0),
       // Control Ports: 1-bit (each) input: MMCM control ports
       .CLKINSEL                     (1'b1),
