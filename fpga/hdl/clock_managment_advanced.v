@@ -79,7 +79,7 @@ module clock_managment_advanced #(
     wire [7:0] dcm_status;
 
 
-    // TODO: remove/clean up!
+    /* TODO: remove or update
     dcm_phaseshift_interface dcmps(.clk_usb(clk_usb),
                                    .reset_i(reset),
                                    .default_value_i(9'd0),
@@ -91,6 +91,10 @@ module clock_managment_advanced #(
                                    .dcm_psincdec_o(dcm_psincdec),
                                    .dcm_psdone_i(dcm_psdone),
                                    .dcm_status_i(dcm_status));
+    */
+    assign dcm_psincdec = 1'b0;
+    assign dcm_psen = 1'b0;
+    assign dcm_status = 8'b0;
 
    reg_mmcm_drp #(
       .pBYTECNT_SIZE    (pBYTECNT_SIZE)

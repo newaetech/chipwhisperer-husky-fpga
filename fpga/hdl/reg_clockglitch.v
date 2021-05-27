@@ -60,16 +60,11 @@ module reg_clockglitch #(
    assign reset = reset_i;
 
 
-  /* Controls width of pulse */
-   wire [8:0] phase1_requested;
-   wire [8:0] phase1_actual;
-   wire phase1_load;
-   wire phase1_done;
+   wire phase1_load; // Controls width of pulse
+   wire phase2_load; // Controls delay between falling edge of glitch & risinge edge of clock
 
-   /* Controls delay between falling edge of glitch & risinge edge of clock */
-   wire [8:0] phase2_requested;
-   wire [8:0] phase2_actual;
-   wire phase2_load;
+   wire [15:0] phase_requested;
+   wire phase1_done;
    wire phase2_done;
 
    `define CLOCKGLITCH_SETTINGS     51
@@ -112,11 +107,10 @@ module reg_clockglitch #(
    wire mmcm1_locked;
    wire mmcm2_locked;
 
-   reg phase2_done_reg;
    reg phase1_done_reg;
+   reg phase2_done_reg;
 
-   assign phase1_requested = clockglitch_settings_reg[8:0];
-   assign phase2_requested = clockglitch_settings_reg[17:9];
+   assign phase_requested = clockglitch_settings_reg[15:0];
 
    wire mmcm_rst;
 
@@ -124,16 +118,17 @@ module reg_clockglitch #(
 
 /*
     Clock-glitch settings main registers (address 51)
-    [8..0]  = Glitch Offset Fine Phase 
-    [17..9] = Glitch Width Fine Phase
-    [18] = Load Phases
-    [27..19] =  Glitch Offset current setting
-    [36..28] =  Glitch Width current setting
-    [37] = Offset Fine loaded
-    [38] = Width Fine loaded
-    [39] (Byte 4, Bit 7)  = Offset DCM Locked
-    [40] (Byte 5, Bit 0)  = Width DCM Locked 
-    [41] (Byte 5, Bit 1)  = DCM Reset
+    *** NOTE these are different from the CW-lite/pro definitions! ***
+    (due to the differences in offset and width settings for 7-series MMCM)
+    [15..0]  = Glitch Offset / Width Phase
+    [16] = Load offset phase (NOTE: only one of offset / width phase load bits can be set)
+    [17] = Load width phase  (NOTE: only one of offset / width phase load bits can be set)
+    [18] = phase offset done
+    [19] = phase width done
+    [20] = Offset MMCM Locked
+    [21] = Width MMCM Locked 
+    [22] = DCM Reset
+    [42..23] unused (left blank so that fields below coincide with CW-lite/pro)
     [43..42] (Byte 5, Bit [3..2]) = Glitch trigger source
          00 = Manual
          01 = Capture Trigger (with offset, continous)
@@ -155,13 +150,11 @@ module reg_clockglitch #(
 
     [57..56] (Byte 7, Bits [1..0]) = Glitch Clock Source
           00 = Source 0 (HS1)
-          01 = Source 1 (clkgen)
+          01 = Source 1 (clkgen aka pll_fpga_clk)
 
     [62..58] (Byte 7, Bits [6..2]) = Cycles to glitch (top 5 bits)
 
     [63] (Byte 7, Bit 7) = Unused (reads as 0, used to later expand if needed)
-    
-    
 */
 
    wire [2:0] glitch_type;
@@ -239,28 +232,27 @@ module reg_clockglitch #(
       clockglitch_cnt <= clockglitch_cnt + 32'd1;
    end
 
-   assign clockglitch_settings_read[18:0] = clockglitch_settings_reg[18:0];
-   assign clockglitch_settings_read[36:19] = {phase2_actual, phase1_actual};
-   assign clockglitch_settings_read[37] = phase1_done_reg;
-   assign clockglitch_settings_read[38] = phase2_done_reg;
-   assign clockglitch_settings_read[39] = mmcm1_locked;
-   assign clockglitch_settings_read[40] = mmcm2_locked;
-   assign clockglitch_settings_read[63:41] = clockglitch_settings_reg[63:41];
-   assign mmcm_rst = clockglitch_settings_reg[41];
+   assign clockglitch_settings_read[17:0] = clockglitch_settings_reg[17:0];
+   assign clockglitch_settings_read[18] = phase1_done_reg;
+   assign clockglitch_settings_read[19] = phase2_done_reg;
+   assign clockglitch_settings_read[20] = mmcm1_locked;
+   assign clockglitch_settings_read[21] = mmcm2_locked;
+   assign clockglitch_settings_read[63:22] = clockglitch_settings_reg[63:22];
+   assign mmcm_rst = clockglitch_settings_reg[22];
 
    always @(posedge clk_usb) begin
       if (phase1_load)
          phase1_done_reg <= 'b0;
       else if (phase1_done)
          phase1_done_reg <= 'b1;
-   end
 
-   always @(posedge clk_usb) begin
       if (phase2_load)
          phase2_done_reg <= 'b0;
       else if (phase2_done)
          phase2_done_reg <= 'b1;
-   end 
+
+
+   end
 
 
    always @(posedge clk_usb) begin
@@ -280,21 +272,9 @@ module reg_clockglitch #(
          reg_datao_reg <= 0;
    end
 
-   /* Know when all settings have been written successfully */
-   /*
-   always @(posedge clk_usb) begin
-  	if ((reg_write) && (reg_address == `CLOCKGLITCH_SETTINGS)) begin
-  		if (reg_bytecnt == 16'd7) begin
-  			regwrite_done <= 1'b1;			
-  		end else begin
-  			regwrite_done <= 1'b0;
-  		end
-  	end
-  end
-  */
-
-   assign phase2_load  = clockglitch_settings_reg[18];
-   assign phase1_load  = clockglitch_settings_reg[18];
+   // single-cycle pulses:
+   assign phase1_load  = clockglitch_settings_reg[16];
+   assign phase2_load  = clockglitch_settings_reg[17];
 
    always @(posedge clk_usb) begin
       if (reset) begin
@@ -305,10 +285,15 @@ module reg_clockglitch #(
 `ifdef SUPPORT_GLITCH_READBACK
          clockglitch_readback_reg <= {8'd0, 8'd10, 8'd0, 8'd10, 16'd0, 16'd0};
 `endif
-      end else if (clockglitch_settings_reg[18]) begin
-         clockglitch_settings_reg[18] <= 0;
+      end 
 
-      end else if (reg_write) begin
+      else if (clockglitch_settings_reg[16])
+         clockglitch_settings_reg[16] <= 0;
+
+      else if (clockglitch_settings_reg[17])
+         clockglitch_settings_reg[17] <= 0;
+
+      else if (reg_write) begin
          case (reg_address)
             `CLOCKGLITCH_SETTINGS: clockglitch_settings_reg[reg_bytecnt*8 +: 8] <= reg_datai;      
             `CLOCKGLITCH_OFFSET: clockglitch_offset_reg[reg_bytecnt*8 +: 8] <= reg_datai;      
@@ -339,16 +324,13 @@ module reg_clockglitch #(
     .glitch_type            (glitch_type),
     .clk_usb                (clk_usb),
     .mmcm_rst               (mmcm_rst),
-    .phase1_requested       (phase1_requested),
-    .phase1_actual          (phase1_actual),
+    .phase_requested        (phase_requested),
     .phase1_load            (phase1_load),
-    .phase1_done            (phase1_done),
     .mmcm1_locked           (mmcm1_locked),
-    .phase2_requested       (phase2_requested),
-    .phase2_actual          (phase2_actual),
     .phase2_load            (phase2_load),
-    .phase2_done            (phase2_done),
     .mmcm2_locked           (mmcm2_locked),
+    .phase1_done            (phase1_done),
+    .phase2_done            (phase2_done),
     .I_mmcm_powerdown       (clockglitch_powerdown)
 );
 

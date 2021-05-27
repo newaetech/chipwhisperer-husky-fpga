@@ -53,18 +53,16 @@ module clockglitch_a7(
     input wire          mmcm_rst,
 
     // Controls width of pulse
-    input wire [8:0]    phase1_requested,
-    output wire [8:0]   phase1_actual,
     input wire          phase1_load,
     output wire         phase1_done,
     output wire         mmcm1_locked,
 
     // Controls delay between falling edge of glitch & risinge edge of clock
-    input wire [8:0]    phase2_requested,
-    output wire [8:0]   phase2_actual,
     input wire          phase2_load,
     output wire         phase2_done,
     output wire         mmcm2_locked,
+
+    input wire [15:0]   phase_requested,
 
     input wire          I_mmcm_powerdown
 );
@@ -80,6 +78,7 @@ module clockglitch_a7(
     wire mmcm1_DWE = 1'b0; // TODO-temp
     wire [15:0] mmcm1_DO;
     wire mmcm1_DRDY;
+
     wire mmcm1_PSEN;
     wire mmcm1_PSINCDEC;
     wire mmcm1_PSDONE;
@@ -93,44 +92,38 @@ module clockglitch_a7(
     wire [15:0] mmcm2_DI;
     wire mmcm2_DWE = 1'b0; // TODO-temp
     wire [15:0] mmcm2_DO;
+
     wire mmcm2_DRDY;
     wire mmcm2_PSEN;
     wire mmcm2_PSINCDEC;
     wire mmcm2_PSDONE;
 
+    wire psen;
+    wire psdone;
 
-    dcm_phaseshift_interface dcmps1(
+    mmcm_phaseshift_interface U_offset_phaseshift (
       .clk_usb          (clk_usb),
-      .reset_i          (mmcm_rst),
-      .default_value_i  (9'd0),
-      .value_i          (phase1_requested),
-      .load_i           (phase1_load),
-      .value_o          (phase1_actual),
-      .done_o           (phase1_done),
-      .dcm_psen_o       (mmcm1_PSEN),
-      .dcm_psincdec_o   (mmcm1_PSINCDEC),
-      .dcm_psdone_i     (mmcm1_PSDONE),
-      .dcm_status_i     (8'b0)  // TODO
+      .reset            (mmcm_rst),
+      .I_step_index     (phase_requested),
+      .I_load           (phase1_load),
+      .O_done           (phase1_done),
+      .O_psen           (mmcm1_PSEN),
+      .O_psincdec       (mmcm1_PSINCDEC),
+      .I_psdone         (mmcm1_PSDONE)
     );
 
-   wire dcm2_psen;
-   wire dcm2_psincdec;
-   wire dcm2_psdone;
-
-   dcm_phaseshift_interface dcmps2(
+    mmcm_phaseshift_interface U_width_phaseshift (
       .clk_usb          (clk_usb),
-      .reset_i          (mmcm_rst),
-      .default_value_i  (9'd0),
-      .value_i          (phase2_requested),
-      .load_i           (phase2_load),
-      .value_o          (phase2_actual),
-      .done_o           (phase2_done),
-      .dcm_psen_o       (mmcm2_PSEN),
-      .dcm_psincdec_o   (mmcm2_PSINCDEC),
-      .dcm_psdone_i     (mmcm2_PSDONE),
-      .dcm_status_i     (8'b0)  // TODO
-   );
+      .reset            (mmcm_rst),
+      .I_step_index     (phase_requested),
+      .I_load           (phase2_load),
+      .O_done           (phase2_done),
+      .O_psen           (mmcm2_PSEN),
+      .O_psincdec       (mmcm2_PSINCDEC),
+      .I_psdone         (mmcm2_PSDONE)
+    );
 
+   
    wire glitchstream;
 
    reg glitch_next_reg1;
@@ -184,7 +177,7 @@ module clockglitch_a7(
       .STARTUP_WAIT                 ("FALSE"), // Delays DONE until MMCM is locked (FALSE, TRUE)
       .CLKFBOUT_USE_FINE_PS         ("FALSE"),
       .CLKOUT0_USE_FINE_PS          ("TRUE")
-   ) U_mmcm1 (
+   ) U_mmcm1_offset (
       // Clock Outputs:
       //.CLKOUT0                      (),
       //.CLKOUT0B                     (glitch_mmcm1_clk_out), 
@@ -246,7 +239,7 @@ module clockglitch_a7(
       .STARTUP_WAIT                 ("FALSE"), // Delays DONE until MMCM is locked (FALSE, TRUE)
       .CLKFBOUT_USE_FINE_PS         ("FALSE"),
       .CLKOUT0_USE_FINE_PS          ("TRUE")
-   ) U_mmcm2 (
+   ) U_mmcm2_width (
       // Clock Outputs:
       .CLKOUT0                      (glitch_mmcm2_clk_out),
       .CLKOUT0B                     (),
@@ -289,6 +282,21 @@ module clockglitch_a7(
       // Feedback Clocks
       .CLKFBIN                      (mmcm2_clkfb)
    );
+`endif
+
+`ifdef ILA_GLITCH_PS
+    ila_glitch_ps U_ila_glitch_ps (
+       .clk            (clk_usb),              // input wire clk
+       .probe0         (phase1_load),          // input wire [0:0]  probe0 
+       .probe1         (phase2_load),          // input wire [0:0]  probe1 
+       .probe2         (phase1_done),          // input wire [0:0]  probe2 
+       .probe3         (mmcm1_PSEN),           // input wire [0:0]  probe3 
+       .probe4         (mmcm2_PSEN),           // input wire [0:0]  probe4 
+       .probe5         (mmcm1_PSINCDEC),       // input wire [0:0]  probe5 
+       .probe6         (mmcm2_PSINCDEC),       // input wire [0:0]  probe6 
+       .probe7         (mmcm_rst),             // input wire [0:0]  probe7 
+       .probe8         (phase2_done)           // input wire [0:0]  probe8 
+    );
 `endif
 
 

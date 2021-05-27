@@ -1,6 +1,6 @@
 cwhusky_tb.v
 ../hdl/clockglitch_a7.v
-../hdl/dcm_phaseshift_interface.v
+../hdl/mmcm_phaseshift_interface.v
 ../hdl/includes.v
 ../hdl/reg_chipwhisperer.v
 ../hdl/reg_openadc.v

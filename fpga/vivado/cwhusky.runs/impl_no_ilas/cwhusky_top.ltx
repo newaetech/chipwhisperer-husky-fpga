@@ -240,7 +240,7 @@
                     },
                     {
                         "type": "ILA_V3",
-                        "name": "oadc/U_fifo/U_ila_fifo_counts",
+                        "name": "reg_clockglitch/gc/U_ila_glitch_ps",
                         "spec": "labtools_ila_v6",
                         "ipName": "ila",
                         "core_location": {
@@ -248,7 +248,7 @@
                             "slave_index": 1,
                             "bscan_switch_index": 0
                         },
-                        "uuid": "9298C225979E5E51AAA6F2E9A5EC06B1",
+                        "uuid": "C5C03C88AFB8545780AC802A1066062A",
                         "pins": [
                             {
                                 "name": "probe0",
@@ -261,7 +261,7 @@
                                 "portIndex": 0,
                                 "nets": [
                                     {
-                                        "name": "oadc/U_fifo/stream_segment_available",
+                                        "name": "reg_clockglitch/gc/phase1_load",
                                         "isBus": false
                                     }
                                 ]
@@ -271,73 +271,14 @@
                                 "id": 11,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
-                                "isVector": true,
+                                "isVector": false,
                                 "leftIndex": 0,
-                                "rightIndex": 18,
+                                "rightIndex": 0,
                                 "portIndex": 1,
                                 "nets": [
                                     {
-                                        "name": "oadc/U_fifo/write_count_to_usb",
-                                        "isBus": true,
-                                        "subnets": [
-                                            {
-                                                "name": "oadc/U_fifo/write_count_to_usb[18]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/write_count_to_usb[17]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/write_count_to_usb[16]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/write_count_to_usb[15]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/write_count_to_usb[14]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/write_count_to_usb[13]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/write_count_to_usb[12]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/write_count_to_usb[11]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/write_count_to_usb[10]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/write_count_to_usb[9]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/write_count_to_usb[8]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/write_count_to_usb[7]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/write_count_to_usb[6]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/write_count_to_usb[5]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/write_count_to_usb[4]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/write_count_to_usb[3]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/write_count_to_usb[2]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/write_count_to_usb[1]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/write_count_to_usb[0]"
-                                            }
-                                        ]
+                                        "name": "reg_clockglitch/gc/phase2_load",
+                                        "isBus": false
                                     }
                                 ]
                             },
@@ -346,73 +287,14 @@
                                 "id": 12,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
-                                "isVector": true,
+                                "isVector": false,
                                 "leftIndex": 0,
-                                "rightIndex": 18,
+                                "rightIndex": 0,
                                 "portIndex": 2,
                                 "nets": [
                                     {
-                                        "name": "oadc/U_fifo/read_count",
-                                        "isBus": true,
-                                        "subnets": [
-                                            {
-                                                "name": "oadc/U_fifo/read_count[18]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/read_count[17]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/read_count[16]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/read_count[15]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/read_count[14]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/read_count[13]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/read_count[12]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/read_count[11]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/read_count[10]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/read_count[9]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/read_count[8]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/read_count[7]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/read_count[6]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/read_count[5]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/read_count[4]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/read_count[3]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/read_count[2]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/read_count[1]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/read_count[0]"
-                                            }
-                                        ]
+                                        "name": "reg_clockglitch/gc/phase1_done",
+                                        "isBus": false
                                     }
                                 ]
                             },
@@ -427,7 +309,7 @@
                                 "portIndex": 3,
                                 "nets": [
                                     {
-                                        "name": "oadc/U_fifo/slow_fifo_rd",
+                                        "name": "reg_clockglitch/gc/mmcm1_PSEN",
                                         "isBus": false
                                     }
                                 ]
@@ -443,7 +325,7 @@
                                 "portIndex": 4,
                                 "nets": [
                                     {
-                                        "name": "oadc/U_fifo/slow_fifo_wr",
+                                        "name": "reg_clockglitch/gc/mmcm2_PSEN",
                                         "isBus": false
                                     }
                                 ]
@@ -459,7 +341,7 @@
                                 "portIndex": 5,
                                 "nets": [
                                     {
-                                        "name": "oadc/U_fifo/slow_fifo_full",
+                                        "name": "reg_clockglitch/gc/mmcm1_PSINCDEC",
                                         "isBus": false
                                     }
                                 ]
@@ -475,7 +357,7 @@
                                 "portIndex": 6,
                                 "nets": [
                                     {
-                                        "name": "oadc/U_fifo/slow_fifo_empty",
+                                        "name": "reg_clockglitch/gc/mmcm2_PSINCDEC",
                                         "isBus": false
                                     }
                                 ]
@@ -491,8 +373,9 @@
                                 "portIndex": 7,
                                 "nets": [
                                     {
-                                        "name": "oadc/U_fifo/slow_fifo_overflow",
-                                        "isBus": false
+                                        "name": "reg_clockglitch/gc/mmcm_rst",
+                                        "isBus": false,
+                                        "parentNetId": 31
                                     }
                                 ]
                             },
@@ -507,24 +390,41 @@
                                 "portIndex": 8,
                                 "nets": [
                                     {
-                                        "name": "oadc/U_fifo/slow_fifo_underflow",
+                                        "name": "reg_clockglitch/gc/phase2_done",
                                         "isBus": false
                                     }
                                 ]
-                            },
+                            }
+                        ]
+                    }
+                ],
+                "parent_nets": [
+                    {
+                        "id": 31,
+                        "name": "reg_clockglitch/mmcm_rst",
+                        "state_reg": [
                             {
-                                "name": "probe9",
-                                "id": 19,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": false,
-                                "leftIndex": 0,
-                                "rightIndex": 0,
-                                "portIndex": 9,
-                                "nets": [
+                                "name": "reg_clockglitch/gc/U_offset_phaseshift/FSM_sequential_state_reg[0]",
+                                "states": [
                                     {
-                                        "name": "oadc/U_fifo/error_flag",
-                                        "isBus": false
+                                        "name": "pS_RESET",
+                                        "val": "000"
+                                    },
+                                    {
+                                        "name": "pS_IDLE",
+                                        "val": "001"
+                                    },
+                                    {
+                                        "name": "pS_PULSE",
+                                        "val": "010"
+                                    },
+                                    {
+                                        "name": "pS_DONE",
+                                        "val": "100"
+                                    },
+                                    {
+                                        "name": "pS_WAIT",
+                                        "val": "011"
                                     }
                                 ]
                             }
