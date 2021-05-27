@@ -46,7 +46,6 @@ module reg_openadc_adcfifo #(
    inout  wire [7:0]   reg_datao,    // Data to read
    input  wire         reg_read,     // Read flag
    input  wire         reg_write,    // Write flag
-   input  wire         reg_addrvalid,// Address valid flag
 
    /* ADC Fifo Interface */
    input  wire         fifo_empty,

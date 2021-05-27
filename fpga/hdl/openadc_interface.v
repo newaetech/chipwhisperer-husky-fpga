@@ -63,7 +63,6 @@ module openadc_interface #(
     output wire [7:0]                   reg_datao,
     input  wire                         reg_read,
     input  wire                         reg_write,
-    input  wire                         reg_addrvalid,
     output wire                         fast_fifo_read,
 
     output wire                         fifo_error_flag,
@@ -306,7 +305,6 @@ module openadc_interface #(
       .reg_datai                    (reg_datai), 
       .reg_read                     (reg_read), 
       .reg_write                    (reg_write), 
-      .reg_addrvalid                (reg_addrvalid), 
 
       .gain                         (PWM_incr),
       .status                       (reg_status),         
@@ -343,7 +341,6 @@ module openadc_interface #(
       .no_clip_errors               (no_clip_errors),
       .adc_clkgen_power_down        (adc_clkgen_power_down),
       .clkgen_power_down            (clkgen_power_down    )
-
    );
 
    reg_openadc_adcfifo #(
@@ -357,7 +354,6 @@ module openadc_interface #(
       .reg_datai            (reg_datai), 
       .reg_read             (reg_read), 
       .reg_write            (reg_write), 
-      .reg_addrvalid        (reg_addrvalid), 
       .fifo_empty           (fifo_empty),
       .fifo_data            (fifo_dout),
       .fifo_rd_en           (fifo_rd_en),
@@ -396,7 +392,6 @@ module openadc_interface #(
       .reg_datai            (reg_datai), 
       .reg_read             (reg_read), 
       .reg_write            (reg_write), 
-      .reg_addrvalid        (reg_addrvalid),
 
       .adc_clkgen_power_down(adc_clkgen_power_down),
       .clkgen_power_down    (clkgen_power_down    )

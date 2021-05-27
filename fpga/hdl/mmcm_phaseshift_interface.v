@@ -52,14 +52,12 @@ module mmcm_phaseshift_interface(
 
     reg [2:0] state;
     reg signed [15:0] ps_count;
-    reg psdone_r;
 
     always @(posedge clk_usb) begin
        if (reset) begin
           state <= pS_RESET;          
        end 
        else begin
-          psdone_r <= I_psdone;
           case (state)
 
              pS_RESET: begin
@@ -97,7 +95,7 @@ module mmcm_phaseshift_interface(
 
              pS_WAIT: begin
                 O_psen <= 0;
-                if (psdone_r)
+                if (I_psdone)
                    state <= pS_PULSE;
              end
 

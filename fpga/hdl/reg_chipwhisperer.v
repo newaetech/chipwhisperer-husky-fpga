@@ -34,7 +34,6 @@ module reg_chipwhisperer #(
    inout  wire [7:0]   reg_datao,    // Data to read
    input  wire         reg_read,     // Read flag
    input  wire         reg_write,    // Write flag
-   input  wire         reg_addrvalid,// Address valid flag
 
    /* External Clock */
    input  wire        usbiohs2,
@@ -463,17 +462,5 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    end
 
 
- `ifdef CHIPSCOPE
-   assign cs_data[5:0] = reg_address;
-   assign cs_data[21:6] = reg_bytecnt;
-   assign cs_data[29:22] = reg_datai;
-   assign cs_data[37:30] = reg_datao;
-   assign cs_data[38] = reg_read;
-   assign cs_data[39] = reg_write;
-   assign cs_data[40] = reg_addrvalid;
-   assign cs_data[46:41] = reg_hypaddress;
-   assign cs_data[62:47] = reg_hyplen;
- `endif
- 
 endmodule
 `default_nettype wire

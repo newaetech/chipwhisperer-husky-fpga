@@ -45,9 +45,8 @@ module usb_reg_main #(
    input  wire [7:0]   reg_datai,    // Data to read
    output wire         reg_read,     // Read flag. One clock cycle AFTER this flag is high
                                      // valid data must be present on the reg_datai bus
-   output reg          reg_write,    // Write flag. When high on rising edge valid data is
+   output reg          reg_write     // Write flag. When high on rising edge valid data is
                                      // present on reg_datao
-   output wire         reg_addrvalid // Address valid flag
 );
 
 
@@ -79,8 +78,6 @@ module usb_reg_main #(
 
    assign reg_read = isoutreg;
    assign cwusb_dout = reg_datai;
-
-   assign reg_addrvalid = 1'b1;
 
    //Don't immediatly turn off output drivers
    assign cwusb_isout = isoutreg | isoutregdly | (drive_data_out & cwusb_wrn);

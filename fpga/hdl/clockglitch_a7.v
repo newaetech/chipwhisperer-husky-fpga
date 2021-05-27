@@ -65,6 +65,7 @@ module clockglitch_a7(
     input wire [15:0]   phase_requested,
 
     input wire          I_mmcm_powerdown
+
 );
 
 
@@ -283,6 +284,7 @@ module clockglitch_a7(
       .CLKFBIN                      (mmcm2_clkfb)
    );
 `endif
+
 
 `ifdef ILA_GLITCH_PS
     ila_glitch_ps U_ila_glitch_ps (

@@ -152,7 +152,6 @@ module cwhusky_top(
    wire [7:0]   read_data;
    wire         reg_read;
    wire         reg_write;
-   wire         reg_addrvalid;
    wire [7:0]   reg_address;
 
    wire [7:0] read_data_openadc;
@@ -195,8 +194,7 @@ module cwhusky_top(
       .reg_datao        (write_data), 
       .reg_datai        (read_data),
       .reg_read         (reg_read), 
-      .reg_write        (reg_write), 
-      .reg_addrvalid    (reg_addrvalid)
+      .reg_write        (reg_write) 
    );
 
    `ifdef USERIO_DEBUG
@@ -282,7 +280,6 @@ module cwhusky_top(
         .reg_datai              (write_data), 
         .reg_read               (reg_read), 
         .reg_write              (reg_write), 
-        .reg_addrvalid          (reg_addrvalid),
         .fast_fifo_read         (fast_fifo_read),
 
         .fifo_error_flag        (fifo_error_flag),
@@ -311,7 +308,6 @@ module cwhusky_top(
         .reg_datai      (write_data), 
         .reg_read       (reg_read), 
         .reg_write      (reg_write), 
-        .reg_addrvalid  (reg_addrvalid), 
 
         .ADC_RESET      (ADC_RESET    ),
         .ADC_SDATA      (ADC_SDATA    ),
@@ -335,7 +331,6 @@ module cwhusky_top(
         .reg_datai              (write_data), 
         .reg_read               (reg_read), 
         .reg_write              (reg_write), 
-        .reg_addrvalid          (reg_addrvalid), 
 
         .usbiohs2               (USBIOHS2),
         .target_hs1             (target_hs1),
@@ -391,7 +386,6 @@ module cwhusky_top(
         .reg_datai      (write_data), 
         .reg_read       (reg_read), 
         .reg_write      (reg_write), 
-        .reg_addrvalid  (reg_addrvalid), 
         .target_hs1     (target_hs1),
         .clkgen         (pll_fpga_clk),
         .glitchclk      (glitchclk),
@@ -540,7 +534,6 @@ module cwhusky_top(
           .reg_datai        (write_data), 
           .reg_read         (reg_read), 
           .reg_write        (reg_write), 
-          .reg_addrvalid    (reg_addrvalid),
           .xadc_error       (xadc_error_flag)
        ); 
 

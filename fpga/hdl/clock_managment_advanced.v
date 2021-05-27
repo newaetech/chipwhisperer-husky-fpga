@@ -56,7 +56,6 @@ module clock_managment_advanced #(
     output wire [7:0]                   reg_datao,
     input  wire                         reg_read,
     input  wire                         reg_write,
-    input  wire                         reg_addrvalid,
 
     // MMCM control
     input  wire                         adc_clkgen_power_down,
@@ -107,7 +106,6 @@ module clock_managment_advanced #(
       .reg_datai        (reg_datai), 
       .reg_read         (reg_read), 
       .reg_write        (reg_write), 
-      .reg_addrvalid    (reg_addrvalid), 
 
       .drp_addr         (drp_addr ),
       .drp_den          (drp_den  ),
