@@ -31,7 +31,9 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 *************************************************************************/
 
-module clockglitch_a7(
+module clockglitch_a7 #(
+   parameter pBYTECNT_SIZE = 7
+)(
    // Source Clock
     input wire          source_clk, // HS1 or clkgen
 
@@ -64,21 +66,36 @@ module clockglitch_a7(
 
     input wire [15:0]   phase_requested,
 
-    input wire          I_mmcm_powerdown
+    input wire          I_mmcm_powerdown,
+
+    // register interface
+    input  wire [7:0]                   reg_address,
+    input  wire [pBYTECNT_SIZE-1:0]     reg_bytecnt,
+    input  wire [7:0]                   reg_datai,
+    output wire [7:0]                   reg_datao,
+    input  wire                         reg_read,
+    input  wire                         reg_write
 
 );
-
 
     wire glitch_mmcm1_clk_out;
     wire mmcm1_clkfbstopped;
     wire mmcm1_clkinstopped;
     wire mmcm1_clkfb;
-    wire [7:0] mmcm1_DADDR;
-    wire mmcm1_DEN = 1'b0; // TODO-temp
-    wire [15:0] mmcm1_DI;
-    wire mmcm1_DWE = 1'b0; // TODO-temp
-    wire [15:0] mmcm1_DO;
-    wire mmcm1_DRDY;
+
+    wire [6:0] drp1_addr;
+    wire [15:0] drp1_din;
+    wire [15:0] drp1_dout;
+    wire drp1_den;
+    wire drp1_dwe;
+    wire drp1_drdy;
+
+    wire [6:0] drp2_addr;
+    wire [15:0] drp2_din;
+    wire [15:0] drp2_dout;
+    wire drp2_den;
+    wire drp2_dwe;
+    wire drp2_drdy;
 
     wire mmcm1_PSEN;
     wire mmcm1_PSINCDEC;
@@ -88,11 +105,6 @@ module clockglitch_a7(
     wire mmcm2_clkfbstopped;
     wire mmcm2_clkinstopped;
     wire mmcm2_clkfb;
-    wire [7:0] mmcm2_DADDR;
-    wire mmcm2_DEN = 1'b0; // TODO-temp
-    wire [15:0] mmcm2_DI;
-    wire mmcm2_DWE = 1'b0; // TODO-temp
-    wire [15:0] mmcm2_DO;
 
     wire mmcm2_DRDY;
     wire mmcm2_PSEN;
@@ -101,6 +113,10 @@ module clockglitch_a7(
 
     wire psen;
     wire psdone;
+
+    wire [7:0] reg_datao_drp1;
+    wire [7:0] reg_datao_drp2;
+    assign reg_datao = reg_datao_drp1 | reg_datao_drp2;
 
     mmcm_phaseshift_interface U_offset_phaseshift (
       .clk_usb          (clk_usb),
@@ -210,13 +226,13 @@ module clockglitch_a7(
       .PWRDWN                       (I_mmcm_powerdown),
       .RST                          (mmcm_rst),
       // DRP Ports:
-      .DADDR                        (mmcm1_DADDR),
+      .DADDR                        (drp1_addr),
       .DCLK                         (clk_usb),
-      .DEN                          (mmcm1_DEN),
-      .DI                           (mmcm1_DI),
-      .DWE                          (mmcm1_DWE),
-      .DO                           (mmcm1_DO),
-      .DRDY                         (mmcm1_DRDY),
+      .DEN                          (drp1_den),
+      .DI                           (drp1_din),
+      .DWE                          (drp1_dwe),
+      .DO                           (drp1_dout),
+      .DRDY                         (drp1_drdy),
       // Dynamic Phase Shift Ports:
       .PSCLK                        (clk_usb),
       .PSEN                         (mmcm1_PSEN),
@@ -268,13 +284,13 @@ module clockglitch_a7(
       .PWRDWN                       (I_mmcm_powerdown),
       .RST                          (mmcm_rst),
       // DRP Ports:
-      .DADDR                        (mmcm2_DADDR),
+      .DADDR                        (drp2_addr),
       .DCLK                         (clk_usb),
-      .DEN                          (mmcm2_DEN),
-      .DI                           (mmcm2_DI),
-      .DWE                          (mmcm2_DWE),
-      .DO                           (mmcm2_DO),
-      .DRDY                         (mmcm2_DRDY),
+      .DEN                          (drp2_den),
+      .DI                           (drp2_din),
+      .DWE                          (drp2_dwe),
+      .DO                           (drp2_dout),
+      .DRDY                         (drp2_drdy),
       // Dynamic Phase Shift Ports:
       .PSCLK                        (clk_usb),
       .PSEN                         (mmcm2_PSEN),
@@ -284,6 +300,48 @@ module clockglitch_a7(
       .CLKFBIN                      (mmcm2_clkfb)
    );
 `endif
+
+   reg_mmcm_drp #(
+      .pBYTECNT_SIZE    (pBYTECNT_SIZE),
+      .pDRP_ADDR        (`CG1_DRP_ADDR),
+      .pDRP_DATA        (`CG1_DRP_DATA)
+   ) U_cg_mmcm1_drp (
+      .reset_i          (mmcm_rst),
+      .clk_usb          (clk_usb),
+      .reg_address      (reg_address), 
+      .reg_bytecnt      (reg_bytecnt), 
+      .reg_datao        (reg_datao_drp1), 
+      .reg_datai        (reg_datai), 
+      .reg_read         (reg_read), 
+      .reg_write        (reg_write), 
+      .drp_addr         (drp1_addr ),
+      .drp_den          (drp1_den  ),
+      .drp_din          (drp1_din  ),
+      .drp_dout         (drp1_dout ),
+      .drp_drdy         (drp1_drdy ),
+      .drp_dwe          (drp1_dwe  )
+   ); 
+
+   reg_mmcm_drp #(
+      .pBYTECNT_SIZE    (pBYTECNT_SIZE),
+      .pDRP_ADDR        (`CG2_DRP_ADDR),
+      .pDRP_DATA        (`CG2_DRP_DATA)
+   ) U_cg_mmcm2_drp (
+      .reset_i          (mmcm_rst),
+      .clk_usb          (clk_usb),
+      .reg_address      (reg_address), 
+      .reg_bytecnt      (reg_bytecnt), 
+      .reg_datao        (reg_datao_drp2), 
+      .reg_datai        (reg_datai), 
+      .reg_read         (reg_read), 
+      .reg_write        (reg_write), 
+      .drp_addr         (drp2_addr ),
+      .drp_den          (drp2_den  ),
+      .drp_din          (drp2_din  ),
+      .drp_dout         (drp2_dout ),
+      .drp_drdy         (drp2_drdy ),
+      .drp_dwe          (drp2_dwe  )
+   ); 
 
 
 `ifdef ILA_GLITCH_PS

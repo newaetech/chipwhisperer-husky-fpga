@@ -96,7 +96,9 @@ module clock_managment_advanced #(
     assign dcm_status = 8'b0;
 
    reg_mmcm_drp #(
-      .pBYTECNT_SIZE    (pBYTECNT_SIZE)
+      .pBYTECNT_SIZE    (pBYTECNT_SIZE),
+      .pDRP_ADDR        (`DRP_ADDR),
+      .pDRP_DATA        (`DRP_DATA)
    ) U_reg_mmcm_drp (
       .reset_i          (reset),
       .clk_usb          (clk_usb),

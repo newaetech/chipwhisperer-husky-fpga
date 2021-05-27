@@ -244,6 +244,7 @@ module cwhusky_top(
    wire LED_ADCDCMUnlock;
    wire LED_CLKGENDCMUnlock;
    wire led_glitch;
+   wire cg_mmcm_unlocked;
 
    // fast-flash red LEDs when some internal error has occurred:
    //assign LED_CLK1FAIL = error_flag? usb_hearbeat[22] : LED_ADCDCMUnlock;
@@ -302,7 +303,7 @@ module cwhusky_top(
    ) U_reg_husky_adc (
         .reset_i        (reg_rst),
         .clk_usb        (clk_usb_buf),
-        .reg_address    (reg_address[5:0]), 
+        .reg_address    (reg_address),
         .reg_bytecnt    (reg_bytecnt), 
         .reg_datao      (read_data_adc), 
         .reg_datai      (write_data), 
@@ -325,7 +326,7 @@ module cwhusky_top(
    ) reg_chipwhisperer (
         .reset_i                (reg_rst),
         .clk_usb                (clk_usb_buf),
-        .reg_address            (reg_address[5:0]), 
+        .reg_address            (reg_address),
         .reg_bytecnt            (reg_bytecnt), 
         .reg_datao              (read_data_cw), 
         .reg_datai              (write_data), 
@@ -380,7 +381,7 @@ module cwhusky_top(
    ) reg_clockglitch (
         .reset_i        (reg_rst),
         .clk_usb        (clk_usb_buf),
-        .reg_address    (reg_address[5:0]), 
+        .reg_address    (reg_address),
         .reg_bytecnt    (reg_bytecnt), 
         .reg_datao      (read_data_glitch), 
         .reg_datai      (write_data), 
@@ -390,7 +391,8 @@ module cwhusky_top(
         .clkgen         (pll_fpga_clk),
         .glitchclk      (glitchclk),
         .exttrigger     (ext_trigger),
-        .led_glitch     (led_glitch)
+        .led_glitch     (led_glitch),
+        .mmcm_unlocked  (cg_mmcm_unlocked)
    );
 
    assign FPGA_TRIGOUT = ext_trigger;

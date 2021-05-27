@@ -24,14 +24,16 @@ Author: Jean-Pierre Thibault <jpthibault@newae.com>
 *************************************************************************/
 
 module reg_mmcm_drp #(
-   parameter pBYTECNT_SIZE = 7
+   parameter pBYTECNT_SIZE = 7,
+   parameter pDRP_ADDR = 0,
+   parameter pDRP_DATA = 1
 )(
    input  wire         reset_i,
    input  wire         clk_usb,
    input  wire [7:0]   reg_address,  // Address of register
    input  wire [pBYTECNT_SIZE-1:0]  reg_bytecnt,  // Current byte count
    input  wire [7:0]   reg_datai,    // Data to write
-   inout  wire [7:0]   reg_datao,    // Data to read
+   output wire [7:0]   reg_datao,    // Data to read
    input  wire         reg_read,     // Read flag
    input  wire         reg_write,    // Write flag
 
@@ -57,8 +59,8 @@ module reg_mmcm_drp #(
    always @(posedge clk_usb) begin
       if (reg_read) begin
          case (reg_address)
-           `DRP_ADDR: reg_datao_reg <= {1'b0, drp_addr};
-           `DRP_DATA: reg_datao_reg <= drp_dout[reg_bytecnt*8 +: 8];
+           pDRP_ADDR: reg_datao_reg <= {1'b0, drp_addr};
+           pDRP_DATA: reg_datao_reg <= drp_dout[reg_bytecnt*8 +: 8];
            default: reg_datao_reg <= 0;
          endcase
       end
@@ -73,7 +75,7 @@ module reg_mmcm_drp #(
       end
       else begin
          if (reg_write) begin
-            if (reg_address == `DRP_ADDR) begin
+            if (reg_address == pDRP_ADDR) begin
                drp_addr <= reg_datai[6:0];
                drp_den <= 1'b1;
                // DRP write:
@@ -87,7 +89,7 @@ module reg_mmcm_drp #(
             else begin
                drp_dwe <= 1'b0;
                drp_den <= 1'b0;
-               if (reg_address == `DRP_DATA)
+               if (reg_address == pDRP_DATA)
                   drp_din[reg_bytecnt*8 +: 8] <= reg_datai;
             end
 

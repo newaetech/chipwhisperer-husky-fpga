@@ -273,6 +273,11 @@
 `define DEBUG_FIFO_READS_FREEZE 47
 `define CLKGEN_POWERDOWN        48
 
+`define CG1_DRP_ADDR            62
+`define CG1_DRP_DATA            63
+`define CG2_DRP_ADDR            64
+`define CG2_DRP_DATA            65
+
 `define REGISTER_VERSION 1
 
 //`define SCARDCTRL_ADDR 30

@@ -38,7 +38,7 @@ module reg_clockglitch #(
 )(
    input  wire         reset_i,
    input  wire         clk_usb,
-   input  wire [5:0]   reg_address,  // Address of register
+   input  wire [7:0]   reg_address,  // Address of register
    input  wire [pBYTECNT_SIZE-1:0]  reg_bytecnt,  // Current byte count
    input  wire [7:0]   reg_datai,    // Data to write
    output wire [7:0]   reg_datao,    // Data to read
@@ -51,7 +51,7 @@ module reg_clockglitch #(
    output wire         glitchclk,
    input wire          exttrigger,
 
-   output wire         mmcm_unlocked,    // TODO- unused
+   output wire         mmcm_unlocked,
    output reg          led_glitch
 );
 
@@ -101,7 +101,8 @@ module reg_clockglitch #(
    reg clockglitch_powerdown;
 
    reg [7:0] reg_datao_reg;
-   assign reg_datao = reg_datao_reg;
+   wire [7:0] reg_datao_cg;
+   assign reg_datao = reg_datao_reg | reg_datao_cg;
 
    wire mmcm1_locked;
    wire mmcm2_locked;
@@ -316,7 +317,9 @@ module reg_clockglitch #(
    );
 
  /* Glitch Hardware */
- clockglitch_a7 gc(
+ clockglitch_a7 #(
+    .pBYTECNT_SIZE    (pBYTECNT_SIZE)
+ ) U_clockglitch (
     .source_clk             (sourceclk),
     .glitched_clk           (glitchclk),
     .glitch_next            (glitch_go),
@@ -330,7 +333,14 @@ module reg_clockglitch #(
     .mmcm2_locked           (mmcm2_locked),
     .phase1_done            (phase1_done),
     .phase2_done            (phase2_done),
-    .I_mmcm_powerdown       (clockglitch_powerdown)
+    .I_mmcm_powerdown       (clockglitch_powerdown),
+
+    .reg_address            (reg_address), 
+    .reg_bytecnt            (reg_bytecnt), 
+    .reg_datao              (reg_datao_cg), 
+    .reg_datai              (reg_datai), 
+    .reg_read               (reg_read), 
+    .reg_write              (reg_write) 
 );
 
 /* LED lighty up thing */
