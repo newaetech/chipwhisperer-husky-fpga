@@ -157,11 +157,11 @@ module clockglitch_a7 #(
    wire glitch_mmcm2_clk_out_buf;
 
 `ifdef __ICARUS__
-   assign glitch_mmcm1_clk_out_buf = ~glitch_mmcm1_clk_out;
+   assign glitch_mmcm1_clk_out_buf = glitch_mmcm1_clk_out;
    assign glitch_mmcm2_clk_out_buf = glitch_mmcm2_clk_out;
 `else
    BUFG ubuf1(
-      .I    (~glitch_mmcm1_clk_out),
+      .I    (glitch_mmcm1_clk_out),
       .O    (glitch_mmcm1_clk_out_buf)
    );
    BUFG ubuf2(
@@ -196,12 +196,8 @@ module clockglitch_a7 #(
       .CLKOUT0_USE_FINE_PS          ("TRUE")
    ) U_mmcm1_offset (
       // Clock Outputs:
-      //.CLKOUT0                      (),
-      //.CLKOUT0B                     (glitch_mmcm1_clk_out), 
-      // would be nice to use this but Vivado won't let us cascade MMCM's from here...
-      // so, instead we'll invert this one :shrugs:
       .CLKOUT0                      (glitch_mmcm1_clk_out), 
-      .CLKOUT0B                     (),
+      .CLKOUT0B                     (), // WARNING: Vivado doesn't let you cascade MMCMs from CLKOUT0B, and the error is cryptic if you do!
       .CLKOUT1                      (),
       .CLKOUT1B                     (),
       .CLKOUT2                      (),
@@ -258,8 +254,8 @@ module clockglitch_a7 #(
       .CLKOUT0_USE_FINE_PS          ("TRUE")
    ) U_mmcm2_width (
       // Clock Outputs:
-      .CLKOUT0                      (glitch_mmcm2_clk_out),
-      .CLKOUT0B                     (),
+      .CLKOUT0                      (),
+      .CLKOUT0B                     (glitch_mmcm2_clk_out),
       .CLKOUT1                      (),
       .CLKOUT1B                     (),
       .CLKOUT2                      (),
@@ -277,7 +273,7 @@ module clockglitch_a7 #(
       .CLKINSTOPPED                 (mmcm2_clkinstopped),
       .LOCKED                       (mmcm2_locked),
       // Clock Inputs:
-      .CLKIN1                       (~glitch_mmcm1_clk_out),
+      .CLKIN1                       (glitch_mmcm1_clk_out),
       .CLKIN2                       (1'b0),
       // Control Ports: 1-bit (each) input: MMCM control ports
       .CLKINSEL                     (1'b1),
