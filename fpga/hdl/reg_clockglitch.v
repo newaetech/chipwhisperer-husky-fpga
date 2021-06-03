@@ -123,12 +123,12 @@ module reg_clockglitch #(
     [15..0]  = Glitch Offset / Width Phase
     [16] = Load offset phase (NOTE: only one of offset / width phase load bits can be set)
     [17] = Load width phase  (NOTE: only one of offset / width phase load bits can be set)
-    [18] = phase offset done
-    [19] = phase width done
-    [20] = Offset MMCM Locked
-    [21] = Width MMCM Locked 
-    [22] = DCM Reset
-    [42..23] unused (left blank so that fields below coincide with CW-lite/pro)
+    [36..18] unused (left blank so that fields below coincide with CW-lite/pro)
+    [37] = Offset change done
+    [38] = Width change done
+    [39] (Byte 4, Bit 7)  = Offset MMCM Locked
+    [40] (Byte 5, Bit 0)  = Width MMCM Locked 
+    [41] (Byte 5, Bit 1)  = MMCM Reset
     [43..42] (Byte 5, Bit [3..2]) = Glitch trigger source
          00 = Manual
          01 = Capture Trigger (with offset, continous)
@@ -233,12 +233,13 @@ module reg_clockglitch #(
    end
 
    assign clockglitch_settings_read[17:0] = clockglitch_settings_reg[17:0];
-   assign clockglitch_settings_read[18] = phase1_done_reg;
-   assign clockglitch_settings_read[19] = phase2_done_reg;
-   assign clockglitch_settings_read[20] = mmcm1_locked;
-   assign clockglitch_settings_read[21] = mmcm2_locked;
-   assign clockglitch_settings_read[63:22] = clockglitch_settings_reg[63:22];
-   assign mmcm_rst = clockglitch_settings_reg[22];
+   assign clockglitch_settings_read[36:18] = 0;
+   assign clockglitch_settings_read[37] = phase1_done_reg;
+   assign clockglitch_settings_read[38] = phase2_done_reg;
+   assign clockglitch_settings_read[39] = mmcm1_locked;
+   assign clockglitch_settings_read[40] = mmcm2_locked;
+   assign clockglitch_settings_read[63:41] = clockglitch_settings_reg[63:41];
+   assign mmcm_rst = clockglitch_settings_reg[41];
 
    always @(posedge clk_usb) begin
       if (phase1_load)
