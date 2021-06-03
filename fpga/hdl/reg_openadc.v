@@ -89,7 +89,7 @@ module reg_openadc #(
    output wire        clkblock_gen_reset_o,
    input  wire        clkblock_dcm_locked_i,
    input  wire        clkblock_gen_locked_i,
-   output wire [31:0] presamples_o,
+   output wire [14:0] presamples_o,
    output wire [31:0] maxsamples_o,
    input  wire [31:0] maxsamples_i,
    output wire [12:0] downsample_o,
@@ -139,7 +139,7 @@ module reg_openadc #(
    wire [31:0] registers_extclk_frequency;
    wire [31:0] registers_adcclk_frequency;
    reg [31:0] registers_samples;
-   reg [31:0] registers_presamples;
+   reg [14:0] registers_presamples;
    reg [31:0] registers_offset;
    reg [8:0]  phase_out;
    reg [8:0]  phase_in;

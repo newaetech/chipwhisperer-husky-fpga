@@ -25,7 +25,7 @@ module fifo_top_husky(
     output reg  [7:0]   fifo_read_data,
     input  wire         fast_fifo_read_mode, // not to be confused with the ADC fast FIFO, this denote fast reading of the *slow* FIFO
 
-    input wire  [31:0]  presample_i,
+    input wire  [14:0]  presample_i,
     input wire  [31:0]  max_samples_i,
     output wire [31:0]  max_samples_o,
     input wire  [12:0]  downsample_i, //Ignores this many samples inbetween captured measurements

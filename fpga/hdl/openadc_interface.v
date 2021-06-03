@@ -271,7 +271,7 @@ module openadc_interface #(
    wire low_res_lsb;
    wire [31:0] stream_segment_size;
 
-   wire [31:0] presamples;
+   wire [14:0] presamples;
    wire [31:0] maxsamples_limit;
    wire [31:0] maxsamples;
 
