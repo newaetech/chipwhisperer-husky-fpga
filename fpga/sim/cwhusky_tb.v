@@ -22,7 +22,7 @@ module cwhusky_tb();
    parameter pSEGMENT_CYCLE_COUNTER_EN = 0;
    parameter pSTREAM = 0;
    parameter pSTREAM_SEGMENT_SIZE = 0;
-   parameter pSLOP = 5;
+   parameter pSLOP = 6;
    parameter pTRIGGER_ADJUST = pTRIGGER_NOW? 2 : 0;
    parameter pSEED = 1;
    parameter pTIMEOUT_CYCLES = 50000;
@@ -125,6 +125,7 @@ module cwhusky_tb();
       $display("pREAD_DELAY = %d", pREAD_DELAY);
       $display("pNUM_SEGMENTS = %d", pNUM_SEGMENTS);
       $display("pSEGMENT_CYCLES = %d", pSEGMENT_CYCLES);
+      $display("pSEGMENT_CYCLE_COUNTER_EN = %d", pSEGMENT_CYCLE_COUNTER_EN);
       if ((pSLOW_ADC == 0) && (pFAST_ADC == 0) && (pNOM_ADC == 0)) begin
          chosen_clock = $urandom_range(0, 2);
          case (chosen_clock)
@@ -258,6 +259,7 @@ module cwhusky_tb();
       #1 wait (setup_done);
       for (trigger_gen_index = 0; trigger_gen_index < pNUM_SEGMENTS; trigger_gen_index += 1) begin
 
+         settings[3] = 1'b1; // keep arm bit set
          if (trigger_gen_index == 0) begin
             settings[4] = pSTREAM;
             settings[2] = 1'b1; // high trigger polarity
