@@ -1,24 +1,28 @@
 `timescale 1ns / 1ps
 `default_nettype none
-//////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
-// 
-// Create Date:    19:48:25 07/04/2014 
-// Design Name: 
-// Module Name:    trigger_resync 
-// Project Name: 
-// Target Devices: 
-// Tool versions: 
-// Description: 
-//
-// Dependencies: 
-//
-// Revision: 
-// Revision 0.01 - File Created
-// Additional Comments: 
-//
-//////////////////////////////////////////////////////////////////////////////////
+
+/***********************************************************************
+This file is part of the ChipWhisperer Project. See www.newae.com for more
+details, or the codebase at http://www.chipwhisperer.com
+
+Copyright (c) 2014-2021, NewAE Technology Inc. All rights reserved.
+Author: Colin O'Flynn <coflynn@newae.com>
+
+  chipwhisperer is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  chipwhisperer is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Lesser General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with chipwhisperer.  If not, see <http://www.gnu.org/licenses/>.
+*************************************************************************/
+
+
 module trigger_resync(
    input wire   reset,
    input wire   clk,    // clkgen or HS1

@@ -1,25 +1,25 @@
 `default_nettype none
 `timescale 1ns / 1ps
-//////////////////////////////////////////////////////////////////////////////////
-// Company: NewAE
-// Engineer: Jean-Pierre Thibault
-// 
-// Create Date: 
-// Design Name: 
-// Module Name: usb_reg_main
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
-// Dependencies: 
-// 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
-// 
-//////////////////////////////////////////////////////////////////////////////////
+/***********************************************************************
+This file is part of the ChipWhisperer Project. See www.newae.com for more
+details, or the codebase at http://www.chipwhisperer.com
 
+Copyright (c) 2019-2021, NewAE Technology Inc. All rights reserved.
+Author: Jean-Pierre Thibault <jpthibault@newae.com>
+
+  chipwhisperer is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  chipwhisperer is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Lesser General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with chipwhisperer.  If not, see <http://www.gnu.org/licenses/>.
+*************************************************************************/
 
 module usb_reg_main #(
    parameter pBYTECNT_SIZE = 7

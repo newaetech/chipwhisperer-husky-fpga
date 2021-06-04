@@ -2,17 +2,26 @@
 `default_nettype none
 `include "includes.v"
 /***********************************************************************
-This file is part of the OpenADC Project. See www.newae.com for more details,
-or the codebase at http://www.assembla.com/spaces/openadc .
+This file is part of the ChipWhisperer Project. See www.newae.com for more
+details, or the codebase at http://www.chipwhisperer.com
 
-This file is the clock managment, which deals with selecting the ADC clock and
-required phase shifts. This file will be very implementation-specific, since
-different chips & vendors offer different features.
+Copyright (c) 2012-2021, NewAE Technology Inc. All rights reserved.
+Author: Colin O'Flynn <coflynn@newae.com>
 
-Copyright (c) 2012-2021, Colin O'Flynn <coflynn@newae.com>. All rights reserved.
-This project is released under the Modified FreeBSD License. See LICENSE
-file which should have came with this code.
+  chipwhisperer is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  chipwhisperer is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Lesser General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with chipwhisperer.  If not, see <http://www.gnu.org/licenses/>.
 *************************************************************************/
+
 module clock_managment_advanced #(
    parameter pBYTECNT_SIZE = 7
 )(
