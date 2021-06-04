@@ -66,17 +66,8 @@ module reg_clockglitch #(
    wire phase1_done;
    wire phase2_done;
 
-   `define CLOCKGLITCH_SETTINGS     51
-   `define CLOCKGLITCH_LEN          8
-   `define CLOCKGLITCH_OFFSET       25
-   `define CLOCKGLITCH_OFFSET_LEN   8
-   `define CLOCKGLITCH_POWERDOWN    49
    
 `ifdef SUPPORT_GLITCH_READBACK
-   `define GLITCHCYCLES_CNT         19
-   `define GLITCHCYCLES_CNT_LEN     4
-   `define GLITCH_RECONFIG_RB_ADDR  56
-   `define GLITCH_RECONFIG_RB_LEN   16
     reg [127:0] clockglitch_readback_reg;
 `endif
 

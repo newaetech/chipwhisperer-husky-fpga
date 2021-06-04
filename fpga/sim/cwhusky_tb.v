@@ -1,5 +1,6 @@
 `timescale 1 ns / 1 ps
 `default_nettype none
+`include "includes.v"
 
 module cwhusky_tb();
    parameter pCLK_USB_PERIOD = 10;
@@ -155,54 +156,38 @@ module cwhusky_tb();
       #(pCLK_USB_PERIOD*100);
 
       // manually reset with new register:
-      write_1byte('d28, 8'h1);
-      write_1byte('d28, 8'h0);
+      write_1byte(`RESET, 8'h1);
+      write_1byte(`RESET, 8'h0);
 
-      write_1byte('d60, 'h41);
-      write_1byte('d60, 'h01);
-      write_1byte('d60, 'h00);
-      write_1byte('d60, 'h11);
-      write_1byte('d60, 'h10);
-      write_1byte('d60, 'h01);
-      write_1byte('d60, 'h00);
-      write_1byte('d60, 'h11);
-      write_1byte('d60, 'h10);
-      write_1byte('d60, 'h41);
-
-      // reset again:
-      write_1byte('d28, 8'h1);
-      write_1byte('d28, 8'h0);
       #(pCLK_USB_PERIOD*1000);
 
-      write_1byte('d61, 'hff);
-      write_1byte('d0, 'h7f);
-
-      write_1byte('d27, 8'h0); // data source select
+      write_1byte(`DATA_SOURCE_SELECT, 8'h0);
       if (pADC_LOW_RES)
-         write_1byte('d29, 3);
+         write_1byte(`ADC_LOW_RES, 3);
       else
-         write_1byte('d29, 0);
+         write_1byte(`ADC_LOW_RES, 0);
 
-      write_1byte('d45, 8'h1); // no clip errors
+      write_1byte(`NO_CLIP_ERRORS, 8'h1);
 
       // program number of samples:
-      rw_lots_bytes('h11);
+      rw_lots_bytes(`PRESAMPLES_ADDR);
       write_next_byte((pPRESAMPLES & 32'h0000_00FF));
       write_next_byte((pPRESAMPLES & 32'h0000_FF00)>>8);
       write_next_byte((pPRESAMPLES & 32'h00FF_0000)>>16);
       write_next_byte((pPRESAMPLES & 32'hFF00_0000)>>24);
 
-      rw_lots_bytes('h10);
+      rw_lots_bytes(`SAMPLES_ADDR);
       write_next_byte((fifo_samples & 32'h0000_00FF));
       write_next_byte((fifo_samples & 32'h0000_FF00)>>8);
       write_next_byte((fifo_samples & 32'h00FF_0000)>>16);
       write_next_byte((fifo_samples & 32'hFF00_0000)>>24);
 
-      rw_lots_bytes('d15);
+      rw_lots_bytes(`DECIMATE_ADDR);
       write_next_byte((pDOWNSAMPLE & 16'h00FF));
       write_next_byte((pDOWNSAMPLE & 16'hFF00)>>8);
 
-      write_1byte('h1, 8'hc); // arm, trigger level = high
+      // yes this is also done in the trigger thread, this seems redundant but it's necessary:
+      write_1byte(`SETTINGS_ADDR, 8'hc); // arm, trigger level = high
 
       // random delay before trigger:
       //#($urandom_range(0, 100)*pCLK_USB_PERIOD);
@@ -213,21 +198,18 @@ module cwhusky_tb();
          repeat (pTRIGGER_DELAY) @(posedge clk_adc);
       end
 
-      // TODO: what's this?!? enabling external clock? cleanup required
-      write_1byte(38, 8'h63);
-
       // number of segments - 1 (0 = 1 segment, 1 = 2 segments,...)
-      write_1byte(32, pNUM_SEGMENTS);
+      write_1byte(`NUM_SEGMENTS, pNUM_SEGMENTS);
       if (pSEGMENT_CYCLE_COUNTER_EN) begin
          // number of cycles between segments:
-         rw_lots_bytes(33);
+         rw_lots_bytes(`SEGMENT_CYCLES);
          write_next_byte((pSEGMENT_CYCLES & 32'h0000_00FF));
          write_next_byte((pSEGMENT_CYCLES & 32'h0000_FF00)>>8);
          write_next_byte((pSEGMENT_CYCLES & 32'h00FF_0000)>>16);
       end
 
       if (pSTREAM) begin
-         rw_lots_bytes(35);
+         rw_lots_bytes(`STREAM_SEGMENT_SIZE);
          write_next_byte((pSTREAM_SEGMENT_SIZE & 32'h0000_00FF));
          write_next_byte((pSTREAM_SEGMENT_SIZE & 32'h0000_FF00)>>8);
          write_next_byte((pSTREAM_SEGMENT_SIZE & 32'h00FF_0000)>>16);
@@ -266,10 +248,10 @@ module cwhusky_tb();
             if (pTRIGGER_NOW) begin
                settings[3] = 1'b1; // arm
                settings[6] = 1'b1; // trigger now
-               write_1byte('h1, settings);
+               write_1byte(`SETTINGS_ADDR, settings);
             end
             else begin
-               write_1byte('h1, settings);
+               write_1byte(`SETTINGS_ADDR, settings);
                target_io4_reg = 1'b1;
             end
          end
@@ -304,7 +286,7 @@ module cwhusky_tb();
       if (pSTREAM) begin
          wait (setup_done);
          repeat (pREAD_DELAY) @(posedge clk_adc);
-         write_1byte('d36, 1);
+         write_1byte(`FAST_FIFO_READ_MODE, 1);
          wait (stream_segment_available);
       end
       
@@ -316,7 +298,7 @@ module cwhusky_tb();
          repeat(fifo_samples*(pDOWNSAMPLE+1)) @(posedge clk_adc);
       end
 
-      rw_lots_bytes('d3);
+      rw_lots_bytes(`ADCREAD_ADDR);
       $display("XXX samples_to_read: %d", samples_to_read);
       segment_read_index = 0;
 
@@ -358,19 +340,19 @@ module cwhusky_tb();
       end
 
       // TODO-temporary to manually verify if fast reads get disabled: (clean up later)
-      write_1byte(4, 155);
-      read_1byte(4, rdata);
+      write_1byte(`ECHO_ADDR, 155);
+      read_1byte(`ECHO_ADDR, rdata);
       //$display("Read %d", rdata);
 
       if (pSTREAM)
          // clear stream mode:
-         write_1byte('d36, 0);
+         write_1byte(`FAST_FIFO_READ_MODE, 0);
 
       //#(pCLK_USB_PERIOD*20);
       #(pCLK_USB_PERIOD*500);
       
       // check no errors:
-      read_1byte(44, rdata);
+      read_1byte(`FIFO_STAT, rdata);
       if (pPRESAMP_ERROR) begin
          if (rdata[4] != 1'b1) begin
             errors += 1;

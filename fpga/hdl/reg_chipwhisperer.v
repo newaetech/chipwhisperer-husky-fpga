@@ -92,12 +92,6 @@ module reg_chipwhisperer #(
    wire reset;
    assign reset = reset_i;
 
-   `define CW_EXTCLK_ADDR       38
-   `define CW_TRIGSRC_ADDR      39
-   `define CW_TRIGMOD_ADDR      40
-   `define CW_IOROUTE_ADDR      55
-   `define CW_IOREAD_ADDR       59
-
  /*  
 CW_EXTCLK_ADDR, address 38 (0x26) - External Clock Connections (One Byte)
 

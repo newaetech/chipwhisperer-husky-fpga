@@ -230,6 +230,8 @@
        O2 = Slow FIFO overflow
        U2 = Slow FIFO underflow
 
+Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisperer.v
+
  */
  
 `define GAIN_ADDR               0
@@ -247,7 +249,9 @@
 `define DECIMATE_ADDR           15
 `define SAMPLES_ADDR            16
 `define PRESAMPLES_ADDR         17
+`define GLITCHCYCLES_CNT        19
 `define TRIGGER_DUR_ADDR        20
+`define CLOCKGLITCH_OFFSET      25
 `define OFFSET_ADDR             26
 `define DATA_SOURCE_SELECT      27
 `define RESET                   28
@@ -260,9 +264,12 @@
 `define SEGMENT_CYCLES          33
 
 `define LED_SELECT              34
+`define STREAM_SEGMENT_SIZE     35
 `define FAST_FIFO_READ_MODE     36
 
-`define STREAM_SEGMENT_SIZE     35
+`define CW_EXTCLK_ADDR          38
+`define CW_TRIGSRC_ADDR         39
+`define CW_TRIGMOD_ADDR         40
 
 `define XADC_DRP_ADDR           41
 `define XADC_DRP_DATA           42
@@ -273,6 +280,13 @@
 `define DEBUG_FIFO_READS_FREEZE 47
 `define CLKGEN_POWERDOWN        48
 
+`define CLOCKGLITCH_POWERDOWN   49
+`define CLOCKGLITCH_SETTINGS    51
+`define CW_IOROUTE_ADDR         55
+`define GLITCH_RECONFIG_RB_ADDR 56
+`define CW_IOREAD_ADDR          59
+
+
 `define CG1_DRP_ADDR            62
 `define CG1_DRP_DATA            63
 `define CG2_DRP_ADDR            64
@@ -280,52 +294,3 @@
 
 `define REGISTER_VERSION 1
 
-//`define SCARDCTRL_ADDR 30
-//`define SCARDHDR_ADDR 31
-//`define SCARDPLD_ADDR 32
-
-//`define TARGSERIALDATA_ADDR 33
-//`define TARGSERIALLEN_ADDR 34
-//`define TARGSERIALBAUD_ADDR 35
-
-//`define IOTRIGCLKDDIV_ADDR 36
-//`define IOTRIGPROG_ADDR 37 
-
-//`define CW_EXTCLK_ADDR 38
-//`define CW_TRIGSRC_ADDR 39
-//`define CW_TRIGMOD_ADDR 40
-//`define CW_IOROUTE_ADDR    55
-
-//For SmartCard Only
-//`define TARGSERIALDATA_ADDR 41
-//`define TARGSERIALLEN_ADDR 42
-//`define TARGSERIALBAUD_ADDR 43
-
-// 44 - 46 is USI
-
-//`define ADDR_I2CSTATUS 47
-//`define ADDR_I2CDATA 48
-
-//`define SAKURA_STATUS_ADDR 49
-//`define SAKURA_FIFO_ADDR 50
-
-//`define GLITCHCYCLES_CNT   19
-
-
-//`define CLOCKGLITCH_SETTINGS 51
-//`define CLOCKGLITCH_OFFSET    25
-//`define CLOCKGLITCH_OFFSET_LEN 4
-
-//`define RECONFIG_REG 52
-
-//`define SAD_STATUSCFG_ADDR 53
-//`define SAD_REFDATA_ADDR   54
-
-//`define GLITCH_RECONFIG_RB_ADDR 56
-
-//`define IODECODETRIG_CFG_ADDR  57
-//`define IODECODETRIG_DATA_ADDR 58
-
-//``define CW_IOREAD_ADDR       59
-
-//NEXT ADDRESS = 60
