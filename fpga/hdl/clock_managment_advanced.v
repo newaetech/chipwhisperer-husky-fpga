@@ -25,38 +25,30 @@ Author: Colin O'Flynn <coflynn@newae.com>
 module clock_managment_advanced #(
    parameter pBYTECNT_SIZE = 7
 )(
-    input  wire           reset, //Does NOT reset CLKGEN block
+    input  wire                         reset,       //Does NOT reset CLKGEN block
 
-    /* Clock sources */
-    input  wire           clk_usb,     //System clock
-    input  wire           clk_ext,     //External clock, aka HS1
+    // Clock sources
+    input  wire                         clk_usb,     //System clock
+    input  wire                         clk_ext,     //External clock, aka HS1
 
-    /* Clock to ADC (not used by CW) */
-    output wire           adc_clk_out, //Output clock to ADC
+    output wire                         adc_clk_out, //Output clock to ADC
+    input  wire                         adc_clk_feedback, // Clock from ADC (used for sampling)
+    output wire                         clkgen, // Clock to DUT
 
-    /* Clock from ADC (used for sampling)*/
-    input  wire           adc_clk_feedback,
+    // Clock selection
+    input  wire [2:0]                   clkadc_source,
+    input  wire                         clkgen_source,
 
-    /* Clock to DUT */
-    output wire           clkgen,
+    output wire                         systemsample_clk, // Clock to System compensates for wire delay of ADC clock
+    input  wire                         clkgen_reset,
 
-    /* Clock selection */
-    input  wire [2:0]     clkadc_source,
-    input  wire           clkgen_source,
+    // Phase shift control for external clock (clock: clk_usb)
+    input  wire [15:0]                  phase_requested,
+    input  wire                         phase_load,
+    output wire                         phase_done, 
 
-    /* Clock to System compensates for wire delay of ADC clock */
-    output wire           systemsample_clk,
-
-    input  wire           clkgen_reset, // TODO ? 
-
-    /* Phase shift control for external clock (clock: clk_usb) */
-    input  wire [8:0]     phase_requested,
-    output wire [8:0]     phase_actual,
-    input  wire           phase_load,
-    output wire           phase_done, 
-    /* Is Selected DCM Locked? */
-    output wire           dcm_adc_locked,
-    output wire           dcm_gen_locked ,
+    output wire                         dcm_adc_locked,
+    output wire                         dcm_gen_locked ,
 
     // register interface
     input  wire [7:0]                   reg_address,
@@ -69,8 +61,8 @@ module clock_managment_advanced #(
     // MMCM control
     input  wire                         adc_clkgen_power_down,
     input  wire                         clkgen_power_down 
-    );
- 
+);
+
     wire ADC_clk_extsrc;
     wire ADC_clk_sample;
 
@@ -80,29 +72,21 @@ module clock_managment_advanced #(
     wire [15:0] drp_dout;
     wire drp_drdy;
     wire drp_dwe;
-    
-    wire dcm_psen;
-    wire dcm_psincdec;
-    wire dcm_psdone;
-    wire [7:0] dcm_status;
 
+    wire mmcm_psen;
+    wire mmcm_psincdec;
+    wire mmcm_psdone;
 
-    /* TODO: remove or update
-    dcm_phaseshift_interface dcmps(.clk_usb(clk_usb),
-                                   .reset_i(reset),
-                                   .default_value_i(9'd0),
-                                   .value_i(phase_requested),
-                                   .load_i(phase_load),
-                                   .value_o(phase_actual),
-                                   .done_o(phase_done),
-                                   .dcm_psen_o(dcm_psen),
-                                   .dcm_psincdec_o(dcm_psincdec),
-                                   .dcm_psdone_i(dcm_psdone),
-                                   .dcm_status_i(dcm_status));
-    */
-    assign dcm_psincdec = 1'b0;
-    assign dcm_psen = 1'b0;
-    assign dcm_status = 8'b0;
+    mmcm_phaseshift_interface U_offset_phaseshift (
+      .clk_usb          (clk_usb),
+      .reset            (reset),
+      .I_step_index     (phase_requested),
+      .I_load           (phase_load),
+      .O_done           (phase_done),
+      .O_psen           (mmcm_psen),
+      .O_psincdec       (mmcm_psincdec),
+      .I_psdone         (mmcm_psdone)
+    );
 
    reg_mmcm_drp #(
       .pBYTECNT_SIZE    (pBYTECNT_SIZE),
@@ -133,45 +117,39 @@ module clock_managment_advanced #(
     wire dcm_clk_in;
     wire clkgenfx_out;
      
-    `ifdef __ICARUS__
+`ifdef __ICARUS__
        assign dcm_clk_in = clkadc_source[2]? clk_ext : clkgenfx_out;
        assign clkgenfx_in = clkgen_source? clk_ext : clk_usb;
-    `else
+`else
        BUFGMUX #(
-       .CLK_SEL_TYPE("ASYNC") // Glitchles ("SYNC") or fast ("ASYNC") clock switch-over
-       )
-       clkdcm_mux (
-       .O(dcm_clk_in), // 1-bit output: Clock buffer output
-       .I0(clkgenfx_out), // 1-bit input: Clock buffer input (S=0)
-       .I1(clk_ext), // 1-bit input: Clock buffer input (S=1)
-       .S(clkadc_source[2]) // 1-bit input: Clock buffer select
+          .CLK_SEL_TYPE("ASYNC")
+       ) clkdcm_mux (
+          .O    (dcm_clk_in),
+          .I0   (clkgenfx_out),
+          .I1   (clk_ext),
+          .S    (clkadc_source[2])
        );  
 
-
        BUFGMUX #(
-       .CLK_SEL_TYPE("ASYNC") // Glitchles ("SYNC") or fast ("ASYNC") clock switch-over
-       )
-       clkgenfx_mux (
-       .O(clkgenfx_in), // 1-bit output: Clock buffer output
-       .I0(clk_usb), // 1-bit input: Clock buffer input (S=0)
-       .I1(clk_ext), // 1-bit input: Clock buffer input (S=1)
-       .S(clkgen_source) // 1-bit input: Clock buffer select
+          .CLK_SEL_TYPE("ASYNC")
+       ) clkgenfx_mux (
+          .O    (clkgenfx_in),
+          .I0   (clk_usb),
+          .I1   (clk_ext),
+          .S    (clkgen_source)
        ); 
-    `endif
+`endif
 
-    wire dcm_locked_int;
     wire dcm_clk;
-
-    //dcm_locked_int may be high if clock is removed, so also check clkfx output is toggling
-    assign dcm_adc_locked = dcm_locked_int & (~dcm_status[2]);
 
     wire ADC_clk_times4;
     wire ADC_clk;
 
-    `ifdef __ICARUS__
+`ifdef __ICARUS__
        assign ADC_clk_times4 = dcm_clk_in;
        assign ADC_clk = dcm_clk_in;
-    `else
+       assign clkgenfx_out = clkgenfx_in;
+`else
     wire adcfb;
     MMCM_adc_clock_gen U_adc_clock_gen (
        // Clock out ports
@@ -179,134 +157,61 @@ module clock_managment_advanced #(
        .clk_in1         (dcm_clk_in),
        .clk_out1        (ADC_clk),
        .clk_out2        (ADC_clk_times4),
-       .locked          (dcm_locked_int),
+       .locked          (dcm_adc_locked),
        .power_down      (adc_clkgen_power_down),
        .clkfb_in        (adcfb),
        .clkfb_out       (adcfb),
        .psclk           (clk_usb),
-       .psen            (dcm_psen),
-       .psincdec        (dcm_psincdec),
-       .psdone          (dcm_psdone)
+       .psen            (mmcm_psen),
+       .psincdec        (mmcm_psincdec),
+       .psdone          (mmcm_psdone)
     );
-    /* OG DCM_SP: Digital Clock Manager
-     * TODO: remove later
-    // Spartan-6
-    // Xilinx HDL Libraries Guide, version 13.2
-    DCM_SP #(
-    .CLKFX_DIVIDE(1), // Divide value on CLKFX outputs - D - (1-32)
-    .CLKFX_MULTIPLY(4), // Multiply value on CLKFX outputs - M - (2-32)
-    .CLKIN_DIVIDE_BY_2("FALSE"), // CLKIN divide by two (TRUE/FALSE)
-    //.CLKIN_PERIOD(10.0), // Input clock period specified in nS
-    .CLKOUT_PHASE_SHIFT("VARIABLE"), // Output phase shift (NONE, FIXED, VARIABLE)
-    .CLK_FEEDBACK("2X"), // Feedback source (NONE, 1X, 2X)
-    .DESKEW_ADJUST("SYSTEM_SYNCHRONOUS"), // SYSTEM_SYNCHRNOUS or SOURCE_SYNCHRONOUS
-    .PHASE_SHIFT(0), // Amount of fixed phase shift (-255 to 255)
-    .STARTUP_WAIT("FALSE") // Delay config DONE until DCM_SP LOCKED (TRUE/FALSE)
-    )
-    DCM_extclock_gen (
-    .CLK2X(dcm_clk),
-    .CLK0(ADC_clk),
-    .CLK2X180(),
-    .CLK90(),
-    .CLK180(),
-    .CLK270(),
-    .CLKFX(ADC_clk_times4), // 1-bit output: Digital Frequency Synthesizer output (DFS)
-    .CLKFX180(),
-    .CLKDV(), //TODO: Use this output for additional options
-    .LOCKED(dcm_locked_int), // 1-bit output: DCM_SP Lock Output
-    .PSDONE(dcm_psdone), // 1-bit output: Phase shift done output
-    .STATUS(dcm_status), // 8-bit output: DCM_SP status output
-    .CLKFB(dcm_clk), // 1-bit input: Clock feedback input
-    .CLKIN(dcm_clk_in), // 1-bit input: Clock input
-    .PSCLK(clk_usb), // 1-bit input: Phase shift clock input
-    .PSEN(dcm_psen), // 1-bit input: Phase shift enable
-    .PSINCDEC(dcm_psincdec), // 1-bit input: Phase shift increment/decrement input
-    .RST(reset) // 1-bit input: Active high reset input
-    );
-    */
-    `endif
 
-    wire clkgenfx_dev_out;
-    wire dcm2_locked_int;
-    wire [2:1] dcm2_status;
-    assign dcm_gen_locked = dcm2_locked_int & (~dcm2_status[2]);
-
-    `ifdef __ICARUS__
-       assign clkgenfx_out = clkgenfx_in;
-
-    `else
     MMCM_clkgen U_clkgen (
        .reset           (reset || clkgen_reset),
        .clk_in1         (clkgenfx_in),
        .clk_out1        (clkgenfx_out),
-       .locked          (dcm2_locked_int), // TODO: rename more descriptively
+       .locked          (dcm_gen_locked),
        .power_down      (clkgen_power_down),
        // Dynamic reconfiguration ports:
-       .daddr           (drp_addr),    // input [6:0] daddr
-       .dclk            (clk_usb),         // input dclk
-       .den             (drp_den),       // input den
+       .daddr           (drp_addr),
+       .dclk            (clk_usb),
+       .den             (drp_den),
        .din             (drp_din),
        .dout            (drp_dout),
        .drdy            (drp_drdy),
        .dwe             (drp_dwe)
     );
-    /* OG: DCM_CLKGEN: Frequency Aligned Digital Clock Manager
-    // Spartan-6
-    // Xilinx HDL Libraries Guide, version 14.3
-    DCM_CLKGEN #(
-    .CLKFXDV_DIVIDE(4), // CLKFXDV divide value (2, 4, 8, 16, 32)
-    .CLKFX_DIVIDE(2), // Divide value - D - (1-256)
-    .CLKFX_MULTIPLY(2), // Multiply value - M - (2-256)
-    .CLKFX_MD_MAX(1.0), // Specify maximum M/D ratio for timing anlysis
-    //.CLKIN_PERIOD(10.0), // Input clock period specified in nS
-    .SPREAD_SPECTRUM("NONE"), // Spread Spectrum mode "NONE"
-    .STARTUP_WAIT("FALSE") // Delay config DONE until DCM_CLKGEN LOCKED
-    )
-    DCM_CLKGEN_inst (
-    .CLKFX(clkgenfx_out), // 1-bit output: Generated clock output
-    .CLKFX180(), // 1-bit output: Generated clock output 180 degree out of phase from CLKFX.
-    .CLKFXDV(), // 1-bit output: Divided clock output
-    .LOCKED(dcm2_locked_int), // 1-bit output: Locked output
-    .PROGDONE(clkgen_progdone), // 1-bit output: Active high output to indicate the successful re-programming
-    .STATUS(dcm2_status), // 2-bit output: DCM_CLKGEN status
-    .CLKIN(clkgenfx_in), // 1-bit input: Input clock
-    .FREEZEDCM(1'b0), // 1-bit input: Prevents frequency adjustments to input clock
-    .PROGCLK(clk_usb), // 1-bit input: Clock input for M/D reconfiguration
-    .PROGDATA(clkgen_progdata), // 1-bit input: Serial data input for M/D reconfiguration
-    .PROGEN(clkgen_progen), // 1-bit input: Active high program enable
-    .RST(clkgen_reset) // 1-bit input: Reset input pin
-    );
-    */
-    `endif
+`endif
 
     assign clkgen = clkgenfx_out;
 
     //Output buffers
     wire out_from_dcmmux;
-    `ifdef __ICARUS__
+`ifdef __ICARUS__
        assign ADC_clk_sample = clkadc_source[0]? clk_ext : out_from_dcmmux;
        assign out_from_dcmmux = clkadc_source[1]? ADC_clk : ADC_clk_times4;
-    `else
+`else
        BUFGMUX #(
-       .CLK_SEL_TYPE("ASYNC") // Glitchles ("SYNC") or fast ("ASYNC") clock switch-over
+          .CLK_SEL_TYPE("ASYNC")
        )
        adcclk_mux (
-       .O(ADC_clk_sample), // 1-bit output: Clock buffer output
-       .I0(out_from_dcmmux), // 1-bit input: Clock buffer input (S=0)
-       .I1(clk_ext), // 1-bit input: Clock buffer input (S=1)
-       .S(clkadc_source[0]) // 1-bit input: Clock buffer select
+          .O    (ADC_clk_sample),
+          .I0   (out_from_dcmmux),
+          .I1   (clk_ext),
+          .S    (clkadc_source[0])
        );
 
         BUFGMUX #(
-       .CLK_SEL_TYPE("ASYNC") // Glitchles ("SYNC") or fast ("ASYNC") clock switch-over
+          .CLK_SEL_TYPE("ASYNC")
        )
        adcclk_0_mux (
-       .O(out_from_dcmmux), // 1-bit output: Clock buffer output
-       .I0(ADC_clk_times4), // 1-bit input: Clock buffer input (S=0)
-       .I1(ADC_clk), // 1-bit input: Clock buffer input (S=1)
-       .S(clkadc_source[1]) // 1-bit input: Clock buffer select
+          .O    (out_from_dcmmux),
+          .I0   (ADC_clk_times4),
+          .I1   (ADC_clk),
+          .S    (clkadc_source[1])
        );
-    `endif
+`endif
 
     assign adc_clk_out = ADC_clk_sample;
 

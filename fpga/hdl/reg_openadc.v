@@ -60,9 +60,8 @@ module reg_openadc #(
    input  wire [31:0]  adcclk_frequency,
 
    /* Interface to phase shift module */
-   output wire [8:0]   phase_o,
+   output wire [15:0]  phase_o,
    output wire         phase_ld_o,
-   input  wire [8:0]   phase_i,
    input  wire         phase_done_i,
 
    /* Interface to fifo/capture module */
@@ -129,8 +128,7 @@ module reg_openadc #(
    reg [31:0] registers_samples;
    reg [14:0] registers_presamples;
    reg [31:0] registers_offset;
-   reg [8:0]  phase_out;
-   reg [8:0]  phase_in;
+   reg [15:0] phase_out;
    reg        phase_loadout;
    wire [47:0] version_data;
    wire [31:0] system_frequency = 32'd`SYSTEM_CLK;
@@ -148,13 +146,6 @@ module reg_openadc #(
 
    assign phase_o = phase_out;
    assign phase_ld_o = phase_loadout;
-
-   always @(posedge clk_usb) begin
-      if (reset | phase_loadout)
-         phase_in <= 0;
-      else if (phase_done_i)
-         phase_in <= phase_i;
-   end
 
    //assign reset_fromreg = registers_settings[0] || new_reset;
    assign reset_fromreg = new_reset;
@@ -209,7 +200,7 @@ module reg_openadc #(
                 `ECHO_ADDR: reg_datao_reg <= registers_echo;
                 `EXTFREQ_ADDR: reg_datao_reg <= registers_extclk_frequency[reg_bytecnt*8 +: 8]; 
                 `ADCFREQ_ADDR: reg_datao_reg <= registers_adcclk_frequency[reg_bytecnt*8 +: 8]; 
-                `PHASE_ADDR: reg_datao_reg <= phase_in[reg_bytecnt*8 +: 8]; 
+                `PHASE_ADDR: reg_datao_reg <= phase_out[reg_bytecnt*8 +: 8]; 
                 `VERSION_ADDR: reg_datao_reg <= version_data[reg_bytecnt*8 +: 8];
                 `DECIMATE_ADDR: reg_datao_reg <= registers_downsample[reg_bytecnt*8 +: 8];
                 `SAMPLES_ADDR: reg_datao_reg <= registers_samples[reg_bytecnt*8 +: 8];
@@ -250,6 +241,7 @@ module reg_openadc #(
          // CLKGEN MMCMs are powered down by default, because we can get too hot if all MMCMs are kept on:
          adc_clkgen_power_down <= 1;
          clkgen_power_down <= 1;
+         phase_out <= 0;
       end else if (reg_write) begin
          case (reg_address)
             `GAIN_ADDR: registers_gain <= reg_datai;
@@ -266,6 +258,7 @@ module reg_openadc #(
             `LED_SELECT: led_select <= reg_datai[1:0];
             `NO_CLIP_ERRORS: no_clip_errors <= reg_datai[0];
             `CLKGEN_POWERDOWN: {adc_clkgen_power_down, clkgen_power_down} <= reg_datai[1:0];
+            `PHASE_ADDR: phase_out[reg_bytecnt*8 +: 8] <= reg_datai;
             default: ;
          endcase
       end
@@ -278,21 +271,9 @@ module reg_openadc #(
    end
 
    always @(posedge clk_usb) begin
-      if (reset) begin
-         phase_out <= 0;
+      if (reset)
          phase_loadout <= 1'b0;
-      end
-
-      else if (reg_write) begin
-         if (reg_address == `PHASE_ADDR) begin
-            if (reg_bytecnt == 0)
-               phase_out[7:0] <= reg_datai;
-            else if (reg_bytecnt == 1)
-               phase_out[8] <= reg_datai[0];
-         end
-      end
-
-      if ( reg_write && (reg_address == `PHASE_ADDR) && (reg_bytecnt == 1) )
+      else if ( reg_write && (reg_address == `PHASE_ADDR) && (reg_bytecnt == 1) )
          phase_loadout <= 1'b1;
       else
          phase_loadout <= 1'b0;

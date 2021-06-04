@@ -69,8 +69,7 @@ module openadc_interface #(
     wire        ADC_clk_sample;
 
 
-    wire [8:0] phase_requested;
-    wire [8:0] phase_actual;
+    wire [15:0] phase_requested;
     wire       phase_load;
     wire       phase_done;
 
@@ -312,7 +311,6 @@ module openadc_interface #(
       .adcclk_frequency             (adcclk_frequency),
       .phase_o                      (phase_requested),
       .phase_ld_o                   (phase_load),
-      .phase_i                      (phase_actual),
       .phase_done_i                 (phase_done),
       .presamples_o                 (presamples),
       .maxsamples_i                 (maxsamples_limit),
@@ -370,7 +368,6 @@ module openadc_interface #(
       .clkgen_source        (clkgen_selection),
       .systemsample_clk     (ADC_clk_sample),
       .phase_requested      (phase_requested),
-      .phase_actual         (phase_actual),
       .phase_load           (phase_load),
       .phase_done           (phase_done),
       .clkgen_reset         (reset | clkgen_reset),
@@ -386,7 +383,6 @@ module openadc_interface #(
 
       .adc_clkgen_power_down(adc_clkgen_power_down),
       .clkgen_power_down    (clkgen_power_down    )
-
     );
 
    reg [8:0] PWM_accumulator;

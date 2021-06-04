@@ -97,7 +97,7 @@ module fifo_top_husky(
 
     reg                 adc_capture_stop_reg;
     reg                 fifo_overflow_reg;
-    reg  [31:0]         presample_counter;      // TODO: reduced size as required when FIFOs are finalized
+    reg  [14:0]         presample_counter;
     reg  [31:0]         sample_counter;
     reg  [15:0]         segment_counter;
     reg  [19:0]         segment_cycle_counter;

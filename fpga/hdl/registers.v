@@ -147,8 +147,6 @@
 
 
 0x09 - Phase Adjust (2 Bytes)
-   [ P7 P6 P5 P4 P3 P2 P1 P0 ] (Byte 0)    
-   [                      P8 ] (Byte 1)
 
 
 0x0A - Version Information (6 Bytes)
