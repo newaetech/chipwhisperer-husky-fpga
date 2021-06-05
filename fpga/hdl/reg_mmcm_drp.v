@@ -41,7 +41,6 @@ module reg_mmcm_drp #(
    output reg          drp_den,
    output reg  [15:0]  drp_din,
    input  wire [15:0]  drp_dout,
-   input  wire         drp_drdy,
    output reg          drp_dwe
 ); 
 
@@ -52,8 +51,6 @@ module reg_mmcm_drp #(
 
 
    reg [7:0] reg_datao_reg;
-   reg [7:0] data_reg;
-   reg reg_write_r;
    assign reg_datao = reg_datao_reg;
 
    always @(posedge clk_usb) begin
@@ -106,13 +103,13 @@ module reg_mmcm_drp #(
 
    `ifdef ILA_DRP
        ila_drp U_ila_drp (
-	.clk            (clk_usb),      // input wire clk
-	.probe0         (drp_addr),     // input wire [6:0]  probe0  
-	.probe1         (drp_den),      // input wire [7:0]  probe1 
-	.probe2         (drp_din),      // input wire [15:0] probe2 
-	.probe3         (drp_dout),     // input wire [15:0] probe3 
-	.probe4         (drp_drdy),     // input wire [0:0]  probe4 
-	.probe5         (drp_dwe)       // input wire [0:0]  probe5 
+	      .clk            (clk_usb),      // input wire clk
+	      .probe0         (drp_addr),     // input wire [6:0]  probe0  
+	      .probe1         (drp_den),      // input wire [7:0]  probe1 
+	      .probe2         (drp_din),      // input wire [15:0] probe2 
+	      .probe3         (drp_dout),     // input wire [15:0] probe3 
+	      .probe4         (1'b0),         // input wire [0:0]  probe4 
+	      .probe5         (drp_dwe)       // input wire [0:0]  probe5 
        );
    `endif
 

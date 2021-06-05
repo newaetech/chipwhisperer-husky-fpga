@@ -79,13 +79,11 @@ module fifo_top_husky(
     wire [11:0]         fast_fifo_dout;
     wire                fast_fifo_full;
     wire                fast_fifo_empty;
-    reg                 fast_fifo_empty_r;
     wire                fast_fifo_overflow;
     wire                fast_fifo_underflow;
 
     reg  [35:0]         slow_fifo_din;
     reg                 slow_fifo_prewr = 1'b0;
-    reg                 slow_fifo_wr_premask = 1'b0;
     reg                 slow_fifo_rd_slow;
     wire                slow_fifo_rd_fast;
     wire [35:0]         slow_fifo_dout;
@@ -96,12 +94,12 @@ module fifo_top_husky(
     wire                slow_fifo_underflow;
 
     reg                 adc_capture_stop_reg;
-    reg                 fifo_overflow_reg;
+    reg                 fast_fifo_overflow_reg;
+    reg                 slow_fifo_overflow_reg;
     reg  [14:0]         presample_counter;
     reg  [31:0]         sample_counter;
     reg  [15:0]         segment_counter;
     reg  [19:0]         segment_cycle_counter;
-    reg                 fifo_capture_en;
 
     reg                 arm_r;
     reg                 arm_r2;
@@ -120,7 +118,30 @@ module fifo_top_husky(
     reg  [3:0]          done_wait_count;
     reg                 downsample_error;
 
-    assign fifo_overflow = fifo_overflow_reg;
+    assign fifo_overflow = fast_fifo_overflow_reg || slow_fifo_overflow_reg;
+
+    // make overflow sticky:
+    always @(posedge adc_sampleclk) begin
+       if (fifo_rst) begin
+          fast_fifo_overflow_reg <= 1'b0;
+          slow_fifo_overflow_reg <= 1'b0;
+       end
+       else begin
+          if (fast_fifo_overflow)
+             fast_fifo_overflow_reg <= 1'b1;
+          if (slow_fifo_overflow)
+             slow_fifo_overflow_reg <= 1'b1;
+       end
+    end
+
+    always @(posedge adc_sampleclk) begin
+       if (fifo_rst)
+          fast_fifo_overflow_reg <= 1'b0;
+       else if (fast_fifo_overflow)
+          fast_fifo_overflow_reg <= 1'b1;
+    end
+
+
     assign adc_capture_stop = adc_capture_stop_reg;
     assign fifo_read_fifoempty = slow_fifo_empty;
 
@@ -308,8 +329,6 @@ module fifo_top_husky(
                 // serves two purposes:
                 // 1. wait for fast FIFO to empty;
                 // 2. wait state so that we don't get back out of idle right away
-                //if (fast_fifo_empty) begin
-                //if (fast_fifo_empty && fast_fifo_empty_r) begin
                 if (fast_fifo_empty && (done_wait_count == 0)) begin
                    fast_fifo_rd_en <= 1'b0;
                    state <= pS_IDLE;
@@ -355,8 +374,6 @@ module fifo_top_husky(
     end
 
     assign fast_fifo_wr = downsample_wr_en & fsm_fast_wr_en & reset_done & !fifo_rst_pre;
-    //assign fast_fifo_rd = fast_fifo_rd_en & reset_done & !fifo_rst_pre;
-    //assign slow_fifo_wr = slow_fifo_wr_premask & reset_done & !fifo_rst_pre;
     assign slow_fifo_wr = slow_fifo_prewr & reset_done & !fifo_rst_pre;
 
     // Xilinx FIFO is very particular about its reset: it must be wide enough
@@ -374,18 +391,15 @@ module fifo_top_husky(
       .dst_pulse     (arm_fifo_rst_usb)
    );
 
-    //wire fifo_rst_start = arm_fifo_rst_usb || (reset && ~reset_r);
     wire fifo_rst_start = arm_fifo_rst_usb || reset;
     reg fifo_rst_start_r;
 
-    reg reset_r;
     reg [6:0] reset_hi_count;
     reg [9:0] reset_lo_count;
     reg fifo_rst_pre;
     reg fifo_rst;
     reg reset_done;
     always @(posedge clk_usb) begin
-       reset_r <= reset;
        fifo_rst <= fifo_rst_pre;
        fifo_rst_start_r <= fifo_rst_start;
        if (fifo_rst_start_r) begin
@@ -469,15 +483,10 @@ module fifo_top_husky(
        if (reset) begin
           fast_read_count <= 0;
           slow_fifo_prewr <= 1'b0;
-          slow_fifo_wr_premask <= 1'b0;
           //fast_fifo_empty <= 1'b0;
-          fast_fifo_empty_r <= 1'b0;
        end
 
        else begin
-          slow_fifo_wr_premask <= slow_fifo_prewr;
-          fast_fifo_empty_r <= fast_fifo_empty;
-
           if (fifo_rst_pre || ~reset_done || ((state == pS_SEGMENT_DONE) && fast_fifo_empty)) begin
              slow_fifo_prewr <= 0;
              if (fifo_rst_pre || ~reset_done)

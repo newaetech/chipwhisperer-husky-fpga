@@ -26,6 +26,7 @@ all: compile run
 
 compile:
 	iverilog -ccmdfile \
+	cwhusky_tb.v \
 	-g2005-sv \
 	-I../hdl \
 	-Wportbind \
@@ -63,12 +64,24 @@ cwlite:
 
 nofifo:
 	iverilog -ccmdfile_nofifo \
+	cwhusky_tb.v \
 	-g2005-sv \
 	-I../hdl \
 	-Wportbind \
 	-Wselect-range \
 	-DNOFIFO \
 	-DXADC \
+
+lint:
+	verilator --lint-only -Wall \
+	-f cmdfile_nofifo \
+	-I../hdl \
+	-D__ICARUS__ \
+	-DNOFIFO \
+	-DXADC_EN \
+	-DUSERIO_DEBUG \
+	--top-module cwhusky_top \
+	2>&1 | tee lint.out \
 
 fifo:
 	iverilog \

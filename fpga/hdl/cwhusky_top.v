@@ -39,6 +39,7 @@ module cwhusky_top(
     input wire          USB_ALEn,                   // USB_SPARE1
     output wire         stream_segment_available,   // USB_SPARE0
 
+    // currently unused:
     input wire          FPGA_BONUS1,
     input wire          FPGA_BONUS2,
     input wire          FPGA_BONUS3,
@@ -78,7 +79,7 @@ module cwhusky_top(
     input  wire         SAM_MOSI,
     output wire         SAM_MISO,
     input  wire         SAM_SPCK,
-    input  wire         SAM_CS,
+    input  wire         SAM_CS, // TODO: why not using this?
 
     /* XMEGA Programming - not used, but need to ensure line is floating */
     inout wire       target_PDID,
@@ -106,7 +107,7 @@ module cwhusky_top(
     output wire         FPGA_TRIGOUT, //trigger out MCX
     inout  wire         USBIOHS2  //clock MCX
 
-    /* Various connections to USB Chip 
+    /* Various connections to USB Chip  -- TODO: cleanup!
     input wire          USB_ser0_tx_i,
     output wire         USB_ser0_rx_o,
 
@@ -145,7 +146,7 @@ module cwhusky_top(
    // TEMPORARY, until I/Os are added / cleaned up:
    wire         ADC_clk_out;
    wire         target_npower;
-   wire         USB_treset_i; // ? came from SAM3U
+   wire         USB_treset_i; // TODO? came from SAM3U
 
    wire         reg_rst;
 
@@ -189,7 +190,7 @@ module cwhusky_top(
 
    wire fifo_error_flag;
    wire xadc_error_flag;
-   wire error_flag = fifo_error_flag | xadc_error_flag; // TODO: add other sources as they get created
+   wire error_flag = fifo_error_flag | xadc_error_flag;
    wire fast_fifo_read;
 
    wire slow_fifo_wr;
@@ -266,6 +267,7 @@ module cwhusky_top(
    wire led_glitch;
    wire cg_mmcm_unlocked;
 
+   // TODO: finalize LEDs and clean up
    // fast-flash red LEDs when some internal error has occurred:
    //assign LED_CLK1FAIL = error_flag? usb_hearbeat[22] : LED_ADCDCMUnlock;
    //assign LED_CLK1FAIL = error_flag? usb_hearbeat[22] : ~PLL_STATUS;
@@ -293,7 +295,7 @@ module cwhusky_top(
         .DUT_CLK_i              (extclk_mux),
         .DUT_trigger_i          (ext_trigger),
         .amp_gain               (VDBSPWM),
-        .clkgen                 (), // TODO: unnused?
+        .clkgen                 (), // TODO: unused?
 
         .reg_address            (reg_address),
         .reg_bytecnt            (reg_bytecnt), 
@@ -324,7 +326,6 @@ module cwhusky_top(
         .reset_i        (reg_rst),
         .clk_usb        (clk_usb_buf),
         .reg_address    (reg_address),
-        .reg_bytecnt    (reg_bytecnt), 
         .reg_datao      (read_data_adc), 
         .reg_datai      (write_data), 
         .reg_read       (reg_read), 
@@ -362,7 +363,7 @@ module cwhusky_top(
         .trigger_io3_i          (target_io3),
         .trigger_io4_i          (target_io4),
         .trigger_nrst_i         (target_nRST),
-        //.trigger_ext_o(advio_trigger_line), // XXX TODO?: cw1200 has this
+        .trigger_ext_o          (), // TODO?: cw1200 has this
         .trigger_advio_i        (1'b0),
         .trigger_anapattern_i   (1'b0),
         .trigger_decodedio_i    (1'b0),
@@ -388,8 +389,6 @@ module cwhusky_top(
 
         .uart_tx_i              (FPGA_CDOUT),
         .uart_rx_o              (FPGA_CDIN),
-        .usi_out_i              (1'b0),
-        .usi_in_o               (),
         .targetpower_off        (target_npower),
 
         .trigger_o              (ext_trigger)
@@ -412,7 +411,7 @@ module cwhusky_top(
         .glitchclk      (glitchclk),
         .exttrigger     (ext_trigger),
         .led_glitch     (led_glitch),
-        .mmcm_unlocked  (cg_mmcm_unlocked)
+        .mmcm_unlocked  (cg_mmcm_unlocked) // TODO: currently unused
    );
 
    assign FPGA_TRIGOUT = ext_trigger;

@@ -29,7 +29,6 @@ module reg_husky_adc #(
    input  wire         reset_i,
    input  wire         clk_usb,
    input  wire [7:0]   reg_address,  // Address of register
-   input  wire [pBYTECNT_SIZE-1:0]  reg_bytecnt,  // Current byte count
    input  wire [7:0]   reg_datai,    // Data to write
    output wire [7:0]   reg_datao,    // Data to read
    input  wire         reg_read,     // Read flag
@@ -55,6 +54,7 @@ module reg_husky_adc #(
    // 
    // bit 7: ADC_RESET
    // bit 6: ADC_SEN
+   // bit 5: unused
    // bit 4: ADC_SDATA
    // bit 3: ADC_DFS
    // bit 2: ~ADC_OE

@@ -39,7 +39,6 @@ module reg_openadc #(
 
    /* Interface to gain module */
    output wire [7:0]   gain,
-   output wire         hilow,
 
    /* General status stuff input */
    input  wire [7:0]   status,
@@ -62,7 +61,7 @@ module reg_openadc #(
    /* Interface to phase shift module */
    output wire [15:0]  phase_o,
    output wire         phase_ld_o,
-   input  wire         phase_done_i,
+   input  wire         phase_done_i,    // TODO: currently unused
 
    /* Interface to fifo/capture module */
    output reg  [15:0] num_segments,
@@ -90,7 +89,6 @@ module reg_openadc #(
 );
 
    wire reset;
-   wire  reset_reg_extended;
    wire cmd_arm_usb;
 
    assign  trigger_level = 12'b0; // TODO: add register?
@@ -112,7 +110,7 @@ module reg_openadc #(
    assign cmd_arm = arm_r2;
 
 
-   assign reset = reset_i | reset_reg_extended;
+   assign reset = reset_i | reset_fromreg;
    assign reset_o = reset;
 
 
@@ -149,7 +147,6 @@ module reg_openadc #(
 
    //assign reset_fromreg = registers_settings[0] || new_reset;
    assign reset_fromreg = new_reset;
-   assign hilow = registers_settings[1];
    assign trigger_mode = registers_settings[2];
    assign cmd_arm_usb = registers_settings[3];
    assign fifo_stream = registers_settings[4];
@@ -176,14 +173,6 @@ module reg_openadc #(
    assign gain = registers_gain;
    assign maxsamples_o = registers_samples;
    assign presamples_o = registers_presamples;
-
-   reg extclk_locked;
-   reg adcclk_locked;
-
-   reg [7:0] reset_r;
-   always @(posedge clk_usb) reset_r <= {reset_r[6:0], reset_fromreg};
-   //assign reset_reg_extended = |reset_r;
-   assign reset_reg_extended = reset_fromreg;
 
    assign registers_extclk_frequency = extclk_frequency;
    assign registers_adcclk_frequency = adcclk_frequency;
@@ -293,11 +282,11 @@ module reg_openadc #(
 
    `ifdef ILA_REG
        ila_reg U_ila_usb (
-	.clk            (clk_usb),      // input wire clk
-	.probe0         (reset_fromreg),// input wire [0:0]  probe0  
-	.probe1         (reset_o),      // input wire [0:0]  probe1 
-        .probe2         (new_reset),    // input wire [0:0]  probe2 
-	.probe3         (registers_echo)// input wire [7:0]  probe3 
+	      .clk            (clk_usb),      // input wire clk
+	      .probe0         (reset_fromreg),// input wire [0:0]  probe0  
+	      .probe1         (reset_o),      // input wire [0:0]  probe1 
+          .probe2         (new_reset),    // input wire [0:0]  probe2 
+	      .probe3         (registers_echo)// input wire [7:0]  probe3 
        );
    `endif
 

@@ -79,10 +79,6 @@ module reg_chipwhisperer #(
    input  wire        uart_tx_i,
    output wire        uart_rx_o,
 
-   // TODO: no longer exists
-   input  wire        usi_out_i,
-   output wire        usi_in_o,
-
    output wire        targetpower_off,
 
    /* Main trigger connections */
@@ -210,12 +206,6 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    assign extclk_o = (registers_cwextclk[2:0] == 3'b000) ? usbiohs2 :
                      (registers_cwextclk[2:0] == 3'b011) ? target_hs1 : 
                      1'b0;
-
-   //TODO: Should use a mux?
-   //The glitch-clock comes from the fabric anyway, but the clkgen comes from the DCM. Either way we are jumping back
-   //and forth a lot.
-
-
 
    wire rearclk;
 
@@ -369,20 +359,17 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
    assign targetio1_io = targetio_highz ? 1'bZ :
                          registers_iorouting[0 + 0] ? uart_tx_i :
-                         registers_iorouting[0 + 2] ? usi_out_i :
                          registers_iorouting[0 + 7] ? registers_iorouting[0 + 6] :
                          1'bZ;
 
    assign targetio2_io = targetio_highz ? 1'bZ :
                          registers_iorouting[8 + 0] ? uart_tx_i :
-                         registers_iorouting[8 + 2] ? usi_out_i :
                          registers_iorouting[8 + 7] ? registers_iorouting[8 + 6] :
                          1'bZ;
 
    assign targetio3_io = targetio_highz ? 1'bZ :
                          registers_iorouting[16 + 0] ? uart_tx_i :
-                         registers_iorouting[16 + 2] ? usi_out_i :
-                         registers_iorouting[16 + 4] ? (usi_out_i ? 1'bZ : 1'b0) :
+                         registers_iorouting[16 + 4] ? 1'b0 :
                          registers_iorouting[16 + 5] ? (uart_tx_i ? 1'bZ : 1'b0) :
                          registers_iorouting[16 + 7] ? registers_iorouting[16 + 6] :
                          1'bZ;
@@ -397,11 +384,6 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
                       registers_iorouting[16 + 1] ? targetio3_io :
                       registers_iorouting[24 + 1] ? targetio3_io :
                       1'b1;
-
-   assign usi_in_o = registers_iorouting[0 + 3] ? targetio1_io :
-                     registers_iorouting[8 + 3] ? targetio2_io :
-                     registers_iorouting[16 + 3] ? targetio3_io :
-                     1'b1; 
 
 
    assign enable_output_nrst = registers_iorouting[48];

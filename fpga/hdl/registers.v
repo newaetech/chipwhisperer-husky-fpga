@@ -7,10 +7,9 @@
 
 
 0x01 - Settings (One Byte)
-  [  I  F  W  S  A  T  H  R ]
+  [  I  F  W  S  A  T  X  R ]
 
          R = (bit 0) System Reset, active high
-         H = (bit 1) Hilo output to amplifier
          T = (bit 2) Trigger Polarity:
              1 = Trigger when 'trig in' = 1
              0 = Trigger when 'trig in' = 0
@@ -36,7 +35,7 @@
 
 
 0x02 - Status (One Byte)
-   [  X M  DC DE X  E  F  T ] 
+   [  X M  DC DE L  E  F  T ] 
         T = (bit 0) Triggered status
              1 = System armed
              0 = System disarmed
@@ -46,6 +45,9 @@
         E = (bit 2) External trigger status
              1 = Trigger line high
              0 = Trigger line low
+        L  = (bit 3) CLKGEN MMCM locked
+             1 = locked
+             0 = not locked
         DE = (bit 4) DDR Error
              1 = DDR error (FIFO underflow/overflow or DDR Error)
              0 = No error
@@ -56,8 +58,8 @@
              1 = DDR
              0 = FIFO
         O =  (bit 7) Overflow
-             1 = Overflow happened
-             0 = No overflow
+             1 = Overflow occured on last capture
+             0 = No overflow on last capture
 
 0x03 - ADC Readings
        Data is read from this register by issuing a READ command.

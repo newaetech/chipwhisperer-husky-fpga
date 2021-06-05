@@ -139,7 +139,6 @@ module trigger_unit(
    end
 
    wire resetarm;
-   wire cmd_arm;
    assign resetarm = reset | reset_arm;
 
    //'armed' goes high when arm command present & conditions met during rising clock edge

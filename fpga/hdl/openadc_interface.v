@@ -208,6 +208,7 @@ module openadc_interface #(
    end
 
    wire [7:0] reg_status;
+   wire fifo_overflow;
 
    //1 = trigger on high, 0 = trigger on low
    wire trigger_mode;
@@ -244,10 +245,10 @@ module openadc_interface #(
    assign reg_status[1] = ~adc_capture_go;
    assign reg_status[2] = DUT_trigger_i;
    assign reg_status[3] = dcm_locked;
-   //reg_status[4]
-   //reg_status[5]
-   // XXX TODO: collapse, or keep same for backwards compatibility?
+   assign reg_status[4] = 1'b0;
+   assign reg_status[5] = 1'b0;
    assign reg_status[6] = 1'b0;
+   assign reg_status[7] = fifo_overflow;
 
    wire [7:0] PWM_incr;
 
@@ -395,9 +396,6 @@ module openadc_interface #(
 
    assign amp_gain = PWM_accumulator[8];
 
-   assign reg_status[4] = 1'b0;
-   assign reg_status[5] = 1'b0;
-
 
    fifo_top_husky U_fifo(
       .reset                    (reset),
@@ -425,7 +423,7 @@ module openadc_interface #(
       .max_samples_o            (maxsamples_limit),
       .downsample_i             (downsample),
 
-      .fifo_overflow            (reg_status[7]),
+      .fifo_overflow            (fifo_overflow),
       .stream_mode              (fifo_stream),
       .error_flag               (fifo_error_flag),
       .error_stat               (fifo_error_stat),

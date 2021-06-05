@@ -70,8 +70,8 @@ module reg_openadc_adcfifo #(
          case (reg_address)
             `ADCREAD_ADDR: reg_datao_reg = fifo_data;
             `FIFO_STAT: reg_datao_reg = {fifo_empty, fifo_error_stat};
-            `DEBUG_FIFO_READS: reg_datao_reg <= fifo_read_count[reg_bytecnt*8 +: 8];
-            `DEBUG_FIFO_READS_FREEZE: reg_datao_reg <= fifo_read_count_error_freeze[reg_bytecnt*8 +: 8];
+            `DEBUG_FIFO_READS: reg_datao_reg = fifo_read_count[reg_bytecnt*8 +: 8];
+            `DEBUG_FIFO_READS_FREEZE: reg_datao_reg = fifo_read_count_error_freeze[reg_bytecnt*8 +: 8];
             default: reg_datao_reg = 0;
          endcase
       end

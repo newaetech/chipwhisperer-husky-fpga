@@ -88,14 +88,12 @@ module clockglitch_a7 #(
     wire [15:0] drp1_dout;
     wire drp1_den;
     wire drp1_dwe;
-    wire drp1_drdy;
 
     wire [6:0] drp2_addr;
     wire [15:0] drp2_din;
     wire [15:0] drp2_dout;
     wire drp2_den;
     wire drp2_dwe;
-    wire drp2_drdy;
 
     wire mmcm1_PSEN;
     wire mmcm1_PSINCDEC;
@@ -110,9 +108,6 @@ module clockglitch_a7 #(
     wire mmcm2_PSEN;
     wire mmcm2_PSINCDEC;
     wire mmcm2_PSDONE;
-
-    wire psen;
-    wire psdone;
 
     wire [7:0] reg_datao_drp1;
     wire [7:0] reg_datao_drp2;
@@ -228,7 +223,7 @@ module clockglitch_a7 #(
       .DI                           (drp1_din),
       .DWE                          (drp1_dwe),
       .DO                           (drp1_dout),
-      .DRDY                         (drp1_drdy),
+      .DRDY                         (),
       // Dynamic Phase Shift Ports:
       .PSCLK                        (clk_usb),
       .PSEN                         (mmcm1_PSEN),
@@ -286,7 +281,7 @@ module clockglitch_a7 #(
       .DI                           (drp2_din),
       .DWE                          (drp2_dwe),
       .DO                           (drp2_dout),
-      .DRDY                         (drp2_drdy),
+      .DRDY                         (),
       // Dynamic Phase Shift Ports:
       .PSCLK                        (clk_usb),
       .PSEN                         (mmcm2_PSEN),
@@ -314,7 +309,6 @@ module clockglitch_a7 #(
       .drp_den          (drp1_den  ),
       .drp_din          (drp1_din  ),
       .drp_dout         (drp1_dout ),
-      .drp_drdy         (drp1_drdy ),
       .drp_dwe          (drp1_dwe  )
    ); 
 
@@ -335,7 +329,6 @@ module clockglitch_a7 #(
       .drp_den          (drp2_den  ),
       .drp_din          (drp2_din  ),
       .drp_dout         (drp2_dout ),
-      .drp_drdy         (drp2_drdy ),
       .drp_dwe          (drp2_dwe  )
    ); 
 

@@ -50,8 +50,6 @@ module usb_reg_main #(
 );
 
 
-   wire rdflag = ~cwusb_rdn & ~cwusb_cen;
-   reg rdflag_rs, rdflag_rs_dly;
    reg isoutreg, isoutregdly;
    reg addrvalid_outreg;
    reg cwusb_wrn_rs, cwusb_wrn_rs_dly;
@@ -62,9 +60,6 @@ module usb_reg_main #(
 
    // note: could possibly be simplified, and delays reduced?
    always @(posedge clk_usb) begin
-      rdflag_rs <= rdflag;
-      rdflag_rs_dly <= rdflag_rs;
-
       isoutreg <= ~cwusb_rdn;
       isoutregdly <= isoutreg;
 

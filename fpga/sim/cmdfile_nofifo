@@ -1,4 +1,3 @@
-cwhusky_tb.v
 ../hdl/clockglitch_a7.v
 ../hdl/mmcm_phaseshift_interface.v
 ../hdl/includes.v

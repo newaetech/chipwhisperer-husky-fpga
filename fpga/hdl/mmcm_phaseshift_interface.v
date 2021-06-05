@@ -68,13 +68,13 @@ module mmcm_phaseshift_interface(
                 if (I_step_index < ps_count) begin // decrement
                    O_psincdec <= 0;
                    O_psen <= 1;
-                   ps_count <= ps_count + (-8'sd1);
+                   ps_count <= ps_count + (-15'sd1);
                    state <= pS_WAIT;
                 end 
                 else if (I_step_index > ps_count) begin // increment
                    O_psincdec <= 1;
                    O_psen <= 1;
-                   ps_count <= ps_count + 8'sd1;
+                   ps_count <= ps_count + 15'sd1;
                    state <= pS_WAIT;
                 end else begin // no change / done
                    state <= pS_DONE;
@@ -91,6 +91,8 @@ module mmcm_phaseshift_interface(
                 O_done <= 1;
                 state <= pS_IDLE;
              end
+
+             default: state <= pS_RESET;
 
           endcase
        end

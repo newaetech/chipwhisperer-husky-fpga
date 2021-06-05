@@ -63,14 +63,12 @@ module clock_managment_advanced #(
     input  wire                         clkgen_power_down 
 );
 
-    wire ADC_clk_extsrc;
     wire ADC_clk_sample;
 
     wire [6:0] drp_addr;
     wire drp_den;
     wire [15:0] drp_din;
     wire [15:0] drp_dout;
-    wire drp_drdy;
     wire drp_dwe;
 
     wire mmcm_psen;
@@ -106,12 +104,10 @@ module clock_managment_advanced #(
       .drp_den          (drp_den  ),
       .drp_din          (drp_din  ),
       .drp_dout         (drp_dout ),
-      .drp_drdy         (drp_drdy ),
       .drp_dwe          (drp_dwe  )
    ); 
 
 
-    wire clkb;
     wire clkgenfx_in;
 
     wire dcm_clk_in;
@@ -140,8 +136,6 @@ module clock_managment_advanced #(
        ); 
 `endif
 
-    wire dcm_clk;
-
     wire ADC_clk_times4;
     wire ADC_clk;
 
@@ -149,6 +143,9 @@ module clock_managment_advanced #(
        assign ADC_clk_times4 = dcm_clk_in;
        assign ADC_clk = dcm_clk_in;
        assign clkgenfx_out = clkgenfx_in;
+       assign mmcm_psdone = 1'b0;
+       assign dcm_adc_locked = 1'b0;
+       assign dcm_gen_locked = 1'b0;
 `else
     wire adcfb;
     MMCM_adc_clock_gen U_adc_clock_gen (
@@ -179,7 +176,7 @@ module clock_managment_advanced #(
        .den             (drp_den),
        .din             (drp_din),
        .dout            (drp_dout),
-       .drdy            (drp_drdy),
+       .drdy            (),
        .dwe             (drp_dwe)
     );
 `endif

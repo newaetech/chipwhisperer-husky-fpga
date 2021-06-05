@@ -50,8 +50,6 @@ module xadc #(
    wire vccint_alarm_out;
    wire vccaux_alarm_out;
    wire ot_out;
-   wire channel_out;
-   wire eoc_out;
    wire vbram_alarm_out;
    wire alarm_out;
 
@@ -60,8 +58,6 @@ module xadc #(
 // Reads: write DRP_ADDR with MSB clear, then obtain read data from DRP_DATA.
 
    reg [7:0] reg_datao_reg;
-   reg [7:0] data_reg;
-   reg reg_write_r;
    assign reg_datao = reg_datao_reg;
 
    wire [4:0] xadc_stat;
@@ -156,7 +152,7 @@ module xadc #(
           .channel_out          (),                     // output wire [4 : 0] channel_out
           .eoc_out              (),                     // output wire eoc_out
           .vbram_alarm_out      (vbram_alarm_out),      // output wire vbram_alarm_out
-          .alarm_out            (alarm_out),            // output wire alarm_out
+          .alarm_out            (alarm_out),            // output wire alarm_out TODO: why unused?!? what is this? UG480 doesn't say. Add to xadc_stat?
           .eos_out              (),                     // output wire eos_out
           .busy_out             ()                      // output wire busy_out
         );
