@@ -35,7 +35,7 @@
 
 
 0x02 - Status (One Byte)
-   [  X M  DC DE L  E  F  T ] 
+   [  O M  X PL L  E  F  T ] 
         T = (bit 0) Triggered status
              1 = System armed
              0 = System disarmed
@@ -48,9 +48,9 @@
         L  = (bit 3) CLKGEN MMCM locked
              1 = locked
              0 = not locked
-        DE = (bit 4) DDR Error
-             1 = DDR error (FIFO underflow/overflow or DDR Error)
-             0 = No error
+        PL = (bit 4) ADS4128 PLL locked
+             1 = locked
+             0 = not locked
         DC = (bit 5) DDR Calibration Done
              1 = Cal done OK
              0 = Cal in progress/failed

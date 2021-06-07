@@ -262,17 +262,10 @@ module cwhusky_top(
    reg [24:0] usb_hearbeat;
    always @(posedge clk_usb_buf) usb_hearbeat <= usb_hearbeat +  25'd1;
 
-   wire LED_ADCDCMUnlock;
-   wire LED_CLKGENDCMUnlock;
    wire led_glitch;
    wire cg_mmcm_unlocked;
 
-   // TODO: finalize LEDs and clean up
    // fast-flash red LEDs when some internal error has occurred:
-   //assign LED_CLK1FAIL = error_flag? usb_hearbeat[22] : LED_ADCDCMUnlock;
-   //assign LED_CLK1FAIL = error_flag? usb_hearbeat[22] : ~PLL_STATUS;
-   //assign LED_CLK2FAIL = error_flag? usb_hearbeat[22] : LED_CLKGENDCMUnlock;
-
    assign LED_ADC = error_flag? usb_hearbeat[22] : ~PLL_STATUS;
    assign LED_GLITCH = error_flag? usb_hearbeat[22] : led_glitch;
 
@@ -285,8 +278,6 @@ module cwhusky_top(
 
         .LED_capture            (LED_CAP),
         .LED_armed              (LED_ARMED),
-        .LED_ADCDCMUnlock       (LED_ADCDCMUnlock),
-        .LED_CLKGENDCMUnlock    (LED_CLKGENDCMUnlock),
         .ADC_data               (ADC_data),
         .ADC_clk_out            (ADC_clk_out),
         .ADC_clk_feedback       (ADC_clk_fb),

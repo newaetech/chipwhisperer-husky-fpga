@@ -31,8 +31,6 @@ module openadc_interface #(
 
     output reg                          LED_armed, // Armed LED
     output reg                          LED_capture, // Capture in Progress LED (only illuminate during capture, very quick)
-    output wire                         LED_ADCDCMUnlock, // MMCM for ADC is unlocked
-    output wire                         LED_CLKGENDCMUnlock, // MMCM for CLKGEN is unlocked
 
     // OpenADC Interface Pins
     input  wire [11:0]                  ADC_data,
@@ -137,16 +135,13 @@ module openadc_interface #(
       end
       else if (led_select == 2'b11) begin
          LED_armed = pll_fpga_clk_heartbeat[24];
-         LED_capture = PLL_STATUS;
+         LED_capture = 1'b0;
       end
       else begin
          LED_armed = armed;
          LED_capture = adc_capture_go;
       end
    end
-
-   assign LED_ADCDCMUnlock = ~dcm_locked;
-   assign LED_CLKGENDCMUnlock = ~dcm_gen_locked;
 
    wire freq_measure_adc;
    wire freq_measure_ext;
@@ -245,7 +240,7 @@ module openadc_interface #(
    assign reg_status[1] = ~adc_capture_go;
    assign reg_status[2] = DUT_trigger_i;
    assign reg_status[3] = dcm_locked;
-   assign reg_status[4] = 1'b0;
+   assign reg_status[4] = PLL_STATUS;
    assign reg_status[5] = 1'b0;
    assign reg_status[6] = 1'b0;
    assign reg_status[7] = fifo_overflow;
