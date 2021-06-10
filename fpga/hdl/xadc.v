@@ -61,6 +61,7 @@ module xadc #(
    assign reg_datao = reg_datao_reg;
 
    wire [4:0] xadc_stat;
+   reg  [4:0] xadc_stat_hold;
    
    assign xadc_stat[0] = ot_out;
    assign xadc_stat[1] = user_temp_alarm_out;
@@ -75,13 +76,30 @@ module xadc #(
          case (reg_address)
            `XADC_DRP_ADDR: reg_datao_reg <= {1'b0, drp_addr};
            `XADC_DRP_DATA: reg_datao_reg <= drp_dout[reg_bytecnt*8 +: 8];
-           `XADC_STAT: reg_datao_reg <= {3'b0, xadc_stat};
+           `XADC_STAT: reg_datao_reg <= {3'b0, xadc_stat_hold};
            default: reg_datao_reg <= 0;
          endcase
       end
       else
          reg_datao_reg <= 0;
    end  
+
+   // alarms can be transient, so hold until cleared:
+   always @(posedge clk_usb) begin
+      if (reset_i)
+         xadc_stat_hold <= 0;
+      else begin
+         if (reg_write && (reg_address == `XADC_STAT))
+            xadc_stat_hold <= 0;
+         else begin
+            if (xadc_stat[0]) xadc_stat_hold[0] <= 1'b1;
+            if (xadc_stat[1]) xadc_stat_hold[1] <= 1'b1;
+            if (xadc_stat[2]) xadc_stat_hold[2] <= 1'b1;
+            if (xadc_stat[3]) xadc_stat_hold[3] <= 1'b1;
+            if (xadc_stat[4]) xadc_stat_hold[4] <= 1'b1;
+         end
+      end
+   end
 
    always @(posedge clk_usb) begin
       if (reset_i) begin
@@ -131,6 +149,18 @@ module xadc #(
         );
    `endif
 
+   `ifdef ILA_XADC_ALARMS
+        ila_xadc_alarms U_ila_alarms (
+            .clk            (clk_usb),              // input wire clk
+            .probe0         (user_temp_alarm_out),  // input wire [6:0]  probe0  
+            .probe1         (vccint_alarm_out),     // input wire [7:0]  probe1 
+            .probe2         (vccaux_alarm_out),     // input wire [15:0] probe2 
+            .probe3         (ot_out),               // input wire [15:0] probe3 
+            .probe4         (vbram_alarm_out),      // input wire [0:0]  probe4 
+            .probe5         (alarm_out),            // input wire [0:0]  probe5 
+            .probe6         (xadc_error)            // input wire [0:0]  probe6 
+        );
+   `endif
 
 
    `ifndef __ICARUS__
