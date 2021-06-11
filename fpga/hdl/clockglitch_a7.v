@@ -144,7 +144,8 @@ module clockglitch_a7 #(
    //which edge. Lots of trouble as different options on outputs & adjustable
    //phase
    always @(negedge glitch_mmcm1_clk_out_buf) begin
-      glitch_next_reg1 <= glitch_next;
+   //always @(posedge glitch_mmcm1_clk_out_buf) begin     // TODO: original code used negedge, but that leads to a large timing violation; need to think about this one.. switching to posedge doesn't change anything
+      glitch_next_reg1 <= glitch_next;                  // also note that glitch_next is coming from the source_clk domain!
       glitch_next_reg2 <= glitch_next_reg1;
    end
 

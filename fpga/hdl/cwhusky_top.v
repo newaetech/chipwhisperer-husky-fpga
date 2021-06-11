@@ -150,7 +150,7 @@ module cwhusky_top(
 
    wire         reg_rst;
 
-   wire reset_i = 0;
+   wire reset_i = 0;    // TODO: remove?
 
    wire clk_usb_buf;
    wire ADC_clk_fb;
@@ -286,7 +286,7 @@ module cwhusky_top(
         .DUT_CLK_i              (extclk_mux),
         .DUT_trigger_i          (ext_trigger),
         .amp_gain               (VDBSPWM),
-        .clkgen                 (), // TODO: unused?
+        .clkgen                 (clkgen),
 
         .reg_address            (reg_address),
         .reg_bytecnt            (reg_bytecnt), 
@@ -398,7 +398,8 @@ module cwhusky_top(
         .reg_read       (reg_read), 
         .reg_write      (reg_write), 
         .target_hs1     (target_hs1),
-        .clkgen         (pll_fpga_clk),
+        .clkgen         (clkgen),
+        .pll_fpga_clk   (pll_fpga_clk),
         .glitchclk      (glitchclk),
         .exttrigger     (ext_trigger),
         .led_glitch     (led_glitch),

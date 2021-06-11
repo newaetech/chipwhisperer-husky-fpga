@@ -33,7 +33,26 @@ set_clock_groups -asynchronous \
 
 set_clock_groups -asynchronous \
                  -group [get_clocks clk_usb] \
+                 -group [get_clocks glitch_mmcm1_clk_out_1]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks clk_usb] \
                  -group [get_clocks glitch_mmcm2_clk_out]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks clk_out1_MMCM_clkgen] \
+                 -group [get_clocks clk_usb]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks clk_out1_MMCM_clkgen] \
+                 -group [get_clocks pll_fpga_clk]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks clk_out1_MMCM_clkgen] \
+                 -group [get_clocks pll_fpga_clk]
+
+
+
 
 
 # *****************************************************************************

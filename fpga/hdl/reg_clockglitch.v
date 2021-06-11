@@ -47,6 +47,7 @@ module reg_clockglitch #(
 
    input wire          target_hs1,
    input wire          clkgen,
+   input wire          pll_fpga_clk,
 
    output wire         glitchclk,
    input wire          exttrigger,
@@ -141,7 +142,8 @@ module reg_clockglitch #(
 
     [57..56] (Byte 7, Bits [1..0]) = Glitch Clock Source
           00 = Source 0 (HS1)
-          01 = Source 1 (clkgen aka pll_fpga_clk)
+          01 = Source 1 (clkgen)
+          10 = Source 2 (pll_fpga_clk)
 
     [62..58] (Byte 7, Bits [6..2]) = Cycles to glitch (top 5 bits)
 
@@ -156,7 +158,8 @@ module reg_clockglitch #(
    assign glitch_type = clockglitch_settings_reg[46:44];
    assign glitch_trigger_src = clockglitch_settings_reg[43:42];
    assign max_glitches = {clockglitch_settings_reg[62:58], clockglitch_settings_reg[55:48]};
-   assign sourceclk = (clockglitch_settings_reg[57:56] == 2'b01) ? clkgen : target_hs1;
+   assign sourceclk = (clockglitch_settings_reg[57:56] == 2'b01) ? clkgen : 
+                      (clockglitch_settings_reg[57:56] == 2'b10) ? pll_fpga_clk : target_hs1;
 
    // manual glitch logic:
    reg manual;

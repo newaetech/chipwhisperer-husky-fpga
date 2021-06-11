@@ -215,7 +215,7 @@ module reg_openadc #(
    always @(posedge clk_usb) begin
       if (reset) begin
          registers_gain <= 0;
-         registers_settings <= 0;
+         registers_settings <= 8'b0010_0100; // default to trigger on rising edge
          registers_echo <= 0;
          registers_samples <= maxsamples_i;
          registers_presamples <= 0;

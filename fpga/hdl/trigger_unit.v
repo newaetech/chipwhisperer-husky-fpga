@@ -40,7 +40,7 @@ module trigger_unit(
     output reg               arm_o,              //Status of internal arm logic
 
     input wire [31:0]        trigger_offset_i,   //Delays the capture_go_o by this many ADC clock cycles
-    output wire [31:0]       trigger_length_o,   //Length of trigger pulse in ADC samples (only valid AFTER trigger happened)
+    output reg  [31:0]       trigger_length_o,   //Length of trigger pulse in ADC samples (only valid AFTER trigger happened)
 
     output wire              capture_go_o,         //1 = trigger conditions met, stays high until 'capture_done_i' goes high
     output wire              segment_go_o,
@@ -158,20 +158,18 @@ module trigger_unit(
       end
 
    /** Trigger Length Detection - does not account for multiple togglings**/
-   reg [31:0] trigger_length;
    reg arm_i_dly;
 
    always @(posedge adc_clk)
       arm_i_dly <= arm_i;
 
-   always @(posedge adc_clk)
-      if (trigger == trigger_level_i) begin
-         trigger_length <= trigger_length + 32'd1;
-      end else if(arm_i & ~arm_i_dly) begin
-         trigger_length <= 0;
-      end
+   always @(posedge adc_clk) begin
+      if (trigger == trigger_level_i)
+         trigger_length_o <= trigger_length_o + 32'd1;
+      else if(arm_i & ~arm_i_dly)
+         trigger_length_o <= 0;
+   end
 
-   assign trigger_length_o = trigger_length;
 
    `ifdef ILA_TRIG
        ila_trig U_ila_trig (
