@@ -54,7 +54,7 @@ module fifo_top_husky(
     output wire         fifo_overflow, //If overflow happens (bad during stream mode)
     input  wire         stream_mode, //1=Enable stream mode, 0=Normal
     output reg          error_flag,
-    output reg [6:0]    error_stat,
+    output reg [7:0]    error_stat,
     input  wire         clear_fifo_errors,
     output reg          stream_segment_available,
     input  wire         no_clip_errors,
@@ -117,6 +117,7 @@ module fifo_top_husky(
 
     reg  [3:0]          done_wait_count;
     reg                 downsample_error;
+    reg                 segment_error;
 
     assign fifo_overflow = fast_fifo_overflow_reg || slow_fifo_overflow_reg;
 
@@ -187,6 +188,7 @@ module fifo_top_husky(
     localparam pS_SEGMENT_DONE = 4;
     localparam pS_DONE = 5;
     reg [2:0] state;
+    reg [2:0] state_r;
 
     // strictly for easier debugging:
     wire state_idle = (state == pS_IDLE);
@@ -207,6 +209,20 @@ module fifo_top_husky(
     wire presamp_done = ( (adc_capture_go && (segment_counter == 0)) || (adc_segment_go && (segment_counter > 0)) || ((segment_cycle_counter == (segment_cycles-1)) && (segment_cycles>0)) );
     wire presamp_error = presamp_done && (state == pS_PRESAMP_FILLING);
     wire clip_error = ~no_clip_errors && fast_fifo_wr && ( (adc_datain == {12{1'b1}}) || (adc_datain == {12{1'b0}}) );
+    wire next_segment_go = ( (adc_segment_go && ~adc_segment_go_r) || ((segment_cycle_counter == (segment_cycles-1)) && (segment_cycles>0)) );
+
+    /*
+    always @ (posedge adc_sampleclk) begin
+       if (reset)
+          segment_error <= 1'b0;
+       else begin
+          if (next_segment_go && (state != pS_SEGMENT_DONE) && ((state_r != pS_IDLE) && (state != pS_PRESAMP_FULL)))
+             segment_error <= 1'b1;
+          else if (state == pS_IDLE)
+             segment_error <= 1'b0;
+       end
+    end
+    */
 
     always @ (posedge adc_sampleclk) begin
        if (reset) begin
@@ -220,9 +236,11 @@ module fifo_top_husky(
           segment_cycle_counter <= 0;
           filling_out_to_done <= 0;
           downsample_error <= 1'b0;
+          segment_error <= 1'b0;
        end
 
        else begin
+          state_r <= state;
           case (state)
 
              pS_IDLE: begin
@@ -234,6 +252,7 @@ module fifo_top_husky(
                 segment_counter <= 0;
                 segment_cycle_counter <= 0;
                 filling_out_to_done <= 0;
+                segment_error <= 1'b0;
 
                 if ((downsample_i > 0) && ((presample_i > 0) || (num_segments > 1)))
                    downsample_error <= 1'b1;
@@ -250,6 +269,8 @@ module fifo_top_husky(
 
              pS_PRESAMP_FILLING: begin
                 fast_fifo_presample_drain <= 1'b0;
+                if (next_segment_go && (state_r == pS_PRESAMP_FILLING))
+                   segment_error <= 1'b1;
                 if (segment_counter > 0)
                    segment_cycle_counter <= segment_cycle_counter + 1;
                 if (stop_capture_conditions)
@@ -279,6 +300,8 @@ module fifo_top_husky(
              end
 
              pS_TRIGGERED: begin
+                if (next_segment_go && (state_r == pS_TRIGGERED))
+                   segment_error <= 1'b1;
                 fast_fifo_presample_drain <= 1'b0;
                 fast_fifo_rd_en <= 1'b1;
                 segment_cycle_counter <= segment_cycle_counter + 1;
@@ -316,7 +339,7 @@ module fifo_top_husky(
                       presample_counter <= 0;
                       state <= pS_PRESAMP_FILLING;
                    end
-                   else if ( (adc_segment_go && ~adc_segment_go_r) || ((segment_cycle_counter == (segment_cycles-1)) && (segment_cycles>0)) ) begin
+                   else if (next_segment_go) begin
                       segment_counter <= segment_counter + 1;
                       segment_cycle_counter <= 0;
                       sample_counter <= 0;
@@ -447,9 +470,17 @@ module fifo_top_husky(
              error_stat <= 0;
              error_flag <= 0;
           end
-          else if (downsample_error || clip_error || presamp_error || fast_fifo_overflow || fast_fifo_underflow || slow_fifo_overflow || slow_fifo_underflow_masked) begin
-             error_stat <= {downsample_error, clip_error, presamp_error, fast_fifo_overflow, fast_fifo_underflow, slow_fifo_overflow, slow_fifo_underflow_masked};
-             error_flag <= 1;
+          else begin
+             if (segment_error || downsample_error || clip_error || presamp_error || fast_fifo_overflow || fast_fifo_underflow || slow_fifo_overflow || slow_fifo_underflow_masked)
+                error_flag <= 1;
+             if (segment_error)                 error_stat[7] <= 1'b1;
+             if (downsample_error)              error_stat[6] <= 1'b1;
+             if (clip_error)                    error_stat[5] <= 1'b1;
+             if (presamp_error)                 error_stat[4] <= 1'b1;
+             if (fast_fifo_overflow)            error_stat[3] <= 1'b1;
+             if (fast_fifo_underflow)           error_stat[2] <= 1'b1;
+             if (slow_fifo_overflow)            error_stat[1] <= 1'b1;
+             if (slow_fifo_underflow_masked)    error_stat[0] <= 1'b1;
           end
 
           if (fifo_rst_start_r)
