@@ -40,7 +40,7 @@ module fifo_top_husky(
     input wire          clk_usb,
     input wire          low_res,        // if set, return just 8 bits per sample; if clear return all 12 bits per sample
     input wire          low_res_lsb,    // useless except for testing: if set, return the 8 LSB bits when in low_res mode
-    input wire [31:0]   stream_segment_size,
+    input wire [31:0]   stream_segment_threshold,
     input wire          fifo_read_fifoen,
     output wire         fifo_read_fifoempty,
     output reg  [7:0]   fifo_read_data,
@@ -726,7 +726,7 @@ module fifo_top_husky(
             read_count <= read_count + 3;
          if (read_update_usb) begin
             if (write_count_to_usb > read_count)
-               stream_segment_available <= ( (write_count_to_usb - read_count > stream_segment_size) || (write_count_to_usb >= max_samples_i) );
+               stream_segment_available <= ( (write_count_to_usb - read_count > stream_segment_threshold) || (write_count_to_usb >= max_samples_i) );
             else
                stream_segment_available <= 1'b0;
          end

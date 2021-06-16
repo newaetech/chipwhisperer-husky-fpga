@@ -43,7 +43,7 @@ module cwhusky_tb();
    parameter pSEGMENT_CYCLES = 1;
    parameter pSEGMENT_CYCLE_COUNTER_EN = 0;
    parameter pSTREAM = 0;
-   parameter pSTREAM_SEGMENT_SIZE = 0;
+   parameter pSTREAM_SEGMENT_THRESHOLD = 0;
    parameter pSLOP = 6;
    parameter pTRIGGER_ADJUST = pTRIGGER_NOW? 2 : 0;
    parameter pSEED = 1;
@@ -230,11 +230,11 @@ module cwhusky_tb();
       end
 
       if (pSTREAM) begin
-         rw_lots_bytes(`STREAM_SEGMENT_SIZE);
-         write_next_byte((pSTREAM_SEGMENT_SIZE & 32'h0000_00FF));
-         write_next_byte((pSTREAM_SEGMENT_SIZE & 32'h0000_FF00)>>8);
-         write_next_byte((pSTREAM_SEGMENT_SIZE & 32'h00FF_0000)>>16);
-         write_next_byte((pSTREAM_SEGMENT_SIZE & 32'hFF00_0000)>>24);
+         rw_lots_bytes(`STREAM_SEGMENT_THRESHOLD);
+         write_next_byte((pSTREAM_SEGMENT_THRESHOLD & 32'h0000_00FF));
+         write_next_byte((pSTREAM_SEGMENT_THRESHOLD & 32'h0000_FF00)>>8);
+         write_next_byte((pSTREAM_SEGMENT_THRESHOLD & 32'h00FF_0000)>>16);
+         write_next_byte((pSTREAM_SEGMENT_THRESHOLD & 32'hFF00_0000)>>24);
       end
 
       // it takes up to ~700 clock cycles after reset for things to get going again:

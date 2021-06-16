@@ -41,7 +41,7 @@ module reg_openadc_adcfifo #(
    output reg          low_res,
    output reg          low_res_lsb,
    output reg          fast_fifo_read_mode,
-   output reg  [31:0]  stream_segment_size,
+   output reg  [31:0]  stream_segment_threshold,
    input  wire [7:0]   fifo_error_stat,
    output reg          clear_fifo_errors,
 
@@ -74,6 +74,8 @@ module reg_openadc_adcfifo #(
             `FIFO_STAT: reg_datao_reg = fifo_stat[reg_bytecnt*8 +: 8];
             `DEBUG_FIFO_READS: reg_datao_reg = fifo_read_count[reg_bytecnt*8 +: 8];
             `DEBUG_FIFO_READS_FREEZE: reg_datao_reg = fifo_read_count_error_freeze[reg_bytecnt*8 +: 8];
+            `STREAM_SEGMENT_THRESHOLD: reg_datao_reg = stream_segment_threshold[reg_bytecnt*8 +: 8];
+            `ADC_LOW_RES: reg_datao_reg = {6'b0, low_res_lsb, low_res};
             default: reg_datao_reg = 0;
          endcase
       end
@@ -86,7 +88,7 @@ module reg_openadc_adcfifo #(
          low_res <= 0;
          low_res_lsb <= 0;
          clear_fifo_errors <= 1'b0;
-         stream_segment_size <= 32;
+         stream_segment_threshold <= 65536;
          //fast_fifo_read_mode <= 1'b0;
       end 
       else if (reg_write) begin
@@ -95,8 +97,8 @@ module reg_openadc_adcfifo #(
                low_res <= reg_datai[0];
                low_res_lsb <= reg_datai[1];
             end
-            `STREAM_SEGMENT_SIZE:
-               stream_segment_size[reg_bytecnt*8 +: 8] <= reg_datai; 
+            `STREAM_SEGMENT_THRESHOLD:
+               stream_segment_threshold[reg_bytecnt*8 +: 8] <= reg_datai; 
             //`FAST_FIFO_READ_MODE: fast_fifo_read_mode <= reg_datai[0];
             `FIFO_STAT:
                clear_fifo_errors <= 1'b1;

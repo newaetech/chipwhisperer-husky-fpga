@@ -255,7 +255,7 @@ module openadc_interface #(
    wire fifo_rd_en;
    wire low_res;
    wire low_res_lsb;
-   wire [31:0] stream_segment_size;
+   wire [31:0] stream_segment_threshold;
 
    wire [14:0] presamples;
    wire [31:0] maxsamples_limit;
@@ -345,7 +345,7 @@ module openadc_interface #(
       .low_res              (low_res),
       .low_res_lsb          (low_res_lsb),
       .fast_fifo_read_mode  (fast_fifo_read),
-      .stream_segment_size  (stream_segment_size),
+      .stream_segment_threshold (stream_segment_threshold),
       .fifo_error_stat      (fifo_error_stat),
       .fifo_read_count      (fifo_read_count),
       .fifo_read_count_error_freeze (fifo_read_count_error_freeze),
@@ -411,7 +411,7 @@ module openadc_interface #(
       .low_res                  (low_res),
       .low_res_lsb              (low_res_lsb),
       .fast_fifo_read_mode      (fast_fifo_read),
-      .stream_segment_size      (stream_segment_size),
+      .stream_segment_threshold (stream_segment_threshold),
 
       .presample_i              (presamples),
       .max_samples_i            (maxsamples),

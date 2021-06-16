@@ -264,7 +264,7 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define SEGMENT_CYCLES          33
 
 `define LED_SELECT              34
-`define STREAM_SEGMENT_SIZE     35
+`define STREAM_SEGMENT_THRESHOLD 35
 `define FAST_FIFO_READ_MODE     36
 
 `define CW_EXTCLK_ADDR          38
