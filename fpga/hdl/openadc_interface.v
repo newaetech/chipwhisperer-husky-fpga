@@ -276,6 +276,9 @@ module openadc_interface #(
    wire adc_clkgen_power_down;
    wire clkgen_power_down;
 
+   wire [7:0] underflow_count;
+   wire no_underflow_errors;
+
    assign reg_datao = reg_datao_oadc | reg_datao_fifo | reg_datao_mmcm_drp;
 
    reg_openadc #(
@@ -349,6 +352,8 @@ module openadc_interface #(
       .fifo_error_stat      (fifo_error_stat),
       .fifo_read_count      (fifo_read_count),
       .fifo_read_count_error_freeze (fifo_read_count_error_freeze),
+      .underflow_count      (underflow_count),
+      .no_underflow_errors  (no_underflow_errors),
       .clear_fifo_errors    (clear_fifo_errors)
    );
 
@@ -425,6 +430,8 @@ module openadc_interface #(
       .clear_fifo_errors        (clear_fifo_errors),
       .stream_segment_available (stream_segment_available),
       .no_clip_errors           (no_clip_errors),
+      .underflow_count          (underflow_count),
+      .no_underflow_errors      (no_underflow_errors),
 
       .slow_fifo_wr             (slow_fifo_wr),
       .slow_fifo_rd             (slow_fifo_rd),

@@ -286,11 +286,13 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define GLITCH_RECONFIG_RB_ADDR 56
 `define CW_IOREAD_ADDR          59
 
-
 `define CG1_DRP_ADDR            62
 `define CG1_DRP_DATA            63
 `define CG2_DRP_ADDR            64
 `define CG2_DRP_DATA            65
+
+`define FIFO_UNDERFLOW_COUNT    66
+`define FIFO_NO_UNDERFLOW_ERROR 67
 
 `define REGISTER_VERSION 1
 

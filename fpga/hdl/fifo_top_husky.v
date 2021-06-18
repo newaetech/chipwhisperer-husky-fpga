@@ -58,6 +58,8 @@ module fifo_top_husky(
     input  wire         clear_fifo_errors,
     output reg          stream_segment_available,
     input  wire         no_clip_errors,
+    output reg [7:0]    underflow_count,
+    input  wire         no_underflow_errors,
 
     // for debug only:
     output wire         slow_fifo_wr,
@@ -118,6 +120,7 @@ module fifo_top_husky(
     reg  [3:0]          done_wait_count;
     reg                 downsample_error;
     reg                 segment_error;
+
 
     assign fifo_overflow = fast_fifo_overflow_reg || slow_fifo_overflow_reg;
 
@@ -464,14 +467,16 @@ module fifo_top_husky(
           error_flag <= 0;
           error_stat <= 0;
           slow_fifo_underflow_sticky <= 0;
+          underflow_count <= 0;
        end
        else begin
           if (fifo_rst_start_r || clear_fifo_errors) begin
              error_stat <= 0;
              error_flag <= 0;
+             underflow_count <= 0;
           end
           else begin
-             if (segment_error || downsample_error || clip_error || presamp_error || fast_fifo_overflow || fast_fifo_underflow || slow_fifo_overflow || slow_fifo_underflow_masked)
+             if (segment_error || downsample_error || clip_error || presamp_error || fast_fifo_overflow || fast_fifo_underflow || slow_fifo_overflow || (slow_fifo_underflow_masked && ~no_underflow_errors))
                 error_flag <= 1;
              if (segment_error)                 error_stat[7] <= 1'b1;
              if (downsample_error)              error_stat[6] <= 1'b1;
@@ -480,7 +485,11 @@ module fifo_top_husky(
              if (fast_fifo_overflow)            error_stat[3] <= 1'b1;
              if (fast_fifo_underflow)           error_stat[2] <= 1'b1;
              if (slow_fifo_overflow)            error_stat[1] <= 1'b1;
-             if (slow_fifo_underflow_masked)    error_stat[0] <= 1'b1;
+             if (slow_fifo_underflow_masked && ~no_underflow_errors)
+                                                error_stat[0] <= 1'b1;
+
+             if (slow_fifo_underflow_masked && (underflow_count != 8'hFF))
+                underflow_count <= underflow_count + 1;
           end
 
           if (fifo_rst_start_r)
