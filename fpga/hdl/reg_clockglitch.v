@@ -166,9 +166,8 @@ module reg_clockglitch #(
    always @(posedge clk_usb)
       manual <= clockglitch_settings_reg[47];
 
-   reg manual_rs1, manual_rs2;
+   (*ASYNC_REG = "True" *) reg manual_rs1, manual_rs2;
    reg manual_dly;
-   // TODO: add ASYNC's here
    always @(posedge sourceclk) begin
       //Resync with double-FF
       manual_rs1 <= manual;

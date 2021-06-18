@@ -67,9 +67,6 @@ module trigger_resync(
 
    reg exttrigger_resync_reg;
 
-   //always @(posedge clk)
-   //  delayed <= ~data_status;
-
    always @(posedge clk)
       exttrigger_resync_reg <= (glitch_delay_cnt == offset) ? ~async_trigger_inv : 1'b0;
 

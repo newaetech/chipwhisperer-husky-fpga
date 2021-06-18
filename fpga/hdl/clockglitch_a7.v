@@ -35,7 +35,7 @@ module clockglitch_a7 #(
    parameter pBYTECNT_SIZE = 7
 )(
    // Source Clock
-    input wire          source_clk, // HS1 or clkgen
+    input wire          source_clk, // HS1 or pll_fpga_clk or clkgen
 
     // Glitchy Clock
     output wire         glitched_clk,
