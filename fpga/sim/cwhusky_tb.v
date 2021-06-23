@@ -207,18 +207,6 @@ module cwhusky_tb();
       write_next_byte((pDOWNSAMPLE & 16'h00FF));
       write_next_byte((pDOWNSAMPLE & 16'hFF00)>>8);
 
-      // yes this is also done in the trigger thread, this seems redundant but it's necessary:
-      write_1byte(`SETTINGS_ADDR, 8'hc); // arm, trigger level = high
-
-      // random delay before trigger:
-      //#($urandom_range(0, 100)*pCLK_USB_PERIOD);
-
-      if (pTRIGGER_DELAY) begin
-         //wait (U_dut.oadc.U_fifo.fast_fifo_full);
-         //wait (U_dut.oadc.U_fifo.fast_fifo_empty == 1'b0);
-         repeat (pTRIGGER_DELAY) @(posedge clk_adc);
-      end
-
       // number of segments - 1 (0 = 1 segment, 1 = 2 segments,...)
       write_1byte(`NUM_SEGMENTS, pNUM_SEGMENTS);
       if (pSEGMENT_CYCLE_COUNTER_EN) begin
@@ -235,6 +223,18 @@ module cwhusky_tb();
          write_next_byte((pSTREAM_SEGMENT_THRESHOLD & 32'h0000_FF00)>>8);
          write_next_byte((pSTREAM_SEGMENT_THRESHOLD & 32'h00FF_0000)>>16);
          write_next_byte((pSTREAM_SEGMENT_THRESHOLD & 32'hFF00_0000)>>24);
+      end
+
+      // yes this is also done in the trigger thread, this seems redundant but it's necessary:
+      write_1byte(`SETTINGS_ADDR, 8'hc); // arm, trigger level = high
+
+      // random delay before trigger:
+      //#($urandom_range(0, 100)*pCLK_USB_PERIOD);
+
+      if (pTRIGGER_DELAY) begin
+         //wait (U_dut.oadc.U_fifo.fast_fifo_full);
+         //wait (U_dut.oadc.U_fifo.fast_fifo_empty == 1'b0);
+         repeat (pTRIGGER_DELAY) @(posedge clk_adc);
       end
 
       // it takes up to ~700 clock cycles after reset for things to get going again:
@@ -281,6 +281,9 @@ module cwhusky_tb();
 
          trigger_counter_value[trigger_gen_index] = U_dut.oadc.U_fifo.adc_datain - pPRESAMPLES;
          repeat (10) @(posedge clk_adc);
+         // TODO: this isn't accounting for the case where trigger remains
+         // high throughout the capture... which I've seen can hide bugs, e.g.
+         // with presamples and segments!
          target_io4_reg = 1'b0;
          if (pSEGMENT_CYCLES > 10)
             repeat (pSEGMENT_CYCLES-10) @(posedge clk_adc);
