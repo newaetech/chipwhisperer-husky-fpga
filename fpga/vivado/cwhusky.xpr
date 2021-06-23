@@ -54,13 +54,13 @@
     <Option Name="WTVcsLaunchSim" Val="0"/>
     <Option Name="WTRivieraLaunchSim" Val="0"/>
     <Option Name="WTActivehdlLaunchSim" Val="0"/>
-    <Option Name="WTXSimExportSim" Val="69"/>
-    <Option Name="WTModelSimExportSim" Val="69"/>
-    <Option Name="WTQuestaExportSim" Val="69"/>
-    <Option Name="WTIesExportSim" Val="69"/>
-    <Option Name="WTVcsExportSim" Val="69"/>
-    <Option Name="WTRivieraExportSim" Val="69"/>
-    <Option Name="WTActivehdlExportSim" Val="69"/>
+    <Option Name="WTXSimExportSim" Val="73"/>
+    <Option Name="WTModelSimExportSim" Val="73"/>
+    <Option Name="WTQuestaExportSim" Val="73"/>
+    <Option Name="WTIesExportSim" Val="73"/>
+    <Option Name="WTVcsExportSim" Val="73"/>
+    <Option Name="WTRivieraExportSim" Val="73"/>
+    <Option Name="WTActivehdlExportSim" Val="73"/>
     <Option Name="GenerateIPUpgradeLog" Val="TRUE"/>
     <Option Name="XSimRadix" Val="hex"/>
     <Option Name="XSimTimeUnit" Val="ns"/>
@@ -588,6 +588,25 @@
         <Define Name="ILA_USB_LITE"/>
       </Config>
     </FileSet>
+    <FileSet Name="ila_segments" Type="BlockSrcs" RelSrcDir="$PSRCDIR/ila_segments">
+      <File Path="$PSRCDIR/sources_1/ip/ila_segments/ila_segments.xci">
+        <FileInfo>
+          <Attr Name="UsedIn" Val="synthesis"/>
+          <Attr Name="UsedIn" Val="implementation"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+      </File>
+      <Config>
+        <Option Name="TopModule" Val="ila_segments"/>
+        <Option Name="UseBlackboxStub" Val="1"/>
+        <Define Name="XADC_EN"/>
+        <Define Name="USERIO_DEBUG"/>
+        <Define Name="ILA_FIFO_COUNTS"/>
+        <Define Name="ILA_SEGMENTS"/>
+        <Define Name="ILA_USB_LITE"/>
+        <Define Name="TINYFIFO"/>
+      </Config>
+    </FileSet>
   </FileSets>
   <Simulators>
     <Simulator Name="XSim">
@@ -815,6 +834,18 @@
     <Run Id="ila_xadc_alarms_synth_1" Type="Ft3:Synth" SrcSet="ila_xadc_alarms" Part="xc7a35tftg256-2" ConstrsSet="ila_xadc_alarms" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_xadc_alarms_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_xadc_alarms_synth_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
+        <Step Id="synth_design"/>
+      </Strategy>
+      <GeneratedRun Dir="$PRUNDIR" File="gen_run.xml"/>
+      <ReportStrategy Name="Vivado Synthesis Default Reports" Flow="Vivado Synthesis 2020"/>
+      <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
+      <RQSFiles/>
+    </Run>
+    <Run Id="ila_segments_synth_1" Type="Ft3:Synth" SrcSet="ila_segments" Part="xc7a35tftg256-2" ConstrsSet="ila_segments" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_segments_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_segments_synth_1">
+      <Strategy Version="1" Minor="2">
+        <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020">
+          <Desc>Vivado Synthesis Defaults</Desc>
+        </StratHandle>
         <Step Id="synth_design"/>
       </Strategy>
       <GeneratedRun Dir="$PRUNDIR" File="gen_run.xml"/>
@@ -1171,6 +1202,25 @@
     <Run Id="ila_xadc_alarms_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-2" ConstrsSet="ila_xadc_alarms" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_xadc_alarms_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_xadc_alarms_impl_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020"/>
+        <Step Id="init_design"/>
+        <Step Id="opt_design"/>
+        <Step Id="power_opt_design"/>
+        <Step Id="place_design"/>
+        <Step Id="post_place_power_opt_design"/>
+        <Step Id="phys_opt_design"/>
+        <Step Id="route_design"/>
+        <Step Id="post_route_phys_opt_design"/>
+        <Step Id="write_bitstream"/>
+      </Strategy>
+      <ReportStrategy Name="Vivado Implementation Default Reports" Flow="Vivado Implementation 2020"/>
+      <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
+      <RQSFiles/>
+    </Run>
+    <Run Id="ila_segments_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-2" ConstrsSet="ila_segments" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_segments_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_segments_impl_1">
+      <Strategy Version="1" Minor="2">
+        <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020">
+          <Desc>Default settings for Implementation.</Desc>
+        </StratHandle>
         <Step Id="init_design"/>
         <Step Id="opt_design"/>
         <Step Id="power_opt_design"/>

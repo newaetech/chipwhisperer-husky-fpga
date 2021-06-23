@@ -131,7 +131,7 @@ module trigger_unit(
          segment_go_delayed <= segment_go; // delay one cycle to match adc_capture_go_delayed timing
          if (((trigger == trigger_level_i) & armed) | trigger_now)
             adc_capture_go <= 1;
-         if ((trigger == trigger_level_i) && adc_capture_go)
+         if (((trigger == trigger_level_i) || trigger_now) && adc_capture_go)
             segment_go <= 1'b1;
          else
             segment_go <= 1'b0;

@@ -31,7 +31,7 @@ module fifo_top_husky(
     input wire          adc_sampleclk,
     input wire          adc_capture_go, //Set to '1' to start capture, keep at 1 until adc_capture_stop goes high
     input wire          adc_segment_go,
-    output wire         adc_capture_stop,
+    output reg          adc_capture_stop,
     input wire          arm_i,
     input wire [15:0]   num_segments,
     input wire [19:0]   segment_cycles,
@@ -95,7 +95,6 @@ module fifo_top_husky(
     wire                slow_fifo_overflow;
     wire                slow_fifo_underflow;
 
-    reg                 adc_capture_stop_reg;
     reg                 fast_fifo_overflow_reg;
     reg                 slow_fifo_overflow_reg;
     reg  [14:0]         presample_counter;
@@ -110,6 +109,7 @@ module fifo_top_husky(
     reg                 armed_and_ready;
     reg                 arming;
     reg                 adc_segment_go_r;
+    reg                 adc_capture_go_r;
 
     reg [1:0]           fast_read_count;
     reg [2:0]           fast_write_count;
@@ -146,7 +146,6 @@ module fifo_top_husky(
     end
 
 
-    assign adc_capture_stop = adc_capture_stop_reg;
     assign fifo_read_fifoempty = slow_fifo_empty;
 
     //Counter for downsampling (NOT proper decimation)
@@ -209,23 +208,14 @@ module fifo_top_husky(
 
     assign fsm_fast_wr_en = ((state == pS_PRESAMP_FILLING) || (state == pS_PRESAMP_FULL) || (state == pS_TRIGGERED));
 
-    wire presamp_done = ( (adc_capture_go && (segment_counter == 0)) || (adc_segment_go && (segment_counter > 0)) || ((segment_cycle_counter == (segment_cycles-1)) && (segment_cycles>0)) );
+    wire presamp_done1 = (adc_capture_go && ~adc_capture_go_r && (segment_counter == 0));
+    wire presamp_done2 = (adc_segment_go && ~adc_segment_go_r && (segment_counter > 0));
+    wire presamp_done3 = ((segment_cycle_counter == (segment_cycles-1)) && (segment_cycles>0));
+    wire presamp_done = presamp_done1 || presamp_done2 || presamp_done3;
+
     wire presamp_error = presamp_done && (state == pS_PRESAMP_FILLING);
     wire clip_error = ~no_clip_errors && fast_fifo_wr && ( (adc_datain == {12{1'b1}}) || (adc_datain == {12{1'b0}}) );
     wire next_segment_go = ( (adc_segment_go && ~adc_segment_go_r) || ((segment_cycle_counter == (segment_cycles-1)) && (segment_cycles>0)) );
-
-    /*
-    always @ (posedge adc_sampleclk) begin
-       if (reset)
-          segment_error <= 1'b0;
-       else begin
-          if (next_segment_go && (state != pS_SEGMENT_DONE) && ((state_r != pS_IDLE) && (state != pS_PRESAMP_FULL)))
-             segment_error <= 1'b1;
-          else if (state == pS_IDLE)
-             segment_error <= 1'b0;
-       end
-    end
-    */
 
     always @ (posedge adc_sampleclk) begin
        if (reset) begin
@@ -233,7 +223,7 @@ module fifo_top_husky(
           presample_counter <= 0;
           sample_counter <= 0;
           fast_fifo_presample_drain <= 1'b0;
-          adc_capture_stop_reg <= 1'b0;
+          adc_capture_stop <= 1'b0;
           fast_fifo_rd_en <= 1'b0;
           segment_counter <= 0;
           segment_cycle_counter <= 0;
@@ -250,7 +240,7 @@ module fifo_top_husky(
                 presample_counter <= 0;
                 sample_counter <= 0;
                 fast_fifo_presample_drain <= 1'b0;
-                adc_capture_stop_reg <= 1'b0;
+                adc_capture_stop <= 1'b0;
                 fast_fifo_rd_en <= 1'b0;
                 segment_counter <= 0;
                 segment_cycle_counter <= 0;
@@ -262,7 +252,7 @@ module fifo_top_husky(
                 else
                    downsample_error <= 1'b0;
 
-                if (armed_and_ready && ~adc_capture_stop_reg) begin
+                if (armed_and_ready && ~adc_capture_stop) begin
                    if (arm_i & (presample_i > 0))
                       state <= pS_PRESAMP_FILLING;
                    else if (adc_capture_go)
@@ -311,7 +301,7 @@ module fifo_top_husky(
 
                 if (stop_capture_conditions || ((sample_counter == (max_samples_i-1)) && fast_fifo_wr && (segment_counter == (num_segments-1))) || (filling_out_to_done && fast_fifo_wr)) begin
                    if (fast_write_count == 2) begin
-                      adc_capture_stop_reg <= 1'b1;
+                      adc_capture_stop <= 1'b1;
                       done_wait_count <= 10;  // established by trial/error to account for the latency in the Xilinx FIFO updating its empty flag
                       state <= pS_DONE;
                    end
@@ -333,7 +323,7 @@ module fifo_top_husky(
 
              pS_SEGMENT_DONE: begin
                 segment_cycle_counter <= segment_cycle_counter + 1;
-                //adc_capture_stop_reg <= 1'b0;
+                //adc_capture_stop <= 1'b0;
                 if (fast_fifo_empty) begin
                    fast_fifo_rd_en <= 1'b0;
                    if (presample_i > 0) begin
@@ -379,9 +369,11 @@ module fifo_top_husky(
           arming <= 1'b0;
           armed_and_ready <= 1'b0;
           adc_segment_go_r <= 1'b0;
+          adc_capture_go_r <= 1'b0;
        end
        else begin
           adc_segment_go_r <= adc_segment_go;
+          adc_capture_go_r <= adc_capture_go;
           {reset_done_r2, reset_done_r, reset_done_pipe} <= {reset_done_r, reset_done_pipe, reset_done};
           arm_r <= arm_i;
           arm_r2 <= arm_r;
@@ -394,7 +386,7 @@ module fifo_top_husky(
              arming <= 1'b0;
              armed_and_ready <= 1'b1;
           end
-          else if (adc_capture_stop_reg)
+          else if (adc_capture_stop)
              armed_and_ready <= 1'b0;
        end
     end
@@ -816,7 +808,9 @@ module fifo_top_husky(
               .probe11        (state_presamp_filling),// input wire [0:0]  probe11
               .probe12        (state_presamp_full),   // input wire [0:0]  probe12
               .probe13        (state_triggered),      // input wire [0:0]  probe13
-              .probe14        (state_done)            // input wire [0:0]  probe14
+              .probe14        (state_done),           // input wire [0:0]  probe14
+              .probe15        (error_stat),           // input wire [7:0]  probe15
+              .probe16        (error_flag)            // input wire [0:0]  probe16
            );
        `endif
 
@@ -871,6 +865,28 @@ module fifo_top_husky(
           .probe9         (error_flag)            // input wire [0:0]  probe9 
        );
    `endif
+
+   `ifdef ILA_SEGMENTS
+       ila_segments U_ila_segments (
+          .clk            (adc_sampleclk),        // input wire clk
+          .probe0         (state_idle),           // input wire [0:0]  probe0 
+          .probe1         (state_done),           // input wire [0:0]  probe1 
+          .probe2         (state_presamp_filling),// input wire [0:0]  probe2 
+          .probe3         (state_presamp_full),   // input wire [0:0]  probe3 
+          .probe4         (state_triggered),      // input wire [0:0]  probe4 
+          .probe5         (state_segment_done),   // input wire [0:0]  probe5 
+          .probe6         (error_flag),           // input wire [0:0]  probe6 
+          .probe7         (error_stat),           // input wire [7:0]  probe7 
+          .probe8         (presamp_done),         // input wire [0:0]  probe8 
+          .probe9         (segment_cycle_counter),// input wire [19:0] probe9 
+          .probe10        (segment_counter),      // input wire [15:0] probe10 
+          .probe11        (adc_segment_go),       // input wire [0:0]  probe11
+          .probe12        (adc_capture_go),       // input wire [0:0]  probe12 
+          .probe13        (fast_fifo_empty)       // input wire [0:0]  probe13 
+       );
+   `endif
+
+
 
 
 endmodule
