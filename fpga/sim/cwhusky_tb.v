@@ -231,6 +231,17 @@ module cwhusky_tb();
       // random delay before trigger:
       //#($urandom_range(0, 100)*pCLK_USB_PERIOD);
 
+      // TEMP:
+      rw_lots_bytes(`CLOCKGLITCH_SETTINGS);
+      write_next_byte(8'h00); // byte 0
+      write_next_byte(8'h00); // byte 1
+      write_next_byte(8'h00); // byte 2
+      write_next_byte(8'h00); // byte 3
+      write_next_byte(8'h00); // byte 4
+      write_next_byte(8'h08); // byte 5: continuous glitch
+      write_next_byte(8'h00); // byte 6
+      write_next_byte(8'h01); // byte 7: source=clkgen
+
       if (pTRIGGER_DELAY) begin
          //wait (U_dut.oadc.U_fifo.fast_fifo_full);
          //wait (U_dut.oadc.U_fifo.fast_fifo_empty == 1'b0);

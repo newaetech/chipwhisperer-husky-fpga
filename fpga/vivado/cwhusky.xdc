@@ -48,9 +48,64 @@ set_clock_groups -asynchronous \
                  -group [get_clocks pll_fpga_clk]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks clk_out1_MMCM_clkgen] \
+                 -group [get_clocks glitch_observer_clk] \
+                 -group [get_clocks glitch_observer_clk_1]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks glitch_observer_clk] \
+                 -group [get_clocks clk_usb]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks glitch_observer_clk_1] \
+                 -group [get_clocks clk_usb]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks glitch_observer_clk] \
                  -group [get_clocks pll_fpga_clk]
 
+set_clock_groups -asynchronous \
+                 -group [get_clocks glitch_observer_clk_1] \
+                 -group [get_clocks pll_fpga_clk]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks glitch_observer_clk] \
+                 -group [get_clocks glitch_mmcm1_clk_out]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks glitch_observer_clk_1] \
+                 -group [get_clocks glitch_mmcm1_clk_out]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks glitch_observer_clk] \
+                 -group [get_clocks glitch_mmcm1_clk_out_1]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks glitch_observer_clk_1] \
+                 -group [get_clocks glitch_mmcm1_clk_out_1]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks glitch_observer_clk] \
+                 -group [get_clocks glitch_mmcm2_clk_out]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks glitch_observer_clk_1] \
+                 -group [get_clocks glitch_mmcm2_clk_out]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks glitch_observer_clk] \
+                 -group [get_clocks glitch_mmcm2_clk_out_1]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks glitch_observer_clk_1] \
+                 -group [get_clocks glitch_mmcm2_clk_out_1]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks glitch_observer_clk] \
+                 -group [get_clocks clk_out1_MMCM_clkgen]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks glitch_observer_clk_1] \
+                 -group [get_clocks clk_out1_MMCM_clkgen]
 
 
 

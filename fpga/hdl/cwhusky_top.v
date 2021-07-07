@@ -389,7 +389,7 @@ module cwhusky_top(
    reg_clockglitch #(
         .pBYTECNT_SIZE  (pBYTECNT_SIZE)
    ) reg_clockglitch (
-        .reset_i        (reg_rst),
+        .reset          (reg_rst),
         .clk_usb        (clk_usb_buf),
         .reg_address    (reg_address),
         .reg_bytecnt    (reg_bytecnt), 

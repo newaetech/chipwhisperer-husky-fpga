@@ -32,8 +32,10 @@ POSSIBILITY OF SUCH DAMAGE.
 *************************************************************************/
 
 module clockglitch_a7 #(
-   parameter pBYTECNT_SIZE = 7
+   parameter pBYTECNT_SIZE = 7,
+   parameter pDATA_WIDTH = 512
 )(
+    input wire          reset,
    // Source Clock
     input wire          source_clk, // HS1 or pll_fpga_clk or clkgen
 
@@ -67,8 +69,17 @@ module clockglitch_a7 #(
     input wire [15:0]   phase_requested,
 
     input wire          I_mmcm_powerdown,
+    input wire          I_observer_powerdown,
 
-    // register interface
+    output wire [pDATA_WIDTH-1:0] O_glitchedclk_data,
+    output wire [pDATA_WIDTH-1:0] O_sourceclk_data,
+    output wire [pDATA_WIDTH-1:0] O_mmcm1out_data,
+    output wire [pDATA_WIDTH-1:0] O_mmcm2out_data,
+
+    output wire         O_capturing,
+    output wire         O_glitch_observer_locked,
+
+    // register interface (for DRP)
     input  wire [7:0]                   reg_address,
     input  wire [pBYTECNT_SIZE-1:0]     reg_bytecnt,
     input  wire [7:0]                   reg_datai,
@@ -111,7 +122,8 @@ module clockglitch_a7 #(
 
     wire [7:0] reg_datao_drp1;
     wire [7:0] reg_datao_drp2;
-    assign reg_datao = reg_datao_drp1 | reg_datao_drp2;
+    wire [7:0] reg_datao_drp_observer;
+    assign reg_datao = reg_datao_drp1 | reg_datao_drp2 | reg_datao_drp_observer;
 
     mmcm_phaseshift_interface U_offset_phaseshift (
       .clk_usb          (clk_usb),
@@ -332,6 +344,183 @@ module clockglitch_a7 #(
       .drp_dout         (drp2_dout ),
       .drp_dwe          (drp2_dwe  )
    ); 
+
+
+`ifdef GLITCH_OBSERVER
+
+    wire [6:0] drp_observer_addr;
+    wire [15:0] drp_observer_din;
+    wire [15:0] drp_observer_dout;
+    wire drp_observer_den;
+    wire drp_observer_dwe;
+
+    wire glitch_observer_clk;
+
+   `ifndef __ICARUS__
+      wire glitch_observer_clkfb;
+      wire glitch_observer_clk_prebuf;
+      MMCME2_ADV #(
+         .BANDWIDTH                    ("OPTIMIZED"), // Jitter programming (OPTIMIZED, HIGH, LOW)
+         .CLKFBOUT_MULT_F              (3.0), // Multiply value for all CLKOUT (2.000-64.000)
+         .CLKOUT0_DIVIDE_F             (2.0),
+         .CLKFBOUT_PHASE               (0.0), // Phase offset in degrees of CLKFB (-360.000-360.000).
+         .CLKIN1_PERIOD                (5.0),
+         .CLKOUT0_DUTY_CYCLE           (0.5),
+         .CLKOUT0_PHASE                (0.0),  // Phase offset for CLKOUT outputs (-360.000-360.000).
+         .CLKOUT4_CASCADE              ("FALSE"), // Cascade CLKOUT4 counter with CLKOUT6 (FALSE, TRUE)
+         .COMPENSATION                 ("INTERNAL"), // ZHOLD, BUF_IN, EXTERNAL, INTERNAL
+         .DIVCLK_DIVIDE                (1), // Master division value (1-106)
+         .STARTUP_WAIT                 ("FALSE"), // Delays DONE until MMCM is locked (FALSE, TRUE)
+         .CLKFBOUT_USE_FINE_PS         ("FALSE"),
+         .CLKOUT0_USE_FINE_PS          ("FALSE")
+      ) U_mmcm2_glitch_observer (
+         // Clock Outputs:
+         .CLKOUT0                      (glitch_observer_clk_prebuf),
+         .CLKOUT0B                     (),
+         .CLKOUT1                      (),
+         .CLKOUT1B                     (),
+         .CLKOUT2                      (),
+         .CLKOUT2B                     (),
+         .CLKOUT3                      (),
+         .CLKOUT3B                     (),
+         .CLKOUT4                      (),
+         .CLKOUT5                      (),
+         .CLKOUT6                      (),
+         // Feedback Clocks:
+         .CLKFBOUT                     (glitch_observer_clkfb),
+         .CLKFBOUTB                    (),
+         // Status Ports: 1-bit (each) output: MMCM status ports
+         .CLKFBSTOPPED                 (),
+         .CLKINSTOPPED                 (),
+         .LOCKED                       (O_glitch_observer_locked),
+         // Clock Inputs:
+         .CLKIN1                       (source_clk),
+         .CLKIN2                       (1'b0),
+         // Control Ports: 1-bit (each) input: MMCM control ports
+         .CLKINSEL                     (1'b1),
+         .PWRDWN                       (I_observer_powerdown),
+         .RST                          (mmcm_rst),
+         // DRP Ports:
+         .DADDR                        (drp_observer_addr),
+         .DCLK                         (clk_usb),
+         .DEN                          (drp_observer_den),
+         .DI                           (drp_observer_din),
+         .DWE                          (drp_observer_dwe),
+         .DO                           (drp_observer_dout),
+         .DRDY                         (),
+         // Feedback Clocks
+         .CLKFBIN                      (glitch_observer_clkfb)
+      );
+
+      BUFR #(
+         .BUFR_DIVIDE   (1)
+      ) U_glitch_observer_clk (
+         .I             (glitch_observer_clk_prebuf),
+         .O             (glitch_observer_clk),
+         .CE            (~I_observer_powerdown),
+         .CLR           (1'b0)
+      );
+
+
+   `else
+      assign glitch_observer_clk = source_clk;
+
+   `endif // __ICARUS__
+
+   reg_mmcm_drp #(
+      .pBYTECNT_SIZE    (pBYTECNT_SIZE),
+      .pDRP_ADDR        (`CG_OBSERVER_DRP_ADDR),
+      .pDRP_DATA        (`CG_OBSERVER_DRP_DATA)
+   ) U_cg_observer_drp (
+      .reset_i          (mmcm_rst),
+      .clk_usb          (clk_usb),
+      .reg_address      (reg_address), 
+      .reg_bytecnt      (reg_bytecnt), 
+      .reg_datao        (reg_datao_drp_observer), 
+      .reg_datai        (reg_datai), 
+      .reg_read         (reg_read), 
+      .reg_write        (reg_write), 
+      .drp_addr         (drp_observer_addr ),
+      .drp_den          (drp_observer_den  ),
+      .drp_din          (drp_observer_din  ),
+      .drp_dout         (drp_observer_dout ),
+      .drp_dwe          (drp_observer_dwe  )
+   ); 
+
+   //
+   // CDC for capture enable:
+   (* ASYNC_REG = "TRUE" *) reg[1:0] capture_go_pipe;
+   reg capture_go_r;
+   reg capture_go_r2;
+   always @ (posedge glitch_observer_clk) begin
+      if (reset) begin
+         capture_go_pipe <= 0;
+         capture_go_r <= 0;
+         capture_go_r2 <= 0;
+      end
+      else begin
+         {capture_go_r2, capture_go_r, capture_go_pipe} <= {capture_go_r, capture_go_pipe, glitch_next};
+      end
+   end
+   wire capture_go = capture_go_r & ~capture_go_r2;
+
+   // Do the capture.
+   reg [9:0] capture_count;
+   reg capturing;
+   reg [pDATA_WIDTH-1:0] glitch_glitchedclk_reg;
+   reg [pDATA_WIDTH-1:0] glitch_sourceclk_reg;
+   reg [pDATA_WIDTH-1:0] glitch_mmcm1out_reg;
+   reg [pDATA_WIDTH-1:0] glitch_mmcm2out_reg;
+
+   always @ (posedge glitch_observer_clk) begin
+      if (reset) begin
+         capture_count <= 0;
+         glitch_glitchedclk_reg <= 0;
+         glitch_sourceclk_reg <= 0;
+         glitch_mmcm1out_reg <= 0;
+         glitch_mmcm2out_reg <= 0;
+      end
+
+      else begin
+         if (capture_go) begin
+            capture_count <= 0;
+            capturing <= 1;
+            glitch_glitchedclk_reg <= { {(pDATA_WIDTH-1){1'b0}}, glitched_clk};
+            glitch_sourceclk_reg   <= { {(pDATA_WIDTH-1){1'b0}}, source_clk};
+            glitch_mmcm1out_reg    <= { {(pDATA_WIDTH-1){1'b0}}, glitch_mmcm1_clk_out_buf};
+            glitch_mmcm2out_reg    <= { {(pDATA_WIDTH-1){1'b0}}, glitch_mmcm2_clk_out_buf};
+         end
+         else if (capturing) begin
+            glitch_glitchedclk_reg <= {glitch_glitchedclk_reg[pDATA_WIDTH-2:0], glitched_clk};
+            glitch_sourceclk_reg   <= {glitch_sourceclk_reg[pDATA_WIDTH-2:0],   source_clk};
+            glitch_mmcm1out_reg    <= {glitch_mmcm1out_reg[pDATA_WIDTH-2:0],    glitch_mmcm1_clk_out_buf};
+            glitch_mmcm2out_reg    <= {glitch_mmcm2out_reg[pDATA_WIDTH-2:0],    glitch_mmcm2_clk_out_buf};
+
+            if (capture_count < pDATA_WIDTH-1)
+               capture_count <= capture_count + 1;
+            else
+               capturing <= 0;
+         end
+      end
+
+   end
+
+   assign O_glitchedclk_data = glitch_glitchedclk_reg;
+   assign O_sourceclk_data = glitch_sourceclk_reg;
+   assign O_mmcm1out_data = glitch_mmcm1out_reg;
+   assign O_mmcm2out_data = glitch_mmcm2out_reg;
+   assign O_capturing = capturing;
+
+`else
+    assign reg_datao_drp_observer = 8'd0;
+    assign O_glitchedclk_data = 0;
+    assign O_sourceclk_data = 0;
+    assign O_mmcm1out_data = 0;
+    assign O_mmcm2out_data = 0;
+    assign O_glitch_observer_locked = 1'b0;
+    assign O_capturing = 1'b0;
+
+`endif // GLITCH_OBSERVER
 
 
 `ifdef ILA_GLITCH_PS
