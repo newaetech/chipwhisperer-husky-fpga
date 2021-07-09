@@ -51,7 +51,10 @@ module reg_clockglitch #(
    input wire          pll_fpga_clk,
 
    output wire         glitchclk,
+   output wire         glitch_mmcm1_clk_out,
+   output wire         glitch_mmcm2_clk_out,
    input wire          exttrigger,
+   output reg          glitch_go,
 
    output wire         mmcm_unlocked,
    output reg          led_glitch
@@ -89,7 +92,6 @@ module reg_clockglitch #(
 
    reg [31:0] clockglitch_offset_reg;
    reg clockglitch_powerdown;
-   reg observer_powerdown;
    wire [pDATA_WIDTH-1:0] glitchedclk_data;
    wire [pDATA_WIDTH-1:0] sourceclk_data;
    wire [pDATA_WIDTH-1:0] mmcm1out_data;
@@ -101,8 +103,6 @@ module reg_clockglitch #(
 
    wire mmcm1_locked;
    wire mmcm2_locked;
-   wire glitch_observer_locked;
-   wire capturing;
 
    reg phase1_done_reg;
    reg phase2_done_reg;
@@ -206,7 +206,6 @@ module reg_clockglitch #(
    end
 
    reg [12:0] glitch_cnt;
-   reg glitch_go;
    always @(posedge sourceclk) begin
       if (glitch_trigger)
          glitch_go <= 'b1;
@@ -259,14 +258,7 @@ module reg_clockglitch #(
          case (reg_address)
             `CLOCKGLITCH_SETTINGS: reg_datao_reg <= clockglitch_settings_read[reg_bytecnt*8 +: 8];
             `CLOCKGLITCH_OFFSET: reg_datao_reg <= clockglitch_offset_reg[reg_bytecnt*8 +: 8];
-            `CLOCKGLITCH_POWERDOWN: reg_datao_reg <= {6'b0, observer_powerdown, clockglitch_powerdown};
-
-            `CG_OBSERVER_GLITCHCLK_DATA: reg_datao_reg <= glitchedclk_data[reg_bytecnt*8 +: 8];
-            `CG_OBSERVER_SOURCECLK_DATA: reg_datao_reg <= sourceclk_data[reg_bytecnt*8 +: 8];
-            `CG_OBSERVER_MMCM1OUT_DATA:  reg_datao_reg <= mmcm1out_data[reg_bytecnt*8 +: 8];
-            `CG_OBSERVER_MMCM2OUT_DATA:  reg_datao_reg <= mmcm2out_data[reg_bytecnt*8 +: 8];
-
-            `CG_OBSERVER_STATUS: reg_datao_reg <= {6'b0, capturing, glitch_observer_locked};
+            `CLOCKGLITCH_POWERDOWN: reg_datao_reg <= {7'b0, clockglitch_powerdown};
 
 `ifdef SUPPORT_GLITCH_READBACK
             // ***** be careful to not add registers in this ifdef block unless you really mean to! *****
@@ -291,7 +283,6 @@ module reg_clockglitch #(
          clockglitch_offset_reg <= 0;
          clockglitch_cnt_rst <= 0;
          clockglitch_powerdown <= 0;
-         observer_powerdown <= 1;
 `ifdef SUPPORT_GLITCH_READBACK
          clockglitch_readback_reg <= {8'd0, 8'd10, 8'd0, 8'd10, 16'd0, 16'd0};
 `endif
@@ -307,7 +298,7 @@ module reg_clockglitch #(
          case (reg_address)
             `CLOCKGLITCH_SETTINGS: clockglitch_settings_reg[reg_bytecnt*8 +: 8] <= reg_datai;      
             `CLOCKGLITCH_OFFSET: clockglitch_offset_reg[reg_bytecnt*8 +: 8] <= reg_datai;      
-            `CLOCKGLITCH_POWERDOWN: {observer_powerdown, clockglitch_powerdown} <= reg_datai[1:0];
+            `CLOCKGLITCH_POWERDOWN: clockglitch_powerdown <= reg_datai[0];
 `ifdef SUPPORT_GLITCH_READBACK
             `GLITCHCYCLES_CNT: clockglitch_cnt_rst <= reg_datai[0];
             `GLITCH_RECONFIG_RB_ADDR: clockglitch_readback_reg[reg_bytecnt*8 +: 8] <= reg_datai;
@@ -346,7 +337,9 @@ module reg_clockglitch #(
     .phase1_done            (phase1_done),
     .phase2_done            (phase2_done),
     .I_mmcm_powerdown       (clockglitch_powerdown),
-    .I_observer_powerdown   (observer_powerdown),
+
+    .glitch_mmcm1_clk_out_buf (glitch_mmcm1_clk_out),
+    .glitch_mmcm2_clk_out_buf (glitch_mmcm2_clk_out),
 
     .reg_address            (reg_address), 
     .reg_bytecnt            (reg_bytecnt), 
@@ -358,11 +351,7 @@ module reg_clockglitch #(
     .O_glitchedclk_data     (glitchedclk_data),
     .O_sourceclk_data       (sourceclk_data),
     .O_mmcm1out_data        (mmcm1out_data),
-    .O_mmcm2out_data        (mmcm2out_data),
-
-
-    .O_capturing            (capturing),
-    .O_glitch_observer_locked (glitch_observer_locked)
+    .O_mmcm2out_data        (mmcm2out_data)
 );
 
 /* LED lighty up thing */

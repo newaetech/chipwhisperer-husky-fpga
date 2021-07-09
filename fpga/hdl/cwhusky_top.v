@@ -134,6 +134,7 @@ module cwhusky_top(
     );
 
     parameter pBYTECNT_SIZE = 7;
+    parameter pLA_CAPTURE_DEPTH = 512;
 
    /* PDI Programming done from SAM, must float these wires
       or programming will fail from weak pull-down on FPGA */
@@ -180,11 +181,16 @@ module cwhusky_top(
    wire [7:0] read_data_adc;
    wire [7:0] read_data_glitch;
    wire [7:0] read_data_xadc;
-   assign read_data = read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc;
+   wire [7:0] read_data_la;
+   assign read_data = read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc | read_data_la;
 
    wire ext_trigger;
    wire extclk_mux;
    wire clkgen, glitchclk;
+   wire glitch_mmcm1_clk_out;
+   wire glitch_mmcm2_clk_out;
+   wire glitch_go;
+   wire adc_capture_go;
    wire enable_avrprog;
    wire [11:0] ADC_data;
 
@@ -264,6 +270,7 @@ module cwhusky_top(
 
    wire led_glitch;
    wire cg_mmcm_unlocked;
+   wire la_mmcm_unlocked;
 
    // fast-flash red LEDs when some internal error has occurred:
    assign LED_ADC = error_flag? usb_hearbeat[22] : ~PLL_STATUS;
@@ -298,6 +305,8 @@ module cwhusky_top(
 
         .fifo_error_flag        (fifo_error_flag),
         .stream_segment_available (stream_segment_available),
+
+        .adc_capture_go         (adc_capture_go),
 
         .slow_fifo_wr           (slow_fifo_wr),
         .slow_fifo_rd           (slow_fifo_rd)
@@ -401,10 +410,59 @@ module cwhusky_top(
         .clkgen         (clkgen),
         .pll_fpga_clk   (pll_fpga_clk),
         .glitchclk      (glitchclk),
+        .glitch_mmcm1_clk_out (glitch_mmcm1_clk_out),
+        .glitch_mmcm2_clk_out (glitch_mmcm2_clk_out),
         .exttrigger     (ext_trigger),
+        .glitch_go      (glitch_go),
         .led_glitch     (led_glitch),
         .mmcm_unlocked  (cg_mmcm_unlocked) // TODO: currently unused
    );
+
+   `ifdef LOGIC_ANALYZER
+   reg_la #(
+        .pBYTECNT_SIZE  (pBYTECNT_SIZE),
+        .pCAPTURE_DEPTH (pLA_CAPTURE_DEPTH)
+   ) reg_la (
+        .reset                  (reg_rst),
+        .clk_usb                (clk_usb_buf),
+        .reg_address            (reg_address),
+        .reg_bytecnt            (reg_bytecnt), 
+        .reg_datao              (read_data_la), 
+        .reg_datai              (write_data), 
+        .reg_read               (reg_read), 
+        .reg_write              (reg_write), 
+        .target_hs1             (target_hs1),
+        .clkgen                 (clkgen),
+        .pll_fpga_clk           (pll_fpga_clk),
+
+        .glitchclk              (glitchclk),
+        .glitch_mmcm1_clk_out   (glitch_mmcm1_clk_out),
+        .glitch_mmcm2_clk_out   (glitch_mmcm2_clk_out),
+        .io1                    (target_io1),
+        .io2                    (target_io2),
+        .io3                    (target_io3),
+        .io4                    (target_io4),
+        .hs1                    (target_hs1),
+        .hs2                    (target_hs2),
+        .aux_mcx                (USBIOHS2),
+        .trig_mcx               (FPGA_TRIGOUT),
+        .userio0                (USERIO_D[0]),
+        .userio1                (USERIO_D[1]),
+        .userio2                (USERIO_D[2]),
+        .userio3                (USERIO_D[3]),
+        .userio4                (USERIO_D[4]),
+        .userio5                (USERIO_D[5]),
+        .userio6                (USERIO_D[6]),
+        .userio7                (USERIO_D[7]),
+        .userio_clk             (USERIO_CLK),
+
+        .glitch_go              (glitch_go),
+        .adc_capture_go         (adc_capture_go)
+   );
+   `else
+       assign read_data_la = 0;
+   `endif
+
 
    assign FPGA_TRIGOUT = ext_trigger;
    //assign FPGA_TRIGOUT = 1'b0;

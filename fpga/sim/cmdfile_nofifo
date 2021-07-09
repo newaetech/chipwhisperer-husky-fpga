@@ -20,3 +20,4 @@
 ../hdl/reg_mmcm_drp.v
 ../hdl/xadc.v
 ../hdl/slow_debug.v
+../hdl/reg_la.v

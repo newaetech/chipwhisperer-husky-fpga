@@ -28,16 +28,20 @@ set_clock_groups -asynchronous \
                  -group [get_clocks pll_fpga_clk]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks clk_usb] \
-                 -group [get_clocks glitch_mmcm1_clk_out]
+                 -group [get_clocks pll_fpga_clk] \
+                 -group [get_clocks glitch_mmcm1_clk_out*]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks clk_usb] \
+                 -group [get_clocks glitch_mmcm1_clk_out*]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks clk_usb] \
+                 -group [get_clocks glitch_mmcm2_clk_out*]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks glitch_mmcm1_clk_out] \
                  -group [get_clocks glitch_mmcm1_clk_out_1]
-
-set_clock_groups -asynchronous \
-                 -group [get_clocks clk_usb] \
-                 -group [get_clocks glitch_mmcm2_clk_out]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks clk_out1_MMCM_clkgen] \
@@ -48,65 +52,60 @@ set_clock_groups -asynchronous \
                  -group [get_clocks pll_fpga_clk]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks glitch_observer_clk] \
-                 -group [get_clocks glitch_observer_clk_1]
+                 -group [get_clocks observer_clk] \
+                 -group [get_clocks observer_clk_1]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks glitch_observer_clk] \
+                 -group [get_clocks observer_clk] \
                  -group [get_clocks clk_usb]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks glitch_observer_clk_1] \
+                 -group [get_clocks observer_clk_1] \
                  -group [get_clocks clk_usb]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks glitch_observer_clk] \
+                 -group [get_clocks observer_clk] \
                  -group [get_clocks pll_fpga_clk]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks glitch_observer_clk_1] \
+                 -group [get_clocks observer_clk_1] \
                  -group [get_clocks pll_fpga_clk]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks glitch_observer_clk] \
-                 -group [get_clocks glitch_mmcm1_clk_out]
+                 -group [get_clocks observer_clk] \
+                 -group [get_clocks glitch_mmcm1_clk_out*]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks glitch_observer_clk_1] \
-                 -group [get_clocks glitch_mmcm1_clk_out]
+                 -group [get_clocks observer_clk_1] \
+                 -group [get_clocks glitch_mmcm1_clk_out*]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks glitch_observer_clk] \
-                 -group [get_clocks glitch_mmcm1_clk_out_1]
+                 -group [get_clocks observer_clk] \
+                 -group [get_clocks glitch_mmcm2_clk_out*]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks glitch_observer_clk_1] \
-                 -group [get_clocks glitch_mmcm1_clk_out_1]
+                 -group [get_clocks observer_clk_1] \
+                 -group [get_clocks glitch_mmcm2_clk_out*]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks glitch_observer_clk] \
-                 -group [get_clocks glitch_mmcm2_clk_out]
-
-set_clock_groups -asynchronous \
-                 -group [get_clocks glitch_observer_clk_1] \
-                 -group [get_clocks glitch_mmcm2_clk_out]
-
-set_clock_groups -asynchronous \
-                 -group [get_clocks glitch_observer_clk] \
-                 -group [get_clocks glitch_mmcm2_clk_out_1]
-
-set_clock_groups -asynchronous \
-                 -group [get_clocks glitch_observer_clk_1] \
-                 -group [get_clocks glitch_mmcm2_clk_out_1]
-
-set_clock_groups -asynchronous \
-                 -group [get_clocks glitch_observer_clk] \
+                 -group [get_clocks observer_clk] \
                  -group [get_clocks clk_out1_MMCM_clkgen]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks glitch_observer_clk_1] \
+                 -group [get_clocks observer_clk_1] \
                  -group [get_clocks clk_out1_MMCM_clkgen]
 
+set_clock_groups -asynchronous \
+                 -group [get_clocks glitch_mmcm1_clk_out*] \
+                 -group [get_clocks clk_out1_MMCM_clkgen]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks observer_clk] \
+                 -group [get_clocks ADC_clk_fb]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks observer_clk_1] \
+                 -group [get_clocks ADC_clk_fb]
 
 
 
@@ -356,7 +355,7 @@ set_false_path -to [get_ports FPGA_TRIGOUT]
 
 
 # Not from any spec, but the result is no timing violations and reads work:
-set_output_delay -clock clk_usb -1.200 [get_ports USB_Data]
+set_output_delay -clock clk_usb -2.000 [get_ports USB_Data]
 
 set_property BITSTREAM.CONFIG.USR_ACCESS TIMESTAMP [current_design]
 set_property C_CLK_INPUT_FREQ_HZ 300000000 [get_debug_cores dbg_hub]

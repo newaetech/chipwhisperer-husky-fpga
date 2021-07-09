@@ -57,6 +57,8 @@ module openadc_interface #(
     output wire                         fifo_error_flag,
     output wire                         stream_segment_available,
 
+    output wire                         adc_capture_go,
+
     // for debug only:
     output wire                         slow_fifo_wr,
     output wire                         slow_fifo_rd
@@ -71,7 +73,6 @@ module openadc_interface #(
     wire       phase_load;
     wire       phase_done;
 
-    wire       adc_capture_go;
     wire       adc_segment_go;
     wire       adc_capture_done;
     wire       armed;

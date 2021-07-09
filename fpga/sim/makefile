@@ -34,7 +34,7 @@ compile:
 	-D$(FIFOSIZE) \
 	-DXADC \
 	-DUSERIO_DEBUG \
-	-DGLITCH_OBSERVER \
+	-DLOGIC_ANALYZER \
 	-P cwhusky_tb.pADC_LOW_RES=$(ADC_LOW_RES) \
 	-P cwhusky_tb.pSLOW_ADC=$(SLOW_ADC) \
 	-P cwhusky_tb.pFAST_ADC=$(FAST_ADC) \
@@ -72,7 +72,7 @@ nofifo:
 	-Wselect-range \
 	-DNOFIFO \
 	-DXADC \
-	-DGLITCH_OBSERVER \
+	-DLOGIC_ANALYZER \
 
 lint:
 	verilator --lint-only -Wall \
@@ -82,7 +82,7 @@ lint:
 	-DNOFIFO \
 	-DXADC_EN \
 	-DUSERIO_DEBUG \
-	-DGLITCH_OBSERVER \
+	-DLOGIC_ANALYZER \
 	--top-module cwhusky_top \
 	2>&1 | tee lint.out \
 

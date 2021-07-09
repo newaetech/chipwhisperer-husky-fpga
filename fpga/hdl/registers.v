@@ -294,13 +294,17 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define FIFO_UNDERFLOW_COUNT    66
 `define FIFO_NO_UNDERFLOW_ERROR 67
 
-`define CG_OBSERVER_DRP_ADDR    68
-`define CG_OBSERVER_DRP_DATA    69
-`define CG_OBSERVER_STATUS      70
-`define CG_OBSERVER_GLITCHCLK_DATA 71
-`define CG_OBSERVER_SOURCECLK_DATA 72
-`define CG_OBSERVER_MMCM1OUT_DATA  73
-`define CG_OBSERVER_MMCM2OUT_DATA  74
+`define LA_DRP_ADDR             68
+`define LA_DRP_DATA             69
+`define LA_STATUS               70
+`define LA_CLOCK_SOURCE         71
+`define LA_TRIGGER_SOURCE       72
+`define LA_POWERDOWN            73
+`define LA_MMCM_RESET           74
+`define LA_EXISTS               75
+`define LA_CAPTURE_GROUP        76
+`define LA_CAPTURE_DEPTH        77
+`define LA_READ_SELECT          78
 
 `define REGISTER_VERSION 1
 
