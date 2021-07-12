@@ -70,6 +70,7 @@ module clock_managment_advanced #(
     wire [15:0] drp_din;
     wire [15:0] drp_dout;
     wire drp_dwe;
+    wire drp_reset;
 
     wire mmcm_psen;
     wire mmcm_psincdec;
@@ -77,7 +78,7 @@ module clock_managment_advanced #(
 
     mmcm_phaseshift_interface U_offset_phaseshift (
       .clk_usb          (clk_usb),
-      .reset            (reset),
+      .reset            (clkgen_reset),
       .I_step_index     (phase_requested),
       .I_load           (phase_load),
       .O_done           (phase_done),
@@ -89,7 +90,8 @@ module clock_managment_advanced #(
    reg_mmcm_drp #(
       .pBYTECNT_SIZE    (pBYTECNT_SIZE),
       .pDRP_ADDR        (`DRP_ADDR),
-      .pDRP_DATA        (`DRP_DATA)
+      .pDRP_DATA        (`DRP_DATA),
+      .pDRP_RESET       (`DRP_RESET)
    ) U_reg_mmcm_drp (
       .reset_i          (reset),
       .clk_usb          (clk_usb),
@@ -104,7 +106,8 @@ module clock_managment_advanced #(
       .drp_den          (drp_den  ),
       .drp_din          (drp_din  ),
       .drp_dout         (drp_dout ),
-      .drp_dwe          (drp_dwe  )
+      .drp_dwe          (drp_dwe  ),
+      .drp_reset        (drp_reset)
    ); 
 
 
@@ -165,7 +168,7 @@ module clock_managment_advanced #(
     );
 
     MMCM_clkgen U_clkgen (
-       .reset           (reset || clkgen_reset),
+       .reset           (reset || clkgen_reset || drp_reset), // redundancy is for backwards compatability
        .clk_in1         (clkgenfx_in),
        .clk_out1        (clkgenfx_out),
        .locked          (dcm_gen_locked),

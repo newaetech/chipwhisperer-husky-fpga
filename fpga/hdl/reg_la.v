@@ -74,15 +74,15 @@ module reg_la #(
     wire [15:0] drp_observer_dout;
     wire drp_observer_den;
     wire drp_observer_dwe;
+    wire drp_observer_reset;
 
     wire observer_clk;
 
     reg [1:0] clock_source_reg;
     reg trigger_source_reg;
     reg [1:0] capture_group_reg;
-    reg [7:0] read_select_reg; // TODO-size
+    reg [3:0] read_select_reg;
     reg observer_powerdown;
-    reg mmcm_rst;
     wire observer_locked;
 
     reg [7:0] reg_datao_reg;
@@ -138,7 +138,7 @@ module reg_la #(
          // Control Ports: 1-bit (each) input: MMCM control ports
          .CLKINSEL                     (1'b1),
          .PWRDWN                       (observer_powerdown),
-         .RST                          (mmcm_rst),
+         .RST                          (drp_observer_reset),
          // DRP Ports:
          .DADDR                        (drp_observer_addr),
          .DCLK                         (clk_usb),
@@ -169,9 +169,10 @@ module reg_la #(
    reg_mmcm_drp #(
       .pBYTECNT_SIZE    (pBYTECNT_SIZE),
       .pDRP_ADDR        (`LA_DRP_ADDR),
-      .pDRP_DATA        (`LA_DRP_DATA)
+      .pDRP_DATA        (`LA_DRP_DATA),
+      .pDRP_RESET       (`LA_DRP_RESET)
    ) U_cg_observer_drp (
-      .reset_i          (mmcm_rst),
+      .reset_i          (reset),
       .clk_usb          (clk_usb),
       .reg_address      (reg_address), 
       .reg_bytecnt      (reg_bytecnt), 
@@ -183,7 +184,8 @@ module reg_la #(
       .drp_den          (drp_observer_den  ),
       .drp_din          (drp_observer_din  ),
       .drp_dout         (drp_observer_dout ),
-      .drp_dwe          (drp_observer_dwe  )
+      .drp_dwe          (drp_observer_dwe  ),
+      .drp_reset        (drp_observer_reset)
    ); 
 
    // CDC for capture enable:
@@ -370,7 +372,6 @@ module reg_la #(
          capture_group_reg <= 0;
          read_select_reg <= 0;
          observer_powerdown <= 1;
-         mmcm_rst <= 0;
       end 
 
       else if (reg_write) begin
@@ -380,7 +381,6 @@ module reg_la #(
              `LA_CAPTURE_GROUP: capture_group_reg <= reg_datai[1:0];
              `LA_READ_SELECT:   read_select_reg <= reg_datai;
              `LA_POWERDOWN:     observer_powerdown <= reg_datai[0];
-             `LA_MMCM_RESET:    mmcm_rst <= reg_datai[0];
          endcase
       end
    end

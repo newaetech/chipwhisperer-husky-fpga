@@ -98,12 +98,14 @@ module clockglitch_a7 #(
     wire [15:0] drp1_dout;
     wire drp1_den;
     wire drp1_dwe;
+    wire drp1_reset;
 
     wire [6:0] drp2_addr;
     wire [15:0] drp2_din;
     wire [15:0] drp2_dout;
     wire drp2_den;
     wire drp2_dwe;
+    wire drp2_reset;
 
     wire mmcm1_PSEN;
     wire mmcm1_PSINCDEC;
@@ -224,7 +226,7 @@ module clockglitch_a7 #(
       // Control Ports: 1-bit (each) input: MMCM control ports
       .CLKINSEL                     (1'b1),
       .PWRDWN                       (I_mmcm_powerdown),
-      .RST                          (mmcm_rst),
+      .RST                          (mmcm_rst || drp1_reset),
       // DRP Ports:
       .DADDR                        (drp1_addr),
       .DCLK                         (clk_usb),
@@ -282,7 +284,7 @@ module clockglitch_a7 #(
       // Control Ports: 1-bit (each) input: MMCM control ports
       .CLKINSEL                     (1'b1),
       .PWRDWN                       (I_mmcm_powerdown),
-      .RST                          (mmcm_rst),
+      .RST                          (mmcm_rst || drp2_reset),
       // DRP Ports:
       .DADDR                        (drp2_addr),
       .DCLK                         (clk_usb),
@@ -304,9 +306,10 @@ module clockglitch_a7 #(
    reg_mmcm_drp #(
       .pBYTECNT_SIZE    (pBYTECNT_SIZE),
       .pDRP_ADDR        (`CG1_DRP_ADDR),
-      .pDRP_DATA        (`CG1_DRP_DATA)
+      .pDRP_DATA        (`CG1_DRP_DATA),
+      .pDRP_RESET       (`CG1_DRP_RESET)
    ) U_cg_mmcm1_drp (
-      .reset_i          (mmcm_rst),
+      .reset_i          (reset),
       .clk_usb          (clk_usb),
       .reg_address      (reg_address), 
       .reg_bytecnt      (reg_bytecnt), 
@@ -318,15 +321,17 @@ module clockglitch_a7 #(
       .drp_den          (drp1_den  ),
       .drp_din          (drp1_din  ),
       .drp_dout         (drp1_dout ),
-      .drp_dwe          (drp1_dwe  )
+      .drp_dwe          (drp1_dwe  ),
+      .drp_reset        (drp1_reset)
    ); 
 
    reg_mmcm_drp #(
       .pBYTECNT_SIZE    (pBYTECNT_SIZE),
       .pDRP_ADDR        (`CG2_DRP_ADDR),
-      .pDRP_DATA        (`CG2_DRP_DATA)
+      .pDRP_DATA        (`CG2_DRP_DATA),
+      .pDRP_RESET       (`CG2_DRP_RESET)
    ) U_cg_mmcm2_drp (
-      .reset_i          (mmcm_rst),
+      .reset_i          (reset),
       .clk_usb          (clk_usb),
       .reg_address      (reg_address), 
       .reg_bytecnt      (reg_bytecnt), 
@@ -338,7 +343,8 @@ module clockglitch_a7 #(
       .drp_den          (drp2_den  ),
       .drp_din          (drp2_din  ),
       .drp_dout         (drp2_dout ),
-      .drp_dwe          (drp2_dwe  )
+      .drp_dwe          (drp2_dwe  ),
+      .drp_reset        (drp2_reset)
    ); 
 
 

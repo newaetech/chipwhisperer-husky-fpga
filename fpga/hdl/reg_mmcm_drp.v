@@ -26,7 +26,8 @@ Author: Jean-Pierre Thibault <jpthibault@newae.com>
 module reg_mmcm_drp #(
    parameter pBYTECNT_SIZE = 7,
    parameter pDRP_ADDR = 0,
-   parameter pDRP_DATA = 1
+   parameter pDRP_DATA = 1,
+   parameter pDRP_RESET = 2
 )(
    input  wire         reset_i,
    input  wire         clk_usb,
@@ -41,7 +42,8 @@ module reg_mmcm_drp #(
    output reg          drp_den,
    output reg  [15:0]  drp_din,
    input  wire [15:0]  drp_dout,
-   output reg          drp_dwe
+   output reg          drp_dwe,
+   output reg          drp_reset
 ); 
 
 
@@ -69,6 +71,7 @@ module reg_mmcm_drp #(
       if (reset_i) begin
          drp_dwe <= 1'b0;
          drp_den <= 1'b0;
+         drp_reset <= 1'b0;
       end
       else begin
          if (reg_write) begin
@@ -88,6 +91,8 @@ module reg_mmcm_drp #(
                drp_den <= 1'b0;
                if (reg_address == pDRP_DATA)
                   drp_din[reg_bytecnt*8 +: 8] <= reg_datai;
+               else if (reg_address == pDRP_RESET)
+                  drp_reset <= reg_datai[0];
             end
 
          end

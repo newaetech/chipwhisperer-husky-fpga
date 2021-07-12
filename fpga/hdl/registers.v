@@ -300,11 +300,15 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define LA_CLOCK_SOURCE         71
 `define LA_TRIGGER_SOURCE       72
 `define LA_POWERDOWN            73
-`define LA_MMCM_RESET           74
+`define LA_DRP_RESET            74
 `define LA_EXISTS               75
 `define LA_CAPTURE_GROUP        76
 `define LA_CAPTURE_DEPTH        77
 `define LA_READ_SELECT          78
+
+`define CG1_DRP_RESET           79
+`define CG2_DRP_RESET           80
+`define DRP_RESET               81
 
 `define REGISTER_VERSION 1
 
