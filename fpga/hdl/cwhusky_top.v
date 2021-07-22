@@ -189,7 +189,9 @@ module cwhusky_top(
    wire clkgen, glitchclk;
    wire glitch_mmcm1_clk_out;
    wire glitch_mmcm2_clk_out;
+   wire glitch_enable;
    wire glitch_go;
+   wire glitch_trigger;
    wire adc_capture_go;
    wire enable_avrprog;
    wire [11:0] ADC_data;
@@ -270,7 +272,6 @@ module cwhusky_top(
 
    wire led_glitch;
    wire cg_mmcm_unlocked;
-   wire la_mmcm_unlocked;
 
    // fast-flash red LEDs when some internal error has occurred:
    assign LED_ADC = error_flag? usb_hearbeat[22] : ~PLL_STATUS;
@@ -412,8 +413,10 @@ module cwhusky_top(
         .glitchclk      (glitchclk),
         .glitch_mmcm1_clk_out (glitch_mmcm1_clk_out),
         .glitch_mmcm2_clk_out (glitch_mmcm2_clk_out),
+        .glitch_enable  (glitch_enable),
         .exttrigger     (ext_trigger),
         .glitch_go      (glitch_go),
+        .glitch_trigger (glitch_trigger),
         .led_glitch     (led_glitch),
         .mmcm_unlocked  (cg_mmcm_unlocked) // TODO: currently unused
    );
@@ -438,6 +441,7 @@ module cwhusky_top(
         .glitchclk              (glitchclk),
         .glitch_mmcm1_clk_out   (glitch_mmcm1_clk_out),
         .glitch_mmcm2_clk_out   (glitch_mmcm2_clk_out),
+        .glitch_enable          (glitch_enable),
         .io1                    (target_io1),
         .io2                    (target_io2),
         .io3                    (target_io3),
@@ -457,6 +461,7 @@ module cwhusky_top(
         .userio_clk             (USERIO_CLK),
 
         .glitch_go              (glitch_go),
+        .glitch_trigger_sourceclock (glitch_trigger),
         .adc_capture_go         (adc_capture_go)
    );
    `else

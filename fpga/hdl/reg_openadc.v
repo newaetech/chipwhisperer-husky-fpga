@@ -110,6 +110,7 @@ module reg_openadc #(
    assign cmd_arm = arm_r2;
 
 
+   wire reset_fromreg;
    assign reset = reset_i | reset_fromreg;
    assign reset_o = reset;
 
@@ -130,7 +131,6 @@ module reg_openadc #(
    reg        phase_loadout;
    wire [47:0] version_data;
    wire [31:0] system_frequency = 32'd`SYSTEM_CLK;
-   wire reset_fromreg;
    wire [31:0] buildtime;
    reg new_reset;
 

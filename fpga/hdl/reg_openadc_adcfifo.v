@@ -57,12 +57,12 @@ module reg_openadc_adcfifo #(
    assign reset = reset_i;
 
    reg fifo_rd_en_reg;
+   reg reg_read_r;
 
    // in fast FIFO read mode, need to shave off a clock cycle:
    assign fifo_rd_en = fast_fifo_read_mode? reg_read & ~reg_read_r : fifo_rd_en_reg;
 
    reg [7:0] reg_datao_reg;
-   reg reg_read_r;
    assign reg_datao = reg_datao_reg;
 
    wire [8:0] fifo_stat = {fifo_empty, fifo_error_stat};

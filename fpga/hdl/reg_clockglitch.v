@@ -34,8 +34,7 @@ POSSIBILITY OF SUCH DAMAGE.
 *************************************************************************/
 
 module reg_clockglitch #(
-   parameter pBYTECNT_SIZE = 7,
-   parameter pDATA_WIDTH = 512
+   parameter pBYTECNT_SIZE = 7
 )(
    input  wire         reset,
    input  wire         clk_usb,
@@ -53,8 +52,10 @@ module reg_clockglitch #(
    output wire         glitchclk,
    output wire         glitch_mmcm1_clk_out,
    output wire         glitch_mmcm2_clk_out,
+   output wire         glitch_enable,
    input wire          exttrigger,
-   output reg          glitch_go,
+   output wire         glitch_go,
+   output reg          glitch_trigger,
 
    output wire         mmcm_unlocked,
    output reg          led_glitch
@@ -92,10 +93,6 @@ module reg_clockglitch #(
 
    reg [31:0] clockglitch_offset_reg;
    reg clockglitch_powerdown;
-   wire [pDATA_WIDTH-1:0] glitchedclk_data;
-   wire [pDATA_WIDTH-1:0] sourceclk_data;
-   wire [pDATA_WIDTH-1:0] mmcm1out_data;
-   wire [pDATA_WIDTH-1:0] mmcm2out_data;
 
    reg [7:0] reg_datao_reg;
    wire [7:0] reg_datao_cg;
@@ -182,7 +179,6 @@ module reg_clockglitch #(
       manual_dly <= ~manual_rs2;
    end
 
-   reg glitch_trigger;
    wire exttrigger_resync;
 
    reg oneshot;
@@ -205,29 +201,28 @@ module reg_clockglitch #(
          oneshot <= 1'b0;
    end
 
+   // replicate logic now found in clockglitch_a7, but on clocked on sourceclk, for clockglitch_cnt
    reg [12:0] glitch_cnt;
+   reg glitch_go_local;
    always @(posedge sourceclk) begin
       if (glitch_trigger)
-         glitch_go <= 'b1;
+         glitch_go_local <= 'b1;
       else if (glitch_cnt >= max_glitches)
-         glitch_go <= 'b0;
+         glitch_go_local <= 'b0;
 
-      if (glitch_go)
+      if (glitch_go_local)
          glitch_cnt <= glitch_cnt + 13'd1;
       else
          glitch_cnt <= 0;
 
    end
 
-
    reg [31:0] clockglitch_cnt;
    reg clockglitch_cnt_rst;
-   always @(posedge sourceclk) begin
-   /*if ((clockglitch_cnt_rst == 1'b1) || (reset == 1'b1))
-      clockglitch_cnt <= 32'd0;
-   else*/ if (glitch_go)
-      clockglitch_cnt <= clockglitch_cnt + 32'd1;
-   end
+   always @(posedge sourceclk)
+       if (glitch_go_local)
+          clockglitch_cnt <= clockglitch_cnt + 32'd1;
+
 
    assign clockglitch_settings_read[17:0] = clockglitch_settings_reg[17:0];
    assign clockglitch_settings_read[36:18] = 0;
@@ -282,7 +277,7 @@ module reg_clockglitch #(
          clockglitch_settings_reg <= 0;
          clockglitch_offset_reg <= 0;
          clockglitch_cnt_rst <= 0;
-         clockglitch_powerdown <= 0;
+         clockglitch_powerdown <= 1;
 `ifdef SUPPORT_GLITCH_READBACK
          clockglitch_readback_reg <= {8'd0, 8'd10, 8'd0, 8'd10, 16'd0, 16'd0};
 `endif
@@ -319,13 +314,13 @@ module reg_clockglitch #(
 
  /* Glitch Hardware */
  clockglitch_a7 #(
-    .pBYTECNT_SIZE    (pBYTECNT_SIZE),
-    .pDATA_WIDTH      (pDATA_WIDTH)
+    .pBYTECNT_SIZE    (pBYTECNT_SIZE)
  ) U_clockglitch (
     .source_clk             (sourceclk),
     .reset                  (reset),
     .glitched_clk           (glitchclk),
-    .glitch_next            (glitch_go),
+    .glitch_trigger         (glitch_trigger),
+    .max_glitches           (max_glitches),
     .glitch_type            (glitch_type),
     .clk_usb                (clk_usb),
     .mmcm_rst               (mmcm_rst),
@@ -340,24 +335,22 @@ module reg_clockglitch #(
 
     .glitch_mmcm1_clk_out_buf (glitch_mmcm1_clk_out),
     .glitch_mmcm2_clk_out_buf (glitch_mmcm2_clk_out),
+    .glitch_enable          (glitch_enable),
+    .glitch_go              (glitch_go),
 
     .reg_address            (reg_address), 
     .reg_bytecnt            (reg_bytecnt), 
     .reg_datao              (reg_datao_cg), 
     .reg_datai              (reg_datai), 
     .reg_read               (reg_read), 
-    .reg_write              (reg_write),
+    .reg_write              (reg_write)
 
-    .O_glitchedclk_data     (glitchedclk_data),
-    .O_sourceclk_data       (sourceclk_data),
-    .O_mmcm1out_data        (mmcm1out_data),
-    .O_mmcm2out_data        (mmcm2out_data)
 );
 
 /* LED lighty up thing */
 reg [18:0] led_extend;
 always @(posedge sourceclk) begin
-   if (glitch_go) begin
+   if (glitch_go_local) begin
       led_extend <= 0;   
       led_glitch <= 1'b1;
    end 

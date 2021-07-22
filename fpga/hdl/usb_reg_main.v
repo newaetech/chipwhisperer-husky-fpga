@@ -51,7 +51,6 @@ module usb_reg_main #(
 
 
    reg isoutreg, isoutregdly;
-   reg addrvalid_outreg;
    reg cwusb_wrn_rs, cwusb_wrn_rs_dly;
    reg cwusb_alen_r;
    reg reg_write_dly;

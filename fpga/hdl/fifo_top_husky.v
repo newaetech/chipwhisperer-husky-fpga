@@ -121,6 +121,11 @@ module fifo_top_husky(
     reg                 downsample_error;
     reg                 segment_error;
 
+    reg                 fifo_rst_pre;
+    reg                 fifo_rst;
+    reg                 reset_done;
+    reg [31:0]          read_count;
+
 
     assign fifo_overflow = fast_fifo_overflow_reg || slow_fifo_overflow_reg;
 
@@ -414,9 +419,6 @@ module fifo_top_husky(
 
     reg [6:0] reset_hi_count;
     reg [9:0] reset_lo_count;
-    reg fifo_rst_pre;
-    reg fifo_rst;
-    reg reset_done;
     always @(posedge clk_usb) begin
        fifo_rst <= fifo_rst_pre;
        fifo_rst_start_r <= fifo_rst_start;
@@ -695,7 +697,6 @@ module fifo_top_husky(
    reg [31:0] write_count;
    (* ASYNC_REG = "TRUE" *) reg [31:0] write_count_to_usb;
    reg [5:0] write_cycle_count = 0;
-   reg [31:0] read_count;
 
    // track how many FIFO entries (roughly) are available to be read; tricky because of two clock domains!
    always @(posedge adc_sampleclk) begin

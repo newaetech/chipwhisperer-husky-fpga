@@ -32,8 +32,7 @@ POSSIBILITY OF SUCH DAMAGE.
 *************************************************************************/
 
 module clockglitch_a7 #(
-   parameter pBYTECNT_SIZE = 7,
-   parameter pDATA_WIDTH = 512
+   parameter pBYTECNT_SIZE = 7
 )(
     input wire                          reset,
    // Source Clock
@@ -43,7 +42,8 @@ module clockglitch_a7 #(
     output wire                         glitched_clk,
 
     // Glitch request
-    input wire                          glitch_next,
+    input wire                          glitch_trigger,
+    input wire [12:0]                   max_glitches,
     input wire [2:0]                    glitch_type,
      /*
      000 = Glitch is XORd with Clock (Positive or Negative going glitch)
@@ -70,13 +70,10 @@ module clockglitch_a7 #(
 
     input wire                          I_mmcm_powerdown,
 
-    output wire [pDATA_WIDTH-1:0]       O_glitchedclk_data,
-    output wire [pDATA_WIDTH-1:0]       O_sourceclk_data,
-    output wire [pDATA_WIDTH-1:0]       O_mmcm1out_data,
-    output wire [pDATA_WIDTH-1:0]       O_mmcm2out_data,
-
     output wire                         glitch_mmcm1_clk_out_buf,
     output wire                         glitch_mmcm2_clk_out_buf,
+    output wire                         glitch_enable,
+    output reg                          glitch_go,
 
     // register interface (for DRP)
     input  wire [7:0]                   reg_address,
@@ -150,15 +147,39 @@ module clockglitch_a7 #(
    
    wire glitchstream;
 
-   reg glitch_next_reg1;
-   reg glitch_next_reg2;
-   //Need to think carefully about which clock to syncronize this too, and
-   //which edge. Lots of trouble as different options on outputs & adjustable
-   //phase
+
+   reg [12:0] glitch_cnt;
+   (* ASYNC_REG = "TRUE" *) reg[2:0] glitch_trigger_pipe;
+   reg glitch_trigger_resync;
+
+   // We need to use negedge here to avoid extra glitches.
+   // The reason is that glitch_go will always lag the MMCM1 clock, and so
+   // it's clocked on posedge, the second rising edge of the clock can create
+   // an extra glitch. Perhaps the best way to understand is to switch to
+   // posedge and see what happens (using reg_la.v)
    always @(negedge glitch_mmcm1_clk_out_buf) begin
-   //always @(posedge glitch_mmcm1_clk_out_buf) begin     // TODO: original code used negedge, but that leads to a large timing violation; need to think about this one.. switching to posedge doesn't change anything
-      glitch_next_reg1 <= glitch_next;                  // also note that glitch_next is coming from the source_clk domain!
-      glitch_next_reg2 <= glitch_next_reg1;
+       if (reset) begin
+           glitch_trigger_pipe <= 0;
+           glitch_trigger_resync <= 0;
+       end
+       else begin
+           {glitch_trigger_resync, glitch_trigger_pipe} <= {glitch_trigger_pipe, glitch_trigger};
+       end
+
+   end
+
+   reg glitch_go_r;
+   always @(negedge glitch_mmcm1_clk_out_buf) begin
+      glitch_go_r <= glitch_go;
+      if (glitch_trigger_resync)
+         glitch_go <= 'b1;
+      else if (glitch_cnt >= max_glitches)
+         glitch_go <= 'b0;
+
+      if (glitch_go)
+         glitch_cnt <= glitch_cnt + 13'd1;
+      else
+         glitch_cnt <= 0;
    end
 
 
@@ -176,13 +197,14 @@ module clockglitch_a7 #(
    );
 `endif
 
-   assign glitchstream = (glitch_mmcm1_clk_out_buf & glitch_mmcm2_clk_out_buf) & glitch_next_reg2;
+   assign glitchstream = (glitch_mmcm1_clk_out_buf & glitch_mmcm2_clk_out_buf) & glitch_go_r;
+   assign glitch_enable = glitch_go_r;
 
    assign glitched_clk = (glitch_type == 3'b000) ? source_clk ^ glitchstream :  // glitch XORd with clock
                          (glitch_type == 3'b001) ? source_clk | glitchstream :  // glitch ORd with clock
                          (glitch_type == 3'b010) ? glitchstream :               // glitch only
                          (glitch_type == 3'b011) ? source_clk :                 // clock only
-                         (glitch_type == 3'b100) ? glitch_next_reg2 :           // glitch only based on enable
+                         (glitch_type == 3'b100) ? glitch_go_r :                // glitch only based on enable
                          1'b0;
 
 `ifndef __ICARUS__
@@ -301,6 +323,10 @@ module clockglitch_a7 #(
       // Feedback Clocks
       .CLKFBIN                      (mmcm2_clkfb)
    );
+
+`else
+   assign #1 glitch_mmcm1_clk_out = source_clk;
+   assign #1 glitch_mmcm2_clk_out = glitch_mmcm1_clk_out;
 `endif
 
    reg_mmcm_drp #(
