@@ -95,7 +95,8 @@ module reg_la #(
                       (clock_source_reg == 2'b10) ? pll_fpga_clk : target_hs1;
 
     wire capture_go_async = (trigger_source_reg == 2'b00)? adc_capture_go : 
-                            (trigger_source_reg == 2'b01)? glitch_go : glitch_trigger_sourceclock;
+                            (trigger_source_reg == 2'b01)? glitch_go : 
+                            (trigger_source_reg == 2'b10)? glitch_trigger_sourceclock : hs1;
 
 
    `ifndef __ICARUS__
