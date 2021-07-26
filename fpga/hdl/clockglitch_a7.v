@@ -171,10 +171,20 @@ module clockglitch_a7 #(
    reg glitch_go_r;
    always @(negedge glitch_mmcm1_clk_out_buf) begin
       glitch_go_r <= glitch_go;
-      if (glitch_trigger_resync)
-         glitch_go <= 'b1;
-      else if (glitch_cnt >= max_glitches)
-         glitch_go <= 'b0;
+      // Careful because it's possible for glitch_trigger_resync to be > 1 cycle.
+      // Also note that max_glitches = <number of cycles to glitch> - 1
+      if (max_glitches > 0) begin
+          if (glitch_trigger_resync)
+             glitch_go <= 'b1;
+          else if (glitch_cnt >= max_glitches)
+             glitch_go <= 'b0;
+      end
+      else begin
+          if (glitch_go)
+              glitch_go <= 1'b0;
+          else if (glitch_trigger_resync)
+              glitch_go <= 1'b1;
+      end
 
       if (glitch_go)
          glitch_cnt <= glitch_cnt + 13'd1;

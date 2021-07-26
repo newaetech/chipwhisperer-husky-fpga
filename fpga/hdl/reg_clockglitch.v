@@ -201,27 +201,13 @@ module reg_clockglitch #(
          oneshot <= 1'b0;
    end
 
-   // replicate logic now found in clockglitch_a7, but on clocked on sourceclk, for clockglitch_cnt
-   reg [12:0] glitch_cnt;
    reg glitch_go_local;
    always @(posedge sourceclk) begin
       if (glitch_trigger)
          glitch_go_local <= 'b1;
-      else if (glitch_cnt >= max_glitches)
+      else 
          glitch_go_local <= 'b0;
-
-      if (glitch_go_local)
-         glitch_cnt <= glitch_cnt + 13'd1;
-      else
-         glitch_cnt <= 0;
-
    end
-
-   reg [31:0] clockglitch_cnt;
-   reg clockglitch_cnt_rst;
-   always @(posedge sourceclk)
-       if (glitch_go_local)
-          clockglitch_cnt <= clockglitch_cnt + 32'd1;
 
 
    assign clockglitch_settings_read[17:0] = clockglitch_settings_reg[17:0];
@@ -276,9 +262,9 @@ module reg_clockglitch #(
       if (reset) begin
          clockglitch_settings_reg <= 0;
          clockglitch_offset_reg <= 0;
-         clockglitch_cnt_rst <= 0;
          clockglitch_powerdown <= 1;
 `ifdef SUPPORT_GLITCH_READBACK
+         clockglitch_cnt_rst <= 0;
          clockglitch_readback_reg <= {8'd0, 8'd10, 8'd0, 8'd10, 16'd0, 16'd0};
 `endif
       end 

@@ -238,8 +238,9 @@ module cwhusky_tb();
       write_next_byte(8'h00); // byte 2
       write_next_byte(8'h00); // byte 3
       write_next_byte(8'h00); // byte 4
-      write_next_byte(8'h08); // byte 5: continuous glitch
-      write_next_byte(8'h00); // byte 6
+      //write_next_byte(8'h08); // byte 5: continuous glitch
+      write_next_byte(8'h00); // byte 5: manual
+      write_next_byte(8'h01); // byte 6: reps=1
       write_next_byte(8'h01); // byte 7: source=clkgen
 
       if (pTRIGGER_DELAY) begin
@@ -250,6 +251,33 @@ module cwhusky_tb();
 
       // it takes up to ~700 clock cycles after reset for things to get going again:
       #(pCLK_USB_PERIOD*900);
+
+      // TEMP: manual glitch
+      rw_lots_bytes(`CLOCKGLITCH_SETTINGS);
+      write_next_byte(8'h00); // byte 0
+      write_next_byte(8'h00); // byte 1
+      write_next_byte(8'h00); // byte 2
+      write_next_byte(8'h00); // byte 3
+      write_next_byte(8'h00); // byte 4
+      write_next_byte(8'h80); // byte 5: manual go
+      write_next_byte(8'h01); // byte 6: reps=1
+      write_next_byte(8'h01); // byte 7: source=clkgen
+
+      rw_lots_bytes(`CLOCKGLITCH_SETTINGS);
+      write_next_byte(8'h00); // byte 0
+      write_next_byte(8'h00); // byte 1
+      write_next_byte(8'h00); // byte 2
+      write_next_byte(8'h00); // byte 3
+      write_next_byte(8'h00); // byte 4
+      write_next_byte(8'h00); // byte 5: manual go done
+      write_next_byte(8'h01); // byte 6: reps=1
+      write_next_byte(8'h01); // byte 7: source=clkgen
+
+      #(pCLK_USB_PERIOD*5);
+      force U_dut.reg_clockglitch.U_clockglitch.glitch_trigger = 1'b1;
+      #20;
+      release U_dut.reg_clockglitch.U_clockglitch.glitch_trigger;
+
 
       setup_done = 1;
 
