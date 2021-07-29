@@ -219,7 +219,7 @@ module fifo_top_husky(
     wire presamp_done = presamp_done1 || presamp_done2 || presamp_done3;
 
     wire presamp_error = presamp_done && (state == pS_PRESAMP_FILLING);
-    wire clip_error = ~no_clip_errors && fast_fifo_wr && ( (adc_datain == {12{1'b1}}) || (adc_datain == {12{1'b0}}) );
+    wire clip_error = ~no_clip_errors && slow_fifo_wr && ( (fast_fifo_dout == {12{1'b1}}) || (fast_fifo_dout == {12{1'b0}}) );
     wire next_segment_go = ( (adc_segment_go && ~adc_segment_go_r) || ((segment_cycle_counter == (segment_cycles-1)) && (segment_cycles>0)) );
 
     always @ (posedge adc_sampleclk) begin
