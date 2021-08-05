@@ -450,6 +450,7 @@ module cwhusky_top(
         .hs2                    (target_hs2),
         .aux_mcx                (USBIOHS2),
         .trig_mcx               (FPGA_TRIGOUT),
+        .adc_sample_clk         (ADC_clk_fb),
         .userio0                (USERIO_D[0]),
         .userio1                (USERIO_D[1]),
         .userio2                (USERIO_D[2]),

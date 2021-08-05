@@ -52,6 +52,7 @@ module reg_la #(
    input  wire         hs2,
    input  wire         aux_mcx,
    input  wire         trig_mcx,
+   input  wire         adc_sample_clk,
    input  wire         userio0,
    input  wire         userio1,
    input  wire         userio2,
@@ -255,7 +256,7 @@ module reg_la #(
                capture5_source = hs2;
                capture6_source = aux_mcx;
                capture7_source = trig_mcx;
-               capture8_source = 1'b0;
+               capture8_source = adc_sample_clk;
            end
 
            2: begin

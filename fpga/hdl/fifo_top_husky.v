@@ -120,6 +120,7 @@ module fifo_top_husky(
     reg  [3:0]          done_wait_count;
     reg                 downsample_error;
     reg                 segment_error;
+    reg                 clip_error;
 
     reg                 fifo_rst_pre;
     reg                 fifo_rst;
@@ -219,8 +220,20 @@ module fifo_top_husky(
     wire presamp_done = presamp_done1 || presamp_done2 || presamp_done3;
 
     wire presamp_error = presamp_done && (state == pS_PRESAMP_FILLING);
-    wire clip_error = ~no_clip_errors && slow_fifo_wr && ( (fast_fifo_dout == {12{1'b1}}) || (fast_fifo_dout == {12{1'b0}}) );
     wire next_segment_go = ( (adc_segment_go && ~adc_segment_go_r) || ((segment_cycle_counter == (segment_cycles-1)) && (segment_cycles>0)) );
+
+    always @ (posedge adc_sampleclk) begin
+        if (reset)
+            clip_error <= 1'b0;
+        else begin
+            if (no_clip_errors)
+                clip_error <= 1'b0;
+            else if (slow_fifo_wr && ( (slow_fifo_din[11:0]  == {12{1'b1}} || slow_fifo_din[11:0]  == {12{1'b0}}) ||
+                                       (slow_fifo_din[23:12] == {12{1'b1}} || slow_fifo_din[23:12] == {12{1'b0}}) ||
+                                       (slow_fifo_din[35:24] == {12{1'b1}} || slow_fifo_din[35:24] == {12{1'b0}}) ) )
+                clip_error <= 1'b1;
+        end
+    end
 
     always @ (posedge adc_sampleclk) begin
        if (reset) begin
@@ -863,7 +876,8 @@ module fifo_top_husky(
           .probe6         (slow_fifo_empty),      // input wire [0:0]  probe6 
           .probe7         (slow_fifo_overflow),   // input wire [0:0]  probe7 
           .probe8         (slow_fifo_underflow),  // input wire [0:0]  probe8 
-          .probe9         (error_flag)            // input wire [0:0]  probe9 
+          .probe9         (error_flag),           // input wire [0:0]  probe9 
+          .probe10        (fast_fifo_dout)        // input wire [11:0] probe10 
        );
    `endif
 

@@ -14,7 +14,7 @@
                     },
                     {
                         "type": "ILA_V3",
-                        "name": "U_usb_reg_main/U_ila_usb",
+                        "name": "oadc/U_fifo/U_ila_fifo_counts",
                         "spec": "labtools_ila_v6",
                         "ipName": "ila",
                         "core_location": {
@@ -22,47 +22,21 @@
                             "slave_index": 0,
                             "bscan_switch_index": 0
                         },
-                        "uuid": "7711C27F78A2508BB7793D21BD622F7E",
+                        "uuid": "9298C225979E5E51AAA6F2E9A5EC06B1",
                         "pins": [
                             {
                                 "name": "probe0",
                                 "id": 0,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
-                                "isVector": true,
+                                "isVector": false,
                                 "leftIndex": 0,
-                                "rightIndex": 7,
+                                "rightIndex": 0,
                                 "portIndex": 0,
                                 "nets": [
                                     {
-                                        "name": "U_usb_reg_main/reg_datai",
-                                        "isBus": true,
-                                        "subnets": [
-                                            {
-                                                "name": "U_usb_reg_main/reg_datai[7]"
-                                            },
-                                            {
-                                                "name": "U_usb_reg_main/reg_datai[6]"
-                                            },
-                                            {
-                                                "name": "U_usb_reg_main/reg_datai[5]"
-                                            },
-                                            {
-                                                "name": "U_usb_reg_main/reg_datai[4]"
-                                            },
-                                            {
-                                                "name": "U_usb_reg_main/reg_datai[3]"
-                                            },
-                                            {
-                                                "name": "U_usb_reg_main/reg_datai[2]"
-                                            },
-                                            {
-                                                "name": "U_usb_reg_main/reg_datai[1]"
-                                            },
-                                            {
-                                                "name": "U_usb_reg_main/reg_datai[0]"
-                                            }
-                                        ]
+                                        "name": "oadc/U_fifo/stream_segment_available",
+                                        "isBus": false
                                     }
                                 ]
                             },
@@ -71,14 +45,73 @@
                                 "id": 1,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
-                                "isVector": false,
+                                "isVector": true,
                                 "leftIndex": 0,
-                                "rightIndex": 0,
+                                "rightIndex": 18,
                                 "portIndex": 1,
                                 "nets": [
                                     {
-                                        "name": "U_usb_reg_main/cwusb_isout",
-                                        "isBus": false
+                                        "name": "oadc/U_fifo/write_count_to_usb",
+                                        "isBus": true,
+                                        "subnets": [
+                                            {
+                                                "name": "oadc/U_fifo/write_count_to_usb[18]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/write_count_to_usb[17]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/write_count_to_usb[16]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/write_count_to_usb[15]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/write_count_to_usb[14]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/write_count_to_usb[13]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/write_count_to_usb[12]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/write_count_to_usb[11]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/write_count_to_usb[10]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/write_count_to_usb[9]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/write_count_to_usb[8]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/write_count_to_usb[7]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/write_count_to_usb[6]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/write_count_to_usb[5]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/write_count_to_usb[4]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/write_count_to_usb[3]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/write_count_to_usb[2]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/write_count_to_usb[1]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/write_count_to_usb[0]"
+                                            }
+                                        ]
                                     }
                                 ]
                             },
@@ -87,14 +120,73 @@
                                 "id": 2,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
-                                "isVector": false,
+                                "isVector": true,
                                 "leftIndex": 0,
-                                "rightIndex": 0,
+                                "rightIndex": 18,
                                 "portIndex": 2,
                                 "nets": [
                                     {
-                                        "name": "U_usb_reg_main/cwusb_rdn",
-                                        "isBus": false
+                                        "name": "oadc/U_fifo/read_count",
+                                        "isBus": true,
+                                        "subnets": [
+                                            {
+                                                "name": "oadc/U_fifo/read_count[18]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/read_count[17]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/read_count[16]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/read_count[15]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/read_count[14]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/read_count[13]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/read_count[12]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/read_count[11]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/read_count[10]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/read_count[9]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/read_count[8]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/read_count[7]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/read_count[6]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/read_count[5]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/read_count[4]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/read_count[3]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/read_count[2]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/read_count[1]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/read_count[0]"
+                                            }
+                                        ]
                                     }
                                 ]
                             },
@@ -109,7 +201,7 @@
                                 "portIndex": 3,
                                 "nets": [
                                     {
-                                        "name": "U_usb_reg_main/cwusb_wrn",
+                                        "name": "oadc/U_fifo/slow_fifo_rd",
                                         "isBus": false
                                     }
                                 ]
@@ -125,7 +217,7 @@
                                 "portIndex": 4,
                                 "nets": [
                                     {
-                                        "name": "U_usb_reg_main/cwusb_cen",
+                                        "name": "oadc/U_fifo/slow_fifo_wr",
                                         "isBus": false
                                     }
                                 ]
@@ -141,7 +233,7 @@
                                 "portIndex": 5,
                                 "nets": [
                                     {
-                                        "name": "U_usb_reg_main/reg_read",
+                                        "name": "oadc/U_fifo/slow_fifo_full",
                                         "isBus": false
                                     }
                                 ]
@@ -157,7 +249,7 @@
                                 "portIndex": 6,
                                 "nets": [
                                     {
-                                        "name": "U_usb_reg_main/reg_write",
+                                        "name": "oadc/U_fifo/slow_fifo_empty",
                                         "isBus": false
                                     }
                                 ]
@@ -173,7 +265,7 @@
                                 "portIndex": 7,
                                 "nets": [
                                     {
-                                        "name": "U_usb_reg_main/fast_fifo_read",
+                                        "name": "oadc/U_fifo/slow_fifo_overflow",
                                         "isBus": false
                                     }
                                 ]
@@ -189,7 +281,7 @@
                                 "portIndex": 8,
                                 "nets": [
                                     {
-                                        "name": "U_usb_reg_main/drive_data_out",
+                                        "name": "oadc/U_fifo/slow_fifo_underflow",
                                         "isBus": false
                                     }
                                 ]
@@ -199,38 +291,66 @@
                                 "id": 9,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
-                                "isVector": true,
+                                "isVector": false,
                                 "leftIndex": 0,
-                                "rightIndex": 7,
+                                "rightIndex": 0,
                                 "portIndex": 9,
                                 "nets": [
                                     {
-                                        "name": "U_usb_reg_main/reg_address",
+                                        "name": "oadc/U_fifo/error_flag",
+                                        "isBus": false
+                                    }
+                                ]
+                            },
+                            {
+                                "name": "probe10",
+                                "id": 10,
+                                "type": "DATA_TRIGGER",
+                                "direction": "IN",
+                                "isVector": true,
+                                "leftIndex": 0,
+                                "rightIndex": 11,
+                                "portIndex": 10,
+                                "nets": [
+                                    {
+                                        "name": "oadc/U_fifo/fast_fifo_dout",
                                         "isBus": true,
                                         "subnets": [
                                             {
-                                                "name": "U_usb_reg_main/reg_address[7]"
+                                                "name": "oadc/U_fifo/fast_fifo_dout[11]"
                                             },
                                             {
-                                                "name": "U_usb_reg_main/reg_address[6]"
+                                                "name": "oadc/U_fifo/fast_fifo_dout[10]"
                                             },
                                             {
-                                                "name": "U_usb_reg_main/reg_address[5]"
+                                                "name": "oadc/U_fifo/fast_fifo_dout[9]"
                                             },
                                             {
-                                                "name": "U_usb_reg_main/reg_address[4]"
+                                                "name": "oadc/U_fifo/fast_fifo_dout[8]"
                                             },
                                             {
-                                                "name": "U_usb_reg_main/reg_address[3]"
+                                                "name": "oadc/U_fifo/fast_fifo_dout[7]"
                                             },
                                             {
-                                                "name": "U_usb_reg_main/reg_address[2]"
+                                                "name": "oadc/U_fifo/fast_fifo_dout[6]"
                                             },
                                             {
-                                                "name": "U_usb_reg_main/reg_address[1]"
+                                                "name": "oadc/U_fifo/fast_fifo_dout[5]"
                                             },
                                             {
-                                                "name": "U_usb_reg_main/reg_address[0]"
+                                                "name": "oadc/U_fifo/fast_fifo_dout[4]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/fast_fifo_dout[3]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/fast_fifo_dout[2]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/fast_fifo_dout[1]"
+                                            },
+                                            {
+                                                "name": "oadc/U_fifo/fast_fifo_dout[0]"
                                             }
                                         ]
                                     }
