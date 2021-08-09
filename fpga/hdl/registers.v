@@ -310,5 +310,9 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define CG2_DRP_RESET           80
 `define DRP_RESET               81
 
+`define EXTCLK_CHANGE_LIMIT     82
+`define EXTCLK_MONITOR_DISABLED 83
+`define EXTCLK_MONITOR_STAT     84
+
 `define REGISTER_VERSION 1
 

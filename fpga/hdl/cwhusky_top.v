@@ -204,6 +204,8 @@ module cwhusky_top(
    wire slow_fifo_wr;
    wire slow_fifo_rd;
 
+   wire flash_pattern;
+
    usb_reg_main #(
       .pBYTECNT_SIZE    (pBYTECNT_SIZE)
    ) U_usb_reg_main (
@@ -267,15 +269,12 @@ module cwhusky_top(
    assign cmdfifo_din = USB_Data;
 
 
-   reg [24:0] usb_hearbeat;
-   always @(posedge clk_usb_buf) usb_hearbeat <= usb_hearbeat +  25'd1;
-
    wire led_glitch;
    wire cg_mmcm_unlocked;
 
    // fast-flash red LEDs when some internal error has occurred:
-   assign LED_ADC = error_flag? usb_hearbeat[22] : ~PLL_STATUS;
-   assign LED_GLITCH = error_flag? usb_hearbeat[22] : led_glitch;
+   assign LED_ADC = error_flag? flash_pattern : ~PLL_STATUS;
+   assign LED_GLITCH = error_flag? flash_pattern : led_glitch;
 
    openadc_interface #(
         .pBYTECNT_SIZE  (pBYTECNT_SIZE)
@@ -308,6 +307,8 @@ module cwhusky_top(
         .stream_segment_available (stream_segment_available),
 
         .adc_capture_go         (adc_capture_go),
+
+        .flash_pattern          (flash_pattern),
 
         .slow_fifo_wr           (slow_fifo_wr),
         .slow_fifo_rd           (slow_fifo_rd)

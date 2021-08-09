@@ -59,6 +59,8 @@ module openadc_interface #(
 
     output wire                         adc_capture_go,
 
+    output reg                          flash_pattern,
+
     // for debug only:
     output wire                         slow_fifo_wr,
     output wire                         slow_fifo_rd
@@ -91,19 +93,24 @@ module openadc_interface #(
 
     assign reset_o = reset;
 
+   reg extclk_change;
+   wire extclk_monitor_disabled;
+   wire [31:0] extclk_limit;
+
+
    //Divide clock by 2^24 for heartbeat LED
    //Divide clock by 2^23 for frequency measurement
-   reg [24:0] timer_heartbeat;
+   reg [25:0] timer_heartbeat;
    reg freq_measure;
    reg timer_heartbeat22r;
    always @(posedge clk_usb)
       if (reset) begin
-         timer_heartbeat <= 25'b0;
+         timer_heartbeat <= 26'b0;
          timer_heartbeat22r <= 1'b0;
          freq_measure <= 1'b0;
       end 
       else begin
-         timer_heartbeat <= timer_heartbeat +  25'd1;
+         timer_heartbeat <= timer_heartbeat +  26'd1;
          timer_heartbeat22r <= timer_heartbeat[22];
          if (timer_heartbeat[22] && ~timer_heartbeat22r)
             freq_measure <= 1'b1;
@@ -124,9 +131,18 @@ module openadc_interface #(
    reg [24:0] pll_fpga_clk_heartbeat;
    always @(posedge pll_fpga_clk) pll_fpga_clk_heartbeat <= pll_fpga_clk_heartbeat +  25'd1;
 
+   always @(posedge clk_usb) begin
+       if (timer_heartbeat[25])
+           flash_pattern = ~timer_heartbeat[23];
+   end
+
 
    always @(*) begin
-      if (led_select == 2'b01) begin
+      if (extclk_change) begin
+         LED_armed = flash_pattern;
+         LED_capture = flash_pattern;
+      end
+      else if (led_select == 2'b01) begin
          LED_armed = timer_heartbeat[24];
          LED_capture = clkgen_heartbeat[24];
       end
@@ -136,7 +152,7 @@ module openadc_interface #(
       end
       else if (led_select == 2'b11) begin
          LED_armed = pll_fpga_clk_heartbeat[24];
-         LED_capture = 1'b0;
+         LED_capture = extclk_change;
       end
       else begin
          LED_armed = armed;
@@ -181,6 +197,14 @@ module openadc_interface #(
       else begin
          extclk_frequency_int <= extclk_frequency_int + 32'd1;
       end
+
+      if (extclk_monitor_disabled)
+         extclk_change <= 1'b0;
+      else if (freq_measure_ext && extclk_frequency_int &&
+               ( (extclk_frequency > extclk_frequency_int)?  ((extclk_frequency - extclk_frequency_int) > extclk_limit) :
+                                                             ((extclk_frequency_int - extclk_frequency) > extclk_limit) )
+              )
+         extclk_change <= 1'b1;
    end
 
    always @(posedge ADC_clk_sample) begin
@@ -328,6 +352,11 @@ module openadc_interface #(
       .segment_cycles               (segment_cycles),
       .led_select                   (led_select),
       .no_clip_errors               (no_clip_errors),
+
+      .extclk_change                (extclk_change),
+      .extclk_monitor_disabled      (extclk_monitor_disabled),
+      .extclk_limit                 (extclk_limit),
+
       .adc_clkgen_power_down        (adc_clkgen_power_down),
       .clkgen_power_down            (clkgen_power_down    )
    );

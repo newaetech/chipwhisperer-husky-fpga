@@ -184,6 +184,8 @@ module reg_clockglitch #(
    reg oneshot;
 
    always @(posedge sourceclk) begin
+      if (clockglitch_powerdown)
+         glitch_trigger <= 1'b0;
       if (glitch_trigger_src == 2'b10)
          glitch_trigger <= 1'b1;
       else if (glitch_trigger_src == 2'b00)
@@ -336,7 +338,11 @@ module reg_clockglitch #(
 /* LED lighty up thing */
 reg [18:0] led_extend;
 always @(posedge sourceclk) begin
-   if (glitch_go_local) begin
+   if (clockglitch_powerdown) begin
+      led_extend <= 0;   
+      led_glitch <= 1'b0;
+   end
+   else if (glitch_go_local) begin
       led_extend <= 0;   
       led_glitch <= 1'b1;
    end 

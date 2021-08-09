@@ -83,6 +83,10 @@ module reg_openadc #(
    output reg  [1:0]  led_select,
    output reg         no_clip_errors,
 
+   input  wire        extclk_change,
+   output reg         extclk_monitor_disabled,
+   output reg [31:0]  extclk_limit,
+
    output reg         adc_clkgen_power_down,
    output reg         clkgen_power_down 
 
@@ -205,6 +209,9 @@ module reg_openadc #(
                 `LED_SELECT: reg_datao_reg <= led_select;
                 `NO_CLIP_ERRORS: reg_datao_reg <= no_clip_errors;
                 `CLKGEN_POWERDOWN: reg_datao_reg <= {6'b0, adc_clkgen_power_down, clkgen_power_down};
+                `EXTCLK_MONITOR_DISABLED: reg_datao_reg <= extclk_monitor_disabled;
+                `EXTCLK_MONITOR_STAT: reg_datao_reg <= extclk_change;
+                `EXTCLK_CHANGE_LIMIT: reg_datao_reg <= extclk_limit[reg_bytecnt*8 +: 8];
                 default: reg_datao_reg <= 0;
              endcase
           end
@@ -231,6 +238,8 @@ module reg_openadc #(
          adc_clkgen_power_down <= 1;
          clkgen_power_down <= 1;
          phase_out <= 0;
+         extclk_monitor_disabled <= 1;
+         extclk_limit <= 32'd9; // corresponds to ~100 Hz tolerance
       end else if (reg_write) begin
          case (reg_address)
             `GAIN_ADDR: registers_gain <= reg_datai;
@@ -248,6 +257,8 @@ module reg_openadc #(
             `NO_CLIP_ERRORS: no_clip_errors <= reg_datai[0];
             `CLKGEN_POWERDOWN: {adc_clkgen_power_down, clkgen_power_down} <= reg_datai[1:0];
             `PHASE_ADDR: phase_out[reg_bytecnt*8 +: 8] <= reg_datai;
+            `EXTCLK_MONITOR_DISABLED: extclk_monitor_disabled <= reg_datai[0];
+            `EXTCLK_CHANGE_LIMIT: extclk_limit[reg_bytecnt*8 +: 8] <= reg_datai;
             default: ;
          endcase
       end
