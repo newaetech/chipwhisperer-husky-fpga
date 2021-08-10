@@ -89,6 +89,7 @@ module openadc_interface #(
     wire       data_source_select;
     wire [7:0] fifo_error_stat;
     wire       no_clip_errors;
+    wire       clip_test;
     wire       clear_fifo_errors;
 
     assign reset_o = reset;
@@ -352,6 +353,7 @@ module openadc_interface #(
       .segment_cycles               (segment_cycles),
       .led_select                   (led_select),
       .no_clip_errors               (no_clip_errors),
+      .clip_test                    (clip_test),
 
       .extclk_change                (extclk_change),
       .extclk_monitor_disabled      (extclk_monitor_disabled),
@@ -460,6 +462,7 @@ module openadc_interface #(
       .clear_fifo_errors        (clear_fifo_errors),
       .stream_segment_available (stream_segment_available),
       .no_clip_errors           (no_clip_errors),
+      .clip_test                (clip_test),
       .underflow_count          (underflow_count),
       .no_underflow_errors      (no_underflow_errors),
 

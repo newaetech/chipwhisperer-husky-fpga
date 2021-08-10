@@ -314,5 +314,7 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define EXTCLK_MONITOR_DISABLED 83
 `define EXTCLK_MONITOR_STAT     84
 
+`define CLIP_TEST               85
+
 `define REGISTER_VERSION 1
 

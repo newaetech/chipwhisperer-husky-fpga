@@ -58,6 +58,7 @@ module fifo_top_husky(
     input  wire         clear_fifo_errors,
     output reg          stream_segment_available,
     input  wire         no_clip_errors,
+    input  wire         clip_test,
     output reg [7:0]    underflow_count,
     input  wire         no_underflow_errors,
 
@@ -232,6 +233,8 @@ module fifo_top_husky(
                                        (slow_fifo_din[23:12] == {12{1'b1}} || slow_fifo_din[23:12] == {12{1'b0}}) ||
                                        (slow_fifo_din[35:24] == {12{1'b1}} || slow_fifo_din[35:24] == {12{1'b0}}) ) )
                 clip_error <= 1'b1;
+            else if (clip_test)
+                clip_error <= adc_datain == {12{1'b1}} || adc_datain == {12{1'b0}};
         end
     end
 

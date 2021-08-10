@@ -3,10 +3,10 @@
 <!--The data in this file is primarily intended for consumption by Xilinx tools.
 The structure and the elements are likely to change over the next few releases.
 This means code written to parse this file will need to be revisited each subsequent release.-->
-<application name="pa" timeStamp="Mon Aug  9 12:09:05 2021">
+<application name="pa" timeStamp="Mon Aug  9 12:36:36 2021">
 <section name="Project Information" visible="false">
 <property name="ProjectID" value="708eb1ea8d374e82b03b665cf3a7bbcb" type="ProjectID"/>
-<property name="ProjectIteration" value="375" type="ProjectIteration"/>
+<property name="ProjectIteration" value="376" type="ProjectIteration"/>
 </section>
 <section name="PlanAhead Usage" visible="true">
 <item name="Project Data">
@@ -31,20 +31,20 @@ This means code written to parse this file will need to be revisited each subseq
 <property name="FlipToViewTaskImplementation" value="1" type="JavaHandler"/>
 <property name="HelpAbout" value="1" type="JavaHandler"/>
 <property name="HideWorldView" value="2" type="JavaHandler"/>
-<property name="LaunchProgramFpga" value="334" type="JavaHandler"/>
+<property name="LaunchProgramFpga" value="335" type="JavaHandler"/>
 <property name="NewProject" value="1" type="JavaHandler"/>
 <property name="OpenDeviceView" value="1" type="JavaHandler"/>
 <property name="OpenExistingReport" value="2" type="JavaHandler"/>
-<property name="OpenHardwareManager" value="323" type="JavaHandler"/>
+<property name="OpenHardwareManager" value="324" type="JavaHandler"/>
 <property name="OpenProject" value="1" type="JavaHandler"/>
 <property name="OpenRecentTarget" value="88" type="JavaHandler"/>
-<property name="ProgramDevice" value="143" type="JavaHandler"/>
+<property name="ProgramDevice" value="144" type="JavaHandler"/>
 <property name="RecustomizeCore" value="142" type="JavaHandler"/>
 <property name="RefreshDevice" value="11" type="JavaHandler"/>
 <property name="RefreshTarget" value="1" type="JavaHandler"/>
 <property name="ReportIPStatus" value="1" type="JavaHandler"/>
 <property name="ReportTimingSummary" value="1" type="JavaHandler"/>
-<property name="RunBitgen" value="323" type="JavaHandler"/>
+<property name="RunBitgen" value="324" type="JavaHandler"/>
 <property name="RunDesignAhead" value="2" type="JavaHandler"/>
 <property name="RunImplementation" value="63" type="JavaHandler"/>
 <property name="RunSchematic" value="28" type="JavaHandler"/>
@@ -106,7 +106,7 @@ This means code written to parse this file will need to be revisited each subseq
 <property name="FloatingTopDialog_SELECT_TOP_MODULE_OF_YOUR_DESIGN" value="1" type="GuiHandlerData"/>
 <property name="FloatingTopDialog_SPECIFY_NEW_TOP_MODULE" value="1" type="GuiHandlerData"/>
 <property name="FloorplanEditor_METRIC" value="2" type="GuiHandlerData"/>
-<property name="FlowNavigatorTreePanel_FLOW_NAVIGATOR_TREE" value="1230" type="GuiHandlerData"/>
+<property name="FlowNavigatorTreePanel_FLOW_NAVIGATOR_TREE" value="1232" type="GuiHandlerData"/>
 <property name="GraphicalView_ZOOM_FIT" value="147" type="GuiHandlerData"/>
 <property name="GraphicalView_ZOOM_IN" value="605" type="GuiHandlerData"/>
 <property name="GraphicalView_ZOOM_OUT" value="108" type="GuiHandlerData"/>
@@ -201,11 +201,11 @@ This means code written to parse this file will need to be revisited each subseq
 <property name="PACommandNames_ZOOM_OUT" value="14" type="GuiHandlerData"/>
 <property name="PAGraphicalView_VIEW" value="2" type="GuiHandlerData"/>
 <property name="PAViews_CODE" value="7" type="GuiHandlerData"/>
-<property name="PAViews_DASHBOARD" value="430" type="GuiHandlerData"/>
+<property name="PAViews_DASHBOARD" value="432" type="GuiHandlerData"/>
 <property name="PAViews_DEVICE" value="12" type="GuiHandlerData"/>
 <property name="PAViews_HIERARCHY" value="10" type="GuiHandlerData"/>
 <property name="PAViews_IP_CATALOG" value="1" type="GuiHandlerData"/>
-<property name="PAViews_PROJECT_SUMMARY" value="247" type="GuiHandlerData"/>
+<property name="PAViews_PROJECT_SUMMARY" value="248" type="GuiHandlerData"/>
 <property name="PAViews_SCHEMATIC" value="6" type="GuiHandlerData"/>
 <property name="PathReportTableView_DESCRIPTION" value="5" type="GuiHandlerData"/>
 <property name="PowerResultTab_REPORT_NAVIGATION_TREE" value="12" type="GuiHandlerData"/>
@@ -217,7 +217,7 @@ This means code written to parse this file will need to be revisited each subseq
 <property name="ProgramDebugTab_PROGRAM_DEVICE" value="141" type="GuiHandlerData"/>
 <property name="ProgramDebugTab_REFRESH_DEVICE" value="7" type="GuiHandlerData"/>
 <property name="ProgramFpgaDialog_CHECK_END_OF_STARTUP" value="2" type="GuiHandlerData"/>
-<property name="ProgramFpgaDialog_PROGRAM" value="323" type="GuiHandlerData"/>
+<property name="ProgramFpgaDialog_PROGRAM" value="324" type="GuiHandlerData"/>
 <property name="ProgramFpgaDialog_SPECIFY_BITSTREAM_FILE" value="32" type="GuiHandlerData"/>
 <property name="ProgramFpgaDialog_SPECIFY_DEBUG_PROBES_FILE" value="13" type="GuiHandlerData"/>
 <property name="ProgramOptionsPanelImpl_WRITE_INCREMENTAL_SYNTHESIS" value="1" type="GuiHandlerData"/>
@@ -274,7 +274,7 @@ This means code written to parse this file will need to be revisited each subseq
 <property name="SysMonPlotPanel_OK" value="1" type="GuiHandlerData"/>
 <property name="SysMonPlotPanel_SYSTEM_MONITOR_SENSOR_LIST" value="2" type="GuiHandlerData"/>
 <property name="SysMonView_ADD_SELECTED_SENSOR" value="1" type="GuiHandlerData"/>
-<property name="TaskBanner_CLOSE" value="104" type="GuiHandlerData"/>
+<property name="TaskBanner_CLOSE" value="105" type="GuiHandlerData"/>
 <property name="TclConsoleView_TCL_CONSOLE_CODE_EDITOR" value="8" type="GuiHandlerData"/>
 <property name="TclFindDialog_FIND" value="3" type="GuiHandlerData"/>
 <property name="TclFindDialog_REGULAR_EXPRESSION" value="1" type="GuiHandlerData"/>
