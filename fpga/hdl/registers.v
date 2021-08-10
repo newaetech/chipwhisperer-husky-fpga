@@ -315,6 +315,7 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define EXTCLK_MONITOR_STAT     84
 
 `define CLIP_TEST               85
+
 `define USERIO_CW_DRIVEN        86
 `define USERIO_DEBUG_DRIVEN     87
 `define USERIO_DRIVE_DATA       88
