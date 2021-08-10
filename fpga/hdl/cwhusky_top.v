@@ -69,7 +69,7 @@ module cwhusky_top(
     input wire          PLLFPGAP,
     input wire          PLLFPGAN,
 
-    output wire [7:0]   USERIO_D,
+    inout  wire [7:0]   USERIO_D,
     input  wire         USERIO_CLK,
 
     //input wire          FPGA_CCLK,
@@ -135,6 +135,7 @@ module cwhusky_top(
 
     parameter pBYTECNT_SIZE = 7;
     parameter pLA_CAPTURE_DEPTH = 512;
+    parameter pUSERIO_WIDTH = 8;
 
    /* PDI Programming done from SAM, must float these wires
       or programming will fail from weak pull-down on FPGA */
@@ -206,6 +207,12 @@ module cwhusky_top(
 
    wire flash_pattern;
 
+   wire userio_debug_driven;
+   wire [pUSERIO_WIDTH-1:0] userio_cwdriven;
+   wire [pUSERIO_WIDTH-1:0] userio_drive_data;
+   wire [pUSERIO_WIDTH-1:0] userio_debug_data;
+
+
    usb_reg_main #(
       .pBYTECNT_SIZE    (pBYTECNT_SIZE)
    ) U_usb_reg_main (
@@ -252,17 +259,17 @@ module cwhusky_top(
          .O_slow        (slow_fifo_rd_slow)
       );
 
-      assign USERIO_D[0] = stream_segment_available;
-      assign USERIO_D[1] = slow_fifo_wr_slow;
-      assign USERIO_D[2] = slow_fifo_rd_slow;
-      assign USERIO_D[3] = reg_read_slow;
-      assign USERIO_D[4] = fast_fifo_read;
-      assign USERIO_D[5] = fifo_error_flag;
-      assign USERIO_D[6] = glitchclk;
-      assign USERIO_D[7] = 1'bz;
+      assign userio_debug_data[0] = stream_segment_available;
+      assign userio_debug_data[1] = slow_fifo_wr_slow;
+      assign userio_debug_data[2] = slow_fifo_rd_slow;
+      assign userio_debug_data[3] = reg_read_slow;
+      assign userio_debug_data[4] = fast_fifo_read;
+      assign userio_debug_data[5] = fifo_error_flag;
+      assign userio_debug_data[6] = glitchclk;
+      assign userio_debug_data[7] = 1'bz;
 
    `else
-      assign USERIO_D[7:0] = 8'bz;
+      assign userio_debug_data[7:0] = 8'bz;
    `endif
 
    assign USB_Data = cmdfifo_isout ? cmdfifo_dout : 8'bZ;
@@ -345,7 +352,8 @@ module cwhusky_top(
 
 
    reg_chipwhisperer  #(
-        .pBYTECNT_SIZE  (pBYTECNT_SIZE)
+        .pBYTECNT_SIZE  (pBYTECNT_SIZE),
+        .pUSERIO_WIDTH  (pUSERIO_WIDTH)
    ) reg_chipwhisperer (
         .reset_i                (reg_rst),
         .clk_usb                (clk_usb_buf),
@@ -393,7 +401,23 @@ module cwhusky_top(
         .uart_rx_o              (FPGA_CDIN),
         .targetpower_off        (target_npower),
 
+        .userio_cwdriven        (userio_cwdriven),
+        .userio_drive_data      (userio_drive_data),
+        .userio_debug_driven    (userio_debug_driven),
+
         .trigger_o              (ext_trigger)
+   );
+
+   userio #(
+      .pWIDTH                   (pUSERIO_WIDTH)
+   ) U_userio (
+      .usb_clk                  (clk_usb_buf),
+      .userio_d                 (USERIO_D),
+      .userio_clk               (USERIO_CLK),
+      .I_userio_cwdriven        (userio_cwdriven),
+      .I_userio_debug_driven    (userio_debug_driven),
+      .I_userio_drive_data      (userio_drive_data),
+      .I_userio_debug_data      (userio_debug_data)
    );
 
 

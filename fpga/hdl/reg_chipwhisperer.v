@@ -24,7 +24,8 @@ Author: Colin O'Flynn <coflynn@newae.com>
 *************************************************************************/
 
 module reg_chipwhisperer #(
-   parameter pBYTECNT_SIZE = 7
+   parameter pBYTECNT_SIZE = 7,
+   parameter pUSERIO_WIDTH = 8
 )(
    input  wire         reset_i,
    input  wire         clk_usb,
@@ -80,6 +81,10 @@ module reg_chipwhisperer #(
    output wire        uart_rx_o,
 
    output wire        targetpower_off,
+
+   output reg  [pUSERIO_WIDTH-1:0] userio_cwdriven,
+   output reg  [pUSERIO_WIDTH-1:0] userio_drive_data,
+   output reg                      userio_debug_driven,
 
    /* Main trigger connections */
    output wire        trigger_o /* Trigger signal to capture system */
@@ -413,6 +418,9 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
            `CW_TRIGMOD_ADDR: reg_datao_reg <= registers_cwtrigmod; 
            `CW_IOROUTE_ADDR: reg_datao_reg <= registers_iorouting[reg_bytecnt*8 +: 8];
            `CW_IOREAD_ADDR: reg_datao_reg <= {4'b0000, registers_ioread};
+
+           `USERIO_CW_DRIVEN: reg_datao_reg <= userio_cwdriven;
+           `USERIO_DEBUG_DRIVEN: reg_datao_reg <= userio_debug_driven;
            default: reg_datao_reg <= 0;
          endcase
       end
@@ -426,12 +434,19 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
          registers_cwtrigsrc <= 8'b00100000;
          registers_cwtrigmod <= 0;
          registers_iorouting <= 64'b00000010_00000001;
+         userio_cwdriven <= 8'b0;
+         userio_debug_driven <= 1'b0;
+         userio_drive_data <= 8'b0;
       end else if (reg_write) begin
          case (reg_address)
            `CW_EXTCLK_ADDR: registers_cwextclk <= reg_datai;
            `CW_TRIGSRC_ADDR: registers_cwtrigsrc <= reg_datai;
            `CW_TRIGMOD_ADDR: registers_cwtrigmod <= reg_datai;
            `CW_IOROUTE_ADDR: registers_iorouting[reg_bytecnt*8 +: 8] <= reg_datai;
+
+           `USERIO_CW_DRIVEN: userio_cwdriven <= reg_datai;
+           `USERIO_DEBUG_DRIVEN: userio_debug_driven <= reg_datai[0];
+           `USERIO_DRIVE_DATA: userio_drive_data <= reg_datai;
            default: ;
          endcase
       end

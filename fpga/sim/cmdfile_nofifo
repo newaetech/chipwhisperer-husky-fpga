@@ -21,3 +21,4 @@
 ../hdl/xadc.v
 ../hdl/slow_debug.v
 ../hdl/reg_la.v
+../hdl/userio.v
