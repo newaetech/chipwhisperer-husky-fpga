@@ -390,6 +390,7 @@ module openadc_interface #(
    );
 
 
+`ifdef FPGA_CLKGEN
    clock_managment_advanced genclocks(
       .reset                (reset | clockreset),
       .clk_usb              (clk_usb),
@@ -417,6 +418,17 @@ module openadc_interface #(
       .adc_clkgen_power_down(adc_clkgen_power_down),
       .clkgen_power_down    (clkgen_power_down    )
     );
+`else
+    assign ADC_clk_out = DUT_CLK_i;
+    assign ADC_clk_sample = ADC_clk_feedback;
+    assign clkgen = 1'b0;
+    assign phase_done = 1'b0;
+    assign dcm_locked = 1'b0;
+    assign dcm_gen_locked = 1'b0;
+    assign reg_datao_mmcm_drp = 8'b0;
+
+`endif
+
 
    reg [8:0] PWM_accumulator;
    always @(posedge clk_usb) begin

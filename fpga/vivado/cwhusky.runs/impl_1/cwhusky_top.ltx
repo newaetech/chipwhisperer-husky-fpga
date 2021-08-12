@@ -14,7 +14,7 @@
                     },
                     {
                         "type": "ILA_V3",
-                        "name": "U_usb_reg_main/U_ila_usb",
+                        "name": "oadc/U_fifo/U_ila_fifo_counts",
                         "spec": "labtools_ila_v6",
                         "ipName": "ila",
                         "core_location": {
@@ -22,237 +22,11 @@
                             "slave_index": 0,
                             "bscan_switch_index": 0
                         },
-                        "uuid": "7711C27F78A2508BB7793D21BD622F7E",
-                        "pins": [
-                            {
-                                "name": "probe0",
-                                "id": 0,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": true,
-                                "leftIndex": 0,
-                                "rightIndex": 7,
-                                "portIndex": 0,
-                                "nets": [
-                                    {
-                                        "name": "U_usb_reg_main/reg_datai",
-                                        "isBus": true,
-                                        "subnets": [
-                                            {
-                                                "name": "U_usb_reg_main/reg_datai[7]"
-                                            },
-                                            {
-                                                "name": "U_usb_reg_main/reg_datai[6]"
-                                            },
-                                            {
-                                                "name": "U_usb_reg_main/reg_datai[5]"
-                                            },
-                                            {
-                                                "name": "U_usb_reg_main/reg_datai[4]"
-                                            },
-                                            {
-                                                "name": "U_usb_reg_main/reg_datai[3]"
-                                            },
-                                            {
-                                                "name": "U_usb_reg_main/reg_datai[2]"
-                                            },
-                                            {
-                                                "name": "U_usb_reg_main/reg_datai[1]"
-                                            },
-                                            {
-                                                "name": "U_usb_reg_main/reg_datai[0]"
-                                            }
-                                        ]
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "probe1",
-                                "id": 1,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": false,
-                                "leftIndex": 0,
-                                "rightIndex": 0,
-                                "portIndex": 1,
-                                "nets": [
-                                    {
-                                        "name": "U_usb_reg_main/cwusb_isout",
-                                        "isBus": false
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "probe2",
-                                "id": 2,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": false,
-                                "leftIndex": 0,
-                                "rightIndex": 0,
-                                "portIndex": 2,
-                                "nets": [
-                                    {
-                                        "name": "U_usb_reg_main/cwusb_rdn",
-                                        "isBus": false
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "probe3",
-                                "id": 3,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": false,
-                                "leftIndex": 0,
-                                "rightIndex": 0,
-                                "portIndex": 3,
-                                "nets": [
-                                    {
-                                        "name": "U_usb_reg_main/cwusb_wrn",
-                                        "isBus": false
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "probe4",
-                                "id": 4,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": false,
-                                "leftIndex": 0,
-                                "rightIndex": 0,
-                                "portIndex": 4,
-                                "nets": [
-                                    {
-                                        "name": "U_usb_reg_main/cwusb_cen",
-                                        "isBus": false
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "probe5",
-                                "id": 5,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": false,
-                                "leftIndex": 0,
-                                "rightIndex": 0,
-                                "portIndex": 5,
-                                "nets": [
-                                    {
-                                        "name": "U_usb_reg_main/reg_read",
-                                        "isBus": false
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "probe6",
-                                "id": 6,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": false,
-                                "leftIndex": 0,
-                                "rightIndex": 0,
-                                "portIndex": 6,
-                                "nets": [
-                                    {
-                                        "name": "U_usb_reg_main/reg_write",
-                                        "isBus": false
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "probe7",
-                                "id": 7,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": false,
-                                "leftIndex": 0,
-                                "rightIndex": 0,
-                                "portIndex": 7,
-                                "nets": [
-                                    {
-                                        "name": "U_usb_reg_main/fast_fifo_read",
-                                        "isBus": false
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "probe8",
-                                "id": 8,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": false,
-                                "leftIndex": 0,
-                                "rightIndex": 0,
-                                "portIndex": 8,
-                                "nets": [
-                                    {
-                                        "name": "U_usb_reg_main/drive_data_out",
-                                        "isBus": false
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "probe9",
-                                "id": 9,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": true,
-                                "leftIndex": 0,
-                                "rightIndex": 7,
-                                "portIndex": 9,
-                                "nets": [
-                                    {
-                                        "name": "U_usb_reg_main/reg_address",
-                                        "isBus": true,
-                                        "subnets": [
-                                            {
-                                                "name": "U_usb_reg_main/reg_address[7]"
-                                            },
-                                            {
-                                                "name": "U_usb_reg_main/reg_address[6]"
-                                            },
-                                            {
-                                                "name": "U_usb_reg_main/reg_address[5]"
-                                            },
-                                            {
-                                                "name": "U_usb_reg_main/reg_address[4]"
-                                            },
-                                            {
-                                                "name": "U_usb_reg_main/reg_address[3]"
-                                            },
-                                            {
-                                                "name": "U_usb_reg_main/reg_address[2]"
-                                            },
-                                            {
-                                                "name": "U_usb_reg_main/reg_address[1]"
-                                            },
-                                            {
-                                                "name": "U_usb_reg_main/reg_address[0]"
-                                            }
-                                        ]
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        "type": "ILA_V3",
-                        "name": "oadc/U_fifo/U_ila_fifo_counts",
-                        "spec": "labtools_ila_v6",
-                        "ipName": "ila",
-                        "core_location": {
-                            "user_chain": 1,
-                            "slave_index": 1,
-                            "bscan_switch_index": 0
-                        },
                         "uuid": "9298C225979E5E51AAA6F2E9A5EC06B1",
                         "pins": [
                             {
                                 "name": "probe0",
-                                "id": 10,
+                                "id": 0,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -268,7 +42,7 @@
                             },
                             {
                                 "name": "probe1",
-                                "id": 11,
+                                "id": 1,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -343,7 +117,7 @@
                             },
                             {
                                 "name": "probe2",
-                                "id": 12,
+                                "id": 2,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
@@ -418,7 +192,7 @@
                             },
                             {
                                 "name": "probe3",
-                                "id": 13,
+                                "id": 3,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -434,7 +208,7 @@
                             },
                             {
                                 "name": "probe4",
-                                "id": 14,
+                                "id": 4,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -450,7 +224,7 @@
                             },
                             {
                                 "name": "probe5",
-                                "id": 15,
+                                "id": 5,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -466,7 +240,7 @@
                             },
                             {
                                 "name": "probe6",
-                                "id": 16,
+                                "id": 6,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -482,7 +256,7 @@
                             },
                             {
                                 "name": "probe7",
-                                "id": 17,
+                                "id": 7,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -498,7 +272,7 @@
                             },
                             {
                                 "name": "probe8",
-                                "id": 18,
+                                "id": 8,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
@@ -514,139 +288,13 @@
                             },
                             {
                                 "name": "probe9",
-                                "id": 19,
+                                "id": 9,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": false,
                                 "leftIndex": 0,
                                 "rightIndex": 0,
                                 "portIndex": 9,
-                                "nets": [
-                                    {
-                                        "name": "oadc/U_fifo/error_flag_1",
-                                        "isBus": false
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        "type": "ILA_V3",
-                        "name": "oadc/U_fifo/U_ila_segments",
-                        "spec": "labtools_ila_v6",
-                        "ipName": "ila",
-                        "core_location": {
-                            "user_chain": 1,
-                            "slave_index": 2,
-                            "bscan_switch_index": 0
-                        },
-                        "uuid": "C065A99C603E536BAB0BA1D7456118D0",
-                        "pins": [
-                            {
-                                "name": "probe0",
-                                "id": 20,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": false,
-                                "leftIndex": 0,
-                                "rightIndex": 0,
-                                "portIndex": 0,
-                                "nets": [
-                                    {
-                                        "name": "oadc/U_fifo/state_idle",
-                                        "isBus": false
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "probe1",
-                                "id": 21,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": false,
-                                "leftIndex": 0,
-                                "rightIndex": 0,
-                                "portIndex": 1,
-                                "nets": [
-                                    {
-                                        "name": "oadc/U_fifo/state_done",
-                                        "isBus": false
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "probe2",
-                                "id": 22,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": false,
-                                "leftIndex": 0,
-                                "rightIndex": 0,
-                                "portIndex": 2,
-                                "nets": [
-                                    {
-                                        "name": "oadc/U_fifo/state_presamp_filling",
-                                        "isBus": false
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "probe3",
-                                "id": 23,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": false,
-                                "leftIndex": 0,
-                                "rightIndex": 0,
-                                "portIndex": 3,
-                                "nets": [
-                                    {
-                                        "name": "oadc/U_fifo/state_presamp_full",
-                                        "isBus": false
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "probe4",
-                                "id": 24,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": false,
-                                "leftIndex": 0,
-                                "rightIndex": 0,
-                                "portIndex": 4,
-                                "nets": [
-                                    {
-                                        "name": "oadc/U_fifo/state_triggered",
-                                        "isBus": false
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "probe5",
-                                "id": 25,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": false,
-                                "leftIndex": 0,
-                                "rightIndex": 0,
-                                "portIndex": 5,
-                                "nets": [
-                                    {
-                                        "name": "oadc/U_fifo/state_segment_done",
-                                        "isBus": false
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "probe6",
-                                "id": 26,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": false,
-                                "leftIndex": 0,
-                                "rightIndex": 0,
-                                "portIndex": 6,
                                 "nets": [
                                     {
                                         "name": "oadc/U_fifo/error_flag",
@@ -655,252 +303,56 @@
                                 ]
                             },
                             {
-                                "name": "probe7",
-                                "id": 27,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": true,
-                                "leftIndex": 0,
-                                "rightIndex": 7,
-                                "portIndex": 7,
-                                "nets": [
-                                    {
-                                        "name": "oadc/U_fifo/error_stat",
-                                        "isBus": true,
-                                        "subnets": [
-                                            {
-                                                "name": "oadc/U_fifo/error_stat[7]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/error_stat[6]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/error_stat[5]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/error_stat[4]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/error_stat[3]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/error_stat[2]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/error_stat[1]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/error_stat[0]"
-                                            }
-                                        ]
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "probe8",
-                                "id": 28,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": false,
-                                "leftIndex": 0,
-                                "rightIndex": 0,
-                                "portIndex": 8,
-                                "nets": [
-                                    {
-                                        "name": "oadc/U_fifo/presamp_done",
-                                        "isBus": false
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "probe9",
-                                "id": 29,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": true,
-                                "leftIndex": 0,
-                                "rightIndex": 19,
-                                "portIndex": 9,
-                                "nets": [
-                                    {
-                                        "name": "oadc/U_fifo/segment_cycle_counter",
-                                        "isBus": true,
-                                        "subnets": [
-                                            {
-                                                "name": "oadc/U_fifo/segment_cycle_counter[19]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/segment_cycle_counter[18]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/segment_cycle_counter[17]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/segment_cycle_counter[16]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/segment_cycle_counter[15]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/segment_cycle_counter[14]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/segment_cycle_counter[13]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/segment_cycle_counter[12]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/segment_cycle_counter[11]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/segment_cycle_counter[10]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/segment_cycle_counter[9]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/segment_cycle_counter[8]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/segment_cycle_counter[7]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/segment_cycle_counter[6]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/segment_cycle_counter[5]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/segment_cycle_counter[4]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/segment_cycle_counter[3]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/segment_cycle_counter[2]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/segment_cycle_counter[1]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/segment_cycle_counter[0]"
-                                            }
-                                        ]
-                                    }
-                                ]
-                            },
-                            {
                                 "name": "probe10",
-                                "id": 30,
+                                "id": 10,
                                 "type": "DATA_TRIGGER",
                                 "direction": "IN",
                                 "isVector": true,
                                 "leftIndex": 0,
-                                "rightIndex": 15,
+                                "rightIndex": 11,
                                 "portIndex": 10,
                                 "nets": [
                                     {
-                                        "name": "oadc/U_fifo/segment_counter",
+                                        "name": "oadc/U_fifo/fast_fifo_dout",
                                         "isBus": true,
                                         "subnets": [
                                             {
-                                                "name": "oadc/U_fifo/segment_counter[15]"
+                                                "name": "oadc/U_fifo/fast_fifo_dout[11]"
                                             },
                                             {
-                                                "name": "oadc/U_fifo/segment_counter[14]"
+                                                "name": "oadc/U_fifo/fast_fifo_dout[10]"
                                             },
                                             {
-                                                "name": "oadc/U_fifo/segment_counter[13]"
+                                                "name": "oadc/U_fifo/fast_fifo_dout[9]"
                                             },
                                             {
-                                                "name": "oadc/U_fifo/segment_counter[12]"
+                                                "name": "oadc/U_fifo/fast_fifo_dout[8]"
                                             },
                                             {
-                                                "name": "oadc/U_fifo/segment_counter[11]"
+                                                "name": "oadc/U_fifo/fast_fifo_dout[7]"
                                             },
                                             {
-                                                "name": "oadc/U_fifo/segment_counter[10]"
+                                                "name": "oadc/U_fifo/fast_fifo_dout[6]"
                                             },
                                             {
-                                                "name": "oadc/U_fifo/segment_counter[9]"
+                                                "name": "oadc/U_fifo/fast_fifo_dout[5]"
                                             },
                                             {
-                                                "name": "oadc/U_fifo/segment_counter[8]"
+                                                "name": "oadc/U_fifo/fast_fifo_dout[4]"
                                             },
                                             {
-                                                "name": "oadc/U_fifo/segment_counter[7]"
+                                                "name": "oadc/U_fifo/fast_fifo_dout[3]"
                                             },
                                             {
-                                                "name": "oadc/U_fifo/segment_counter[6]"
+                                                "name": "oadc/U_fifo/fast_fifo_dout[2]"
                                             },
                                             {
-                                                "name": "oadc/U_fifo/segment_counter[5]"
+                                                "name": "oadc/U_fifo/fast_fifo_dout[1]"
                                             },
                                             {
-                                                "name": "oadc/U_fifo/segment_counter[4]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/segment_counter[3]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/segment_counter[2]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/segment_counter[1]"
-                                            },
-                                            {
-                                                "name": "oadc/U_fifo/segment_counter[0]"
+                                                "name": "oadc/U_fifo/fast_fifo_dout[0]"
                                             }
                                         ]
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "probe11",
-                                "id": 31,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": false,
-                                "leftIndex": 0,
-                                "rightIndex": 0,
-                                "portIndex": 11,
-                                "nets": [
-                                    {
-                                        "name": "oadc/U_fifo/adc_segment_go",
-                                        "isBus": false
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "probe12",
-                                "id": 32,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": false,
-                                "leftIndex": 0,
-                                "rightIndex": 0,
-                                "portIndex": 12,
-                                "nets": [
-                                    {
-                                        "name": "oadc/U_fifo/adc_capture_go",
-                                        "isBus": false
-                                    }
-                                ]
-                            },
-                            {
-                                "name": "probe13",
-                                "id": 33,
-                                "type": "DATA_TRIGGER",
-                                "direction": "IN",
-                                "isVector": false,
-                                "leftIndex": 0,
-                                "rightIndex": 0,
-                                "portIndex": 13,
-                                "nets": [
-                                    {
-                                        "name": "oadc/U_fifo/fast_fifo_empty",
-                                        "isBus": false
                                     }
                                 ]
                             }

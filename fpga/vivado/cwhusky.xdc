@@ -6,25 +6,40 @@ create_clock -period 10.400 -name clk_usb -waveform {0.000 5.200} [get_nets clk_
 create_clock -period 5.000 -name ADC_clk_fb -waveform {0.000 2.500} [get_nets ADC_clk_fb]
 create_clock -period 5.000 -name pll_fpga_clk -waveform {0.000 2.500} [get_nets pll_fpga_clk]
 
-# TODO: these are temporary
-set_clock_groups -asynchronous \
-                 -group [get_clocks clk_usb] \
-                 -group [get_clocks ADC_clk_times4]
+create_clock -period 20.000 -name target_hs1 -waveform {0.000 10.000} [get_nets target_hs1]
+create_clock -period 20.000 -name USBIOHS2 -waveform {0.000 10.500} [get_nets USBIOHS2]
+
+# avoid multiple_clock analysis problems: 
+# (these are critical to avoiding HUGE increase in implementation runtime; 5 minutes becomes 24 hours!)
+set_case_analysis 0 [get_pins oadc/genclocks/clkdcm_mux/S]
+set_case_analysis 0 [get_pins oadc/genclocks/clkgenfx_mux/S]
+set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets oadc/genclocks/U_clkgen/inst/clk_out1]
+
+set_case_analysis 1 [get_pins reg_clockglitch/sourceclk_mux1/S]
+set_case_analysis 0 [get_pins reg_clockglitch/sourceclk_mux2/S]
+
+set_case_analysis 1 [get_pins reg_la/sourceclk_mux1/S]
+set_case_analysis 0 [get_pins reg_la/sourceclk_mux2/S]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks clk_usb] \
+                 -group [get_clocks clk_usb ] \
+                 -group [get_clocks target_hs1]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks clk_usb ] \
+                 -group [get_clocks USBIOHS2]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks target_hs1 ] \
+                 -group [get_clocks USBIOHS2]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks {clk_usb target_hs1 USBIOHS2} ] \
                  -group [get_clocks ADC_clk_fb]
 
-set_clock_groups -asynchronous \
-                 -group [get_clocks clk_usb] \
-                 -group [get_clocks ADC_clk]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks ADC_clk] \
-                 -group [get_clocks ADC_clk_times4]
-
-set_clock_groups -asynchronous \
-                 -group [get_clocks clk_usb] \
+                 -group [get_clocks {clk_usb target_hs1 USBIOHS2} ] \
                  -group [get_clocks pll_fpga_clk]
 
 set_clock_groups -asynchronous \
@@ -32,20 +47,51 @@ set_clock_groups -asynchronous \
                  -group [get_clocks glitch_mmcm1_clk_out*]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks clk_usb] \
+                 -group [get_clocks {clk_usb target_hs1 USBIOHS2} ] \
                  -group [get_clocks glitch_mmcm1_clk_out*]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks clk_usb] \
+                 -group [get_clocks {clk_usb target_hs1 USBIOHS2} ] \
                  -group [get_clocks glitch_mmcm2_clk_out*]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks glitch_mmcm1_clk_out] \
-                 -group [get_clocks glitch_mmcm1_clk_out_1]
+                 -group [get_clocks observer_clk*] \
+                 -group [get_clocks {clk_usb target_hs1 USBIOHS2} ]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks observer_clk*] \
+                 -group [get_clocks pll_fpga_clk]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks observer_clk*] \
+                 -group [get_clocks glitch_mmcm1_clk_out*]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks observer_clk*] \
+                 -group [get_clocks glitch_mmcm2_clk_out*]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks observer_clk*] \
+                 -group [get_clocks ADC_clk_fb]
+
+
+# include below if FPGA_CLKGEN:
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks {clk_usb target_hs1 USBIOHS2} ] \
+                 -group [get_clocks ADC_clk_times4]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks {clk_usb target_hs1 USBIOHS2} ] \
+                 -group [get_clocks ADC_clk]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks ADC_clk] \
+                 -group [get_clocks ADC_clk_times4]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks clk_out1_MMCM_clkgen] \
-                 -group [get_clocks clk_usb]
+                 -group [get_clocks {clk_usb target_hs1 USBIOHS2} ]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks clk_out1_MMCM_clkgen] \
@@ -53,60 +99,11 @@ set_clock_groups -asynchronous \
 
 set_clock_groups -asynchronous \
                  -group [get_clocks observer_clk] \
-                 -group [get_clocks observer_clk_1]
-
-set_clock_groups -asynchronous \
-                 -group [get_clocks observer_clk] \
-                 -group [get_clocks clk_usb]
-
-set_clock_groups -asynchronous \
-                 -group [get_clocks observer_clk_1] \
-                 -group [get_clocks clk_usb]
-
-set_clock_groups -asynchronous \
-                 -group [get_clocks observer_clk] \
-                 -group [get_clocks pll_fpga_clk]
-
-set_clock_groups -asynchronous \
-                 -group [get_clocks observer_clk_1] \
-                 -group [get_clocks pll_fpga_clk]
-
-set_clock_groups -asynchronous \
-                 -group [get_clocks observer_clk] \
-                 -group [get_clocks glitch_mmcm1_clk_out*]
-
-set_clock_groups -asynchronous \
-                 -group [get_clocks observer_clk_1] \
-                 -group [get_clocks glitch_mmcm1_clk_out*]
-
-set_clock_groups -asynchronous \
-                 -group [get_clocks observer_clk] \
-                 -group [get_clocks glitch_mmcm2_clk_out*]
-
-set_clock_groups -asynchronous \
-                 -group [get_clocks observer_clk_1] \
-                 -group [get_clocks glitch_mmcm2_clk_out*]
-
-set_clock_groups -asynchronous \
-                 -group [get_clocks observer_clk] \
-                 -group [get_clocks clk_out1_MMCM_clkgen]
-
-set_clock_groups -asynchronous \
-                 -group [get_clocks observer_clk_1] \
                  -group [get_clocks clk_out1_MMCM_clkgen]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks glitch_mmcm1_clk_out*] \
                  -group [get_clocks clk_out1_MMCM_clkgen]
-
-set_clock_groups -asynchronous \
-                 -group [get_clocks observer_clk] \
-                 -group [get_clocks ADC_clk_fb]
-
-set_clock_groups -asynchronous \
-                 -group [get_clocks observer_clk_1] \
-                 -group [get_clocks ADC_clk_fb]
-
 
 
 # *****************************************************************************
@@ -307,22 +304,10 @@ set_false_path -to [get_ports VDBSPWM]
 set_input_delay -clock [get_clocks clk_usb] -add_delay 0.000 [get_ports {USERIO_CLK}]
 set_false_path -from [get_ports {USERIO_CLK}]
 
-set_output_delay -clock [get_clocks clk_usb] 0.0 [get_ports USERIO_D[0]]
-set_output_delay -clock [get_clocks clk_usb] 0.0 [get_ports USERIO_D[1]]
-set_output_delay -clock [get_clocks clk_usb] 0.0 [get_ports USERIO_D[2]]
-set_output_delay -clock [get_clocks clk_usb] 0.0 [get_ports USERIO_D[3]]
-set_output_delay -clock [get_clocks clk_usb] 0.0 [get_ports USERIO_D[4]]
-set_output_delay -clock [get_clocks clk_usb] 0.0 [get_ports USERIO_D[5]]
-set_output_delay -clock [get_clocks clk_usb] 0.0 [get_ports USERIO_D[6]]
-set_output_delay -clock [get_clocks clk_usb] 0.0 [get_ports USERIO_D[7]]
-set_false_path -to [get_ports USERIO_D[0]]
-set_false_path -to [get_ports USERIO_D[1]]
-set_false_path -to [get_ports USERIO_D[2]]
-set_false_path -to [get_ports USERIO_D[3]]
-set_false_path -to [get_ports USERIO_D[4]]
-set_false_path -to [get_ports USERIO_D[5]]
-set_false_path -to [get_ports USERIO_D[6]]
-set_false_path -to [get_ports USERIO_D[7]]
+set_input_delay -clock [get_clocks clk_usb] 0.0 [get_ports USERIO_D]
+set_output_delay -clock [get_clocks clk_usb] 0.0 [get_ports USERIO_D]
+set_false_path -to [get_ports USERIO_D]
+set_false_path -from [get_ports USERIO_D]
 
 set_output_delay -clock [get_clocks clk_usb] 0.0 [get_ports ADC_DFS]
 set_output_delay -clock [get_clocks clk_usb] 0.0 [get_ports ADC_OE]
@@ -353,6 +338,34 @@ set_false_path -to [get_ports target_nRST]
 set_output_delay -clock [get_clocks clk_usb] 0.0 [get_ports FPGA_TRIGOUT]
 set_false_path -to [get_ports FPGA_TRIGOUT]
 
+set_input_delay -clock clk_usb 0.000 [get_ports PLL_STATUS]
+set_input_delay -clock clk_usb 0.000 [get_ports target_nRST]
+set_input_delay -clock clk_usb 0.000 [get_ports FPGA_CDOUT]
+#set_input_delay -clock clk_usb 0.000 [get_ports USBIOHS2]
+#set_input_delay -clock clk_usb 0.000 [get_ports target_hs1]
+set_input_delay -clock clk_usb 0.000 [get_ports target_hs2]
+set_input_delay -clock clk_usb 0.000 [get_ports ADC_clk_fbp]
+set_input_delay -clock clk_usb 0.000 [get_ports PLLFPGAP]
+set_false_path -from [get_ports PLL_STATUS]
+set_false_path -from [get_ports target_nRST]
+set_false_path -from [get_ports FPGA_CDOUT]
+#set_false_path -from [get_ports USBIOHS2]
+#set_false_path -from [get_ports target_hs1]
+set_false_path -from [get_ports target_hs2]
+set_false_path -from [get_ports ADC_clk_fbp]
+set_false_path -from [get_ports PLLFPGAP]
+
+
+set_output_delay -clock [get_clocks clk_usb] 0.0 [get_ports target_hs2]
+set_output_delay -clock [get_clocks clk_usb] 0.0 [get_ports ADC_CLKP]
+set_output_delay -clock [get_clocks clk_usb] 0.0 [get_ports glitchout_highpwr]
+set_output_delay -clock [get_clocks clk_usb] 0.0 [get_ports glitchout_lowpwr]
+set_output_delay -clock [get_clocks clk_usb] 0.0 [get_ports FPGA_CDIN]
+set_false_path -to [get_ports target_hs2]
+set_false_path -to [get_ports ADC_CLKP]
+set_false_path -to [get_ports glitchout_highpwr]
+set_false_path -to [get_ports glitchout_lowpwr]
+set_false_path -to [get_ports FPGA_CDIN]
 
 # Not from any spec, but the result is no timing violations and reads work:
 set_output_delay -clock clk_usb -2.000 [get_ports USB_Data]

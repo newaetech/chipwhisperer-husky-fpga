@@ -80,6 +80,7 @@ module reg_la #(
     wire drp_observer_reset;
 
     wire observer_clk;
+    wire source_clk;
 
     reg [1:0] clock_source_reg;
     reg [1:0] trigger_source_reg;
@@ -92,8 +93,31 @@ module reg_la #(
     wire [7:0] reg_datao_drp_observer;
     assign reg_datao = reg_datao_reg | reg_datao_drp_observer;
 
-    wire source_clk = (clock_source_reg == 2'b01) ? clkgen : 
-                      (clock_source_reg == 2'b10) ? pll_fpga_clk : target_hs1;
+`ifdef __ICARUS__
+   assign source_clk = (clock_source_reg == 2'b01) ? clkgen : 
+                       (clock_source_reg == 2'b10) ? pll_fpga_clk :
+                       (clock_source_reg == 2'b00) ? target_hs1   : target_hs1;
+`else
+    wire mux1out;
+    BUFGMUX #(
+       .CLK_SEL_TYPE("ASYNC")
+    ) sourceclk_mux1 (
+       .O    (mux1out),
+       .I0   (target_hs1),
+       .I1   (pll_fpga_clk),
+       .S    (clock_source_reg[1])
+    );  
+
+    BUFGMUX #(
+       .CLK_SEL_TYPE("ASYNC")
+    ) sourceclk_mux2 (
+       .O    (source_clk),
+       .I0   (mux1out),
+       .I1   (clkgen),
+       .S    (clock_source_reg[0])
+    ); 
+`endif
+
 
     wire capture_go_async = (trigger_source_reg == 2'b00)? adc_capture_go : 
                             (trigger_source_reg == 2'b01)? glitch_go : 

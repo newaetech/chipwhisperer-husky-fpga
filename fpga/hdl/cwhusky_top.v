@@ -82,8 +82,8 @@ module cwhusky_top(
     input  wire         SAM_CS, // TODO: why not using this?
 
     /* XMEGA Programming - not used, but need to ensure line is floating */
-    inout wire       target_PDID,
-    inout wire       target_PDIC,
+    output wire         target_PDID,
+    output wire         target_PDIC,
 
     /* Spare Lines - AVR Programming */
     inout  wire         target_nRST,
@@ -96,7 +96,7 @@ module cwhusky_top(
     inout wire          target_io3, // Normally Spare / SmartCard Comms
     inout wire          target_io2, // Normally RXD
     inout wire          target_io1, // Normally TXD / SmartCard Reset
-    inout wire          target_hs1, // Clock from victim device
+    input wire          target_hs1, // Clock from victim device
     inout wire          target_hs2, // Clock to victim device
 
     output wire         glitchout_highpwr, // high-speed glitch output
@@ -105,7 +105,7 @@ module cwhusky_top(
     output wire         target_poweron,
 
     output wire         FPGA_TRIGOUT, //trigger out MCX
-    inout  wire         USBIOHS2  //clock MCX
+    input  wire         USBIOHS2  //clock MCX
 
     /* Various connections to USB Chip  -- TODO: cleanup!
     input wire          USB_ser0_tx_i,

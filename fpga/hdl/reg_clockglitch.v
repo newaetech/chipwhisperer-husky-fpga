@@ -160,8 +160,33 @@ module reg_clockglitch #(
    assign glitch_type = clockglitch_settings_reg[46:44];
    assign glitch_trigger_src = clockglitch_settings_reg[43:42];
    assign max_glitches = {clockglitch_settings_reg[62:58], clockglitch_settings_reg[55:48]};
+
+
+`ifdef __ICARUS__
    assign sourceclk = (clockglitch_settings_reg[57:56] == 2'b01) ? clkgen : 
-                      (clockglitch_settings_reg[57:56] == 2'b10) ? pll_fpga_clk : target_hs1;
+                      (clockglitch_settings_reg[57:56] == 2'b10) ? pll_fpga_clk :
+                      (clockglitch_settings_reg[57:56] == 2'b00) ? target_hs1   : target_hs1;
+`else
+    wire mux1out;
+    BUFGMUX #(
+       .CLK_SEL_TYPE("ASYNC")
+    ) sourceclk_mux1 (
+       .O    (mux1out),
+       .I0   (target_hs1),
+       .I1   (pll_fpga_clk),
+       .S    (clockglitch_settings_reg[57])
+    );  
+
+    BUFGMUX #(
+       .CLK_SEL_TYPE("ASYNC")
+    ) sourceclk_mux2 (
+       .O    (sourceclk),
+       .I0   (mux1out),
+       .I1   (clkgen),
+       .S    (clockglitch_settings_reg[56])
+    ); 
+`endif
+
 
    // manual glitch logic:
    reg manual;
