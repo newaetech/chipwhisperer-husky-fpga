@@ -25,7 +25,6 @@ Author: Colin O'Flynn <coflynn@newae.com>
 module openadc_interface #(
    parameter pBYTECNT_SIZE = 7
 )(
-    input  wire                         reset_i,
     input  wire                         clk_usb, // 96 MHz
     output wire                         reset_o,
 
@@ -134,7 +133,7 @@ module openadc_interface #(
 
    always @(posedge clk_usb) begin
        if (timer_heartbeat[25])
-           flash_pattern = ~timer_heartbeat[23];
+           flash_pattern <= ~timer_heartbeat[23];
    end
 
 
@@ -281,7 +280,7 @@ module openadc_interface #(
    wire fifo_rd_en;
    wire low_res;
    wire low_res_lsb;
-   wire [31:0] stream_segment_threshold;
+   wire [16:0] stream_segment_threshold;
 
    wire [14:0] presamples;
    wire [31:0] maxsamples_limit;
@@ -310,7 +309,7 @@ module openadc_interface #(
    reg_openadc #(
       .pBYTECNT_SIZE    (pBYTECNT_SIZE)
    ) U_reg_openadc (
-      .reset_i                      (reset_i),
+      .reset_i                      (1'b0),
       .reset_o                      (reset),
       .clk_usb                      (clk_usb),
       .adc_sampleclk                (ADC_clk_sample),
@@ -336,7 +335,6 @@ module openadc_interface #(
       .adcclk_frequency             (adcclk_frequency),
       .phase_o                      (phase_requested),
       .phase_ld_o                   (phase_load),
-      .phase_done_i                 (phase_done),
       .presamples_o                 (presamples),
       .maxsamples_i                 (maxsamples_limit),
       .maxsamples_o                 (maxsamples),
@@ -419,9 +417,13 @@ module openadc_interface #(
       .clkgen_power_down    (clkgen_power_down    )
     );
 `else
-    assign ADC_clk_out = DUT_CLK_i;
+    // TODO-IMPORTANT NOTE! for some unknown reason, simulations fail without
+    // FPGA_CLKGEN. There seems to be some problem with the fast FIFO in
+    // fifo_top_husky: all its inputs appear to be correctly driven, but its
+    // "empty" flag always remains set.
+    assign ADC_clk_out = clk_usb;
     assign ADC_clk_sample = ADC_clk_feedback;
-    assign clkgen = 1'b0;
+    assign clkgen = clk_usb;
     assign phase_done = 1'b0;
     assign dcm_locked = 1'b0;
     assign dcm_gen_locked = 1'b0;

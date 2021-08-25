@@ -51,7 +51,6 @@ module xadc #(
    wire vccaux_alarm_out;
    wire ot_out;
    wire vbram_alarm_out;
-   wire alarm_out;
 
 // DRP usage:
 // Writes: push write data to DRP data, then write DRP_ADDR with MSB set.
@@ -157,14 +156,14 @@ module xadc #(
             .probe2         (vccaux_alarm_out),     // input wire [15:0] probe2 
             .probe3         (ot_out),               // input wire [15:0] probe3 
             .probe4         (vbram_alarm_out),      // input wire [0:0]  probe4 
-            .probe5         (alarm_out),            // input wire [0:0]  probe5 
+            .probe5         (1'b0),                 // input wire [0:0]  probe5 
             .probe6         (xadc_error)            // input wire [0:0]  probe6 
         );
    `endif
 
 
    `ifndef __ICARUS__
-        xadc_wiz_0 your_instance_name (
+        xadc_wiz_0 U_xadc_wiz (
           .di_in                (drp_din),              // input wire [15 : 0] di_in
           .daddr_in             (drp_addr),             // input wire [6 : 0] daddr_in
           .den_in               (drp_den),              // input wire den_in
@@ -182,7 +181,7 @@ module xadc #(
           .channel_out          (),                     // output wire [4 : 0] channel_out
           .eoc_out              (),                     // output wire eoc_out
           .vbram_alarm_out      (vbram_alarm_out),      // output wire vbram_alarm_out
-          .alarm_out            (alarm_out),            // output wire alarm_out TODO: why unused?!? what is this? UG480 doesn't say. Add to xadc_stat?
+          .alarm_out            (),                     // output wire alarm_out
           .eos_out              (),                     // output wire eos_out
           .busy_out             ()                      // output wire busy_out
         );

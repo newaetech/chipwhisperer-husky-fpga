@@ -41,7 +41,7 @@ module reg_openadc_adcfifo #(
    output reg          low_res,
    output reg          low_res_lsb,
    output reg          fast_fifo_read_mode,
-   output reg  [31:0]  stream_segment_threshold,
+   output reg  [16:0]  stream_segment_threshold,
    input  wire [7:0]   fifo_error_stat,
    output reg          clear_fifo_errors,
 
@@ -127,26 +127,8 @@ module reg_openadc_adcfifo #(
       end
    end
 
-/*
-	 always @(negedge clk_usb, negedge reg_read) begin
-		if (reg_read == 0) begin
-			fifo_rd_en_reg <= 0;
-		end else if (reg_address == `ADCREAD_ADDR) begin
-			if ((reg_bytecnt == 0) || (reg_bytecnt == 1)) begin
-				fifo_rd_en_reg <= 0;
-			end else begin
-				fifo_rd_en_reg <= ~fifo_empty;
-			end
-		end else begin
-			fifo_rd_en_reg <= 0;
-		end
-	 end	 
- */
-
-   //always @(reg_read, reg_address, reg_bytecnt) begin
    always @(posedge clk_usb) begin
       reg_read_r <= reg_read;
-      //if (reg_read && ~reg_read_r && (reg_address == `ADCREAD_ADDR) && (reg_bytecnt > 16'd0)) begin
       if (reg_read && ~reg_read_r && (reg_address == `ADCREAD_ADDR)) begin
          fifo_rd_en_reg <= 1;
       end else begin

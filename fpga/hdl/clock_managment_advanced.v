@@ -48,7 +48,7 @@ module clock_managment_advanced #(
     output wire                         phase_done, 
 
     output wire                         dcm_adc_locked,
-    output wire                         dcm_gen_locked ,
+    output wire                         dcm_gen_locked,
 
     // register interface
     input  wire [7:0]                   reg_address,

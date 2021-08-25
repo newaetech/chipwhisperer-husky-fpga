@@ -37,7 +37,7 @@ module cwhusky_top(
     input wire          USB_WRn,
     input wire          USB_CEn,
     input wire          USB_ALEn,                   // USB_SPARE1
-    output wire         stream_segment_available,   // USB_SPARE0
+    inout wire          USB_SPARE0,
 
     // currently unused:
     input wire          FPGA_BONUS1,
@@ -72,7 +72,6 @@ module cwhusky_top(
     inout  wire [7:0]   USERIO_D,
     input  wire         USERIO_CLK,
 
-    //input wire          FPGA_CCLK,
     input wire          FPGA_CDOUT, /* Input FROM SAM3U */
     output wire         FPGA_CDIN, /* Output TO SAM3U */
 
@@ -107,52 +106,17 @@ module cwhusky_top(
     output wire         FPGA_TRIGOUT, //trigger out MCX
     input  wire         USBIOHS2  //clock MCX
 
-    /* Various connections to USB Chip  -- TODO: cleanup!
-    input wire          USB_ser0_tx_i,
-    output wire         USB_ser0_rx_o,
-
-    input wire          USB_spi0_sck_i,
-    input wire          USB_spi0_mosi_i,
-    output wire         USB_spi0_miso_o,
-    input wire          USB_spi0_cs0,
-    input wire          USB_treset_i,
-    
-    input wire          USB_sc_rst,
-    input wire          USB_sc_clk,
-    input wire          USB_sc_aux1,
-    input wire          USB_sc_aux2,
-    input wire          USB_spi2_txd2,
-    output wire         USB_spi2_rxd2,
-    
-    output wire         ext_mosi, //Pin 4 of external header
-    input wire          ext_miso, //Pin 3 of external header
-    output wire         ext_sck,  //Pin 2 of external header
-    output wire         lcd_cs,
-    output wire         lcd_dc,
-    output wire         avr_cs
-    */
     );
 
     parameter pBYTECNT_SIZE = 7;
     parameter pLA_CAPTURE_DEPTH = 512;
     parameter pUSERIO_WIDTH = 8;
 
-   /* PDI Programming done from SAM, must float these wires
-      or programming will fail from weak pull-down on FPGA */
-   //assign XMEGA_PDID = 1'bZ;
-   //assign XMEGA_PDIC = 1'bZ;
-   
-   //wire [35:0] cs_control0;
-   //wire [63:0] ila_trigbus;
-
-   // TEMPORARY, until I/Os are added / cleaned up:
    wire         ADC_clk_out;
    wire         target_npower;
-   wire         USB_treset_i; // TODO? came from SAM3U
+   wire         stream_segment_available;
 
    wire         reg_rst;
-
-   wire reset_i = 0;    // TODO: remove?
 
    wire clk_usb_buf;
    wire ADC_clk_fb;
@@ -212,6 +176,7 @@ module cwhusky_top(
    wire [pUSERIO_WIDTH-1:0] userio_drive_data;
    wire [pUSERIO_WIDTH-1:0] userio_debug_data;
 
+   assign USB_SPARE0 = enable_avrprog? 1'bz : stream_segment_available;
 
    usb_reg_main #(
       .pBYTECNT_SIZE    (pBYTECNT_SIZE)
@@ -277,7 +242,6 @@ module cwhusky_top(
 
 
    wire led_glitch;
-   wire cg_mmcm_unlocked;
 
    // fast-flash red LEDs when some internal error has occurred:
    assign LED_ADC = error_flag? flash_pattern : ~PLL_STATUS;
@@ -286,7 +250,6 @@ module cwhusky_top(
    openadc_interface #(
         .pBYTECNT_SIZE  (pBYTECNT_SIZE)
    ) oadc (
-        .reset_i                (reset_i),
         .clk_usb                (clk_usb_buf),
         .reset_o                (reg_rst),
 
@@ -373,7 +336,7 @@ module cwhusky_top(
         .trigger_io3_i          (target_io3),
         .trigger_io4_i          (target_io4),
         .trigger_nrst_i         (target_nRST),
-        .trigger_ext_o          (), // TODO?: cw1200 has this
+        .trigger_ext_o          (),
         .trigger_advio_i        (1'b0),
         .trigger_anapattern_i   (1'b0),
         .trigger_decodedio_i    (1'b0),
@@ -442,8 +405,7 @@ module cwhusky_top(
         .exttrigger     (ext_trigger),
         .glitch_go      (glitch_go),
         .glitch_trigger (glitch_trigger),
-        .led_glitch     (led_glitch),
-        .mmcm_unlocked  (cg_mmcm_unlocked) // TODO: currently unused
+        .led_glitch     (led_glitch)
    );
 
    `ifdef LOGIC_ANALYZER
@@ -496,7 +458,6 @@ module cwhusky_top(
 
 
    assign FPGA_TRIGOUT = ext_trigger;
-   //assign FPGA_TRIGOUT = 1'b0;
 
    wire target_highz = target_npower;
    assign target_poweron = ~target_npower;
@@ -508,7 +469,7 @@ module cwhusky_top(
                         (enable_output_pdic) ? output_pdic : 1'bZ;
 
    assign target_nRST = (target_highz) ? 1'bZ :
-                        (enable_avrprog) ? 1'b0 : // USB_treset_i : TODO?
+                        (enable_avrprog) ? USB_SPARE0 :
                         (enable_output_nrst) ? output_nrst : 1'bZ;
 
    assign target_MOSI = (target_highz) ? 1'bZ :
@@ -517,7 +478,7 @@ module cwhusky_top(
    assign target_SCK = (target_highz) ? 1'bZ :
                        (enable_avrprog) ? SAM_SPCK : 1'bZ;
 
-   assign SAM_MISO = (enable_avrprog) ? target_MISO : 1'bZ; //ext_miso;
+   assign SAM_MISO = (enable_avrprog) ? target_MISO : 1'bZ;
 
 
    // generate ADC output differential clock
@@ -595,7 +556,6 @@ module cwhusky_top(
    genvar adc_index;
    generate 
       for (adc_index = 0; adc_index < 6; adc_index = adc_index + 1) begin: gen_adc_data
-         // TODO: are these the best settings?
          IBUFDS #(
             .DIFF_TERM          ("FALSE"),
             .IBUF_LOW_PWR       ("FALSE"),

@@ -40,7 +40,7 @@ module fifo_top_husky(
     input wire          clk_usb,
     input wire          low_res,        // if set, return just 8 bits per sample; if clear return all 12 bits per sample
     input wire          low_res_lsb,    // useless except for testing: if set, return the 8 LSB bits when in low_res mode
-    input wire [31:0]   stream_segment_threshold,
+    input wire [16:0]   stream_segment_threshold,
     input wire          fifo_read_fifoen,
     output wire         fifo_read_fifoempty,
     output reg  [7:0]   fifo_read_data,
@@ -69,9 +69,6 @@ module fifo_top_husky(
     output reg  [31:0]  fifo_read_count_error_freeze
 
 );
-
-    //wire                slow_fifo_wr;
-    //wire                slow_fifo_rd;
 
     parameter FIFO_FULL_SIZE = `MAX_SAMPLES;
 
@@ -163,7 +160,6 @@ module fifo_top_husky(
     assign downsample_max = (downsample_ctr == downsample_i) ? 1'b1 : 'b0;
 
     always @(posedge adc_sampleclk) begin
-       //if ((arm_fifo_rst_adc == 1'b1) || (adc_capture_go == 1'b0)) begin
        if (arm_fifo_rst_adc == 1'b1) begin
           downsample_ctr <= 13'd0;
           downsample_wr_en <= 1'b0;
@@ -210,8 +206,7 @@ module fifo_top_husky(
     wire stop_capture_conditions;
     wire fsm_fast_wr_en;
 
-    assign stop_capture_conditions = fifo_rst_pre || adc_capture_stop; // XXX removed adc_capture_stop condition for segmenting, fingers crossed it doesn't break stuff
-    //assign stop_capture_conditions = fifo_rst_pre;
+    assign stop_capture_conditions = fifo_rst_pre || adc_capture_stop;
 
     assign fsm_fast_wr_en = ((state == pS_PRESAMP_FILLING) || (state == pS_PRESAMP_FULL) || (state == pS_TRIGGERED));
 
@@ -336,15 +331,11 @@ module fifo_top_husky(
 
                 if (fast_fifo_wr) begin
                    sample_counter <= sample_counter + 1;
-                   //fast_fifo_rd <= 1'b1;
                 end
-                //else
-                //   fast_fifo_rd <= 1'b0;
              end
 
              pS_SEGMENT_DONE: begin
                 segment_cycle_counter <= segment_cycle_counter + 1;
-                //adc_capture_stop <= 1'b0;
                 if (fast_fifo_empty) begin
                    fast_fifo_rd_en <= 1'b0;
                    if (presample_i > 0) begin
@@ -533,7 +524,6 @@ module fifo_top_husky(
        if (reset) begin
           fast_read_count <= 0;
           slow_fifo_prewr <= 1'b0;
-          //fast_fifo_empty <= 1'b0;
        end
 
        else begin
@@ -900,7 +890,8 @@ module fifo_top_husky(
           .probe10        (segment_counter),      // input wire [15:0] probe10 
           .probe11        (adc_segment_go),       // input wire [0:0]  probe11
           .probe12        (adc_capture_go),       // input wire [0:0]  probe12 
-          .probe13        (fast_fifo_empty)       // input wire [0:0]  probe13 
+          .probe13        (fast_fifo_empty),      // input wire [0:0]  probe13 
+          .probe14        (fifo_rst)              // input wire [0:0]  probe14 
        );
    `endif
 

@@ -260,51 +260,51 @@ module reg_la #(
    always @(posedge observer_clk) begin
        case (capture_group_reg)
            0: begin
-               capture0_source = glitchclk;
-               capture1_source = source_clk;
-               capture2_source = glitch_mmcm1_clk_out;
-               capture3_source = glitch_mmcm2_clk_out;
-               capture4_source = glitch_go;
-               capture5_source = adc_capture_go;
-               capture6_source = glitch_enable;
-               capture7_source = glitch_trigger_sourceclock;
-               capture8_source = 1'b0;
+               capture0_source <= glitchclk;
+               capture1_source <= source_clk;
+               capture2_source <= glitch_mmcm1_clk_out;
+               capture3_source <= glitch_mmcm2_clk_out;
+               capture4_source <= glitch_go;
+               capture5_source <= adc_capture_go;
+               capture6_source <= glitch_enable;
+               capture7_source <= glitch_trigger_sourceclock;
+               capture8_source <= 1'b0;
            end
 
            1: begin
-               capture0_source = io1;
-               capture1_source = io2;
-               capture2_source = io3;
-               capture3_source = io4;
-               capture4_source = hs1;
-               capture5_source = hs2;
-               capture6_source = aux_mcx;
-               capture7_source = trig_mcx;
-               capture8_source = adc_sample_clk;
+               capture0_source <= io1;
+               capture1_source <= io2;
+               capture2_source <= io3;
+               capture3_source <= io4;
+               capture4_source <= hs1;
+               capture5_source <= hs2;
+               capture6_source <= aux_mcx;
+               capture7_source <= trig_mcx;
+               capture8_source <= adc_sample_clk;
            end
 
            2: begin
-               capture0_source = userio0;
-               capture1_source = userio1;
-               capture2_source = userio2;
-               capture3_source = userio3;
-               capture4_source = userio4;
-               capture5_source = userio5;
-               capture6_source = userio6;
-               capture7_source = userio7;
-               capture8_source = userio_clk;
+               capture0_source <= userio0;
+               capture1_source <= userio1;
+               capture2_source <= userio2;
+               capture3_source <= userio3;
+               capture4_source <= userio4;
+               capture5_source <= userio5;
+               capture6_source <= userio6;
+               capture7_source <= userio7;
+               capture8_source <= userio_clk;
            end
 
            default: begin
-               capture0_source = 1'b1;
-               capture1_source = 1'b0;
-               capture2_source = 1'b1;
-               capture3_source = 1'b0;
-               capture4_source = 1'b1;
-               capture5_source = 1'b0;
-               capture6_source = 1'b1;
-               capture7_source = 1'b0;
-               capture8_source = 1'b1;
+               capture0_source <= 1'b1;
+               capture1_source <= 1'b0;
+               capture2_source <= 1'b1;
+               capture3_source <= 1'b0;
+               capture4_source <= 1'b1;
+               capture5_source <= 1'b0;
+               capture6_source <= 1'b1;
+               capture7_source <= 1'b0;
+               capture8_source <= 1'b1;
            end
        endcase
    end

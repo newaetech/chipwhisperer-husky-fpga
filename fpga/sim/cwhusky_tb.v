@@ -509,7 +509,7 @@ cwhusky_top U_dut (
     .USB_WRn            (usb_wrn_out  ),
     .USB_CEn            (usb_cen_out  ),
     .USB_ALEn           (usb_alen_out ),
-    .stream_segment_available (stream_segment_available),
+    .USB_SPARE0         (stream_segment_available),
     .FPGA_BONUS1        (FPGA_BONUS1  ),
     .FPGA_BONUS2        (FPGA_BONUS2  ),
     .FPGA_BONUS3        (FPGA_BONUS3  ),

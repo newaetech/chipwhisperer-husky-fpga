@@ -140,7 +140,7 @@ set_property -dict { PACKAGE_PIN A4  IOSTANDARD LVCMOS33 } [get_ports USB_WRn]
 set_property -dict { PACKAGE_PIN B4  IOSTANDARD LVCMOS33 } [get_ports USB_CEn]
 set_property -dict { PACKAGE_PIN B5  IOSTANDARD LVCMOS33 } [get_ports USB_ALEn]
 
-set_property -dict { PACKAGE_PIN H2  IOSTANDARD LVCMOS33 } [get_ports stream_segment_available]
+set_property -dict { PACKAGE_PIN H2  IOSTANDARD LVCMOS33 } [get_ports USB_SPARE0]
 
 set_property -dict { PACKAGE_PIN R1  IOSTANDARD LVCMOS33 } [get_ports FPGA_BONUS1]
 set_property -dict { PACKAGE_PIN P1  IOSTANDARD LVCMOS33 } [get_ports FPGA_BONUS2]
@@ -243,10 +243,10 @@ set_input_delay -clock clk_usb 2.000 [get_ports USB_WRn]
 set_input_delay -clock clk_usb 2.000 [get_ports USB_Data]
 set_input_delay -clock clk_usb 2.000 [get_ports USB_Addr]
 
-set_output_delay -clock clk_usb 0.000 [get_ports stream_segment_available]
-set_false_path -to [get_ports stream_segment_available]
+set_output_delay -clock clk_usb 0.000 [get_ports USB_SPARE0]
+set_false_path -to [get_ports USB_SPARE0]
 
-# TODO: what's the correct value? this results in no timing failures, but?
+# note: unsure of correct value; this results in no timing failures (and functional bitfile)
 set_input_delay -clock ADC_clk_fb 3.000 [get_ports ADC_DP[0]]
 set_input_delay -clock ADC_clk_fb 3.000 [get_ports ADC_DP[1]]
 set_input_delay -clock ADC_clk_fb 3.000 [get_ports ADC_DP[2]]

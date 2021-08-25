@@ -29,14 +29,14 @@ module trigger_unit(
 
     input wire               ext_trigger_i,
     input wire               trigger_level_i,    //1 = trigger on high or rising edge
-                                                         //0 = trigger on low or falling edge
+                                                 //0 = trigger on low or falling edge
     input wire               trigger_wait_i,     //1 = wait for trigger to go to 'inactive' state first (e.g.: edge sensitive)
-                                                         //0 = don't wait
+                                                 //0 = don't wait
     input wire [11:0]        trigger_adclevel_i, //Internal (e.g.: from ADC) trigger level 
     input wire               trigger_source_i,   //0 = External trigger, 1 = internal trigger
     input wire               trigger_now_i,      //1 = Trigger immediatly when armed
     input wire               arm_i,              //1 = arm, edge-sensitive so must be reset to 0 before arming again. Wait until the
-                                            //    arm_o goes high before doing this, otherwise the arm won't take effect.
+                                                 //    arm_o goes high before doing this, otherwise the arm won't take effect.
     output reg               arm_o,              //Status of internal arm logic
 
     input wire [31:0]        trigger_offset_i,   //Delays the capture_go_o by this many ADC clock cycles

@@ -7,7 +7,6 @@
 ../hdl/fifo_top_husky.v
 ../hdl/registers.v
 ../hdl/setup.v
-../hdl/timescale.v
 ../hdl/trigger_resync.v
 ../hdl/trigger_unit.v
 ../hdl/usb_reg_main.v

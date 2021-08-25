@@ -61,7 +61,6 @@ module reg_openadc #(
    /* Interface to phase shift module */
    output wire [15:0]  phase_o,
    output wire         phase_ld_o,
-   input  wire         phase_done_i,    // TODO: currently unused
 
    /* Interface to fifo/capture module */
    output reg  [15:0] num_segments,
@@ -96,7 +95,7 @@ module reg_openadc #(
    wire reset;
    wire cmd_arm_usb;
 
-   assign  trigger_level = 12'b0; // TODO: add register?
+   assign  trigger_level = 12'b0;
 
    (* ASYNC_REG = "TRUE" *) reg[1:0] arm_pipe;
    reg arm_r;
@@ -150,8 +149,8 @@ module reg_openadc #(
    assign phase_o = phase_out;
    assign phase_ld_o = phase_loadout;
 
-   //assign reset_fromreg = registers_settings[0] || new_reset;
-   assign reset_fromreg = new_reset;
+   assign reset_fromreg = registers_settings[0] || new_reset;
+   //assign reset_fromreg = new_reset;
    assign trigger_mode = registers_settings[2];
    assign cmd_arm_usb = registers_settings[3];
    assign fifo_stream = registers_settings[4];
@@ -242,7 +241,7 @@ module reg_openadc #(
          clkgen_power_down <= 1;
          phase_out <= 0;
          extclk_monitor_disabled <= 1;
-         extclk_limit <= 32'd9; // corresponds to ~100 Hz tolerance
+         extclk_limit <= 32'd9; // corresponds to ~100 kHz tolerance
       end else if (reg_write) begin
          case (reg_address)
             `GAIN_ADDR: registers_gain <= reg_datai;

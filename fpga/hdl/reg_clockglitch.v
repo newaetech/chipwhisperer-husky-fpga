@@ -57,7 +57,6 @@ module reg_clockglitch #(
    output wire         glitch_go,
    output reg          glitch_trigger,
 
-   output wire         mmcm_unlocked,
    output reg          led_glitch
 );
 
@@ -107,8 +106,6 @@ module reg_clockglitch #(
    assign phase_requested = clockglitch_settings_reg[15:0];
 
    wire mmcm_rst;
-
-   assign mmcm_unlocked = ~(mmcm1_locked & mmcm2_locked); 
 
 /*
     Clock-glitch settings main registers (address 51)

@@ -32,9 +32,6 @@ compile:
 	-Wportbind \
 	-Wselect-range \
 	-D$(FIFOSIZE) \
-	-DXADC \
-	-DUSERIO_DEBUG \
-	-DLOGIC_ANALYZER \
 	-P cwhusky_tb.pADC_LOW_RES=$(ADC_LOW_RES) \
 	-P cwhusky_tb.pSLOW_ADC=$(SLOW_ADC) \
 	-P cwhusky_tb.pFAST_ADC=$(FAST_ADC) \
@@ -71,8 +68,6 @@ nofifo:
 	-Wportbind \
 	-Wselect-range \
 	-DNOFIFO \
-	-DXADC \
-	-DLOGIC_ANALYZER \
 
 lint:
 	verilator --lint-only -Wall \
@@ -80,9 +75,6 @@ lint:
 	-I../hdl \
 	-D__ICARUS__ \
 	-DNOFIFO \
-	-DXADC_EN \
-	-DUSERIO_DEBUG \
-	-DLOGIC_ANALYZER \
 	--top-module cwhusky_top \
 	2>&1 | tee lint.out \
 
