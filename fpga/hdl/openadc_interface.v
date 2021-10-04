@@ -40,6 +40,7 @@ module openadc_interface #(
     input  wire                         DUT_CLK_i, // target_hs1
     input  wire                         DUT_trigger_i,
     output wire                         amp_gain,
+    output wire [7:0]                   fifo_dout,
 
     // Generated Clock for other uses
     output wire                         clkgen,
@@ -275,7 +276,6 @@ module openadc_interface #(
    wire [2:0] ADC_clk_selection; //0=internal, 1=external
    wire clkgen_selection;
 
-   wire [7:0]  fifo_dout;
    wire fifo_empty;
    wire fifo_rd_en;
    wire low_res;
@@ -373,7 +373,6 @@ module openadc_interface #(
       .reg_read             (reg_read), 
       .reg_write            (reg_write), 
       .fifo_empty           (fifo_empty),
-      .fifo_data            (fifo_dout),
       .fifo_rd_en           (fifo_rd_en),
       .low_res              (low_res),
       .low_res_lsb          (low_res_lsb),

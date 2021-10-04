@@ -36,7 +36,6 @@ module reg_openadc_adcfifo #(
 
    /* ADC Fifo Interface */
    input  wire         fifo_empty,
-   input  wire [7:0]   fifo_data,
    output wire         fifo_rd_en,
    output reg          low_res,
    output reg          low_res_lsb,
@@ -69,11 +68,8 @@ module reg_openadc_adcfifo #(
 
 
    always @(*) begin
-      if (fast_fifo_read_mode)
-         reg_datao_reg = fifo_data;
-      else if (reg_read) begin
+      if (reg_read) begin
          case (reg_address)
-            `ADCREAD_ADDR: reg_datao_reg = fifo_data;
             `FIFO_STAT: reg_datao_reg = fifo_stat[reg_bytecnt*8 +: 8];
             `DEBUG_FIFO_READS: reg_datao_reg = fifo_read_count[reg_bytecnt*8 +: 8];
             `DEBUG_FIFO_READS_FREEZE: reg_datao_reg = fifo_read_count_error_freeze[reg_bytecnt*8 +: 8];

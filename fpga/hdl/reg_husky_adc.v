@@ -81,16 +81,16 @@ module reg_husky_adc #(
    reg reg_write_r;
    assign reg_datao = reg_datao_reg;
 
-   always @(posedge clk_usb) begin
+   always @(*) begin
       if (reg_read) begin
          case (reg_address)
-           `CW_ADC_CTRL: reg_datao_reg <= data_reg;
-           `CW_VMAG_CTRL: reg_datao_reg <= VMAG_D;
-           default: reg_datao_reg <= 0;
+           `CW_ADC_CTRL: reg_datao_reg = data_reg;
+           `CW_VMAG_CTRL: reg_datao_reg = VMAG_D;
+           default: reg_datao_reg = 0;
          endcase
       end
       else
-         reg_datao_reg <= 0;
+         reg_datao_reg = 0;
    end  
 
    always @(posedge clk_usb) begin

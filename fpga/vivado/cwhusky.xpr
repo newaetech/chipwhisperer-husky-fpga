@@ -7,7 +7,7 @@
   <DefaultLaunch Dir="$PRUNDIR"/>
   <Configuration>
     <Option Name="Id" Val="82a0dc8622fb4b6a894998a61aa15aae"/>
-    <Option Name="Part" Val="xc7a35tftg256-2"/>
+    <Option Name="Part" Val="xc7a35tftg256-1"/>
     <Option Name="CompiledLibDir" Val="$PCACHEDIR/compile_simlib"/>
     <Option Name="CompiledLibDirXSim" Val=""/>
     <Option Name="CompiledLibDirModelSim" Val="$PCACHEDIR/compile_simlib/modelsim"/>
@@ -54,13 +54,13 @@
     <Option Name="WTVcsLaunchSim" Val="0"/>
     <Option Name="WTRivieraLaunchSim" Val="0"/>
     <Option Name="WTActivehdlLaunchSim" Val="0"/>
-    <Option Name="WTXSimExportSim" Val="75"/>
-    <Option Name="WTModelSimExportSim" Val="75"/>
-    <Option Name="WTQuestaExportSim" Val="75"/>
-    <Option Name="WTIesExportSim" Val="75"/>
-    <Option Name="WTVcsExportSim" Val="75"/>
-    <Option Name="WTRivieraExportSim" Val="75"/>
-    <Option Name="WTActivehdlExportSim" Val="75"/>
+    <Option Name="WTXSimExportSim" Val="77"/>
+    <Option Name="WTModelSimExportSim" Val="77"/>
+    <Option Name="WTQuestaExportSim" Val="77"/>
+    <Option Name="WTIesExportSim" Val="77"/>
+    <Option Name="WTVcsExportSim" Val="77"/>
+    <Option Name="WTRivieraExportSim" Val="77"/>
+    <Option Name="WTActivehdlExportSim" Val="77"/>
     <Option Name="GenerateIPUpgradeLog" Val="TRUE"/>
     <Option Name="XSimRadix" Val="hex"/>
     <Option Name="XSimTimeUnit" Val="ns"/>
@@ -77,13 +77,6 @@
     <FileSet Name="sources_1" Type="DesignSrcs" RelSrcDir="$PSRCDIR/sources_1">
       <Filter Type="Srcs"/>
       <File Path="$PPRDIR/../hdl/includes.v">
-        <FileInfo>
-          <Attr Name="UsedIn" Val="synthesis"/>
-          <Attr Name="UsedIn" Val="implementation"/>
-          <Attr Name="UsedIn" Val="simulation"/>
-        </FileInfo>
-      </File>
-      <File Path="$PPRDIR/../hdl/timescale.v">
         <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="implementation"/>
@@ -202,20 +195,6 @@
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
-      <File Path="$PSRCDIR/sources_1/ip/adc_fast_fifo/adc_fast_fifo.xci">
-        <FileInfo>
-          <Attr Name="UsedIn" Val="synthesis"/>
-          <Attr Name="UsedIn" Val="implementation"/>
-          <Attr Name="UsedIn" Val="simulation"/>
-        </FileInfo>
-      </File>
-      <File Path="$PSRCDIR/sources_1/ip/usb_slow_fifo/usb_slow_fifo.xci">
-        <FileInfo>
-          <Attr Name="UsedIn" Val="synthesis"/>
-          <Attr Name="UsedIn" Val="implementation"/>
-          <Attr Name="UsedIn" Val="simulation"/>
-        </FileInfo>
-      </File>
       <File Path="$PPRDIR/../hdl/xadc.v">
         <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
@@ -299,8 +278,8 @@
         <Option Name="TopAutoSet" Val="TRUE"/>
       </Config>
     </FileSet>
-    <FileSet Name="tiny_adc_fast_fifo" Type="BlockSrcs" RelSrcDir="$PSRCDIR/tiny_adc_fast_fifo">
-      <File Path="$PSRCDIR/sources_1/ip/tiny_adc_fast_fifo/tiny_adc_fast_fifo.xci">
+    <FileSet Name="adc_fast_fifo" Type="BlockSrcs" RelSrcDir="$PSRCDIR/adc_fast_fifo">
+      <File Path="$PSRCDIR/sources_1/ip/adc_fast_fifo/adc_fast_fifo.xci">
         <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="implementation"/>
@@ -308,135 +287,10 @@
         </FileInfo>
       </File>
       <Config>
-        <Option Name="TopModule" Val="tiny_adc_fast_fifo"/>
+        <Option Name="TopModule" Val="adc_fast_fifo"/>
         <Option Name="UseBlackboxStub" Val="1"/>
-        <Define Name="ILA_USB_LITE"/>
-      </Config>
-    </FileSet>
-    <FileSet Name="tiny_usb_slow_fifo" Type="BlockSrcs" RelSrcDir="$PSRCDIR/tiny_usb_slow_fifo">
-      <File Path="$PSRCDIR/sources_1/ip/tiny_usb_slow_fifo/tiny_usb_slow_fifo.xci">
-        <FileInfo>
-          <Attr Name="UsedIn" Val="synthesis"/>
-          <Attr Name="UsedIn" Val="implementation"/>
-          <Attr Name="UsedIn" Val="simulation"/>
-        </FileInfo>
-      </File>
-      <Config>
-        <Option Name="TopModule" Val="tiny_usb_slow_fifo"/>
-        <Option Name="UseBlackboxStub" Val="1"/>
-        <Define Name="ILA_USB_LITE"/>
-      </Config>
-    </FileSet>
-    <FileSet Name="MMCM_adc_clock_gen" Type="BlockSrcs" RelSrcDir="$PSRCDIR/MMCM_adc_clock_gen">
-      <File Path="$PSRCDIR/sources_1/ip/MMCM_adc_clock_gen/MMCM_adc_clock_gen.xci">
-        <FileInfo>
-          <Attr Name="UsedIn" Val="synthesis"/>
-          <Attr Name="UsedIn" Val="implementation"/>
-          <Attr Name="UsedIn" Val="simulation"/>
-        </FileInfo>
-      </File>
-      <Config>
-        <Option Name="TopModule" Val="MMCM_adc_clock_gen"/>
-        <Option Name="UseBlackboxStub" Val="1"/>
-        <Define Name="XADC_EN"/>
-        <Define Name="USERIO_DEBUG"/>
-        <Define Name="ILA_USB_LITE"/>
-      </Config>
-    </FileSet>
-    <FileSet Name="ila_trig" Type="BlockSrcs" RelSrcDir="$PSRCDIR/ila_trig">
-      <File Path="$PSRCDIR/sources_1/ip/ila_trig/ila_trig.xci">
-        <FileInfo>
-          <Attr Name="UsedIn" Val="synthesis"/>
-          <Attr Name="UsedIn" Val="implementation"/>
-          <Attr Name="UsedIn" Val="simulation"/>
-        </FileInfo>
-      </File>
-      <Config>
-        <Option Name="TopModule" Val="ila_trig"/>
-        <Option Name="UseBlackboxStub" Val="1"/>
-        <Define Name="XADC_EN"/>
-        <Define Name="USERIO_DEBUG"/>
-        <Define Name="ILA_USB_LITE"/>
-      </Config>
-    </FileSet>
-    <FileSet Name="ila_long_fifo" Type="BlockSrcs" RelSrcDir="$PSRCDIR/ila_long_fifo">
-      <File Path="$PSRCDIR/sources_1/ip/ila_long_fifo/ila_long_fifo.xci">
-        <FileInfo>
-          <Attr Name="UsedIn" Val="synthesis"/>
-          <Attr Name="UsedIn" Val="implementation"/>
-          <Attr Name="UsedIn" Val="simulation"/>
-        </FileInfo>
-      </File>
-      <Config>
-        <Option Name="TopModule" Val="ila_long_fifo"/>
-        <Option Name="UseBlackboxStub" Val="1"/>
-        <Define Name="XADC_EN"/>
-        <Define Name="USERIO_DEBUG"/>
-        <Define Name="ILA_USB_LITE"/>
-      </Config>
-    </FileSet>
-    <FileSet Name="clk_wiz_0" Type="BlockSrcs" RelSrcDir="$PSRCDIR/clk_wiz_0">
-      <File Path="$PSRCDIR/sources_1/ip/clk_wiz_0/clk_wiz_0.xci">
-        <FileInfo>
-          <Attr Name="UsedIn" Val="synthesis"/>
-          <Attr Name="UsedIn" Val="implementation"/>
-          <Attr Name="UsedIn" Val="simulation"/>
-        </FileInfo>
-      </File>
-      <Config>
-        <Option Name="TopModule" Val="clk_wiz_0"/>
-        <Option Name="UseBlackboxStub" Val="1"/>
-        <Define Name="XADC_EN"/>
-        <Define Name="USERIO_DEBUG"/>
-        <Define Name="ILA_USB_LITE"/>
-      </Config>
-    </FileSet>
-    <FileSet Name="ila_fast_fifo" Type="BlockSrcs" RelSrcDir="$PSRCDIR/ila_fast_fifo">
-      <File Path="$PSRCDIR/sources_1/ip/ila_fast_fifo/ila_fast_fifo.xci">
-        <FileInfo>
-          <Attr Name="UsedIn" Val="synthesis"/>
-          <Attr Name="UsedIn" Val="implementation"/>
-          <Attr Name="UsedIn" Val="simulation"/>
-        </FileInfo>
-      </File>
-      <Config>
-        <Option Name="TopModule" Val="ila_fast_fifo"/>
-        <Option Name="UseBlackboxStub" Val="1"/>
-        <Define Name="XADC_EN"/>
-        <Define Name="USERIO_DEBUG"/>
-        <Define Name="ILA_USB_LITE"/>
-      </Config>
-    </FileSet>
-    <FileSet Name="ila_fifo_counts" Type="BlockSrcs" RelSrcDir="$PSRCDIR/ila_fifo_counts">
-      <File Path="$PSRCDIR/sources_1/ip/ila_fifo_counts/ila_fifo_counts.xci">
-        <FileInfo>
-          <Attr Name="UsedIn" Val="synthesis"/>
-          <Attr Name="UsedIn" Val="implementation"/>
-          <Attr Name="UsedIn" Val="simulation"/>
-        </FileInfo>
-      </File>
-      <Config>
-        <Option Name="TopModule" Val="ila_fifo_counts"/>
-        <Option Name="UseBlackboxStub" Val="1"/>
-        <Define Name="XADC_EN"/>
-        <Define Name="USERIO_DEBUG"/>
-        <Define Name="ILA_USB_LITE"/>
-      </Config>
-    </FileSet>
-    <FileSet Name="ila_lean_fast_fifo" Type="BlockSrcs" RelSrcDir="$PSRCDIR/ila_lean_fast_fifo">
-      <File Path="$PSRCDIR/sources_1/ip/ila_lean_fast_fifo/ila_lean_fast_fifo.xci">
-        <FileInfo>
-          <Attr Name="UsedIn" Val="synthesis"/>
-          <Attr Name="UsedIn" Val="implementation"/>
-          <Attr Name="UsedIn" Val="simulation"/>
-        </FileInfo>
-      </File>
-      <Config>
-        <Option Name="TopModule" Val="ila_lean_fast_fifo"/>
-        <Option Name="UseBlackboxStub" Val="1"/>
-        <Define Name="XADC_EN"/>
-        <Define Name="USERIO_DEBUG"/>
-        <Define Name="ILA_USB_LITE"/>
+        <Define Name="TINYFIFO"/>
+        <Define Name="ILA_USB"/>
       </Config>
     </FileSet>
     <FileSet Name="xadc_wiz_0" Type="BlockSrcs" RelSrcDir="$PSRCDIR/xadc_wiz_0">
@@ -450,13 +304,12 @@
       <Config>
         <Option Name="TopModule" Val="xadc_wiz_0"/>
         <Option Name="UseBlackboxStub" Val="1"/>
-        <Define Name="XADC_EN"/>
-        <Define Name="USERIO_DEBUG"/>
-        <Define Name="ILA_USB_LITE"/>
+        <Define Name="TINYFIFO"/>
+        <Define Name="ILA_USB"/>
       </Config>
     </FileSet>
-    <FileSet Name="ila_glitch_ps" Type="BlockSrcs" RelSrcDir="$PSRCDIR/ila_glitch_ps">
-      <File Path="$PSRCDIR/sources_1/ip/ila_glitch_ps/ila_glitch_ps.xci">
+    <FileSet Name="usb_slow_fifo" Type="BlockSrcs" RelSrcDir="$PSRCDIR/usb_slow_fifo">
+      <File Path="$PSRCDIR/sources_1/ip/usb_slow_fifo/usb_slow_fifo.xci">
         <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="implementation"/>
@@ -464,15 +317,14 @@
         </FileInfo>
       </File>
       <Config>
-        <Option Name="TopModule" Val="ila_glitch_ps"/>
+        <Option Name="TopModule" Val="usb_slow_fifo"/>
         <Option Name="UseBlackboxStub" Val="1"/>
-        <Define Name="XADC_EN"/>
-        <Define Name="USERIO_DEBUG"/>
-        <Define Name="ILA_USB_LITE"/>
+        <Define Name="TINYFIFO"/>
+        <Define Name="ILA_USB"/>
       </Config>
     </FileSet>
-    <FileSet Name="MMCM_clkgen" Type="BlockSrcs" RelSrcDir="$PSRCDIR/MMCM_clkgen">
-      <File Path="$PSRCDIR/sources_1/ip/MMCM_clkgen/MMCM_clkgen.xci">
+    <FileSet Name="tiny_usb_slow_fifo" Type="BlockSrcs" RelSrcDir="$PSRCDIR/tiny_usb_slow_fifo">
+      <File Path="$PSRCDIR/sources_1/ip/tiny_usb_slow_fifo/tiny_usb_slow_fifo.xci">
         <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="implementation"/>
@@ -480,15 +332,14 @@
         </FileInfo>
       </File>
       <Config>
-        <Option Name="TopModule" Val="MMCM_clkgen"/>
+        <Option Name="TopModule" Val="tiny_usb_slow_fifo"/>
         <Option Name="UseBlackboxStub" Val="1"/>
-        <Define Name="XADC_EN"/>
-        <Define Name="USERIO_DEBUG"/>
-        <Define Name="ILA_USB_LITE"/>
+        <Define Name="TINYFIFO"/>
+        <Define Name="ILA_USB"/>
       </Config>
     </FileSet>
-    <FileSet Name="ila_slow_fifo" Type="BlockSrcs" RelSrcDir="$PSRCDIR/ila_slow_fifo">
-      <File Path="$PSRCDIR/sources_1/ip/ila_slow_fifo/ila_slow_fifo.xci">
+    <FileSet Name="MMCM_adc_clock_gen" Type="BlockSrcs" RelSrcDir="$PSRCDIR/MMCM_adc_clock_gen">
+      <File Path="$PSRCDIR/sources_1/ip/MMCM_adc_clock_gen/MMCM_adc_clock_gen.xci">
         <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="implementation"/>
@@ -496,15 +347,14 @@
         </FileInfo>
       </File>
       <Config>
-        <Option Name="TopModule" Val="ila_slow_fifo"/>
+        <Option Name="TopModule" Val="MMCM_adc_clock_gen"/>
         <Option Name="UseBlackboxStub" Val="1"/>
-        <Define Name="XADC_EN"/>
-        <Define Name="USERIO_DEBUG"/>
-        <Define Name="ILA_USB_LITE"/>
+        <Define Name="TINYFIFO"/>
+        <Define Name="ILA_USB"/>
       </Config>
     </FileSet>
-    <FileSet Name="ila_usb_lite" Type="BlockSrcs" RelSrcDir="$PSRCDIR/ila_usb_lite">
-      <File Path="$PSRCDIR/sources_1/ip/ila_usb_lite/ila_usb_lite.xci">
+    <FileSet Name="ila_long_fifo" Type="BlockSrcs" RelSrcDir="$PSRCDIR/ila_long_fifo">
+      <File Path="$PSRCDIR/sources_1/ip/ila_long_fifo/ila_long_fifo.xci">
         <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="implementation"/>
@@ -512,15 +362,14 @@
         </FileInfo>
       </File>
       <Config>
-        <Option Name="TopModule" Val="ila_usb_lite"/>
+        <Option Name="TopModule" Val="ila_long_fifo"/>
         <Option Name="UseBlackboxStub" Val="1"/>
-        <Define Name="XADC_EN"/>
-        <Define Name="USERIO_DEBUG"/>
-        <Define Name="ILA_USB_LITE"/>
+        <Define Name="TINYFIFO"/>
+        <Define Name="ILA_USB"/>
       </Config>
     </FileSet>
-    <FileSet Name="ila_adc" Type="BlockSrcs" RelSrcDir="$PSRCDIR/ila_adc">
-      <File Path="$PSRCDIR/sources_1/ip/ila_adc/ila_adc.xci">
+    <FileSet Name="clk_wiz_0" Type="BlockSrcs" RelSrcDir="$PSRCDIR/clk_wiz_0">
+      <File Path="$PSRCDIR/sources_1/ip/clk_wiz_0/clk_wiz_0.xci">
         <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="implementation"/>
@@ -528,15 +377,14 @@
         </FileInfo>
       </File>
       <Config>
-        <Option Name="TopModule" Val="ila_adc"/>
+        <Option Name="TopModule" Val="clk_wiz_0"/>
         <Option Name="UseBlackboxStub" Val="1"/>
-        <Define Name="XADC_EN"/>
-        <Define Name="USERIO_DEBUG"/>
-        <Define Name="ILA_USB_LITE"/>
+        <Define Name="TINYFIFO"/>
+        <Define Name="ILA_USB"/>
       </Config>
     </FileSet>
-    <FileSet Name="ila_usb" Type="BlockSrcs" RelSrcDir="$PSRCDIR/ila_usb">
-      <File Path="$PSRCDIR/sources_1/ip/ila_usb/ila_usb.xci">
+    <FileSet Name="ila_fast_fifo" Type="BlockSrcs" RelSrcDir="$PSRCDIR/ila_fast_fifo">
+      <File Path="$PSRCDIR/sources_1/ip/ila_fast_fifo/ila_fast_fifo.xci">
         <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="implementation"/>
@@ -544,15 +392,14 @@
         </FileInfo>
       </File>
       <Config>
-        <Option Name="TopModule" Val="ila_usb"/>
+        <Option Name="TopModule" Val="ila_fast_fifo"/>
         <Option Name="UseBlackboxStub" Val="1"/>
-        <Define Name="XADC_EN"/>
-        <Define Name="USERIO_DEBUG"/>
-        <Define Name="ILA_USB_LITE"/>
+        <Define Name="TINYFIFO"/>
+        <Define Name="ILA_USB"/>
       </Config>
     </FileSet>
-    <FileSet Name="ila_drp" Type="BlockSrcs" RelSrcDir="$PSRCDIR/ila_drp">
-      <File Path="$PSRCDIR/sources_1/ip/ila_drp/ila_drp.xci">
+    <FileSet Name="ila_fifo_counts" Type="BlockSrcs" RelSrcDir="$PSRCDIR/ila_fifo_counts">
+      <File Path="$PSRCDIR/sources_1/ip/ila_fifo_counts/ila_fifo_counts.xci">
         <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="implementation"/>
@@ -560,15 +407,14 @@
         </FileInfo>
       </File>
       <Config>
-        <Option Name="TopModule" Val="ila_drp"/>
+        <Option Name="TopModule" Val="ila_fifo_counts"/>
         <Option Name="UseBlackboxStub" Val="1"/>
-        <Define Name="XADC_EN"/>
-        <Define Name="USERIO_DEBUG"/>
-        <Define Name="ILA_USB_LITE"/>
+        <Define Name="TINYFIFO"/>
+        <Define Name="ILA_USB"/>
       </Config>
     </FileSet>
-    <FileSet Name="ila_reg" Type="BlockSrcs" RelSrcDir="$PSRCDIR/ila_reg">
-      <File Path="$PSRCDIR/sources_1/ip/ila_reg/ila_reg.xci">
+    <FileSet Name="tiny_adc_fast_fifo" Type="BlockSrcs" RelSrcDir="$PSRCDIR/tiny_adc_fast_fifo">
+      <File Path="$PSRCDIR/sources_1/ip/tiny_adc_fast_fifo/tiny_adc_fast_fifo.xci">
         <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="implementation"/>
@@ -576,15 +422,14 @@
         </FileInfo>
       </File>
       <Config>
-        <Option Name="TopModule" Val="ila_reg"/>
+        <Option Name="TopModule" Val="tiny_adc_fast_fifo"/>
         <Option Name="UseBlackboxStub" Val="1"/>
-        <Define Name="XADC_EN"/>
-        <Define Name="USERIO_DEBUG"/>
-        <Define Name="ILA_USB_LITE"/>
+        <Define Name="TINYFIFO"/>
+        <Define Name="ILA_USB"/>
       </Config>
     </FileSet>
-    <FileSet Name="ila_xadc_alarms" Type="BlockSrcs" RelSrcDir="$PSRCDIR/ila_xadc_alarms">
-      <File Path="$PSRCDIR/sources_1/ip/ila_xadc_alarms/ila_xadc_alarms.xci">
+    <FileSet Name="ila_lean_fast_fifo" Type="BlockSrcs" RelSrcDir="$PSRCDIR/ila_lean_fast_fifo">
+      <File Path="$PSRCDIR/sources_1/ip/ila_lean_fast_fifo/ila_lean_fast_fifo.xci">
         <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="implementation"/>
@@ -592,11 +437,25 @@
         </FileInfo>
       </File>
       <Config>
-        <Option Name="TopModule" Val="ila_xadc_alarms"/>
+        <Option Name="TopModule" Val="ila_lean_fast_fifo"/>
         <Option Name="UseBlackboxStub" Val="1"/>
-        <Define Name="XADC_EN"/>
-        <Define Name="USERIO_DEBUG"/>
-        <Define Name="ILA_USB_LITE"/>
+        <Define Name="TINYFIFO"/>
+        <Define Name="ILA_USB"/>
+      </Config>
+    </FileSet>
+    <FileSet Name="ila_trig" Type="BlockSrcs" RelSrcDir="$PSRCDIR/ila_trig">
+      <File Path="$PSRCDIR/sources_1/ip/ila_trig/ila_trig.xci">
+        <FileInfo>
+          <Attr Name="UsedIn" Val="synthesis"/>
+          <Attr Name="UsedIn" Val="implementation"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+      </File>
+      <Config>
+        <Option Name="TopModule" Val="ila_trig"/>
+        <Option Name="UseBlackboxStub" Val="1"/>
+        <Define Name="TINYFIFO"/>
+        <Define Name="ILA_USB"/>
       </Config>
     </FileSet>
     <FileSet Name="ila_segments" Type="BlockSrcs" RelSrcDir="$PSRCDIR/ila_segments">
@@ -610,12 +469,143 @@
       <Config>
         <Option Name="TopModule" Val="ila_segments"/>
         <Option Name="UseBlackboxStub" Val="1"/>
-        <Define Name="XADC_EN"/>
-        <Define Name="USERIO_DEBUG"/>
-        <Define Name="ILA_FIFO_COUNTS"/>
-        <Define Name="ILA_SEGMENTS"/>
-        <Define Name="ILA_USB_LITE"/>
         <Define Name="TINYFIFO"/>
+        <Define Name="ILA_USB"/>
+      </Config>
+    </FileSet>
+    <FileSet Name="ila_adc" Type="BlockSrcs" RelSrcDir="$PSRCDIR/ila_adc">
+      <File Path="$PSRCDIR/sources_1/ip/ila_adc/ila_adc.xci">
+        <FileInfo>
+          <Attr Name="UsedIn" Val="synthesis"/>
+          <Attr Name="UsedIn" Val="implementation"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+      </File>
+      <Config>
+        <Option Name="TopModule" Val="ila_adc"/>
+        <Option Name="UseBlackboxStub" Val="1"/>
+        <Define Name="TINYFIFO"/>
+        <Define Name="ILA_USB"/>
+      </Config>
+    </FileSet>
+    <FileSet Name="ila_slow_fifo" Type="BlockSrcs" RelSrcDir="$PSRCDIR/ila_slow_fifo">
+      <File Path="$PSRCDIR/sources_1/ip/ila_slow_fifo/ila_slow_fifo.xci">
+        <FileInfo>
+          <Attr Name="UsedIn" Val="synthesis"/>
+          <Attr Name="UsedIn" Val="implementation"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+      </File>
+      <Config>
+        <Option Name="TopModule" Val="ila_slow_fifo"/>
+        <Option Name="UseBlackboxStub" Val="1"/>
+        <Define Name="TINYFIFO"/>
+        <Define Name="ILA_USB"/>
+      </Config>
+    </FileSet>
+    <FileSet Name="ila_drp" Type="BlockSrcs" RelSrcDir="$PSRCDIR/ila_drp">
+      <File Path="$PSRCDIR/sources_1/ip/ila_drp/ila_drp.xci">
+        <FileInfo>
+          <Attr Name="UsedIn" Val="synthesis"/>
+          <Attr Name="UsedIn" Val="implementation"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+      </File>
+      <Config>
+        <Option Name="TopModule" Val="ila_drp"/>
+        <Option Name="UseBlackboxStub" Val="1"/>
+        <Define Name="TINYFIFO"/>
+        <Define Name="ILA_USB"/>
+      </Config>
+    </FileSet>
+    <FileSet Name="ila_reg" Type="BlockSrcs" RelSrcDir="$PSRCDIR/ila_reg">
+      <File Path="$PSRCDIR/sources_1/ip/ila_reg/ila_reg.xci">
+        <FileInfo>
+          <Attr Name="UsedIn" Val="synthesis"/>
+          <Attr Name="UsedIn" Val="implementation"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+      </File>
+      <Config>
+        <Option Name="TopModule" Val="ila_reg"/>
+        <Option Name="UseBlackboxStub" Val="1"/>
+        <Define Name="TINYFIFO"/>
+        <Define Name="ILA_USB"/>
+      </Config>
+    </FileSet>
+    <FileSet Name="MMCM_clkgen" Type="BlockSrcs" RelSrcDir="$PSRCDIR/MMCM_clkgen">
+      <File Path="$PSRCDIR/sources_1/ip/MMCM_clkgen/MMCM_clkgen.xci">
+        <FileInfo>
+          <Attr Name="UsedIn" Val="synthesis"/>
+          <Attr Name="UsedIn" Val="implementation"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+      </File>
+      <Config>
+        <Option Name="TopModule" Val="MMCM_clkgen"/>
+        <Option Name="UseBlackboxStub" Val="1"/>
+        <Define Name="TINYFIFO"/>
+        <Define Name="ILA_USB"/>
+      </Config>
+    </FileSet>
+    <FileSet Name="ila_usb_lite" Type="BlockSrcs" RelSrcDir="$PSRCDIR/ila_usb_lite">
+      <File Path="$PSRCDIR/sources_1/ip/ila_usb_lite/ila_usb_lite.xci">
+        <FileInfo>
+          <Attr Name="UsedIn" Val="synthesis"/>
+          <Attr Name="UsedIn" Val="implementation"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+      </File>
+      <Config>
+        <Option Name="TopModule" Val="ila_usb_lite"/>
+        <Option Name="UseBlackboxStub" Val="1"/>
+        <Define Name="TINYFIFO"/>
+        <Define Name="ILA_USB"/>
+      </Config>
+    </FileSet>
+    <FileSet Name="ila_xadc_alarms" Type="BlockSrcs" RelSrcDir="$PSRCDIR/ila_xadc_alarms">
+      <File Path="$PSRCDIR/sources_1/ip/ila_xadc_alarms/ila_xadc_alarms.xci">
+        <FileInfo>
+          <Attr Name="UsedIn" Val="synthesis"/>
+          <Attr Name="UsedIn" Val="implementation"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+      </File>
+      <Config>
+        <Option Name="TopModule" Val="ila_xadc_alarms"/>
+        <Option Name="UseBlackboxStub" Val="1"/>
+        <Define Name="TINYFIFO"/>
+        <Define Name="ILA_USB"/>
+      </Config>
+    </FileSet>
+    <FileSet Name="ila_glitch_ps" Type="BlockSrcs" RelSrcDir="$PSRCDIR/ila_glitch_ps">
+      <File Path="$PSRCDIR/sources_1/ip/ila_glitch_ps/ila_glitch_ps.xci">
+        <FileInfo>
+          <Attr Name="UsedIn" Val="synthesis"/>
+          <Attr Name="UsedIn" Val="implementation"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+      </File>
+      <Config>
+        <Option Name="TopModule" Val="ila_glitch_ps"/>
+        <Option Name="UseBlackboxStub" Val="1"/>
+        <Define Name="TINYFIFO"/>
+        <Define Name="ILA_USB"/>
+      </Config>
+    </FileSet>
+    <FileSet Name="ila_usb" Type="BlockSrcs" RelSrcDir="$PSRCDIR/ila_usb">
+      <File Path="$PSRCDIR/sources_1/ip/ila_usb/ila_usb.xci">
+        <FileInfo>
+          <Attr Name="UsedIn" Val="synthesis"/>
+          <Attr Name="UsedIn" Val="implementation"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+      </File>
+      <Config>
+        <Option Name="TopModule" Val="ila_usb"/>
+        <Option Name="UseBlackboxStub" Val="1"/>
+        <Define Name="TINYFIFO"/>
+        <Define Name="ILA_USB"/>
       </Config>
     </FileSet>
   </FileSets>
@@ -638,7 +628,7 @@
     </Simulator>
   </Simulators>
   <Runs Version="1" Minor="15">
-    <Run Id="synth_1" Type="Ft3:Synth" SrcSet="sources_1" Part="xc7a35tftg256-2" ConstrsSet="constrs_1" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/synth_1">
+    <Run Id="synth_1" Type="Ft3:Synth" SrcSet="sources_1" Part="xc7a35tftg256-1" ConstrsSet="constrs_1" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/synth_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2019"/>
         <Step Id="synth_design"/>
@@ -648,7 +638,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="synth_no_ilas" Type="Ft3:Synth" SrcSet="sources_1" Part="xc7a35tftg256-2" ConstrsSet="constrs_1" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" State="current" Dir="$PRUNDIR/synth_no_ilas" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/synth_no_ilas">
+    <Run Id="synth_no_ilas" Type="Ft3:Synth" SrcSet="sources_1" Part="xc7a35tftg256-1" ConstrsSet="constrs_1" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" State="current" Dir="$PRUNDIR/synth_no_ilas" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/synth_no_ilas">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2019">
           <Desc>Vivado Synthesis Defaults</Desc>
@@ -660,27 +650,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="tiny_adc_fast_fifo_synth_1" Type="Ft3:Synth" SrcSet="tiny_adc_fast_fifo" Part="xc7a35tftg256-2" ConstrsSet="tiny_adc_fast_fifo" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/tiny_adc_fast_fifo_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/tiny_adc_fast_fifo_synth_1">
-      <Strategy Version="1" Minor="2">
-        <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2019"/>
-        <Step Id="synth_design"/>
-      </Strategy>
-      <GeneratedRun Dir="$PRUNDIR" File="gen_run.xml"/>
-      <ReportStrategy Name="Vivado Synthesis Default Reports" Flow="Vivado Synthesis 2019"/>
-      <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
-      <RQSFiles/>
-    </Run>
-    <Run Id="tiny_usb_slow_fifo_synth_1" Type="Ft3:Synth" SrcSet="tiny_usb_slow_fifo" Part="xc7a35tftg256-2" ConstrsSet="tiny_usb_slow_fifo" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/tiny_usb_slow_fifo_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/tiny_usb_slow_fifo_synth_1">
-      <Strategy Version="1" Minor="2">
-        <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2019"/>
-        <Step Id="synth_design"/>
-      </Strategy>
-      <GeneratedRun Dir="$PRUNDIR" File="gen_run.xml"/>
-      <ReportStrategy Name="Vivado Synthesis Default Reports" Flow="Vivado Synthesis 2019"/>
-      <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
-      <RQSFiles/>
-    </Run>
-    <Run Id="MMCM_adc_clock_gen_synth_1" Type="Ft3:Synth" SrcSet="MMCM_adc_clock_gen" Part="xc7a35tftg256-2" ConstrsSet="MMCM_adc_clock_gen" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/MMCM_adc_clock_gen_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/MMCM_adc_clock_gen_synth_1">
+    <Run Id="adc_fast_fifo_synth_1" Type="Ft3:Synth" SrcSet="adc_fast_fifo" Part="xc7a35tftg256-1" ConstrsSet="adc_fast_fifo" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/adc_fast_fifo_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/adc_fast_fifo_synth_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
         <Step Id="synth_design"/>
@@ -690,7 +660,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="ila_trig_synth_1" Type="Ft3:Synth" SrcSet="ila_trig" Part="xc7a35tftg256-2" ConstrsSet="ila_trig" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_trig_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_trig_synth_1">
+    <Run Id="xadc_wiz_0_synth_1" Type="Ft3:Synth" SrcSet="xadc_wiz_0" Part="xc7a35tftg256-1" ConstrsSet="xadc_wiz_0" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/xadc_wiz_0_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/xadc_wiz_0_synth_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
         <Step Id="synth_design"/>
@@ -700,7 +670,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="ila_long_fifo_synth_1" Type="Ft3:Synth" SrcSet="ila_long_fifo" Part="xc7a35tftg256-2" ConstrsSet="ila_long_fifo" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_long_fifo_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_long_fifo_synth_1">
+    <Run Id="usb_slow_fifo_synth_1" Type="Ft3:Synth" SrcSet="usb_slow_fifo" Part="xc7a35tftg256-1" ConstrsSet="usb_slow_fifo" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/usb_slow_fifo_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/usb_slow_fifo_synth_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
         <Step Id="synth_design"/>
@@ -710,7 +680,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="clk_wiz_0_synth_1" Type="Ft3:Synth" SrcSet="clk_wiz_0" Part="xc7a35tftg256-2" ConstrsSet="clk_wiz_0" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/clk_wiz_0_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/clk_wiz_0_synth_1">
+    <Run Id="tiny_usb_slow_fifo_synth_1" Type="Ft3:Synth" SrcSet="tiny_usb_slow_fifo" Part="xc7a35tftg256-1" ConstrsSet="tiny_usb_slow_fifo" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/tiny_usb_slow_fifo_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/tiny_usb_slow_fifo_synth_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
         <Step Id="synth_design"/>
@@ -720,7 +690,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="ila_fast_fifo_synth_1" Type="Ft3:Synth" SrcSet="ila_fast_fifo" Part="xc7a35tftg256-2" ConstrsSet="ila_fast_fifo" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_fast_fifo_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_fast_fifo_synth_1">
+    <Run Id="MMCM_adc_clock_gen_synth_1" Type="Ft3:Synth" SrcSet="MMCM_adc_clock_gen" Part="xc7a35tftg256-1" ConstrsSet="MMCM_adc_clock_gen" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/MMCM_adc_clock_gen_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/MMCM_adc_clock_gen_synth_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
         <Step Id="synth_design"/>
@@ -730,7 +700,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="ila_fifo_counts_synth_1" Type="Ft3:Synth" SrcSet="ila_fifo_counts" Part="xc7a35tftg256-2" ConstrsSet="ila_fifo_counts" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_fifo_counts_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_fifo_counts_synth_1">
+    <Run Id="ila_long_fifo_synth_1" Type="Ft3:Synth" SrcSet="ila_long_fifo" Part="xc7a35tftg256-1" ConstrsSet="ila_long_fifo" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_long_fifo_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_long_fifo_synth_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
         <Step Id="synth_design"/>
@@ -740,7 +710,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="ila_lean_fast_fifo_synth_1" Type="Ft3:Synth" SrcSet="ila_lean_fast_fifo" Part="xc7a35tftg256-2" ConstrsSet="ila_lean_fast_fifo" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_lean_fast_fifo_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_lean_fast_fifo_synth_1">
+    <Run Id="clk_wiz_0_synth_1" Type="Ft3:Synth" SrcSet="clk_wiz_0" Part="xc7a35tftg256-1" ConstrsSet="clk_wiz_0" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/clk_wiz_0_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/clk_wiz_0_synth_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
         <Step Id="synth_design"/>
@@ -750,7 +720,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="xadc_wiz_0_synth_1" Type="Ft3:Synth" SrcSet="xadc_wiz_0" Part="xc7a35tftg256-2" ConstrsSet="xadc_wiz_0" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/xadc_wiz_0_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/xadc_wiz_0_synth_1">
+    <Run Id="ila_fast_fifo_synth_1" Type="Ft3:Synth" SrcSet="ila_fast_fifo" Part="xc7a35tftg256-1" ConstrsSet="ila_fast_fifo" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_fast_fifo_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_fast_fifo_synth_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
         <Step Id="synth_design"/>
@@ -760,7 +730,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="ila_glitch_ps_synth_1" Type="Ft3:Synth" SrcSet="ila_glitch_ps" Part="xc7a35tftg256-2" ConstrsSet="ila_glitch_ps" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_glitch_ps_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_glitch_ps_synth_1">
+    <Run Id="ila_fifo_counts_synth_1" Type="Ft3:Synth" SrcSet="ila_fifo_counts" Part="xc7a35tftg256-1" ConstrsSet="ila_fifo_counts" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_fifo_counts_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_fifo_counts_synth_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
         <Step Id="synth_design"/>
@@ -770,7 +740,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="MMCM_clkgen_synth_1" Type="Ft3:Synth" SrcSet="MMCM_clkgen" Part="xc7a35tftg256-2" ConstrsSet="MMCM_clkgen" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/MMCM_clkgen_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/MMCM_clkgen_synth_1">
+    <Run Id="tiny_adc_fast_fifo_synth_1" Type="Ft3:Synth" SrcSet="tiny_adc_fast_fifo" Part="xc7a35tftg256-1" ConstrsSet="tiny_adc_fast_fifo" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/tiny_adc_fast_fifo_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/tiny_adc_fast_fifo_synth_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
         <Step Id="synth_design"/>
@@ -780,7 +750,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="ila_slow_fifo_synth_1" Type="Ft3:Synth" SrcSet="ila_slow_fifo" Part="xc7a35tftg256-2" ConstrsSet="ila_slow_fifo" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_slow_fifo_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_slow_fifo_synth_1">
+    <Run Id="ila_lean_fast_fifo_synth_1" Type="Ft3:Synth" SrcSet="ila_lean_fast_fifo" Part="xc7a35tftg256-1" ConstrsSet="ila_lean_fast_fifo" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_lean_fast_fifo_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_lean_fast_fifo_synth_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
         <Step Id="synth_design"/>
@@ -790,7 +760,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="ila_usb_lite_synth_1" Type="Ft3:Synth" SrcSet="ila_usb_lite" Part="xc7a35tftg256-2" ConstrsSet="ila_usb_lite" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_usb_lite_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_usb_lite_synth_1">
+    <Run Id="ila_trig_synth_1" Type="Ft3:Synth" SrcSet="ila_trig" Part="xc7a35tftg256-1" ConstrsSet="ila_trig" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_trig_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_trig_synth_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
         <Step Id="synth_design"/>
@@ -800,7 +770,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="ila_adc_synth_1" Type="Ft3:Synth" SrcSet="ila_adc" Part="xc7a35tftg256-2" ConstrsSet="ila_adc" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_adc_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_adc_synth_1">
+    <Run Id="ila_segments_synth_1" Type="Ft3:Synth" SrcSet="ila_segments" Part="xc7a35tftg256-1" ConstrsSet="ila_segments" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_segments_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_segments_synth_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
         <Step Id="synth_design"/>
@@ -810,7 +780,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="ila_usb_synth_1" Type="Ft3:Synth" SrcSet="ila_usb" Part="xc7a35tftg256-2" ConstrsSet="ila_usb" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_usb_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_usb_synth_1">
+    <Run Id="ila_adc_synth_1" Type="Ft3:Synth" SrcSet="ila_adc" Part="xc7a35tftg256-1" ConstrsSet="ila_adc" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_adc_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_adc_synth_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
         <Step Id="synth_design"/>
@@ -820,7 +790,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="ila_drp_synth_1" Type="Ft3:Synth" SrcSet="ila_drp" Part="xc7a35tftg256-2" ConstrsSet="ila_drp" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_drp_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_drp_synth_1">
+    <Run Id="ila_slow_fifo_synth_1" Type="Ft3:Synth" SrcSet="ila_slow_fifo" Part="xc7a35tftg256-1" ConstrsSet="ila_slow_fifo" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_slow_fifo_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_slow_fifo_synth_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
         <Step Id="synth_design"/>
@@ -830,7 +800,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="ila_reg_synth_1" Type="Ft3:Synth" SrcSet="ila_reg" Part="xc7a35tftg256-2" ConstrsSet="ila_reg" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_reg_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_reg_synth_1">
+    <Run Id="ila_drp_synth_1" Type="Ft3:Synth" SrcSet="ila_drp" Part="xc7a35tftg256-1" ConstrsSet="ila_drp" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_drp_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_drp_synth_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
         <Step Id="synth_design"/>
@@ -840,7 +810,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="ila_xadc_alarms_synth_1" Type="Ft3:Synth" SrcSet="ila_xadc_alarms" Part="xc7a35tftg256-2" ConstrsSet="ila_xadc_alarms" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_xadc_alarms_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_xadc_alarms_synth_1">
+    <Run Id="ila_reg_synth_1" Type="Ft3:Synth" SrcSet="ila_reg" Part="xc7a35tftg256-1" ConstrsSet="ila_reg" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_reg_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_reg_synth_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
         <Step Id="synth_design"/>
@@ -850,7 +820,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="ila_segments_synth_1" Type="Ft3:Synth" SrcSet="ila_segments" Part="xc7a35tftg256-2" ConstrsSet="ila_segments" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_segments_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_segments_synth_1">
+    <Run Id="MMCM_clkgen_synth_1" Type="Ft3:Synth" SrcSet="MMCM_clkgen" Part="xc7a35tftg256-1" ConstrsSet="MMCM_clkgen" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/MMCM_clkgen_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/MMCM_clkgen_synth_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
         <Step Id="synth_design"/>
@@ -860,7 +830,47 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-2" ConstrsSet="constrs_1" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/impl_1" SynthRun="synth_1" IncludeInArchive="true" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/impl_1">
+    <Run Id="ila_usb_lite_synth_1" Type="Ft3:Synth" SrcSet="ila_usb_lite" Part="xc7a35tftg256-1" ConstrsSet="ila_usb_lite" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_usb_lite_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_usb_lite_synth_1">
+      <Strategy Version="1" Minor="2">
+        <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
+        <Step Id="synth_design"/>
+      </Strategy>
+      <GeneratedRun Dir="$PRUNDIR" File="gen_run.xml"/>
+      <ReportStrategy Name="Vivado Synthesis Default Reports" Flow="Vivado Synthesis 2020"/>
+      <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
+      <RQSFiles/>
+    </Run>
+    <Run Id="ila_xadc_alarms_synth_1" Type="Ft3:Synth" SrcSet="ila_xadc_alarms" Part="xc7a35tftg256-1" ConstrsSet="ila_xadc_alarms" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_xadc_alarms_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_xadc_alarms_synth_1">
+      <Strategy Version="1" Minor="2">
+        <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
+        <Step Id="synth_design"/>
+      </Strategy>
+      <GeneratedRun Dir="$PRUNDIR" File="gen_run.xml"/>
+      <ReportStrategy Name="Vivado Synthesis Default Reports" Flow="Vivado Synthesis 2020"/>
+      <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
+      <RQSFiles/>
+    </Run>
+    <Run Id="ila_glitch_ps_synth_1" Type="Ft3:Synth" SrcSet="ila_glitch_ps" Part="xc7a35tftg256-1" ConstrsSet="ila_glitch_ps" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_glitch_ps_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_glitch_ps_synth_1">
+      <Strategy Version="1" Minor="2">
+        <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
+        <Step Id="synth_design"/>
+      </Strategy>
+      <GeneratedRun Dir="$PRUNDIR" File="gen_run.xml"/>
+      <ReportStrategy Name="Vivado Synthesis Default Reports" Flow="Vivado Synthesis 2020"/>
+      <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
+      <RQSFiles/>
+    </Run>
+    <Run Id="ila_usb_synth_1" Type="Ft3:Synth" SrcSet="ila_usb" Part="xc7a35tftg256-1" ConstrsSet="ila_usb" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_usb_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_usb_synth_1">
+      <Strategy Version="1" Minor="2">
+        <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
+        <Step Id="synth_design"/>
+      </Strategy>
+      <GeneratedRun Dir="$PRUNDIR" File="gen_run.xml"/>
+      <ReportStrategy Name="Vivado Synthesis Default Reports" Flow="Vivado Synthesis 2020"/>
+      <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
+      <RQSFiles/>
+    </Run>
+    <Run Id="impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-1" ConstrsSet="constrs_1" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/impl_1" SynthRun="synth_1" IncludeInArchive="true" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/impl_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2019"/>
         <Step Id="init_design"/>
@@ -878,7 +888,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="impl_no_ilas" Type="Ft2:EntireDesign" Part="xc7a35tftg256-2" ConstrsSet="constrs_1" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" State="current" Dir="$PRUNDIR/impl_no_ilas" SynthRun="synth_no_ilas" IncludeInArchive="true" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/impl_no_ilas">
+    <Run Id="impl_no_ilas" Type="Ft2:EntireDesign" Part="xc7a35tftg256-1" ConstrsSet="constrs_1" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" State="current" Dir="$PRUNDIR/impl_no_ilas" SynthRun="synth_no_ilas" IncludeInArchive="true" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/impl_no_ilas">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2019">
           <Desc>Default settings for Implementation.</Desc>
@@ -900,41 +910,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="tiny_adc_fast_fifo_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-2" ConstrsSet="tiny_adc_fast_fifo" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="tiny_adc_fast_fifo_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/tiny_adc_fast_fifo_impl_1">
-      <Strategy Version="1" Minor="2">
-        <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2019"/>
-        <Step Id="init_design"/>
-        <Step Id="opt_design"/>
-        <Step Id="power_opt_design"/>
-        <Step Id="place_design"/>
-        <Step Id="post_place_power_opt_design"/>
-        <Step Id="phys_opt_design" EnableStepBool="1"/>
-        <Step Id="route_design"/>
-        <Step Id="post_route_phys_opt_design"/>
-        <Step Id="write_bitstream"/>
-      </Strategy>
-      <ReportStrategy Name="Vivado Implementation Default Reports" Flow="Vivado Implementation 2019"/>
-      <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
-      <RQSFiles/>
-    </Run>
-    <Run Id="tiny_usb_slow_fifo_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-2" ConstrsSet="tiny_usb_slow_fifo" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="tiny_usb_slow_fifo_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/tiny_usb_slow_fifo_impl_1">
-      <Strategy Version="1" Minor="2">
-        <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2019"/>
-        <Step Id="init_design"/>
-        <Step Id="opt_design"/>
-        <Step Id="power_opt_design"/>
-        <Step Id="place_design"/>
-        <Step Id="post_place_power_opt_design"/>
-        <Step Id="phys_opt_design" EnableStepBool="1"/>
-        <Step Id="route_design"/>
-        <Step Id="post_route_phys_opt_design"/>
-        <Step Id="write_bitstream"/>
-      </Strategy>
-      <ReportStrategy Name="Vivado Implementation Default Reports" Flow="Vivado Implementation 2019"/>
-      <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
-      <RQSFiles/>
-    </Run>
-    <Run Id="MMCM_adc_clock_gen_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-2" ConstrsSet="MMCM_adc_clock_gen" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="MMCM_adc_clock_gen_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/MMCM_adc_clock_gen_impl_1">
+    <Run Id="adc_fast_fifo_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-1" ConstrsSet="adc_fast_fifo" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="adc_fast_fifo_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/adc_fast_fifo_impl_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020"/>
         <Step Id="init_design"/>
@@ -951,7 +927,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="ila_trig_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-2" ConstrsSet="ila_trig" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_trig_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_trig_impl_1">
+    <Run Id="xadc_wiz_0_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-1" ConstrsSet="xadc_wiz_0" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="xadc_wiz_0_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/xadc_wiz_0_impl_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020"/>
         <Step Id="init_design"/>
@@ -968,7 +944,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="ila_long_fifo_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-2" ConstrsSet="ila_long_fifo" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_long_fifo_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_long_fifo_impl_1">
+    <Run Id="usb_slow_fifo_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-1" ConstrsSet="usb_slow_fifo" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="usb_slow_fifo_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/usb_slow_fifo_impl_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020"/>
         <Step Id="init_design"/>
@@ -985,7 +961,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="clk_wiz_0_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-2" ConstrsSet="clk_wiz_0" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="clk_wiz_0_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/clk_wiz_0_impl_1">
+    <Run Id="tiny_usb_slow_fifo_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-1" ConstrsSet="tiny_usb_slow_fifo" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="tiny_usb_slow_fifo_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/tiny_usb_slow_fifo_impl_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020"/>
         <Step Id="init_design"/>
@@ -1002,7 +978,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="ila_fast_fifo_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-2" ConstrsSet="ila_fast_fifo" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_fast_fifo_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_fast_fifo_impl_1">
+    <Run Id="MMCM_adc_clock_gen_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-1" ConstrsSet="MMCM_adc_clock_gen" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="MMCM_adc_clock_gen_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/MMCM_adc_clock_gen_impl_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020"/>
         <Step Id="init_design"/>
@@ -1019,7 +995,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="ila_fifo_counts_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-2" ConstrsSet="ila_fifo_counts" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_fifo_counts_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_fifo_counts_impl_1">
+    <Run Id="ila_long_fifo_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-1" ConstrsSet="ila_long_fifo" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_long_fifo_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_long_fifo_impl_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020"/>
         <Step Id="init_design"/>
@@ -1036,7 +1012,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="ila_lean_fast_fifo_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-2" ConstrsSet="ila_lean_fast_fifo" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_lean_fast_fifo_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_lean_fast_fifo_impl_1">
+    <Run Id="clk_wiz_0_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-1" ConstrsSet="clk_wiz_0" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="clk_wiz_0_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/clk_wiz_0_impl_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020"/>
         <Step Id="init_design"/>
@@ -1053,7 +1029,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="xadc_wiz_0_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-2" ConstrsSet="xadc_wiz_0" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="xadc_wiz_0_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/xadc_wiz_0_impl_1">
+    <Run Id="ila_fast_fifo_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-1" ConstrsSet="ila_fast_fifo" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_fast_fifo_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_fast_fifo_impl_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020"/>
         <Step Id="init_design"/>
@@ -1070,7 +1046,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="ila_glitch_ps_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-2" ConstrsSet="ila_glitch_ps" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_glitch_ps_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_glitch_ps_impl_1">
+    <Run Id="ila_fifo_counts_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-1" ConstrsSet="ila_fifo_counts" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_fifo_counts_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_fifo_counts_impl_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020"/>
         <Step Id="init_design"/>
@@ -1087,7 +1063,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="MMCM_clkgen_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-2" ConstrsSet="MMCM_clkgen" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="MMCM_clkgen_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/MMCM_clkgen_impl_1">
+    <Run Id="tiny_adc_fast_fifo_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-1" ConstrsSet="tiny_adc_fast_fifo" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="tiny_adc_fast_fifo_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/tiny_adc_fast_fifo_impl_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020"/>
         <Step Id="init_design"/>
@@ -1104,7 +1080,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="ila_slow_fifo_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-2" ConstrsSet="ila_slow_fifo" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_slow_fifo_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_slow_fifo_impl_1">
+    <Run Id="ila_lean_fast_fifo_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-1" ConstrsSet="ila_lean_fast_fifo" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_lean_fast_fifo_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_lean_fast_fifo_impl_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020"/>
         <Step Id="init_design"/>
@@ -1121,7 +1097,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="ila_usb_lite_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-2" ConstrsSet="ila_usb_lite" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_usb_lite_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_usb_lite_impl_1">
+    <Run Id="ila_trig_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-1" ConstrsSet="ila_trig" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_trig_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_trig_impl_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020"/>
         <Step Id="init_design"/>
@@ -1138,7 +1114,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="ila_adc_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-2" ConstrsSet="ila_adc" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_adc_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_adc_impl_1">
+    <Run Id="ila_segments_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-1" ConstrsSet="ila_segments" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_segments_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_segments_impl_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020"/>
         <Step Id="init_design"/>
@@ -1155,7 +1131,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="ila_usb_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-2" ConstrsSet="ila_usb" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_usb_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_usb_impl_1">
+    <Run Id="ila_adc_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-1" ConstrsSet="ila_adc" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_adc_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_adc_impl_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020"/>
         <Step Id="init_design"/>
@@ -1172,7 +1148,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="ila_drp_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-2" ConstrsSet="ila_drp" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_drp_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_drp_impl_1">
+    <Run Id="ila_slow_fifo_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-1" ConstrsSet="ila_slow_fifo" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_slow_fifo_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_slow_fifo_impl_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020"/>
         <Step Id="init_design"/>
@@ -1189,7 +1165,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="ila_reg_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-2" ConstrsSet="ila_reg" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_reg_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_reg_impl_1">
+    <Run Id="ila_drp_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-1" ConstrsSet="ila_drp" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_drp_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_drp_impl_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020"/>
         <Step Id="init_design"/>
@@ -1206,7 +1182,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="ila_xadc_alarms_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-2" ConstrsSet="ila_xadc_alarms" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_xadc_alarms_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_xadc_alarms_impl_1">
+    <Run Id="ila_reg_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-1" ConstrsSet="ila_reg" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_reg_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_reg_impl_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020"/>
         <Step Id="init_design"/>
@@ -1223,7 +1199,75 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="ila_segments_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-2" ConstrsSet="ila_segments" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_segments_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_segments_impl_1">
+    <Run Id="MMCM_clkgen_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-1" ConstrsSet="MMCM_clkgen" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="MMCM_clkgen_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/MMCM_clkgen_impl_1">
+      <Strategy Version="1" Minor="2">
+        <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020"/>
+        <Step Id="init_design"/>
+        <Step Id="opt_design"/>
+        <Step Id="power_opt_design"/>
+        <Step Id="place_design"/>
+        <Step Id="post_place_power_opt_design"/>
+        <Step Id="phys_opt_design"/>
+        <Step Id="route_design"/>
+        <Step Id="post_route_phys_opt_design"/>
+        <Step Id="write_bitstream"/>
+      </Strategy>
+      <ReportStrategy Name="Vivado Implementation Default Reports" Flow="Vivado Implementation 2020"/>
+      <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
+      <RQSFiles/>
+    </Run>
+    <Run Id="ila_usb_lite_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-1" ConstrsSet="ila_usb_lite" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_usb_lite_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_usb_lite_impl_1">
+      <Strategy Version="1" Minor="2">
+        <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020"/>
+        <Step Id="init_design"/>
+        <Step Id="opt_design"/>
+        <Step Id="power_opt_design"/>
+        <Step Id="place_design"/>
+        <Step Id="post_place_power_opt_design"/>
+        <Step Id="phys_opt_design"/>
+        <Step Id="route_design"/>
+        <Step Id="post_route_phys_opt_design"/>
+        <Step Id="write_bitstream"/>
+      </Strategy>
+      <ReportStrategy Name="Vivado Implementation Default Reports" Flow="Vivado Implementation 2020"/>
+      <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
+      <RQSFiles/>
+    </Run>
+    <Run Id="ila_xadc_alarms_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-1" ConstrsSet="ila_xadc_alarms" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_xadc_alarms_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_xadc_alarms_impl_1">
+      <Strategy Version="1" Minor="2">
+        <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020"/>
+        <Step Id="init_design"/>
+        <Step Id="opt_design"/>
+        <Step Id="power_opt_design"/>
+        <Step Id="place_design"/>
+        <Step Id="post_place_power_opt_design"/>
+        <Step Id="phys_opt_design"/>
+        <Step Id="route_design"/>
+        <Step Id="post_route_phys_opt_design"/>
+        <Step Id="write_bitstream"/>
+      </Strategy>
+      <ReportStrategy Name="Vivado Implementation Default Reports" Flow="Vivado Implementation 2020"/>
+      <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
+      <RQSFiles/>
+    </Run>
+    <Run Id="ila_glitch_ps_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-1" ConstrsSet="ila_glitch_ps" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_glitch_ps_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_glitch_ps_impl_1">
+      <Strategy Version="1" Minor="2">
+        <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020"/>
+        <Step Id="init_design"/>
+        <Step Id="opt_design"/>
+        <Step Id="power_opt_design"/>
+        <Step Id="place_design"/>
+        <Step Id="post_place_power_opt_design"/>
+        <Step Id="phys_opt_design"/>
+        <Step Id="route_design"/>
+        <Step Id="post_route_phys_opt_design"/>
+        <Step Id="write_bitstream"/>
+      </Strategy>
+      <ReportStrategy Name="Vivado Implementation Default Reports" Flow="Vivado Implementation 2020"/>
+      <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
+      <RQSFiles/>
+    </Run>
+    <Run Id="ila_usb_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-1" ConstrsSet="ila_usb" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_usb_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_usb_impl_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020"/>
         <Step Id="init_design"/>

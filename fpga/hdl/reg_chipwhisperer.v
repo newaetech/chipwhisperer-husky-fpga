@@ -410,23 +410,23 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    reg [7:0] reg_datao_reg;
    assign reg_datao = reg_datao_reg;
 
-   always @(posedge clk_usb) begin
+   always @(*) begin
       if (reg_read) begin
          case (reg_address)
-           `CW_EXTCLK_ADDR: reg_datao_reg <= registers_cwextclk; 
-           `CW_TRIGSRC_ADDR: reg_datao_reg <= registers_cwtrigsrc; 
-           `CW_TRIGMOD_ADDR: reg_datao_reg <= registers_cwtrigmod; 
-           `CW_IOROUTE_ADDR: reg_datao_reg <= registers_iorouting[reg_bytecnt*8 +: 8];
-           `CW_IOREAD_ADDR: reg_datao_reg <= {4'b0000, registers_ioread};
+           `CW_EXTCLK_ADDR: reg_datao_reg = registers_cwextclk; 
+           `CW_TRIGSRC_ADDR: reg_datao_reg = registers_cwtrigsrc; 
+           `CW_TRIGMOD_ADDR: reg_datao_reg = registers_cwtrigmod; 
+           `CW_IOROUTE_ADDR: reg_datao_reg = registers_iorouting[reg_bytecnt*8 +: 8];
+           `CW_IOREAD_ADDR: reg_datao_reg = {4'b0000, registers_ioread};
 
-           `USERIO_CW_DRIVEN: reg_datao_reg <= userio_cwdriven;
-           `USERIO_DEBUG_DRIVEN: reg_datao_reg <= userio_debug_driven;
-           default: reg_datao_reg <= 0;
+           `USERIO_CW_DRIVEN: reg_datao_reg = userio_cwdriven;
+           `USERIO_DEBUG_DRIVEN: reg_datao_reg = userio_debug_driven;
+           default: reg_datao_reg = 0;
          endcase
       end
       else
-         reg_datao_reg <= 0;
-   end  
+         reg_datao_reg = 0;
+   end
 
    always @(posedge clk_usb) begin
       if (reset) begin

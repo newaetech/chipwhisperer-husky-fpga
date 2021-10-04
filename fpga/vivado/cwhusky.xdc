@@ -21,6 +21,12 @@ set_case_analysis 0 [get_pins reg_clockglitch/sourceclk_mux2/S]
 set_case_analysis 1 [get_pins reg_la/sourceclk_mux1/S]
 set_case_analysis 0 [get_pins reg_la/sourceclk_mux2/S]
 
+# These are needed to meet timing on USB_Data:
+set_max_delay 20 -through [get_pins USB_Data_IOBUF*inst/T]
+set_max_delay 20 -through [get_pins U_usb_reg_main/reg_address_reg*/Q]
+set_max_delay 20 -through [get_pins oadc/U_fifo/fifo_read_count_reg*/Q]
+set_max_delay 20 -through [get_pins oadc/U_reg_openadc_adcfifo/fast_fifo_read_mode_reg/Q]
+
 set_clock_groups -asynchronous \
                  -group [get_clocks clk_usb ] \
                  -group [get_clocks target_hs1]
@@ -247,12 +253,7 @@ set_output_delay -clock clk_usb 0.000 [get_ports USB_SPARE0]
 set_false_path -to [get_ports USB_SPARE0]
 
 # note: unsure of correct value; this results in no timing failures (and functional bitfile)
-set_input_delay -clock ADC_clk_fb 3.000 [get_ports ADC_DP[0]]
-set_input_delay -clock ADC_clk_fb 3.000 [get_ports ADC_DP[1]]
-set_input_delay -clock ADC_clk_fb 3.000 [get_ports ADC_DP[2]]
-set_input_delay -clock ADC_clk_fb 3.000 [get_ports ADC_DP[3]]
-set_input_delay -clock ADC_clk_fb 3.000 [get_ports ADC_DP[4]]
-set_input_delay -clock ADC_clk_fb 3.000 [get_ports ADC_DP[5]]
+set_input_delay -clock ADC_clk_fb 3.000 [get_ports ADC_DP]
 
 set_input_delay -clock clk_usb 0.000 [get_ports target_io1]
 set_input_delay -clock clk_usb 0.000 [get_ports target_io2]
@@ -367,8 +368,11 @@ set_false_path -to [get_ports glitchout_highpwr]
 set_false_path -to [get_ports glitchout_lowpwr]
 set_false_path -to [get_ports FPGA_CDIN]
 
-# Not from any spec, but the result is no timing violations and reads work:
-set_output_delay -clock clk_usb -2.000 [get_ports USB_Data]
+# We're violating the SAM3U spec for fast reads, so these are not from spec...
+# read data is provided 1 cycle earlier from when it *appears* to be required, and so
+# we use negatives here to meet timing. Works in practice and meets timing.
+set_output_delay -clock clk_usb -max -2.000 [get_ports USB_Data]
+#set_output_delay -clock clk_usb -min -4.000 [get_ports USB_Data]
 
 set_property BITSTREAM.CONFIG.USR_ACCESS TIMESTAMP [current_design]
 set_property C_CLK_INPUT_FREQ_HZ 300000000 [get_debug_cores dbg_hub]

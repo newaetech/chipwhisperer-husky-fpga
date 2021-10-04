@@ -70,18 +70,18 @@ module xadc #(
    
    assign xadc_error = |xadc_stat;
 
-   always @(posedge clk_usb) begin
+   always @(*) begin
       if (reg_read) begin
          case (reg_address)
-           `XADC_DRP_ADDR: reg_datao_reg <= {1'b0, drp_addr};
-           `XADC_DRP_DATA: reg_datao_reg <= drp_dout[reg_bytecnt*8 +: 8];
-           `XADC_STAT: reg_datao_reg <= {3'b0, xadc_stat_hold};
-           default: reg_datao_reg <= 0;
+           `XADC_DRP_ADDR: reg_datao_reg = {1'b0, drp_addr};
+           `XADC_DRP_DATA: reg_datao_reg = drp_dout[reg_bytecnt*8 +: 8];
+           `XADC_STAT: reg_datao_reg = {3'b0, xadc_stat_hold};
+           default: reg_datao_reg = 0;
          endcase
       end
       else
-         reg_datao_reg <= 0;
-   end  
+         reg_datao_reg = 0;
+   end
 
    // alarms can be transient, so hold until cleared:
    always @(posedge clk_usb) begin

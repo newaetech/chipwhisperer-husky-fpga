@@ -124,7 +124,8 @@ module fifo_top_husky(
     reg                 fifo_rst;
     reg                 reset_done;
     reg [31:0]          read_count;
-
+    reg                 first_read;
+    reg                 first_read_done;
 
     assign fifo_overflow = fast_fifo_overflow_reg || slow_fifo_overflow_reg;
 
@@ -569,7 +570,7 @@ module fifo_top_husky(
           slow_fifo_dout_r <= 0;
        end
 
-       else if (fifo_read_fifoen) begin
+       else if (fifo_read_fifoen || first_read) begin
           if (low_res) begin // return 8 bits per sample
              if (slow_read_count < 2) begin
                 slow_read_count <= slow_read_count + 1;
@@ -627,10 +628,23 @@ module fifo_top_husky(
           endcase
        end
     end
-    // note: registering the output can help meet timing / have more reliable reads for the SAM3U,
-    // but it makes data too late to be read properly :-(
-    //always @(posedge clk_usb) fifo_read_data <= fifo_read_data_pre;
-    always @(*) fifo_read_data = fifo_read_data_pre;
+    // register the FIFO output to help meet timing
+    always @(posedge clk_usb) begin
+        if (fifo_rst) begin
+            first_read <= 1'b0;
+            first_read_done <= 1'b0;
+        end
+        else if (first_read) begin
+            first_read <= 1'b0;
+            first_read_done <= 1'b1;
+        end
+        else if (!slow_fifo_empty && !first_read_done) begin
+            first_read <= 1'b1;
+        end
+
+        if (fifo_read_fifoen || first_read) fifo_read_data <= fifo_read_data_pre;
+
+    end
 
     assign fast_fifo_rd = fast_fifo_presample_drain || (fast_fifo_rd_en && !slow_fifo_full && !fast_fifo_empty);
 

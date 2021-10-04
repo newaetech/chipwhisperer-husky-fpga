@@ -74,7 +74,7 @@ module usb_reg_main #(
    assign cwusb_dout = reg_datai;
 
    //Don't immediatly turn off output drivers
-   assign cwusb_isout = isoutreg | isoutregdly | (drive_data_out & cwusb_wrn);
+   assign cwusb_isout = isoutreg | isoutregdly | (drive_data_out & cwusb_wrn_rs);
 
    // for fast FIFO reading, we need to talk hold of the data bus; we only
    // give it up when we see a write start:
@@ -85,7 +85,7 @@ module usb_reg_main #(
       if (~cwusb_cen & ~cwusb_wrn_rs)
          reg_datao <= cwusb_din;
 
-      if (~cwusb_wrn)
+      if (~cwusb_wrn_rs)
          drive_data_out <= 1'b0;
       else if (fast_fifo_read & ~fast_fifo_read_r)
          drive_data_out <= 1'b1;

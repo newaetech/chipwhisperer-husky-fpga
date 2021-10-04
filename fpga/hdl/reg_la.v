@@ -361,37 +361,39 @@ module reg_la #(
    end
 
 
-   always @(*) begin
+   always @(posedge clk_usb) begin
+   //always @(*) begin
        case (read_select_reg)
-           0: observer_data = capture0_reg;
-           1: observer_data = capture1_reg;
-           2: observer_data = capture2_reg;
-           3: observer_data = capture3_reg;
-           4: observer_data = capture4_reg;
-           5: observer_data = capture5_reg;
-           6: observer_data = capture6_reg;
-           7: observer_data = capture7_reg;
-           8: observer_data = capture8_reg;
-           default: observer_data = 'b10110011100011110000; // just some unusual pattern
+           0: observer_data <= capture0_reg;
+           1: observer_data <= capture1_reg;
+           2: observer_data <= capture2_reg;
+           3: observer_data <= capture3_reg;
+           4: observer_data <= capture4_reg;
+           5: observer_data <= capture5_reg;
+           6: observer_data <= capture6_reg;
+           7: observer_data <= capture7_reg;
+           8: observer_data <= capture8_reg;
+           default: observer_data <= 'b11111111111111111100; // just some unusual pattern
        endcase
    end
 
-   always @(posedge clk_usb) begin
+   //always @(posedge clk_usb) begin
+   always @(*) begin
       if (reg_read) begin
          case (reg_address)
-             `LA_READ_SELECT:   reg_datao_reg <= observer_data[reg_bytecnt*8 +: 8];
-             `LA_CAPTURE_GROUP: reg_datao_reg <= {6'b0, capture_group_reg};
-             `LA_STATUS:        reg_datao_reg <= {6'b0, capturing, observer_locked};
-             `LA_CLOCK_SOURCE:  reg_datao_reg <= {6'b0, clock_source_reg};
-             `LA_TRIGGER_SOURCE:reg_datao_reg <= {6'b0, trigger_source_reg};
-             `LA_POWERDOWN:     reg_datao_reg <= {7'b0, observer_powerdown};
-             `LA_EXISTS:        reg_datao_reg <= la_exists_code[reg_bytecnt*8 +: 8];
-             `LA_CAPTURE_DEPTH: reg_datao_reg <= capture_depth[reg_bytecnt*8 +: 8];
-             default:           reg_datao_reg <= 0;
+             `LA_READ_SELECT:   reg_datao_reg = observer_data[reg_bytecnt*8 +: 8];
+             `LA_CAPTURE_GROUP: reg_datao_reg = {6'b0, capture_group_reg};
+             `LA_STATUS:        reg_datao_reg = {6'b0, capturing, observer_locked};
+             `LA_CLOCK_SOURCE:  reg_datao_reg = {6'b0, clock_source_reg};
+             `LA_TRIGGER_SOURCE:reg_datao_reg = {6'b0, trigger_source_reg};
+             `LA_POWERDOWN:     reg_datao_reg = {7'b0, observer_powerdown};
+             `LA_EXISTS:        reg_datao_reg = la_exists_code[reg_bytecnt*8 +: 8];
+             `LA_CAPTURE_DEPTH: reg_datao_reg = capture_depth[reg_bytecnt*8 +: 8];
+             default:           reg_datao_reg = 0;
          endcase
       end
       else
-         reg_datao_reg <= 0;
+         reg_datao_reg = 0;
    end
 
    always @(posedge clk_usb) begin
@@ -413,7 +415,6 @@ module reg_la #(
          endcase
       end
    end
-
 
 endmodule
 

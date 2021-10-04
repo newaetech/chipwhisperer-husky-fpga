@@ -122,7 +122,7 @@ module reg_openadc #(
    //Register definitions
    reg [7:0]  registers_gain;
    reg [7:0]  registers_settings;
-   reg [7:0]  registers_echo;
+   reg [63:0]  registers_echo;
    reg [15:0] registers_downsample;
    reg [31:0] registers_advclocksettings;
    wire [31:0] registers_advclocksettings_read;
@@ -184,40 +184,40 @@ module reg_openadc #(
    reg [7:0] reg_datao_reg;
    assign reg_datao = reg_datao_reg;
 
-   always @(posedge clk_usb) begin
+   always @(*) begin
           if (reg_read) begin
              case (reg_address)
-                `GAIN_ADDR: reg_datao_reg <= registers_gain; 
-                `SETTINGS_ADDR: reg_datao_reg <= registers_settings;
-                `STATUS_ADDR: reg_datao_reg <= status; 
-                `ECHO_ADDR: reg_datao_reg <= registers_echo;
-                `EXTFREQ_ADDR: reg_datao_reg <= registers_extclk_frequency[reg_bytecnt*8 +: 8]; 
-                `ADCFREQ_ADDR: reg_datao_reg <= registers_adcclk_frequency[reg_bytecnt*8 +: 8]; 
-                `PHASE_ADDR: reg_datao_reg <= phase_out[reg_bytecnt*8 +: 8]; 
-                `VERSION_ADDR: reg_datao_reg <= version_data[reg_bytecnt*8 +: 8];
-                `DECIMATE_ADDR: reg_datao_reg <= registers_downsample[reg_bytecnt*8 +: 8];
-                `SAMPLES_ADDR: reg_datao_reg <= registers_samples[reg_bytecnt*8 +: 8];
-                `PRESAMPLES_ADDR: reg_datao_reg <= registers_presamples[reg_bytecnt*8 +: 8];
-                `OFFSET_ADDR: reg_datao_reg <= registers_offset[reg_bytecnt*8 +: 8];
-                `ADVCLOCK_ADDR: reg_datao_reg <= registers_advclocksettings_read[reg_bytecnt*8 +: 8];
-                `SYSTEMCLK_ADDR: reg_datao_reg <= system_frequency[reg_bytecnt*8 +: 8];
-                `TRIGGER_DUR_ADDR: reg_datao_reg <= trigger_length[reg_bytecnt*8 +: 8];
-                `FPGA_BUILDTIME_ADDR: reg_datao_reg <= buildtime[reg_bytecnt*8 +: 8];
-                `NUM_SEGMENTS: reg_datao_reg <= num_segments[reg_bytecnt*8 +: 8];
-                `SEGMENT_CYCLES: reg_datao_reg <= segment_cycles[reg_bytecnt*8 +: 8];
-                `DATA_SOURCE_SELECT: reg_datao_reg <= data_source_select;
-                `LED_SELECT: reg_datao_reg <= led_select;
-                `NO_CLIP_ERRORS: reg_datao_reg <= no_clip_errors;
-                `CLIP_TEST: reg_datao_reg <= clip_test;
-                `CLKGEN_POWERDOWN: reg_datao_reg <= {6'b0, adc_clkgen_power_down, clkgen_power_down};
-                `EXTCLK_MONITOR_DISABLED: reg_datao_reg <= extclk_monitor_disabled;
-                `EXTCLK_MONITOR_STAT: reg_datao_reg <= extclk_change;
-                `EXTCLK_CHANGE_LIMIT: reg_datao_reg <= extclk_limit[reg_bytecnt*8 +: 8];
-                default: reg_datao_reg <= 0;
+                `GAIN_ADDR: reg_datao_reg = registers_gain; 
+                `SETTINGS_ADDR: reg_datao_reg = registers_settings;
+                `STATUS_ADDR: reg_datao_reg = status; 
+                `ECHO_ADDR: reg_datao_reg = registers_echo[reg_bytecnt*8 +: 8];
+                `EXTFREQ_ADDR: reg_datao_reg = registers_extclk_frequency[reg_bytecnt*8 +: 8]; 
+                `ADCFREQ_ADDR: reg_datao_reg = registers_adcclk_frequency[reg_bytecnt*8 +: 8]; 
+                `PHASE_ADDR: reg_datao_reg = phase_out[reg_bytecnt*8 +: 8]; 
+                `VERSION_ADDR: reg_datao_reg = version_data[reg_bytecnt*8 +: 8];
+                `DECIMATE_ADDR: reg_datao_reg = registers_downsample[reg_bytecnt*8 +: 8];
+                `SAMPLES_ADDR: reg_datao_reg = registers_samples[reg_bytecnt*8 +: 8];
+                `PRESAMPLES_ADDR: reg_datao_reg = registers_presamples[reg_bytecnt*8 +: 8];
+                `OFFSET_ADDR: reg_datao_reg = registers_offset[reg_bytecnt*8 +: 8];
+                `ADVCLOCK_ADDR: reg_datao_reg = registers_advclocksettings_read[reg_bytecnt*8 +: 8];
+                `SYSTEMCLK_ADDR: reg_datao_reg = system_frequency[reg_bytecnt*8 +: 8];
+                `TRIGGER_DUR_ADDR: reg_datao_reg = trigger_length[reg_bytecnt*8 +: 8];
+                `FPGA_BUILDTIME_ADDR: reg_datao_reg = buildtime[reg_bytecnt*8 +: 8];
+                `NUM_SEGMENTS: reg_datao_reg = num_segments[reg_bytecnt*8 +: 8];
+                `SEGMENT_CYCLES: reg_datao_reg = segment_cycles[reg_bytecnt*8 +: 8];
+                `DATA_SOURCE_SELECT: reg_datao_reg = data_source_select;
+                `LED_SELECT: reg_datao_reg = led_select;
+                `NO_CLIP_ERRORS: reg_datao_reg = no_clip_errors;
+                `CLIP_TEST: reg_datao_reg = clip_test;
+                `CLKGEN_POWERDOWN: reg_datao_reg = {6'b0, adc_clkgen_power_down, clkgen_power_down};
+                `EXTCLK_MONITOR_DISABLED: reg_datao_reg = extclk_monitor_disabled;
+                `EXTCLK_MONITOR_STAT: reg_datao_reg = extclk_change;
+                `EXTCLK_CHANGE_LIMIT: reg_datao_reg = extclk_limit[reg_bytecnt*8 +: 8];
+                default: reg_datao_reg = 0;
              endcase
           end
           else
-             reg_datao_reg <= 0;
+             reg_datao_reg = 0;
    end
 
    always @(posedge clk_usb) begin
@@ -246,7 +246,7 @@ module reg_openadc #(
          case (reg_address)
             `GAIN_ADDR: registers_gain <= reg_datai;
             `SETTINGS_ADDR: registers_settings <= reg_datai;
-            `ECHO_ADDR: registers_echo <= reg_datai;
+            `ECHO_ADDR: registers_echo[reg_bytecnt*8 +: 8] <= reg_datai;
             `DECIMATE_ADDR:  registers_downsample[reg_bytecnt*8 +: 8] <= reg_datai;
             `SAMPLES_ADDR: registers_samples[reg_bytecnt*8 +: 8] <= reg_datai;
             `PRESAMPLES_ADDR: registers_presamples[reg_bytecnt*8 +: 8] <= reg_datai;

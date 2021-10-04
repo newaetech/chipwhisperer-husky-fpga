@@ -55,16 +55,16 @@ module reg_mmcm_drp #(
    reg [7:0] reg_datao_reg;
    assign reg_datao = reg_datao_reg;
 
-   always @(posedge clk_usb) begin
+   always @(*) begin
       if (reg_read) begin
          case (reg_address)
-           pDRP_ADDR: reg_datao_reg <= {1'b0, drp_addr};
-           pDRP_DATA: reg_datao_reg <= drp_dout[reg_bytecnt*8 +: 8];
-           default: reg_datao_reg <= 0;
+           pDRP_ADDR: reg_datao_reg = {1'b0, drp_addr};
+           pDRP_DATA: reg_datao_reg = drp_dout[reg_bytecnt*8 +: 8];
+           default: reg_datao_reg = 0;
          endcase
       end
       else
-         reg_datao_reg <= 0;
+         reg_datao_reg = 0;
    end  
 
    always @(posedge clk_usb) begin

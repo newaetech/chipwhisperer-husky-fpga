@@ -137,6 +137,7 @@ module cwhusky_top(
    wire [pBYTECNT_SIZE-1:0]  reg_bytecnt;
    wire [7:0]   write_data;
    wire [7:0]   read_data;
+   reg  [7:0]   read_data_reg;
    wire         reg_read;
    wire         reg_write;
    wire [7:0]   reg_address;
@@ -147,7 +148,9 @@ module cwhusky_top(
    wire [7:0] read_data_glitch;
    wire [7:0] read_data_xadc;
    wire [7:0] read_data_la;
-   assign read_data = read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc | read_data_la;
+   always @(posedge clk_usb_buf) read_data_reg <= read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc | read_data_la;
+   //always @(*) read_data_reg = read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc | read_data_la;
+   assign read_data = (reg_address == `ADCREAD_ADDR)? fifo_dout : read_data_reg;
 
    wire ext_trigger;
    wire extclk_mux;
@@ -168,6 +171,7 @@ module cwhusky_top(
 
    wire slow_fifo_wr;
    wire slow_fifo_rd;
+   wire [7:0] fifo_dout;
 
    wire flash_pattern;
 
@@ -263,6 +267,7 @@ module cwhusky_top(
         .DUT_CLK_i              (extclk_mux),
         .DUT_trigger_i          (ext_trigger),
         .amp_gain               (VDBSPWM),
+        .fifo_dout              (fifo_dout),
         .clkgen                 (clkgen),
 
         .reg_address            (reg_address),

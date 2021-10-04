@@ -258,24 +258,24 @@ module reg_clockglitch #(
    end
 
 
-   always @(posedge clk_usb) begin
+   always @(*) begin
       if (reg_read) begin
          case (reg_address)
-            `CLOCKGLITCH_SETTINGS: reg_datao_reg <= clockglitch_settings_read[reg_bytecnt*8 +: 8];
-            `CLOCKGLITCH_OFFSET: reg_datao_reg <= clockglitch_offset_reg[reg_bytecnt*8 +: 8];
-            `CLOCKGLITCH_POWERDOWN: reg_datao_reg <= {7'b0, clockglitch_powerdown};
+            `CLOCKGLITCH_SETTINGS: reg_datao_reg = clockglitch_settings_read[reg_bytecnt*8 +: 8];
+            `CLOCKGLITCH_OFFSET: reg_datao_reg = clockglitch_offset_reg[reg_bytecnt*8 +: 8];
+            `CLOCKGLITCH_POWERDOWN: reg_datao_reg = {7'b0, clockglitch_powerdown};
 
 `ifdef SUPPORT_GLITCH_READBACK
             // ***** be careful to not add registers in this ifdef block unless you really mean to! *****
-            `GLITCH_RECONFIG_RB_ADDR: reg_datao_reg <= clockglitch_readback_reg[reg_bytecnt*8 +: 8];
-            `GLITCHCYCLES_CNT: reg_datao_reg <= clockglitch_cnt[reg_bytecnt*8 +: 8];
+            `GLITCH_RECONFIG_RB_ADDR: reg_datao_reg = clockglitch_readback_reg[reg_bytecnt*8 +: 8];
+            `GLITCHCYCLES_CNT: reg_datao_reg = clockglitch_cnt[reg_bytecnt*8 +: 8];
             // ***** be careful to not add registers in this ifdef block unless you really mean to! *****
 `endif
-            default: reg_datao_reg <= 0;
+            default: reg_datao_reg = 0;
          endcase
       end
       else
-         reg_datao_reg <= 0;
+         reg_datao_reg = 0;
    end
 
    // single-cycle pulses:
