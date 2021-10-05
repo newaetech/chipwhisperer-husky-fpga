@@ -13,6 +13,7 @@ TRIGGER_NOW=0
 STREAM=0
 STREAM_SEGMENT_THRESHOLD=512
 LOGFILE=make.log
+EXEFILE=a.out
 WAVEFORMAT=fst
 SEED=1
 TIMEOUT_CYCLES=50000
@@ -52,6 +53,7 @@ compile:
 	-P cwhusky_tb.pDOWNSAMPLE=$(DOWNSAMPLE) \
 	-P cwhusky_tb.pDUMP=$(DUMP) \
 	-P cwhusky_tb.pSEED=$(SEED) \
+	-o $(EXEFILE) \
 
 cwlite:
 	iverilog -ccmdfile_cwlite \
@@ -91,7 +93,7 @@ fifo:
 
 
 run:
-	vvp -l$(LOGFILE) a.out -$(WAVEFORMAT)
+	vvp -l$(LOGFILE) $(EXEFILE) -$(WAVEFORMAT)
 
 clean:
-	rm -f a.out
+	rm -f a.out results/*.vvp
