@@ -60,7 +60,7 @@ module fifo_top_husky(
     input  wire         no_clip_errors,
     input  wire         clip_test,
     output reg [7:0]    underflow_count,
-    input  wire         no_underflow_errors,
+    input  wire         no_underflow_errors,  // disables flagging of *slow* FIFO underflow errors only
     output reg          capture_done,
 
     // for debug only:
@@ -71,7 +71,8 @@ module fifo_top_husky(
 
 );
 
-    parameter FIFO_FULL_SIZE = `MAX_SAMPLES;
+    parameter pFIFO_FULL_SIZE = `MAX_SAMPLES;
+    parameter pMAX_UNDERFLOWS = 3;
 
     wire                fast_fifo_wr;
     reg                 fast_fifo_presample_drain = 1'b0;
@@ -114,6 +115,7 @@ module fifo_top_husky(
     reg [2:0]           fast_write_count;
     reg                 filling_out_to_done;
     reg                 slow_fifo_underflow_sticky;
+    reg [1:0]           slow_fifo_underflow_count;
     reg                 slow_fifo_underflow_masked;
 
     reg  [3:0]          done_wait_count;
@@ -178,7 +180,7 @@ module fifo_top_husky(
        end
     end
 
-    assign max_samples_o = FIFO_FULL_SIZE;
+    assign max_samples_o = pFIFO_FULL_SIZE;
 
 
     // Presample logic: when armed, we always write to the fast FIFO. When
@@ -471,9 +473,9 @@ module fifo_top_husky(
 
     always @(*) begin
        if (stream_mode)
-          slow_fifo_underflow_masked = slow_fifo_underflow && (read_count < max_samples_i);
+          slow_fifo_underflow_masked = slow_fifo_underflow && (read_count < max_samples_i) && ~no_underflow_errors;
        else
-          slow_fifo_underflow_masked = slow_fifo_underflow;
+          slow_fifo_underflow_masked = slow_fifo_underflow && ~no_underflow_errors && (slow_fifo_underflow_count == pMAX_UNDERFLOWS);
     end
 
 
@@ -481,7 +483,6 @@ module fifo_top_husky(
        if (reset) begin
           error_flag <= 0;
           error_stat <= 0;
-          slow_fifo_underflow_sticky <= 0;
           underflow_count <= 0;
        end
        else begin
@@ -491,7 +492,7 @@ module fifo_top_husky(
              underflow_count <= 0;
           end
           else begin
-             if (segment_error || downsample_error || clip_error || presamp_error || fast_fifo_overflow || fast_fifo_underflow || slow_fifo_overflow || (slow_fifo_underflow_masked && ~no_underflow_errors))
+             if (segment_error || downsample_error || clip_error || presamp_error || fast_fifo_overflow || fast_fifo_underflow || slow_fifo_overflow || slow_fifo_underflow_masked)
                 error_flag <= 1;
              if (segment_error)                 error_stat[7] <= 1'b1;
              if (downsample_error)              error_stat[6] <= 1'b1;
@@ -500,19 +501,36 @@ module fifo_top_husky(
              if (fast_fifo_overflow)            error_stat[3] <= 1'b1;
              if (fast_fifo_underflow)           error_stat[2] <= 1'b1;
              if (slow_fifo_overflow)            error_stat[1] <= 1'b1;
-             if (slow_fifo_underflow_masked && ~no_underflow_errors)
-                                                error_stat[0] <= 1'b1;
+             if (slow_fifo_underflow_masked)    error_stat[0] <= 1'b1;
 
              if (slow_fifo_underflow_masked && (underflow_count != 8'hFF))
                 underflow_count <= underflow_count + 1;
           end
+       end
+    end
 
+    always @(posedge clk_usb) begin
+       if (reset) begin
+          slow_fifo_underflow_sticky <= 0;
+          slow_fifo_underflow_count <= 0;
+       end
+       else begin
+          // Xilinx FIFO asserts "underflow" for a single cycle only:
           if (fifo_rst_start_r)
              slow_fifo_underflow_sticky <= 0;
           else if (slow_fifo_underflow)
              slow_fifo_underflow_sticky <= 1;
+
+          // SAM3U likes to read multiples of 4 bytes, so we don't flag an
+          // underflow unless we observe at least 3 underflow reads
+          if (fifo_rst_start_r)
+             slow_fifo_underflow_count <= 0;
+          else if (slow_fifo_underflow && slow_fifo_underflow_count < pMAX_UNDERFLOWS)
+             slow_fifo_underflow_count <= slow_fifo_underflow_count + 1;
+
        end
     end
+
 
 
     // Track fast FIFO writes to ensure they're a multiple of 3 by the end of the capture:

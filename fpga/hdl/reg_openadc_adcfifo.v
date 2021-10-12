@@ -92,7 +92,7 @@ module reg_openadc_adcfifo #(
          low_res_lsb <= 0;
          clear_fifo_errors <= 1'b0;
          stream_segment_threshold <= 65536;
-         no_underflow_errors <= 1'b1;   // disables flagging of *slow* FIFO underflow errors only
+         no_underflow_errors <= 1'b0;   // disables flagging of *slow* FIFO underflow errors only
       end 
       else if (reg_write) begin
          case (reg_address)
