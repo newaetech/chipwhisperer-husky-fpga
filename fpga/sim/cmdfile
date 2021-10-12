@@ -25,5 +25,5 @@ vivado/adc_fast_fifo_sim_netlist.v
 vivado/usb_slow_fifo_sim_netlist.v
 vivado/tiny_adc_fast_fifo_sim_netlist.v
 vivado/tiny_usb_slow_fifo_sim_netlist.v
--y/mnt/c/Xilinx/Vivado/2020.2/ids_lite/ISE/verilog/src/unisims/
+-y/tools/Xilinx/Vivado/2020.2/ids_lite/ISE/verilog/src/unisims/
 
