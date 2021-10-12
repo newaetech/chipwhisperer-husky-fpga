@@ -91,6 +91,7 @@ module openadc_interface #(
     wire       no_clip_errors;
     wire       clip_test;
     wire       clear_fifo_errors;
+    wire       capture_done;
 
     assign reset_o = reset;
 
@@ -383,7 +384,8 @@ module openadc_interface #(
       .fifo_read_count_error_freeze (fifo_read_count_error_freeze),
       .underflow_count      (underflow_count),
       .no_underflow_errors  (no_underflow_errors),
-      .clear_fifo_errors    (clear_fifo_errors)
+      .clear_fifo_errors    (clear_fifo_errors),
+      .capture_done         (capture_done)
    );
 
 
@@ -478,6 +480,7 @@ module openadc_interface #(
       .clip_test                (clip_test),
       .underflow_count          (underflow_count),
       .no_underflow_errors      (no_underflow_errors),
+      .capture_done             (capture_done),
 
       .slow_fifo_wr             (slow_fifo_wr),
       .slow_fifo_rd             (slow_fifo_rd),

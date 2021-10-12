@@ -46,6 +46,7 @@ module reg_openadc_adcfifo #(
 
    input  wire [7:0]   underflow_count,
    output reg          no_underflow_errors,
+   input  wire         capture_done,
 
    // for debug only:
    input  wire [31:0]  fifo_read_count,
@@ -70,14 +71,15 @@ module reg_openadc_adcfifo #(
    always @(*) begin
       if (reg_read) begin
          case (reg_address)
-            `FIFO_STAT: reg_datao_reg = fifo_stat[reg_bytecnt*8 +: 8];
-            `DEBUG_FIFO_READS: reg_datao_reg = fifo_read_count[reg_bytecnt*8 +: 8];
-            `DEBUG_FIFO_READS_FREEZE: reg_datao_reg = fifo_read_count_error_freeze[reg_bytecnt*8 +: 8];
-            `STREAM_SEGMENT_THRESHOLD: reg_datao_reg = stream_segment_threshold[reg_bytecnt*8 +: 8];
-            `ADC_LOW_RES: reg_datao_reg = {6'b0, low_res_lsb, low_res};
-            `FIFO_UNDERFLOW_COUNT: reg_datao_reg = underflow_count;
-            `FIFO_NO_UNDERFLOW_ERROR: reg_datao_reg = {7'b0, no_underflow_errors};
-            default: reg_datao_reg = 0;
+            `FIFO_STAT:                 reg_datao_reg = fifo_stat[reg_bytecnt*8 +: 8];
+            `DEBUG_FIFO_READS:          reg_datao_reg = fifo_read_count[reg_bytecnt*8 +: 8];
+            `DEBUG_FIFO_READS_FREEZE:   reg_datao_reg = fifo_read_count_error_freeze[reg_bytecnt*8 +: 8];
+            `STREAM_SEGMENT_THRESHOLD:  reg_datao_reg = stream_segment_threshold[reg_bytecnt*8 +: 8];
+            `ADC_LOW_RES:               reg_datao_reg = {6'b0, low_res_lsb, low_res};
+            `FIFO_UNDERFLOW_COUNT:      reg_datao_reg = underflow_count;
+            `FIFO_NO_UNDERFLOW_ERROR:   reg_datao_reg = {7'b0, no_underflow_errors};
+            `CAPTURE_DONE:              reg_datao_reg = {7'b0, capture_done};
+            default:                    reg_datao_reg = 0;
          endcase
       end
       else
