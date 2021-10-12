@@ -5,6 +5,7 @@ import subprocess
 import random
 import re
 import time
+from tqdm import tqdm
 
 parser = argparse.ArgumentParser()
 group = parser.add_mutually_exclusive_group()
@@ -215,8 +216,9 @@ if result.returncode:
 
 # Run tests:
 start_time = int(time.time())
+processes = []
 
-
+print("Dispatching jobs... ", end='')
 for test in tests:
    if args.tests:
       if test_regex.search(test['name']) == None:
@@ -240,7 +242,9 @@ for test in tests:
       for key in test.keys():
          if key == 'name':
             logfile = "results/%s%d.log" % (test[key], i) 
+            exefile = "results/%s%d.vvp" % (test[key], i) 
             makeargs.append("LOGFILE=%s" % logfile)
+            makeargs.append("EXEFILE=%s" % exefile)
          elif key == 'description':
             pass
          elif key == 'frequency':
@@ -257,32 +261,60 @@ for test in tests:
 
       # run:
       if run_test:
-         print("Running %s... " % logfile, end='', flush=True)
-         subprocess.run(makeargs, stdout=outfile, stderr=outfile)
+         p = subprocess.Popen(makeargs, stdout=outfile, stderr=outfile)
+         processes.append((p,logfile))
 
-         # check pass/fail:
-         log = open(logfile, 'r')
-         for line in log:
-            pass_matches = pass_regex.search(line)
-            fail_matches = fail_regex.search(line)
-            if pass_matches:
-               passed += 1
-               warnings = int(pass_matches.group(1))
-               if warnings:
-                  print("pass (%0d warnings)" % warnings)
-               else:
-                  print("pass")
-               break
-            elif fail_matches:
-               failed += 1
-               print("FAILED! %d errors, seed = %d" % (int(fail_matches.group(1)), seed))
-               break
+print("done.")
+warns = []
+fails = []
+
+pbar = tqdm(total=len(processes))
+
+oldfinished = 0
+finished = 0
+while (finished < len(processes)):
+    finished = 0
+    for p,l in processes:
+        if not p.poll() is None:
+            finished += 1
+    pbar.update(finished-oldfinished)
+    oldfinished = finished
+    time.sleep(1)
+pbar.close()
+
+# just to be sure:
+#exit_codes = [p.wait() for p,l in processes]
+
+# check pass/fail:
+for p,logfile in processes:
+    log = open(logfile, 'r')
+    for line in log:
+       pass_matches = pass_regex.search(line)
+       fail_matches = fail_regex.search(line)
+       if pass_matches:
+          passed += 1
+          warnings = int(pass_matches.group(1))
+          if warnings:
+             warns.append("%s: %0d warnings" % (logfile, warnings))
+          break
+       elif fail_matches:
+          failed += 1
+          fails.append("%s: %d errors, seed = %d" % (logfile, int(fail_matches.group(1)), seed))
+          break
+
+# sanity check:
+assert len(processes) == passed + failed
 
 
 # Summarize results:
 print('\n*** RESULTS SUMMARY ***')
 print('%d tests passing, %d tests failing.' % (passed, failed))
 print('Elapsed time: %d seconds' % (int(time.time() - start_time)))
-
+if warns:
+    for w in warns:
+        print(w)
+if fails:
+    for f in fails:
+        print(f)
 
 
