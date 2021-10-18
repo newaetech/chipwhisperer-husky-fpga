@@ -215,6 +215,7 @@ module cwhusky_tb();
          write_next_byte((pSEGMENT_CYCLES & 32'h0000_00FF));
          write_next_byte((pSEGMENT_CYCLES & 32'h0000_FF00)>>8);
          write_next_byte((pSEGMENT_CYCLES & 32'h00FF_0000)>>16);
+         write_1byte(`SEGMENT_CYCLE_COUNTER_EN, 8'h1);
       end
 
       if (pSTREAM) begin

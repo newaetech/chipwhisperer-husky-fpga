@@ -63,6 +63,8 @@ module reg_la #(
    input  wire         userio7,
    input  wire         userio_clk,
 
+   input  wire [8:0]   tu_la_debug,
+
 
    input  wire         glitch_go,
    input  wire         glitch_trigger_sourceclock,
@@ -83,7 +85,7 @@ module reg_la #(
     wire source_clk;
 
     reg [1:0] clock_source_reg;
-    reg [1:0] trigger_source_reg;
+    reg [2:0] trigger_source_reg;
     reg [1:0] capture_group_reg;
     reg [3:0] read_select_reg;
     reg observer_powerdown;
@@ -119,9 +121,11 @@ module reg_la #(
 `endif
 
 
-    wire capture_go_async = (trigger_source_reg == 2'b00)? adc_capture_go : 
-                            (trigger_source_reg == 2'b01)? glitch_go : 
-                            (trigger_source_reg == 2'b10)? glitch_trigger_sourceclock : hs1;
+    wire capture_go_async = (trigger_source_reg == 3'b000)? adc_capture_go : 
+                            (trigger_source_reg == 3'b001)? glitch_go : 
+                            (trigger_source_reg == 3'b010)? glitch_trigger_sourceclock :
+                            (trigger_source_reg == 3'b011)? hs1 :
+                            (trigger_source_reg == 3'b100)? tu_la_debug[0] : 1'b0;
 
 
    `ifndef __ICARUS__
@@ -295,6 +299,19 @@ module reg_la #(
                capture8_source <= userio_clk;
            end
 
+           3: begin
+               capture0_source <= tu_la_debug[0];
+               capture1_source <= tu_la_debug[1];
+               capture2_source <= tu_la_debug[2];
+               capture3_source <= tu_la_debug[3];
+               capture4_source <= tu_la_debug[4];
+               capture5_source <= tu_la_debug[5];
+               capture6_source <= tu_la_debug[6];
+               capture7_source <= tu_la_debug[7];
+               capture8_source <= tu_la_debug[8];
+           end
+
+
            default: begin
                capture0_source <= 1'b1;
                capture1_source <= 1'b0;
@@ -385,7 +402,7 @@ module reg_la #(
              `LA_CAPTURE_GROUP: reg_datao_reg = {6'b0, capture_group_reg};
              `LA_STATUS:        reg_datao_reg = {6'b0, capturing, observer_locked};
              `LA_CLOCK_SOURCE:  reg_datao_reg = {6'b0, clock_source_reg};
-             `LA_TRIGGER_SOURCE:reg_datao_reg = {6'b0, trigger_source_reg};
+             `LA_TRIGGER_SOURCE:reg_datao_reg = {5'b0, trigger_source_reg};
              `LA_POWERDOWN:     reg_datao_reg = {7'b0, observer_powerdown};
              `LA_EXISTS:        reg_datao_reg = la_exists_code[reg_bytecnt*8 +: 8];
              `LA_CAPTURE_DEPTH: reg_datao_reg = capture_depth[reg_bytecnt*8 +: 8];
@@ -399,7 +416,7 @@ module reg_la #(
    always @(posedge clk_usb) begin
       if (reset) begin
          clock_source_reg <= 2'b10; // default to PLL
-         trigger_source_reg <= 2'b00; // default to glitch
+         trigger_source_reg <= 3'b000; // default to glitch
          capture_group_reg <= 0;
          read_select_reg <= 0;
          observer_powerdown <= 1;
@@ -408,9 +425,9 @@ module reg_la #(
       else if (reg_write) begin
          case (reg_address)
              `LA_CLOCK_SOURCE:  clock_source_reg <= reg_datai[1:0];
-             `LA_TRIGGER_SOURCE:trigger_source_reg <= reg_datai[1:0];
+             `LA_TRIGGER_SOURCE:trigger_source_reg <= reg_datai[2:0];
              `LA_CAPTURE_GROUP: capture_group_reg <= reg_datai[1:0];
-             `LA_READ_SELECT:   read_select_reg <= reg_datai;
+             `LA_READ_SELECT:   read_select_reg <= reg_datai[3:0];
              `LA_POWERDOWN:     observer_powerdown <= reg_datai[0];
          endcase
       end

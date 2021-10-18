@@ -173,6 +173,8 @@ module cwhusky_top(
    wire slow_fifo_rd;
    wire [7:0] fifo_dout;
 
+   wire [8:0] tu_la_debug;
+
    wire flash_pattern;
 
    wire userio_debug_driven;
@@ -286,7 +288,8 @@ module cwhusky_top(
         .flash_pattern          (flash_pattern),
 
         .slow_fifo_wr           (slow_fifo_wr),
-        .slow_fifo_rd           (slow_fifo_rd)
+        .slow_fifo_rd           (slow_fifo_rd),
+        .la_debug               (tu_la_debug)
 
    );
 
@@ -452,6 +455,8 @@ module cwhusky_top(
         .userio6                (USERIO_D[6]),
         .userio7                (USERIO_D[7]),
         .userio_clk             (USERIO_CLK),
+
+        .tu_la_debug            (tu_la_debug),
 
         .glitch_go              (glitch_go),
         .glitch_trigger_sourceclock (glitch_trigger),

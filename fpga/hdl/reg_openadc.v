@@ -65,6 +65,7 @@ module reg_openadc #(
    /* Interface to fifo/capture module */
    output reg  [15:0] num_segments,
    output reg  [19:0] segment_cycles,
+   output reg         segment_cycle_counter_en,
 
    /* Additional ADC control lines */
    output reg         data_source_select,
@@ -205,6 +206,7 @@ module reg_openadc #(
                 `FPGA_BUILDTIME_ADDR: reg_datao_reg = buildtime[reg_bytecnt*8 +: 8];
                 `NUM_SEGMENTS: reg_datao_reg = num_segments[reg_bytecnt*8 +: 8];
                 `SEGMENT_CYCLES: reg_datao_reg = segment_cycles[reg_bytecnt*8 +: 8];
+                `SEGMENT_CYCLE_COUNTER_EN: reg_datao_reg = {7'b0, segment_cycle_counter_en};
                 `DATA_SOURCE_SELECT: reg_datao_reg = data_source_select;
                 `LED_SELECT: reg_datao_reg = led_select;
                 `NO_CLIP_ERRORS: reg_datao_reg = no_clip_errors;
@@ -233,6 +235,7 @@ module reg_openadc #(
          data_source_select <= 1; // default to ADC
          num_segments <= 1;
          segment_cycles <= 0;
+         segment_cycle_counter_en <= 0;
          led_select <= 0;
          no_clip_errors <= 0;
          clip_test <= 0;
@@ -254,6 +257,7 @@ module reg_openadc #(
             `ADVCLOCK_ADDR: registers_advclocksettings[reg_bytecnt*8 +: 8] <= reg_datai;
             `NUM_SEGMENTS: num_segments[reg_bytecnt*8 +: 8] <= reg_datai;
             `SEGMENT_CYCLES: segment_cycles[reg_bytecnt*8 +: 8] <= reg_datai;
+            `SEGMENT_CYCLE_COUNTER_EN: segment_cycle_counter_en <= reg_datai[0];
             `DATA_SOURCE_SELECT: data_source_select <= reg_datai[0];
             `LED_SELECT: led_select <= reg_datai[1:0];
             `NO_CLIP_ERRORS: no_clip_errors <= reg_datai[0];

@@ -35,6 +35,7 @@ module fifo_top_husky(
     input wire          arm_i,
     input wire [15:0]   num_segments,
     input wire [19:0]   segment_cycles,
+    input wire          segment_cycle_counter_en,
 
     //FIFO to USB Read Interface
     input wire          clk_usb,
@@ -55,6 +56,8 @@ module fifo_top_husky(
     input  wire         stream_mode, //1=Enable stream mode, 0=Normal
     output reg          error_flag,
     output reg [7:0]    error_stat,
+    output reg [7:0]    first_error_stat,
+    output reg [2:0]    first_error_state,
     input  wire         clear_fifo_errors,
     output reg          stream_segment_available,
     input  wire         no_clip_errors,
@@ -67,7 +70,8 @@ module fifo_top_husky(
     output wire         slow_fifo_wr,
     output wire         slow_fifo_rd,
     output reg  [31:0]  fifo_read_count,
-    output reg  [31:0]  fifo_read_count_error_freeze
+    output reg  [31:0]  fifo_read_count_error_freeze,
+    output reg          fifo_rst 
 
 );
 
@@ -119,12 +123,11 @@ module fifo_top_husky(
     reg                 slow_fifo_underflow_masked;
 
     reg  [3:0]          done_wait_count;
-    reg                 downsample_error;
     reg                 segment_error;
     reg                 clip_error;
+    reg                 downsample_error;
 
     reg                 fifo_rst_pre;
-    reg                 fifo_rst;
     reg                 reset_done;
     reg [31:0]          read_count;
     reg                 first_read;
@@ -215,12 +218,11 @@ module fifo_top_husky(
     assign fsm_fast_wr_en = ((state == pS_PRESAMP_FILLING) || (state == pS_PRESAMP_FULL) || (state == pS_TRIGGERED));
 
     wire presamp_done1 = (adc_capture_go && ~adc_capture_go_r && (segment_counter == 0));
-    wire presamp_done2 = (adc_segment_go && ~adc_segment_go_r && (segment_counter > 0));
-    wire presamp_done3 = ((segment_cycle_counter == (segment_cycles-1)) && (segment_cycles>0));
-    wire presamp_done = presamp_done1 || presamp_done2 || presamp_done3;
+    wire next_segment_go = segment_cycle_counter_en?  ((segment_cycle_counter == (segment_cycles-1)) && (segment_cycles>0)) :
+                                                      (adc_segment_go && ~adc_segment_go_r);
 
+    wire presamp_done = presamp_done1 || (next_segment_go && segment_counter > 0);
     wire presamp_error = presamp_done && (state == pS_PRESAMP_FILLING);
-    wire next_segment_go = ( (adc_segment_go && ~adc_segment_go_r) || ((segment_cycle_counter == (segment_cycles-1)) && (segment_cycles>0)) );
 
     always @ (posedge adc_sampleclk) begin
         if (reset)
@@ -428,6 +430,7 @@ module fifo_top_husky(
     // 5 to 200 MHz.  So we make the FIFO reset four 5 MHz cycles long = 76 USB
     // clocks, and prevent FIFO access for thirty 5 MHz cycles = 570 USB clocks
     // after reset. (Ref: Xilinx PG057 v13.2, p.129).
+    // FIFO reset is initiated by arm_fifo_rst_adc, which comes from arming.
 
    cdc_pulse U_fifo_rst_cdc (
       .reset_i       (reset),
@@ -478,30 +481,46 @@ module fifo_top_husky(
           slow_fifo_underflow_masked = slow_fifo_underflow && ~no_underflow_errors && (slow_fifo_underflow_count == pMAX_UNDERFLOWS);
     end
 
+    function [7:0] error_bits (input [7:0] current_error);
+       begin
+          error_bits = current_error;
+          if (segment_error)                 error_bits[7] = 1'b1;
+          if (downsample_error)              error_bits[6] = 1'b1;
+          if (clip_error)                    error_bits[5] = 1'b1;
+          if (presamp_error)                 error_bits[4] = 1'b1;
+          if (fast_fifo_overflow)            error_bits[3] = 1'b1;
+          if (fast_fifo_underflow)           error_bits[2] = 1'b1;
+          if (slow_fifo_overflow)            error_bits[1] = 1'b1;
+          if (slow_fifo_underflow_masked)    error_bits[0] = 1'b1;
+       end
+    endfunction
 
     always @(posedge clk_usb) begin
        if (reset) begin
           error_flag <= 0;
           error_stat <= 0;
+          first_error_stat <= 0;
           underflow_count <= 0;
+          first_error_state <= pS_IDLE;
        end
        else begin
           if (fifo_rst_start_r || clear_fifo_errors) begin
              error_stat <= 0;
+             first_error_stat <= 0;
              error_flag <= 0;
              underflow_count <= 0;
+             first_error_state <= pS_IDLE;
           end
           else begin
-             if (segment_error || downsample_error || clip_error || presamp_error || fast_fifo_overflow || fast_fifo_underflow || slow_fifo_overflow || slow_fifo_underflow_masked)
+             if (segment_error || downsample_error || clip_error || presamp_error || fast_fifo_overflow || fast_fifo_underflow || slow_fifo_overflow || slow_fifo_underflow_masked) begin
                 error_flag <= 1;
-             if (segment_error)                 error_stat[7] <= 1'b1;
-             if (downsample_error)              error_stat[6] <= 1'b1;
-             if (clip_error)                    error_stat[5] <= 1'b1;
-             if (presamp_error)                 error_stat[4] <= 1'b1;
-             if (fast_fifo_overflow)            error_stat[3] <= 1'b1;
-             if (fast_fifo_underflow)           error_stat[2] <= 1'b1;
-             if (slow_fifo_overflow)            error_stat[1] <= 1'b1;
-             if (slow_fifo_underflow_masked)    error_stat[0] <= 1'b1;
+                if (!error_flag) begin
+                   first_error_stat <= error_bits(first_error_stat);
+                   first_error_state <= state_r;
+                end
+             end
+
+             error_stat <= error_bits(error_stat);
 
              if (slow_fifo_underflow_masked && (underflow_count != 8'hFF))
                 underflow_count <= underflow_count + 1;
@@ -962,7 +981,8 @@ module fifo_top_husky(
           .probe12        (adc_capture_go),       // input wire [0:0]  probe12 
           .probe13        (fast_fifo_empty),      // input wire [0:0]  probe13 
           .probe14        (fifo_rst),             // input wire [0:0]  probe14 
-          .probe15        (adc_datain),           // input wire [11:0] probe15
+          //.probe15        (adc_datain),           // input wire [11:0] probe15
+          .probe15        (segment_cycle_counter[11:0]), // input wire [11:0] probe15
           .probe16        (fast_fifo_wr),         // input wire [0:0]  probe16
           .probe17        (fast_fifo_rd),         // input wire [0:0]  probe17
           .probe18        (fast_fifo_dout),       // input wire [11:0] probe18

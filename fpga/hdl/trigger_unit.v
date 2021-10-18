@@ -44,7 +44,10 @@ module trigger_unit(
 
     output wire              capture_go_o,         //1 = trigger conditions met, stays high until 'capture_done_i' goes high
     output wire              segment_go_o,
-    input wire               capture_done_i        //1 = capture done
+    input wire               capture_done_i,       //1 = capture done
+
+    input wire               fifo_rst,             // for debug only
+    output wire [8:0]        la_debug              // for debug only
     );
 
    //**** Trigger Logic Selection ****
@@ -170,6 +173,16 @@ module trigger_unit(
          trigger_length_o <= 0;
    end
 
+   assign la_debug = { adc_capture_go, 
+                       trigger_now, 
+                       trigger, 
+                       arm_i, 
+                       armed, 
+                       int_reset_capture, 
+                       arm_i, 
+                       segment_go, 
+                       fifo_rst };
+
 
    `ifdef ILA_TRIG
        ila_trig U_ila_trig (
@@ -179,7 +192,12 @@ module trigger_unit(
           .probe2         (trigger_now),          // input wire [0:0]  probe2 
           .probe3         (trigger),              // input wire [0:0]  probe3 
           .probe4         (arm_i),                // input wire [0:0]  probe4 
-          .probe5         (armed)                 // input wire [0:0]  probe5 
+          .probe5         (armed),                // input wire [0:0]  probe5 
+          .probe6         (int_reset_capture),    // input wire [0:0]  probe6 
+          .probe7         (arm_i),                // input wire [0:0]  probe7 
+          .probe8         (segment_go),           // input wire [0:0]  probe8 
+          .probe9         (segment_go_delayed),   // input wire [0:0]  probe9 
+          .probe10        (fifo_rst)              // input wire [0:0]  probe10
        );
    `endif
 

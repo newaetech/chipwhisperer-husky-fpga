@@ -63,7 +63,8 @@ module openadc_interface #(
 
     // for debug only:
     output wire                         slow_fifo_wr,
-    output wire                         slow_fifo_rd
+    output wire                         slow_fifo_rd,
+    output wire [8:0]                   la_debug
 
 );
 
@@ -85,13 +86,17 @@ module openadc_interface #(
     wire       fifo_stream;
     wire [15:0] num_segments;
     wire [19:0] segment_cycles;
+    wire        segment_cycle_counter_en;
     wire [1:0]  led_select;
     wire       data_source_select;
     wire [7:0] fifo_error_stat;
+    wire [7:0] fifo_first_error_stat;
+    wire [2:0] fifo_first_error_state;
     wire       no_clip_errors;
     wire       clip_test;
     wire       clear_fifo_errors;
     wire       capture_done;
+    wire       fifo_rst;
 
     assign reset_o = reset;
 
@@ -260,7 +265,9 @@ module openadc_interface #(
       .trigger_length_o     (trigger_length),
       .capture_go_o         (adc_capture_go),
       .segment_go_o         (adc_segment_go),
-      .capture_done_i       (adc_capture_done)
+      .capture_done_i       (adc_capture_done),
+      .fifo_rst             (fifo_rst),
+      .la_debug             (la_debug)
    );
 
    assign reg_status[0] = armed;
@@ -350,6 +357,7 @@ module openadc_interface #(
       .fifo_stream                  (fifo_stream),
       .num_segments                 (num_segments),
       .segment_cycles               (segment_cycles),
+      .segment_cycle_counter_en     (segment_cycle_counter_en),
       .led_select                   (led_select),
       .no_clip_errors               (no_clip_errors),
       .clip_test                    (clip_test),
@@ -380,6 +388,8 @@ module openadc_interface #(
       .fast_fifo_read_mode  (fast_fifo_read),
       .stream_segment_threshold (stream_segment_threshold),
       .fifo_error_stat      (fifo_error_stat),
+      .fifo_first_error_stat(fifo_first_error_stat),
+      .fifo_first_error_state (fifo_first_error_state),
       .fifo_read_count      (fifo_read_count),
       .fifo_read_count_error_freeze (fifo_read_count_error_freeze),
       .underflow_count      (underflow_count),
@@ -455,6 +465,7 @@ module openadc_interface #(
       .arm_i                    (armed),
       .num_segments             (num_segments),
       .segment_cycles           (segment_cycles),
+      .segment_cycle_counter_en (segment_cycle_counter_en),
 
       .clk_usb                  (clk_usb),
       .fifo_read_fifoen         (fifo_rd_en),
@@ -474,6 +485,8 @@ module openadc_interface #(
       .stream_mode              (fifo_stream),
       .error_flag               (fifo_error_flag),
       .error_stat               (fifo_error_stat),
+      .first_error_stat         (fifo_first_error_stat),
+      .first_error_state        (fifo_first_error_state),
       .clear_fifo_errors        (clear_fifo_errors),
       .stream_segment_available (stream_segment_available),
       .no_clip_errors           (no_clip_errors),
@@ -485,7 +498,8 @@ module openadc_interface #(
       .slow_fifo_wr             (slow_fifo_wr),
       .slow_fifo_rd             (slow_fifo_rd),
       .fifo_read_count          (fifo_read_count),
-      .fifo_read_count_error_freeze (fifo_read_count_error_freeze)
+      .fifo_read_count_error_freeze (fifo_read_count_error_freeze),
+      .fifo_rst                 (fifo_rst)
    );
 
 

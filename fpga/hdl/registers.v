@@ -322,5 +322,10 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 
 `define CAPTURE_DONE            89
 
+`define FIFO_FIRST_ERROR        90
+`define FIFO_FIRST_ERROR_STATE  91
+
+`define SEGMENT_CYCLE_COUNTER_EN 92
+
 `define REGISTER_VERSION 1
 
