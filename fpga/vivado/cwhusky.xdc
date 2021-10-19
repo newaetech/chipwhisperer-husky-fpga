@@ -252,8 +252,12 @@ set_input_delay -clock clk_usb 2.000 [get_ports USB_Addr]
 set_output_delay -clock clk_usb 0.000 [get_ports USB_SPARE0]
 set_false_path -to [get_ports USB_SPARE0]
 
-# note: unsure of correct value; this results in no timing failures (and functional bitfile)
-set_input_delay -clock ADC_clk_fb 3.000 [get_ports ADC_DP]
+# from spec!
+set_input_delay -clock ADC_clk_fb -max 1.450 [get_ports ADC_DP]
+set_input_delay -clock ADC_clk_fb -max 1.450 [get_ports ADC_DP] -clock_fall -add_delay
+set_input_delay -clock ADC_clk_fb -min 0.350 [get_ports ADC_DP]
+set_input_delay -clock ADC_clk_fb -min 0.350 [get_ports ADC_DP] -clock_fall -add_delay
+
 
 set_input_delay -clock clk_usb 0.000 [get_ports target_io1]
 set_input_delay -clock clk_usb 0.000 [get_ports target_io2]
