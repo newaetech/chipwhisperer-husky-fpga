@@ -96,6 +96,7 @@ module openadc_interface #(
     wire       clip_test;
     wire       clear_fifo_errors;
     wire       capture_done;
+    wire       armed_and_ready;
     wire       fifo_rst;
 
     assign reset_o = reset;
@@ -243,7 +244,8 @@ module openadc_interface #(
    //1 = wait for trigger to be INACTIVE before arming (e.g.: avoid triggering immediatly)
    //0 = arm as soon as cmd_arm goes high (e.g.: if trigger is already in active state, trigger)
    wire trigger_wait;
-   wire cmd_arm;
+   wire cmd_arm_adc;
+   wire cmd_arm_usb;
    wire trigger_now;
    wire [31:0] trigger_offset;
    wire [31:0] trigger_length;
@@ -259,13 +261,15 @@ module openadc_interface #(
       .trigger_adclevel_i   (trigger_level),
       .trigger_source_i     (trigger_source),
       .trigger_now_i        (trigger_now),
-      .arm_i                (cmd_arm),
+      .arm_i                (cmd_arm_adc),
       .arm_o                (armed),
       .trigger_offset_i     (trigger_offset),
       .trigger_length_o     (trigger_length),
       .capture_go_o         (adc_capture_go),
       .segment_go_o         (adc_segment_go),
       .capture_done_i       (adc_capture_done),
+      .armed_and_ready      (armed_and_ready),
+
       .fifo_rst             (fifo_rst),
       .la_debug             (la_debug)
    );
@@ -330,7 +334,8 @@ module openadc_interface #(
 
       .gain                         (PWM_incr),
       .status                       (reg_status),         
-      .cmd_arm                      (cmd_arm),
+      .cmd_arm_adc                  (cmd_arm_adc),
+      .cmd_arm_usb                  (cmd_arm_usb),
       .trigger_mode                 (trigger_mode),
       .trigger_wait                 (trigger_wait),  
       .trigger_source               (trigger_source),
@@ -463,6 +468,7 @@ module openadc_interface #(
       .adc_segment_go           (adc_segment_go),
       .adc_capture_stop         (adc_capture_done),
       .arm_i                    (armed),
+      .arm_usb                  (cmd_arm_usb),
       .num_segments             (num_segments),
       .segment_cycles           (segment_cycles),
       .segment_cycle_counter_en (segment_cycle_counter_en),
@@ -494,6 +500,7 @@ module openadc_interface #(
       .underflow_count          (underflow_count),
       .no_underflow_errors      (no_underflow_errors),
       .capture_done             (capture_done),
+      .armed_and_ready          (armed_and_ready),
 
       .slow_fifo_wr             (slow_fifo_wr),
       .slow_fifo_rd             (slow_fifo_rd),

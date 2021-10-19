@@ -45,6 +45,7 @@ module trigger_unit(
     output wire              capture_go_o,         //1 = trigger conditions met, stays high until 'capture_done_i' goes high
     output wire              segment_go_o,
     input wire               capture_done_i,       //1 = capture done
+    input wire               armed_and_ready,
 
     input wire               fifo_rst,             // for debug only
     output wire [8:0]        la_debug              // for debug only
@@ -148,7 +149,7 @@ module trigger_unit(
    always @(posedge adc_clk)
       if (resetarm) begin
          armed <= 0;
-      end else if (arm_i & ((trigger != trigger_level_i) | (trigger_wait_i == 0))) begin
+      end else if (armed_and_ready & ((trigger != trigger_level_i) | (trigger_wait_i == 0))) begin
          armed <= 1;
       end
 

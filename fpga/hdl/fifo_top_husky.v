@@ -33,6 +33,7 @@ module fifo_top_husky(
     input wire          adc_segment_go,
     output reg          adc_capture_stop,
     input wire          arm_i,
+    input wire          arm_usb,
     input wire [15:0]   num_segments,
     input wire [19:0]   segment_cycles,
     input wire          segment_cycle_counter_en,
@@ -65,6 +66,7 @@ module fifo_top_husky(
     output reg [7:0]    underflow_count,
     input  wire         no_underflow_errors,  // disables flagging of *slow* FIFO underflow errors only
     output reg          capture_done,
+    output reg          armed_and_ready,
 
     // for debug only:
     output wire         slow_fifo_wr,
@@ -107,10 +109,8 @@ module fifo_top_husky(
     reg  [19:0]         segment_cycle_counter;
 
     reg                 arm_r;
-    reg                 arm_r2;
     reg                 arm_fifo_rst_adc;
     wire                arm_fifo_rst_usb;
-    reg                 armed_and_ready;
     reg                 arming;
     reg                 adc_segment_go_r;
     reg                 adc_capture_go_r;
@@ -406,8 +406,7 @@ module fifo_top_husky(
           adc_capture_go_r <= adc_capture_go;
           {reset_done_r2, reset_done_r, reset_done_pipe} <= {reset_done_r, reset_done_pipe, reset_done};
           arm_r <= arm_i;
-          arm_r2 <= arm_r;
-          arm_fifo_rst_adc <= ~arm_r2 & arm_r;
+          arm_fifo_rst_adc <= ~arm_r & arm_i;
           if (arm_i && ~arm_r && ~arming) begin
              arming <= 1'b1;
              armed_and_ready <= 1'b0;
@@ -430,24 +429,20 @@ module fifo_top_husky(
     // 5 to 200 MHz.  So we make the FIFO reset four 5 MHz cycles long = 76 USB
     // clocks, and prevent FIFO access for thirty 5 MHz cycles = 570 USB clocks
     // after reset. (Ref: Xilinx PG057 v13.2, p.129).
-    // FIFO reset is initiated by arm_fifo_rst_adc, which comes from arming.
+    // FIFO reset is initiated by arm_fifo_rst_usb, which comes from arming.
 
-   cdc_pulse U_fifo_rst_cdc (
-      .reset_i       (reset),
-      .src_clk       (adc_sampleclk),
-      .src_pulse     (arm_fifo_rst_adc),
-      .dst_clk       (clk_usb),
-      .dst_pulse     (arm_fifo_rst_usb)
-   );
+    assign arm_fifo_rst_usb = arm_usb && ~arm_usb_r;
 
     wire fifo_rst_start = arm_fifo_rst_usb || reset;
     reg fifo_rst_start_r;
 
     reg [6:0] reset_hi_count;
     reg [9:0] reset_lo_count;
+    reg arm_usb_r;
     always @(posedge clk_usb) begin
        fifo_rst <= fifo_rst_pre;
        fifo_rst_start_r <= fifo_rst_start;
+       arm_usb_r <= arm_usb;
        if (fifo_rst_start_r) begin
           fifo_rst_pre <= 1'b1;
           reset_hi_count <= 1;

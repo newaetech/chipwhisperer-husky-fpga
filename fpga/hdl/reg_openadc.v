@@ -44,7 +44,8 @@ module reg_openadc #(
    input  wire [7:0]   status,
 
    /* Interface to trigger unit */
-   output wire         cmd_arm,
+   output wire         cmd_arm_adc,
+   output wire         cmd_arm_usb,
    output wire         trigger_mode,
    output wire         trigger_wait,
    output wire [11:0]  trigger_level,
@@ -94,7 +95,6 @@ module reg_openadc #(
 );
 
    wire reset;
-   wire cmd_arm_usb;
 
    assign  trigger_level = 12'b0;
 
@@ -112,7 +112,7 @@ module reg_openadc #(
          {arm_r2, arm_r, arm_pipe} <= {arm_r, arm_pipe, cmd_arm_usb};
       end
    end
-   assign cmd_arm = arm_r2;
+   assign cmd_arm_adc = arm_r2;
 
 
    wire reset_fromreg;
