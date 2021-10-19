@@ -181,6 +181,28 @@ def print_tests():
        print("%s: %s" % (test['name'], test['description']))
     quit()
 
+def check_pass_fail(logfile):
+    log = open(logfile, 'r')
+    passed = None
+    warnings = 0
+    errors = 0
+    for line in log:
+       pass_matches = pass_regex.search(line)
+       fail_matches = fail_regex.search(line)
+       if pass_matches:
+          passed = 1
+          warnings = int(pass_matches.group(1))
+          break
+       elif fail_matches:
+          passed = 0
+          errors = int(fail_matches.group(1))
+          break
+    log.close()
+    if passed is None:
+        print("*** parsing error on %s ***" % logfile)
+    return passed, warnings, errors
+
+
 if (args.list):
     print_tests()
     quit()
@@ -202,9 +224,6 @@ pass_regex = re.compile(r'^Simulation passed \((\d+) warnings')
 fail_regex = re.compile(r'^SIMULATION FAILED \((\d+) errors')
 seed_regex = re.compile(r'^Running with pSEED=(\d+)$')
 test_regex = re.compile(args.tests)
-
-passed = 0
-failed = 0
 
 # Check once that compile passes:
 outfile = open('regress.out', 'w')
@@ -262,53 +281,53 @@ for test in tests:
       # run:
       if run_test:
          p = subprocess.Popen(makeargs, stdout=outfile, stderr=outfile)
-         processes.append((p,logfile))
+         processes.append((p,logfile,seed))
 
-print("done.")
+num_processes = len(processes)
+print("done. %d tests running." % num_processes)
+
 warns = []
 fails = []
 
-pbar = tqdm(total=len(processes))
+pbar       = tqdm(total=len(processes), desc='Tests finished')
+pbarpassed = tqdm(total=len(processes), desc='Tests passing ')
 
 oldfinished = 0
 finished = 0
-while (finished < len(processes)):
-    finished = 0
-    for p,l in processes:
+oldpass_count = 0
+fail_count = 0
+pass_count = 0
+while len(processes):
+    for p,l,s in processes:
         if not p.poll() is None:
             finished += 1
-    pbar.update(finished-oldfinished)
+            passed, warnings, errors = check_pass_fail(l)
+            pass_count += passed
+            if warnings:
+                warns.append("%s: %0d warnings" % (l, warnings))
+            if errors:
+                fail_count += 1
+                fails.append("%s: %d errors (seed=%d)" % (l, errors, s))
+            processes.remove((p,l,s))
+
+    pbar.update(finished - oldfinished)
+    pbarpassed.update(pass_count - oldpass_count)
     oldfinished = finished
+    oldpass_count = pass_count
     time.sleep(1)
 pbar.close()
+pbarpassed.close()
 
 # just to be sure:
-#exit_codes = [p.wait() for p,l in processes]
-
-# check pass/fail:
-for p,logfile in processes:
-    log = open(logfile, 'r')
-    for line in log:
-       pass_matches = pass_regex.search(line)
-       fail_matches = fail_regex.search(line)
-       if pass_matches:
-          passed += 1
-          warnings = int(pass_matches.group(1))
-          if warnings:
-             warns.append("%s: %0d warnings" % (logfile, warnings))
-          break
-       elif fail_matches:
-          failed += 1
-          fails.append("%s: %d errors, seed = %d" % (logfile, int(fail_matches.group(1)), seed))
-          break
+#exit_codes = [p.wait() for p,l,s in processes]
 
 # sanity check:
-assert len(processes) == passed + failed
+assert num_processes == pass_count + fail_count
 
 
 # Summarize results:
 print('\n*** RESULTS SUMMARY ***')
-print('%d tests passing, %d tests failing.' % (passed, failed))
+print('%d tests passing, %d tests failing.' % (pass_count, fail_count))
 print('Elapsed time: %d seconds' % (int(time.time() - start_time)))
 if warns:
     for w in warns:
