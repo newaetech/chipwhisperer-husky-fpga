@@ -359,7 +359,8 @@ module cwhusky_tb();
          #1 wait (trigger_done == 0);
          #1 wait (trigger_done);
          // wait for the last segment's samples to get captured:
-         repeat(fifo_samples*(pDOWNSAMPLE+1)) @(posedge clk_adc);
+         repeat((fifo_samples+2)*(pDOWNSAMPLE+1)) @(posedge clk_adc);
+         repeat (pREAD_DELAY) @(posedge clk_adc);
       end
 
       rw_lots_bytes(`ADCREAD_ADDR);
