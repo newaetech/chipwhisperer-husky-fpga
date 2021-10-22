@@ -119,6 +119,8 @@ module reg_openadc #(
    assign reset = reset_i | reset_fromreg;
    assign reset_o = reset;
 
+   wire [31:0] max_samples_constant = 32'd`MAX_SAMPLES;
+   wire [31:0] max_segment_samples_constant = 32'd`MAX_SEGMENT_SAMPLES;
 
    //Register definitions
    reg [7:0]  registers_gain;
@@ -198,6 +200,8 @@ module reg_openadc #(
                 `VERSION_ADDR: reg_datao_reg = version_data[reg_bytecnt*8 +: 8];
                 `DECIMATE_ADDR: reg_datao_reg = registers_downsample[reg_bytecnt*8 +: 8];
                 `SAMPLES_ADDR: reg_datao_reg = registers_samples[reg_bytecnt*8 +: 8];
+                `MAX_SAMPLES_ADDR: reg_datao_reg = max_samples_constant[reg_bytecnt*8 +: 8];
+                `MAX_SEGMENT_SAMPLES_ADDR: reg_datao_reg = max_segment_samples_constant[reg_bytecnt*8 +: 8];
                 `PRESAMPLES_ADDR: reg_datao_reg = registers_presamples[reg_bytecnt*8 +: 8];
                 `OFFSET_ADDR: reg_datao_reg = registers_offset[reg_bytecnt*8 +: 8];
                 `ADVCLOCK_ADDR: reg_datao_reg = registers_advclocksettings_read[reg_bytecnt*8 +: 8];
@@ -227,7 +231,8 @@ module reg_openadc #(
          registers_gain <= 0;
          registers_settings <= 8'b0010_0100; // default to trigger on rising edge
          registers_echo <= 0;
-         registers_samples <= maxsamples_i;
+         registers_samples <= maxsamples_i; // for backwards compatibility with CW-lite, but
+                                            // MAX_SAMPLES_ADDR and MAX_SEGMENT_SAMPLES_ADDR registers should be used instead
          registers_presamples <= 0;
          registers_offset <= 0;
          registers_advclocksettings <= 32'h00000102;

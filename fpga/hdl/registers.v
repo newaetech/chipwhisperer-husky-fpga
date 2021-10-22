@@ -327,5 +327,8 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 
 `define SEGMENT_CYCLE_COUNTER_EN 92
 
+`define MAX_SAMPLES_ADDR        93
+`define MAX_SEGMENT_SAMPLES_ADDR 94
+
 `define REGISTER_VERSION 1
 
