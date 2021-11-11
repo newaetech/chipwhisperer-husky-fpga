@@ -40,6 +40,8 @@ module reg_la #(
    input wire          clkgen,
    input wire          pll_fpga_clk,
 
+   input wire          mmcm_shutdown, // triggered by XADC error
+
    input  wire         glitchclk,
    input  wire         glitch_mmcm1_clk_out,
    input  wire         glitch_mmcm2_clk_out,
@@ -170,7 +172,7 @@ module reg_la #(
          .CLKIN2                       (1'b0),
          // Control Ports: 1-bit (each) input: MMCM control ports
          .CLKINSEL                     (1'b1),
-         .PWRDWN                       (observer_powerdown),
+         .PWRDWN                       (observer_powerdown || mmcm_shutdown),
          .RST                          (drp_observer_reset),
          // DRP Ports:
          .DADDR                        (drp_observer_addr),
@@ -189,7 +191,7 @@ module reg_la #(
       ) U_observer_clk (
          .I             (observer_clk_prebuf),
          .O             (observer_clk),
-         .CE            (~observer_powerdown),
+         .CE            (~(observer_powerdown || mmcm_shutdown)),
          .CLR           (1'b0)
       );
 

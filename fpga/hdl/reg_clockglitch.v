@@ -45,6 +45,8 @@ module reg_clockglitch #(
    input  wire         reg_read,     // Read flag
    input  wire         reg_write,    // Write flag
 
+   input  wire         mmcm_shutdown, // triggered by XADC error
+
    input wire          target_hs1,
    input wire          clkgen,
    input wire          pll_fpga_clk,
@@ -341,7 +343,7 @@ module reg_clockglitch #(
     .mmcm2_locked           (mmcm2_locked),
     .phase1_done            (phase1_done),
     .phase2_done            (phase2_done),
-    .I_mmcm_powerdown       (clockglitch_powerdown),
+    .I_mmcm_powerdown       (clockglitch_powerdown || mmcm_shutdown),
 
     .glitch_mmcm1_clk_out_buf (glitch_mmcm1_clk_out),
     .glitch_mmcm2_clk_out_buf (glitch_mmcm2_clk_out),
@@ -360,7 +362,7 @@ module reg_clockglitch #(
 /* LED lighty up thing */
 reg [18:0] led_extend;
 always @(posedge sourceclk) begin
-   if (clockglitch_powerdown) begin
+   if (clockglitch_powerdown || mmcm_shutdown) begin
       led_extend <= 0;   
       led_glitch <= 1'b0;
    end

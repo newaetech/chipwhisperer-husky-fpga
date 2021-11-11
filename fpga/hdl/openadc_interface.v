@@ -31,6 +31,8 @@ module openadc_interface #(
     output reg                          LED_armed, // Armed LED
     output reg                          LED_capture, // Capture in Progress LED (only illuminate during capture, very quick)
 
+    input  wire                         mmcm_shutdown,
+
     // OpenADC Interface Pins
     input  wire [11:0]                  ADC_data,
     output wire                         ADC_clk_out,
@@ -430,7 +432,8 @@ module openadc_interface #(
       .reg_write            (reg_write), 
 
       .adc_clkgen_power_down(adc_clkgen_power_down),
-      .clkgen_power_down    (clkgen_power_down    )
+      .clkgen_power_down    (clkgen_power_down),
+      .mmcm_shutdown        (mmcm_shutdown)
     );
 `else
     // TODO-IMPORTANT NOTE! for some unknown reason, simulations fail without

@@ -60,7 +60,8 @@ module clock_managment_advanced #(
 
     // MMCM control
     input  wire                         adc_clkgen_power_down,
-    input  wire                         clkgen_power_down 
+    input  wire                         clkgen_power_down,
+    input  wire                         mmcm_shutdown
 );
 
     wire ADC_clk_sample;
@@ -158,7 +159,7 @@ module clock_managment_advanced #(
        .clk_out1        (ADC_clk),
        .clk_out2        (ADC_clk_times4),
        .locked          (dcm_adc_locked),
-       .power_down      (adc_clkgen_power_down),
+       .power_down      (adc_clkgen_power_down || mmcm_shutdown),
        .clkfb_in        (adcfb),
        .clkfb_out       (adcfb),
        .psclk           (clk_usb),
@@ -172,7 +173,7 @@ module clock_managment_advanced #(
        .clk_in1         (clkgenfx_in),
        .clk_out1        (clkgenfx_out),
        .locked          (dcm_gen_locked),
-       .power_down      (clkgen_power_down),
+       .power_down      (clkgen_power_down || mmcm_shutdown),
        // Dynamic reconfiguration ports:
        .daddr           (drp_addr),
        .dclk            (clk_usb),

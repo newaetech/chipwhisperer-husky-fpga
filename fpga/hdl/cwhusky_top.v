@@ -258,6 +258,7 @@ module cwhusky_top(
    ) oadc (
         .clk_usb                (clk_usb_buf),
         .reset_o                (reg_rst),
+        .mmcm_shutdown          (xadc_error_flag),
 
         .LED_capture            (LED_CAP),
         .LED_armed              (LED_ARMED),
@@ -403,6 +404,7 @@ module cwhusky_top(
         .reg_datai      (write_data), 
         .reg_read       (reg_read), 
         .reg_write      (reg_write), 
+        .mmcm_shutdown  (xadc_error_flag),
         .target_hs1     (target_hs1),
         .clkgen         (clkgen),
         .pll_fpga_clk   (pll_fpga_clk),
@@ -432,6 +434,7 @@ module cwhusky_top(
         .target_hs1             (target_hs1),
         .clkgen                 (clkgen),
         .pll_fpga_clk           (pll_fpga_clk),
+        .mmcm_shutdown          (xadc_error_flag),
 
         .glitchclk              (glitchclk),
         .glitch_mmcm1_clk_out   (glitch_mmcm1_clk_out),
