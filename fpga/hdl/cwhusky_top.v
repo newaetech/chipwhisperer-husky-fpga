@@ -160,7 +160,7 @@ module cwhusky_top(
    wire glitch_enable;
    wire glitch_go;
    wire glitch_trigger;
-   wire adc_capture_go;
+   wire capture_active;
    wire enable_avrprog;
    wire [11:0] ADC_data;
 
@@ -284,7 +284,7 @@ module cwhusky_top(
         .fifo_error_flag        (fifo_error_flag),
         .stream_segment_available (stream_segment_available),
 
-        .adc_capture_go         (adc_capture_go),
+        .capture_active         (capture_active),
 
         .flash_pattern          (flash_pattern),
 
@@ -463,7 +463,7 @@ module cwhusky_top(
 
         .glitch_go              (glitch_go),
         .glitch_trigger_sourceclock (glitch_trigger),
-        .adc_capture_go         (adc_capture_go)
+        .capture_active         (capture_active)
    );
    `else
        assign read_data_la = 0;

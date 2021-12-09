@@ -29,8 +29,8 @@ module fifo_top_husky(
     //ADC Sample Input
     input wire [11:0]   adc_datain,
     input wire          adc_sampleclk,
-    input wire          adc_capture_go, //Set to '1' to start capture, keep at 1 until adc_capture_stop goes high
-    input wire          adc_segment_go,
+    input wire          capture_active, //for debug only
+    input wire          capture_go,
     output reg          adc_capture_stop,
     input wire          arm_i,
     input wire          arm_usb,
@@ -112,8 +112,7 @@ module fifo_top_husky(
     reg                 arm_fifo_rst_adc;
     wire                arm_fifo_rst_usb;
     reg                 arming;
-    reg                 adc_segment_go_r;
-    reg                 adc_capture_go_r;
+    reg                 capture_go_r;
 
     reg [1:0]           fast_read_count;
     reg [2:0]           fast_write_count;
@@ -217,9 +216,9 @@ module fifo_top_husky(
 
     assign fsm_fast_wr_en = ((state == pS_PRESAMP_FILLING) || (state == pS_PRESAMP_FULL) || (state == pS_TRIGGERED));
 
-    wire presamp_done1 = (adc_capture_go && ~adc_capture_go_r && (segment_counter == 0));
+    wire presamp_done1 = (capture_go && (segment_counter == 0));
     wire next_segment_go = segment_cycle_counter_en?  ((segment_cycle_counter == (segment_cycles-1)) && (segment_cycles>0)) :
-                                                      (adc_segment_go && ~adc_segment_go_r);
+                                                      (capture_go && ~capture_go_r);
 
     wire presamp_done = presamp_done1 || (next_segment_go && segment_counter > 0);
     wire presamp_error = presamp_done && (state == pS_PRESAMP_FILLING);
@@ -277,7 +276,7 @@ module fifo_top_husky(
                 if (armed_and_ready && ~adc_capture_stop) begin
                    if (arm_i & (presample_i > 0))
                       state <= pS_PRESAMP_FILLING;
-                   else if (adc_capture_go)
+                   else if (capture_go)
                       state <= pS_TRIGGERED;
                 end
              end
@@ -398,12 +397,10 @@ module fifo_top_husky(
           reset_done_r2 <= 1'b0;
           arming <= 1'b0;
           armed_and_ready <= 1'b0;
-          adc_segment_go_r <= 1'b0;
-          adc_capture_go_r <= 1'b0;
+          capture_go_r <= 1'b0;
        end
        else begin
-          adc_segment_go_r <= adc_segment_go;
-          adc_capture_go_r <= adc_capture_go;
+          capture_go_r <= capture_go;
           {reset_done_r2, reset_done_r, reset_done_pipe} <= {reset_done_r, reset_done_pipe, reset_done};
           arm_r <= arm_i;
           arm_fifo_rst_adc <= ~arm_r & arm_i;
@@ -846,7 +843,7 @@ module fifo_top_husky(
               .probe14        (reset_hi_count),       // input wire [6:0]  probe14 
               .probe15        (reset_lo_count),       // input wire [9:0]  probe15 
               .probe16        (fifo_rst),             // input wire [0:0]  probe16 
-              .probe17        (adc_capture_go),       // input wire [0:0]  probe17 
+              .probe17        (capture_active),       // input wire [0:0]  probe17 
 
               .probe18        (adc_capture_stop),     // input wire [0:0]  probe18 
               .probe19        (presample_counter[11:0]), // input wire [11:0] probe19 
@@ -868,7 +865,7 @@ module fifo_top_husky(
               .probe5         (fast_fifo_empty),      // input wire [0:0]  probe5 
               .probe6         (fast_fifo_overflow),   // input wire [0:0]  probe6 
               .probe7         (fast_fifo_underflow),  // input wire [0:0]  probe7 
-              .probe8         (adc_capture_go),       // input wire [0:0]  probe8 
+              .probe8         (capture_active),       // input wire [0:0]  probe8 
               .probe9         (adc_capture_stop),     // input wire [0:0]  probe9 
               .probe10        (state_idle),           // input wire [0:0]  probe10
               .probe11        (state_presamp_filling),// input wire [0:0]  probe11
@@ -947,8 +944,8 @@ module fifo_top_husky(
           .probe8         (presamp_done),         // input wire [0:0]  probe8 
           .probe9         (segment_cycle_counter),// input wire [19:0] probe9 
           .probe10        (segment_counter),      // input wire [15:0] probe10 
-          .probe11        (adc_segment_go),       // input wire [0:0]  probe11
-          .probe12        (adc_capture_go),       // input wire [0:0]  probe12 
+          .probe11        (capture_go),           // input wire [0:0]  probe11
+          .probe12        (capture_active),       // input wire [0:0]  probe12 
           .probe13        (fast_fifo_empty),      // input wire [0:0]  probe13 
           .probe14        (fifo_rst)              // input wire [0:0]  probe14 
        );
@@ -972,8 +969,8 @@ module fifo_top_husky(
           .probe8         (presamp_done),         // input wire [0:0]  probe8 
           .probe9         (next_segment_go),      // input wire [0:0]  probe9
           .probe10        (segment_counter[4:0]), // input wire [4:0]  probe10 
-          .probe11        (adc_segment_go),       // input wire [0:0]  probe11
-          .probe12        (adc_capture_go),       // input wire [0:0]  probe12 
+          .probe11        (capture_go),           // input wire [0:0]  probe11
+          .probe12        (capture_active),       // input wire [0:0]  probe12 
           .probe13        (fast_fifo_empty),      // input wire [0:0]  probe13 
           .probe14        (fifo_rst),             // input wire [0:0]  probe14 
           //.probe15        (adc_datain),           // input wire [11:0] probe15

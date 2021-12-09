@@ -59,7 +59,7 @@ module openadc_interface #(
     output wire                         fifo_error_flag,
     output wire                         stream_segment_available,
 
-    output wire                         adc_capture_go,
+    output wire                         capture_active,
 
     output reg                          flash_pattern,
 
@@ -78,7 +78,7 @@ module openadc_interface #(
     wire       phase_load;
     wire       phase_done;
 
-    wire       adc_segment_go;
+    wire       capture_go;
     wire       adc_capture_done;
     wire       armed;
     wire       reset;
@@ -166,7 +166,7 @@ module openadc_interface #(
       end
       else begin
          LED_armed = armed;
-         LED_capture = adc_capture_go;
+         LED_capture = capture_active;
       end
    end
 
@@ -267,8 +267,8 @@ module openadc_interface #(
       .arm_o                (armed),
       .trigger_offset_i     (trigger_offset),
       .trigger_length_o     (trigger_length),
-      .capture_go_o         (adc_capture_go),
-      .segment_go_o         (adc_segment_go),
+      .capture_active_o     (capture_active),
+      .capture_go_o         (capture_go),
       .capture_done_i       (adc_capture_done),
       .armed_and_ready      (armed_and_ready),
 
@@ -277,7 +277,7 @@ module openadc_interface #(
    );
 
    assign reg_status[0] = armed;
-   assign reg_status[1] = ~adc_capture_go;
+   assign reg_status[1] = ~capture_active;
    assign reg_status[2] = DUT_trigger_i;
    assign reg_status[3] = dcm_locked;
    assign reg_status[4] = PLL_STATUS;
@@ -467,8 +467,8 @@ module openadc_interface #(
 
       .adc_datain               (ADC_data_tofifo),
       .adc_sampleclk            (ADC_clk_sample),
-      .adc_capture_go           (adc_capture_go), //Set to '1' to start capture, keep at 1 until adc_capture_stop goes high
-      .adc_segment_go           (adc_segment_go),
+      .capture_active           (capture_active),
+      .capture_go               (capture_go),
       .adc_capture_stop         (adc_capture_done),
       .arm_i                    (armed),
       .arm_usb                  (cmd_arm_usb),

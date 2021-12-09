@@ -70,7 +70,7 @@ module reg_la #(
 
    input  wire         glitch_go,
    input  wire         glitch_trigger_sourceclock,
-   input  wire         adc_capture_go
+   input  wire         capture_active
 );
 
 
@@ -123,7 +123,7 @@ module reg_la #(
 `endif
 
 
-    wire capture_go_async = (trigger_source_reg == 3'b000)? adc_capture_go : 
+    wire capture_go_async = (trigger_source_reg == 3'b000)? capture_active : 
                             (trigger_source_reg == 3'b001)? glitch_go : 
                             (trigger_source_reg == 3'b010)? glitch_trigger_sourceclock :
                             (trigger_source_reg == 3'b011)? hs1 :
@@ -271,7 +271,7 @@ module reg_la #(
                capture2_source <= glitch_mmcm1_clk_out;
                capture3_source <= glitch_mmcm2_clk_out;
                capture4_source <= glitch_go;
-               capture5_source <= adc_capture_go;
+               capture5_source <= capture_active;
                capture6_source <= glitch_enable;
                capture7_source <= glitch_trigger_sourceclock;
                capture8_source <= 1'b0;

@@ -42,8 +42,8 @@ module trigger_unit(
     input wire [31:0]        trigger_offset_i,   //Delays the capture_go_o by this many ADC clock cycles
     output reg  [31:0]       trigger_length_o,   //Length of trigger pulse in ADC samples (only valid AFTER trigger happened)
 
-    output wire              capture_go_o,         //1 = trigger conditions met, stays high until 'capture_done_i' goes high
-    output wire              segment_go_o,
+    output reg               capture_active_o,     //1 = trigger conditions met, stays high until 'capture_done_i' goes high
+    output reg               capture_go_o,         //pulses high for each segment capture start (even when segments aren't used)
     input wire               capture_done_i,       //1 = capture done
     input wire               armed_and_ready,
 
@@ -64,14 +64,10 @@ module trigger_unit(
    reg armed;
 
    wire adc_capture_done;
-   reg adc_capture_go;
-   reg segment_go;
-   reg segment_go_delayed;
-   reg adc_capture_go_delayed;
+   reg capture_active;
+   reg capture_go;
 
    assign adc_capture_done = capture_done_i;
-   assign capture_go_o = adc_capture_go_delayed;
-   assign segment_go_o = segment_go_delayed;
 
    reg [31:0] adc_delay_cnt;
 
@@ -95,18 +91,18 @@ module trigger_unit(
 
 
    always @(posedge adc_clk) begin
-      if (adc_capture_go == 1'b0) begin
+      if (capture_active == 1'b0) begin
          adc_delay_cnt <= 0;
       end else begin
          adc_delay_cnt <= adc_delay_cnt + 1;
       end
    end
 
-   always @(posedge adc_clk) begin //or negedge adc_capture_go
-      if (adc_capture_go == 0)
-         adc_capture_go_delayed <= 1'b0;
+   always @(posedge adc_clk) begin
+      if (capture_active == 0)
+         capture_active_o <= 1'b0;
       else if (adc_delay_cnt == trigger_offset_i)
-         adc_capture_go_delayed <= adc_capture_go;
+         capture_active_o <= capture_active;
    end
 
    //ADC Trigger Stuff
@@ -117,7 +113,7 @@ module trigger_unit(
       end else begin
          if (((trigger == trigger_level_i) & armed) | trigger_now) begin
             reset_arm <= 1;
-         end else if ((arm_i == 0) & (adc_capture_go == 0)) begin
+         end else if ((arm_i == 0) & (capture_active == 0)) begin
             reset_arm <= 0;
          end
       end
@@ -128,17 +124,18 @@ module trigger_unit(
 
    always @(posedge adc_clk) begin
       if (int_reset_capture) begin
-         adc_capture_go <= 0;
-         segment_go <= 0;
-         segment_go_delayed <= 0;
+         capture_active <= 0;
+         capture_go <= 0;
+         capture_go_o <= 0;
       end else begin
-         segment_go_delayed <= segment_go; // delay one cycle to match adc_capture_go_delayed timing
+         capture_go_o <= capture_go; // delay one cycle to match capture_active_o timing
          if (((trigger == trigger_level_i) & armed) | trigger_now)
-            adc_capture_go <= 1;
-         if (((trigger == trigger_level_i) || trigger_now) && adc_capture_go)
-            segment_go <= 1'b1;
+            capture_active <= 1;
+         //if (((trigger == trigger_level_i) || trigger_now) && capture_active)
+         if (((trigger == trigger_level_i) && capture_active) | trigger_now)
+            capture_go <= 1'b1;
          else
-            segment_go <= 1'b0;
+            capture_go <= 1'b0;
       end
    end
 
@@ -174,14 +171,14 @@ module trigger_unit(
          trigger_length_o <= 0;
    end
 
-   assign la_debug = { adc_capture_go, 
+   assign la_debug = { capture_active, 
                        trigger_now, 
                        trigger, 
                        arm_i, 
                        armed, 
                        int_reset_capture, 
                        arm_i, 
-                       segment_go, 
+                       capture_go, 
                        fifo_rst };
 
 
@@ -189,15 +186,15 @@ module trigger_unit(
        ila_trig U_ila_trig (
           .clk            (adc_clk),              // input wire clk
           .probe0         (adc_capture_done),     // input wire [0:0]  probe0  
-          .probe1         (adc_capture_go),       // input wire [0:0]  probe1 
+          .probe1         (capture_active),       // input wire [0:0]  probe1 
           .probe2         (trigger_now),          // input wire [0:0]  probe2 
           .probe3         (trigger),              // input wire [0:0]  probe3 
           .probe4         (arm_i),                // input wire [0:0]  probe4 
           .probe5         (armed),                // input wire [0:0]  probe5 
           .probe6         (int_reset_capture),    // input wire [0:0]  probe6 
           .probe7         (arm_i),                // input wire [0:0]  probe7 
-          .probe8         (segment_go),           // input wire [0:0]  probe8 
-          .probe9         (segment_go_delayed),   // input wire [0:0]  probe9 
+          .probe8         (capture_go),           // input wire [0:0]  probe8 
+          .probe9         (capture_go_o),         // input wire [0:0]  probe9 
           .probe10        (fifo_rst)              // input wire [0:0]  probe10
        );
    `endif
