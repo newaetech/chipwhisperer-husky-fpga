@@ -36,6 +36,9 @@ module cwhusky_tb();
    parameter pNOM_ADC = 0;
    parameter pFIFO_SAMPLES = 90;
    parameter pPRESAMPLES = 0;
+   parameter pOFFSET_ENABLE = 0;
+   parameter pOFFSET_MIN = 0;
+   parameter pOFFSET_MAX = 0;
    parameter pTRIGGER_DELAY = 0;
    parameter pTRIGGER_NOW = 0;
    parameter pREAD_DELAY = 0;
@@ -125,15 +128,23 @@ module cwhusky_tb();
    int fifo_samples;
    int FIFO_SAMPLES_MUL6;
    int samples_to_read;
-
+   int offset;
 
    // initialization thread:
    initial begin
       seed = pSEED;
       $display("Running with seed=%0d", seed);
       rdata = $urandom(seed);
+
+      if (pOFFSET_ENABLE)
+          offset = $urandom_range(pOFFSET_MIN, pOFFSET_MAX);
+      else
+          offset = 0;
+
       $display("pPRESAMPLES = %d", pPRESAMPLES);
       $display("pFIFO_SAMPLES = %d", pFIFO_SAMPLES);
+      $display("OFFSET_ENABLE = %d", pOFFSET_ENABLE);
+      $display("OFFSET = %d", offset);
       $display("pDOWNSAMPLE = %d", pDOWNSAMPLE);
       if ((pNUM_SEGMENTS > 1) && (pPRESAMPLES > 0) && (pFIFO_SAMPLES %3)) begin
          fifo_samples = pFIFO_SAMPLES - (pFIFO_SAMPLES%3);
@@ -202,6 +213,12 @@ module cwhusky_tb();
       write_next_byte((fifo_samples & 32'h0000_FF00)>>8);
       write_next_byte((fifo_samples & 32'h00FF_0000)>>16);
       write_next_byte((fifo_samples & 32'hFF00_0000)>>24);
+
+      rw_lots_bytes(`OFFSET_ADDR);
+      write_next_byte((offset & 32'h0000_00FF));
+      write_next_byte((offset & 32'h0000_FF00)>>8);
+      write_next_byte((offset & 32'h00FF_0000)>>16);
+      write_next_byte((offset & 32'hFF00_0000)>>24);
 
       rw_lots_bytes(`DECIMATE_ADDR);
       write_next_byte((pDOWNSAMPLE & 16'h00FF));
@@ -319,7 +336,7 @@ module cwhusky_tb();
          else if (pSEGMENT_CYCLE_COUNTER_EN == 0)
             target_io4_reg = 1'b1;
 
-         trigger_counter_value[trigger_gen_index] = U_dut.oadc.U_fifo.adc_datain - pPRESAMPLES;
+         trigger_counter_value[trigger_gen_index] = U_dut.oadc.U_fifo.adc_datain - pPRESAMPLES + offset;
          repeat (10) @(posedge clk_adc);
          // TODO: this isn't accounting for the case where trigger remains
          // high throughout the capture... which I've seen can hide bugs, e.g.
@@ -360,7 +377,7 @@ module cwhusky_tb();
          #1 wait (trigger_done);
          // wait for the last segment's samples to get captured:
          repeat((fifo_samples+2)*(pDOWNSAMPLE+1)) @(posedge clk_adc);
-         repeat (pREAD_DELAY) @(posedge clk_adc);
+         repeat (pREAD_DELAY+offset) @(posedge clk_adc);
       end
 
       rw_lots_bytes(`ADCREAD_ADDR);

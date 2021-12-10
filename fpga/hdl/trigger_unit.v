@@ -64,8 +64,7 @@ module trigger_unit(
    reg armed;
 
    wire adc_capture_done;
-   reg capture_active;
-   reg capture_go;
+   reg capture_go_start;
 
    assign adc_capture_done = capture_done_i;
 
@@ -75,6 +74,7 @@ module trigger_unit(
    reg trigger_now_r;
    reg trigger_now_r2;
    wire trigger_now;
+   reg triggered;
 
    always @(posedge adc_clk) begin
       if (reset) begin
@@ -89,20 +89,23 @@ module trigger_unit(
 
    assign trigger_now = trigger_now_r && ~trigger_now_r2;
 
-
    always @(posedge adc_clk) begin
-      if (capture_active == 1'b0) begin
-         adc_delay_cnt <= 0;
-      end else begin
-         adc_delay_cnt <= adc_delay_cnt + 1;
-      end
-   end
-
-   always @(posedge adc_clk) begin
-      if (capture_active == 0)
-         capture_active_o <= 1'b0;
-      else if (adc_delay_cnt == trigger_offset_i)
-         capture_active_o <= capture_active;
+       if (reset) begin
+           adc_delay_cnt <= 0;
+           capture_go_o <= 0;
+       end
+       else begin
+           if (capture_go_start && (adc_delay_cnt == trigger_offset_i)) begin
+               adc_delay_cnt <= 0;
+               capture_go_o <= 1'b1;
+           end
+           else begin
+               if (capture_go_start)
+                   adc_delay_cnt <= adc_delay_cnt + 1;
+               if (capture_go_o)
+                   capture_go_o <= 1'b0;
+           end
+       end
    end
 
    //ADC Trigger Stuff
@@ -113,7 +116,7 @@ module trigger_unit(
       end else begin
          if (((trigger == trigger_level_i) & armed) | trigger_now) begin
             reset_arm <= 1;
-         end else if ((arm_i == 0) & (capture_active == 0)) begin
+         end else if ((arm_i == 0) & (capture_active_o == 0)) begin
             reset_arm <= 0;
          end
       end
@@ -124,19 +127,25 @@ module trigger_unit(
 
    always @(posedge adc_clk) begin
       if (int_reset_capture) begin
-         capture_active <= 0;
-         capture_go <= 0;
-         capture_go_o <= 0;
+         capture_active_o <= 1'b0;
+         capture_go_start <= 1'b0;
+         triggered <= 1'b0;
       end else begin
-         capture_go_o <= capture_go; // delay one cycle to match capture_active_o timing
          if (((trigger == trigger_level_i) & armed) | trigger_now)
-            capture_active <= 1;
-         //if (((trigger == trigger_level_i) || trigger_now) && capture_active)
-         if (((trigger == trigger_level_i) && capture_active) | trigger_now)
-            capture_go <= 1'b1;
-         else
-            capture_go <= 1'b0;
+            capture_active_o <= 1;
+         if ((((trigger == trigger_level_i) && capture_active_o) | trigger_now) && !triggered)
+            capture_go_start <= 1'b1;
+         else if (capture_go_o)
+            capture_go_start <= 1'b0;
       end
+
+      // this could be simpler if we used a 0>1 transition detect on trigger above, but given that
+      // the trigger input could be asynchronous, and we don't want to add delay to it, this seemed
+      // like the best solution
+      if (capture_go_start)
+          triggered <= 1'b1;
+      else if (trigger != trigger_level_i)
+          triggered <= 1'b0;
    end
 
    wire resetarm;
@@ -167,18 +176,18 @@ module trigger_unit(
    always @(posedge adc_clk) begin
       if (trigger == trigger_level_i)
          trigger_length_o <= trigger_length_o + 32'd1;
-      else if(arm_i & ~arm_i_dly)
+      else if (arm_i & ~arm_i_dly)
          trigger_length_o <= 0;
    end
 
-   assign la_debug = { capture_active, 
+   assign la_debug = { capture_active_o, 
                        trigger_now, 
                        trigger, 
                        arm_i, 
                        armed, 
                        int_reset_capture, 
                        arm_i, 
-                       capture_go, 
+                       capture_go_o, 
                        fifo_rst };
 
 
@@ -186,14 +195,14 @@ module trigger_unit(
        ila_trig U_ila_trig (
           .clk            (adc_clk),              // input wire clk
           .probe0         (adc_capture_done),     // input wire [0:0]  probe0  
-          .probe1         (capture_active),       // input wire [0:0]  probe1 
+          .probe1         (capture_active_o),     // input wire [0:0]  probe1 
           .probe2         (trigger_now),          // input wire [0:0]  probe2 
           .probe3         (trigger),              // input wire [0:0]  probe3 
           .probe4         (arm_i),                // input wire [0:0]  probe4 
           .probe5         (armed),                // input wire [0:0]  probe5 
           .probe6         (int_reset_capture),    // input wire [0:0]  probe6 
           .probe7         (arm_i),                // input wire [0:0]  probe7 
-          .probe8         (capture_go),           // input wire [0:0]  probe8 
+          .probe8         (capture_go_start),     // input wire [0:0]  probe8 
           .probe9         (capture_go_o),         // input wire [0:0]  probe9 
           .probe10        (fifo_rst)              // input wire [0:0]  probe10
        );
