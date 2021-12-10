@@ -24,6 +24,7 @@ tests.append(dict(name  = 'slow_adc',
              TRIGGER_NOW = [0,1],
              ADC_LOW_RES = [0,1],
              OFFSET_ENABLE = [0,1],
+             SHORT_TRIGGER = [0,1],
              description = 'Slow ADC clock.',
              SLOW_ADC = 1))
 
@@ -32,6 +33,7 @@ tests.append(dict(name  = 'fast_adc',
              TRIGGER_NOW = [0,1],
              ADC_LOW_RES = [0,1],
              OFFSET_ENABLE = [0,1],
+             SHORT_TRIGGER = [0,1],
              description = 'Fast ADC clock.',
              FAST_ADC = 1))
 
@@ -40,6 +42,7 @@ tests.append(dict(name  = 'nom_adc',
              TRIGGER_NOW = [0,1],
              ADC_LOW_RES = [0,1],
              OFFSET_ENABLE = [0,1],
+             SHORT_TRIGGER = [0,1],
              TIMEOUT_CYCLES=25000,
              description = 'Nominal ADC clock (almost same as USB clock).'))
 
@@ -51,6 +54,7 @@ tests.append(dict(name  = 'presamples',
              TRIGGER_DELAY = [2500, 4000],
              TRIGGER_NOW = [0,1],
              OFFSET_ENABLE = [0,1],
+             SHORT_TRIGGER = [0,1],
              description = 'Randomized pre-trigger samples.'))
 
 tests.append(dict(name  = 'nopresamples',
@@ -61,6 +65,7 @@ tests.append(dict(name  = 'nopresamples',
              READ_DELAY = [100, 500],
              TRIGGER_NOW = [0,1],
              OFFSET_ENABLE = [0,1],
+             SHORT_TRIGGER = [0,1],
              description = 'No pre-trigger samples.'))
 
 tests.append(dict(name  = 'quick_stream',
@@ -72,6 +77,7 @@ tests.append(dict(name  = 'quick_stream',
              READ_DELAY = [100, 500],
              ADC_LOW_RES = [0, 1],
              OFFSET_ENABLE = [0,1],
+             SHORT_TRIGGER = [0,1],
              TIMEOUT_CYCLES = 100000,
              description = 'Emulate streaming mode, few samples.'))
 
@@ -85,6 +91,7 @@ tests.append(dict(name  = 'medium_stream',
              READ_DELAY = [100, 500],
              ADC_LOW_RES = [0, 1],
              OFFSET_ENABLE = [0,1],
+             SHORT_TRIGGER = [0,1],
              TIMEOUT_CYCLES = 200000,
              description = 'Emulate streaming mode, moderate amount of samples.'))
 
@@ -100,6 +107,7 @@ tests.append(dict(name  = 'full_stream',
              ADC_LOW_RES = [0, 1],
              SLOW_ADC = 1, # TODO-temporary, to prevent fast FIFO overflow
              OFFSET_ENABLE = [0,1],
+             SHORT_TRIGGER = [0,1],
              TIMEOUT_CYCLES = 100000,
              description = 'Emulate streaming mode, reading past the internal storage capacity, using tiny FIFOs to manage the run time.'))
 
@@ -113,6 +121,7 @@ tests.append(dict(name  = 'both_fifos',
              TRIGGER_DELAY = [1500, 3000],
              TRIGGER_NOW = [0,1],
              OFFSET_ENABLE = [0,1],
+             SHORT_TRIGGER = [0,1],
              TIMEOUT_CYCLES = 500000,
              FIFO_SAMPLES = 4096))
 
@@ -130,6 +139,7 @@ tests.append(dict(name  = 'presamp_error',
              TRIGGER_NOW = 0,
              SLOW_ADC = 1,
              OFFSET_ENABLE = [0,1],
+             SHORT_TRIGGER = [0,1],
              description = 'Too many presamples before trigger.'))
 
 
@@ -146,6 +156,7 @@ tests.append(dict(name  = 'segments_counter',
              TRIGGER_DELAY = [2500, 4000],
              TRIGGER_NOW = 0,
              OFFSET_ENABLE = [0,1],
+             SHORT_TRIGGER = [0,1],
              TIMEOUT_CYCLES = 100000,
              description = 'Segmented capture, by cycle counter.'))
 
@@ -161,6 +172,7 @@ tests.append(dict(name  = 'segments_trigger',
              TRIGGER_DELAY = [2500, 4000],
              TRIGGER_NOW = 0,
              OFFSET_ENABLE = [0,1],
+             SHORT_TRIGGER = [0,1],
              TIMEOUT_CYCLES = 100000,
              description = 'Segmented capture, by external trigger.'))
 
@@ -176,6 +188,7 @@ tests.append(dict(name  = 'segments_presamples',
              TRIGGER_DELAY = [2500, 4000],
              TRIGGER_NOW = 0,
              OFFSET_ENABLE = [0,1],
+             SHORT_TRIGGER = [0,1],
              TIMEOUT_CYCLES = 100000,
              description = 'Segmented capture, by external trigger.'))
 
@@ -184,6 +197,7 @@ tests.append(dict(name  = 'downsample',
              FIFO_SAMPLES = [30,500],
              DOWNSAMPLE = [1, 50],
              OFFSET_ENABLE = [0,1],
+             SHORT_TRIGGER = [0,1],
              TIMEOUT_CYCLES = 1000000,
              description = 'Downsample.'))
 

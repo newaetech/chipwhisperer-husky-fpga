@@ -39,6 +39,7 @@ module cwhusky_tb();
    parameter pOFFSET_ENABLE = 0;
    parameter pOFFSET_MIN = 0;
    parameter pOFFSET_MAX = 0;
+   parameter pSHORT_TRIGGER = 0;
    parameter pTRIGGER_DELAY = 0;
    parameter pTRIGGER_NOW = 0;
    parameter pREAD_DELAY = 0;
@@ -129,6 +130,7 @@ module cwhusky_tb();
    int FIFO_SAMPLES_MUL6;
    int samples_to_read;
    int offset;
+   int trigger_cycles;
 
    // initialization thread:
    initial begin
@@ -145,6 +147,7 @@ module cwhusky_tb();
       $display("pFIFO_SAMPLES = %d", pFIFO_SAMPLES);
       $display("OFFSET_ENABLE = %d", pOFFSET_ENABLE);
       $display("OFFSET = %d", offset);
+      $display("SHORT_TRIGGER = %d", pSHORT_TRIGGER);
       $display("pDOWNSAMPLE = %d", pDOWNSAMPLE);
       if ((pNUM_SEGMENTS > 1) && (pPRESAMPLES > 0) && (pFIFO_SAMPLES %3)) begin
          fifo_samples = pFIFO_SAMPLES - (pFIFO_SAMPLES%3);
@@ -337,16 +340,26 @@ module cwhusky_tb();
             target_io4_reg = 1'b1;
 
          trigger_counter_value[trigger_gen_index] = U_dut.oadc.U_fifo.adc_datain - pPRESAMPLES + offset;
-         repeat (10) @(posedge clk_adc);
-         // TODO: this isn't accounting for the case where trigger remains
-         // high throughout the capture... which I've seen can hide bugs, e.g.
-         // with presamples and segments!
-         target_io4_reg = 1'b0;
-         if (pSEGMENT_CYCLES > 10)
-            repeat (pSEGMENT_CYCLES-10) @(posedge clk_adc);
+
+         if (pSHORT_TRIGGER)
+             trigger_cycles = 5;
          else begin
-            $display("ERROR: pSEGMENT_CYCLES too small!");
-            errors += 1;
+             if (pNUM_SEGMENTS > 1)
+                 trigger_cycles = $urandom_range(2, fifo_samples-2);
+             else
+                 trigger_cycles = $urandom_range(2, 2*fifo_samples+offset); // to cover the case where trigger is held longer than the capture
+         end
+
+         repeat (trigger_cycles) @(posedge clk_adc);
+         target_io4_reg = 1'b0;
+
+         if (pNUM_SEGMENTS > 1) begin
+             if (pSEGMENT_CYCLES > trigger_cycles)
+                repeat (pSEGMENT_CYCLES-trigger_cycles) @(posedge clk_adc);
+             else begin
+                $display("ERROR: pSEGMENT_CYCLES (%d) too small! trigger_cycles=%d", pSEGMENT_CYCLES, trigger_cycles);
+                errors += 1;
+             end
          end
       end
       trigger_done = 1;
