@@ -100,10 +100,10 @@ module trigger_unit(
                capture_go_o <= 1'b1;
            end
            else begin
-               if (capture_go_start)
-                   adc_delay_cnt <= adc_delay_cnt + 1;
                if (capture_go_o)
                    capture_go_o <= 1'b0;
+               else if (capture_go_start)
+                   adc_delay_cnt <= adc_delay_cnt + 1;
            end
        end
    end
@@ -133,7 +133,7 @@ module trigger_unit(
       end else begin
          if (((trigger == trigger_level_i) & armed) | trigger_now)
             capture_active_o <= 1;
-         if ((((trigger == trigger_level_i) && capture_active_o) | trigger_now) && !triggered)
+         if ((((trigger == trigger_level_i) & (capture_active_o || armed)) | trigger_now) && !triggered)
             capture_go_start <= 1'b1;
          else if (capture_go_o)
             capture_go_start <= 1'b0;
