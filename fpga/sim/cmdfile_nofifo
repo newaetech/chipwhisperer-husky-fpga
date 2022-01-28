@@ -21,3 +21,12 @@
 ../hdl/slow_debug.v
 ../hdl/reg_la.v
 ../hdl/userio.v
+../tracewhisperer/hdl/trace_top.v
+../tracewhisperer/hdl/reg_trace.v
+../tracewhisperer/hdl/fe_capture_trace.v
+../tracewhisperer/hdl/cdc_bus.v
+../tracewhisperer/hdl/uart_core.v
+../tracewhisperer/phywhisperer-common/hardware/hdl/fe_capture_main.v
+../tracewhisperer/phywhisperer-common/hardware/hdl/reg_main.v
+../tracewhisperer/phywhisperer-common/hardware/hdl/pw_trigger.v
+

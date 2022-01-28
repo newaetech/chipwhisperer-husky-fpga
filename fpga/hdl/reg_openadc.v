@@ -308,7 +308,7 @@ module reg_openadc #(
 	      .clk            (clk_usb),      // input wire clk
 	      .probe0         (reset_fromreg),// input wire [0:0]  probe0  
 	      .probe1         (reset_o),      // input wire [0:0]  probe1 
-          .probe2         (new_reset),    // input wire [0:0]  probe2 
+              .probe2         (new_reset),    // input wire [0:0]  probe2 
 	      .probe3         (registers_echo)// input wire [7:0]  probe3 
        );
    `endif

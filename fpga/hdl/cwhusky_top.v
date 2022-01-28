@@ -104,13 +104,14 @@ module cwhusky_top(
     output wire         target_poweron,
 
     output wire         FPGA_TRIGOUT, //trigger out MCX
-    input  wire         USBIOHS2  //clock MCX
-
-    );
+    input  wire         USBIOHS2 //clock MCX
+);
 
     parameter pBYTECNT_SIZE = 7;
     parameter pLA_CAPTURE_DEPTH = 512;
     parameter pUSERIO_WIDTH = 8;
+    parameter pTRACE_BUFFER_SIZE = 64;
+    parameter pTRACE_MATCH_RULES = 8;
 
    wire         ADC_clk_out;
    wire         target_npower;
@@ -121,6 +122,8 @@ module cwhusky_top(
    wire clk_usb_buf;
    wire ADC_clk_fb;
    wire pll_fpga_clk;
+   wire observer_clk;
+   wire observer_locked;
 
    `ifdef __ICARUS__
       assign clk_usb_buf = clk_usb;
@@ -148,12 +151,14 @@ module cwhusky_top(
    wire [7:0] read_data_glitch;
    wire [7:0] read_data_xadc;
    wire [7:0] read_data_la;
-   always @(posedge clk_usb_buf) read_data_reg <= read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc | read_data_la;
+   wire [7:0] read_data_trace;
+   always @(posedge clk_usb_buf) read_data_reg <= read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc | read_data_la | read_data_trace;
    //always @(*) read_data_reg = read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc | read_data_la;
    assign read_data = (reg_address == `ADCREAD_ADDR)? fifo_dout : read_data_reg;
 
    wire ext_trigger;
    wire extclk_mux;
+   wire target_clk;
    wire clkgen, glitchclk;
    wire glitch_mmcm1_clk_out;
    wire glitch_mmcm2_clk_out;
@@ -166,7 +171,8 @@ module cwhusky_top(
 
    wire fifo_error_flag;
    wire xadc_error_flag;
-   wire error_flag = fifo_error_flag | xadc_error_flag;
+   wire trace_error_flag;
+   wire error_flag = fifo_error_flag | xadc_error_flag | trace_error_flag;
    wire fast_fifo_read;
 
    wire slow_fifo_wr;
@@ -181,6 +187,11 @@ module cwhusky_top(
    wire [pUSERIO_WIDTH-1:0] userio_cwdriven;
    wire [pUSERIO_WIDTH-1:0] userio_drive_data;
    wire [pUSERIO_WIDTH-1:0] userio_debug_data;
+
+   wire trace_trig_out;
+
+   wire la_exists;
+   wire trace_exists;
 
    assign USB_SPARE0 = enable_avrprog? 1'bz : stream_segment_available;
 
@@ -248,10 +259,17 @@ module cwhusky_top(
 
 
    wire led_glitch;
+   wire cw_led_cap;
+   wire cw_led_armed;
+   wire trace_en;
+   wire [7:0] trace_userio_dir;
 
    // fast-flash red LEDs when some internal error has occurred:
    assign LED_ADC = error_flag? flash_pattern : ~PLL_STATUS;
    assign LED_GLITCH = error_flag? flash_pattern : led_glitch;
+   assign LED_CAP = cw_led_cap; // TODO: mux trace LEDs
+   assign LED_ARMED = cw_led_armed;
+
 
    openadc_interface #(
         .pBYTECNT_SIZE  (pBYTECNT_SIZE)
@@ -260,8 +278,8 @@ module cwhusky_top(
         .reset_o                (reg_rst),
         .mmcm_shutdown          (xadc_error_flag),
 
-        .LED_capture            (LED_CAP),
-        .LED_armed              (LED_ARMED),
+        .LED_capture            (cw_led_cap),
+        .LED_armed              (cw_led_armed),
         .ADC_data               (ADC_data),
         .ADC_clk_out            (ADC_clk_out),
         .ADC_clk_feedback       (ADC_clk_fb),
@@ -340,6 +358,7 @@ module cwhusky_top(
         .target_hs1             (target_hs1),
         .target_hs2             (target_hs2),
         .extclk_o               (extclk_mux),
+        .target_clk             (target_clk),
         .trigger_io1_i          (target_io1),
         .trigger_io2_i          (target_io2),
         .trigger_io3_i          (target_io3),
@@ -349,6 +368,7 @@ module cwhusky_top(
         .trigger_advio_i        (1'b0),
         .trigger_anapattern_i   (1'b0),
         .trigger_decodedio_i    (1'b0),
+        .trigger_trace_i        (trace_trig_out),
         .pll_fpga_clk           (pll_fpga_clk),
         .glitchclk              (glitchclk),
 
@@ -373,9 +393,14 @@ module cwhusky_top(
         .uart_rx_o              (FPGA_CDIN),
         .targetpower_off        (target_npower),
 
+        .trace_en               (trace_en),
+        .trace_userio_dir       (trace_userio_dir),
         .userio_cwdriven        (userio_cwdriven),
         .userio_drive_data      (userio_drive_data),
         .userio_debug_driven    (userio_debug_driven),
+
+        .trace_exists           (trace_exists),
+        .la_exists              (la_exists),
 
         .trigger_o              (ext_trigger)
    );
@@ -419,6 +444,7 @@ module cwhusky_top(
    );
 
    `ifdef LOGIC_ANALYZER
+   assign la_exists = 1;
    reg_la #(
         .pBYTECNT_SIZE  (pBYTECNT_SIZE),
         .pCAPTURE_DEPTH (pLA_CAPTURE_DEPTH)
@@ -434,6 +460,8 @@ module cwhusky_top(
         .target_hs1             (target_hs1),
         .clkgen                 (clkgen),
         .pll_fpga_clk           (pll_fpga_clk),
+        .observer_clk           (observer_clk),
+        .observer_locked        (observer_locked),
         .mmcm_shutdown          (xadc_error_flag),
 
         .glitchclk              (glitchclk),
@@ -460,6 +488,8 @@ module cwhusky_top(
         .userio_clk             (USERIO_CLK),
 
         .tu_la_debug            (tu_la_debug),
+        .trace_data             (trace_data_sdr),
+        .trace_fe_clk           (fe_clk),
 
         .glitch_go              (glitch_go),
         .glitch_trigger_sourceclock (glitch_trigger),
@@ -467,8 +497,8 @@ module cwhusky_top(
    );
    `else
        assign read_data_la = 0;
+       assign la_exists = 0;
    `endif
-
 
    assign FPGA_TRIGOUT = ext_trigger;
 
@@ -614,6 +644,104 @@ module cwhusky_top(
 
    `else
       assign read_data_xadc = 0;
+      assign xadc_error_flag = 0;
+   `endif
+
+   wire [7:0] trace_data_sdr;
+   wire fe_clk;
+
+   `ifdef TRACE
+       wire TRACECLOCK = USERIO_CLK;
+       wire [3:0] TRACEDATA  = USERIO_D[7:4];
+       wire swo = USERIO_D[2];
+
+       reg [22:0] count_fe_clock;
+       always @(posedge fe_clk) count_fe_clock <= count_fe_clock + 1;
+       assign trace_exists = 1;
+
+       trace_top #(
+          .pBYTECNT_SIZE                (pBYTECNT_SIZE),
+          .pBUFFER_SIZE                 (pTRACE_BUFFER_SIZE),
+          .pMATCH_RULES                 (pTRACE_MATCH_RULES),
+          .pUSERIO_WIDTH                (pUSERIO_WIDTH),
+          .pMAIN_REG_SELECT             (`TW_MAIN_REG_SELECT),
+          .pTRACE_REG_SELECT            (`TW_TRACE_REG_SELECT),
+          .pREGISTERED_READ             (0)
+       ) U_trace_top (
+          .trace_clk_in                 (TRACECLOCK),
+          .fe_clk                       (fe_clk),
+          .usb_clk                      (clk_usb_buf),
+          .reset_pin                    (1'b0),
+          .fpga_reset                   (),
+          .flash_pattern                (),
+          .buildtime                    (32'b0),
+          .O_trace_en                   (trace_en),
+          .O_trace_userio_dir           (trace_userio_dir),
+
+          .trace_data                   (TRACEDATA),
+          .swo                          (swo),
+          .O_trace_trig_out             (trace_trig_out),
+          .m3_trig                      (ext_trigger),
+          .O_soft_trig_passthru         (),     // N/A, used for CW305 DST only
+
+          .target_clk                   (target_clk),
+          .I_fe_clock_count             (count_fe_clock),
+
+          .trigger_clk                  (observer_clk),
+          .trigger_clk_locked           (observer_locked),
+          // in Husky, trigger_clk is generated and controlled in reg_la.v:
+          .trigger_clk_psen             (),
+          .trigger_clk_psincdec         (),
+          .trigger_clk_psdone           (1'b0),
+          .trig_drp_addr                (),
+          .trig_drp_den                 (),
+          .trig_drp_din                 (),
+          .trig_drp_dout                (16'b0),
+          .trig_drp_dwe                 (),
+          .trig_drp_reset               (),
+
+          `ifdef __ICARUS__
+          .I_trace_sdr                  (8'b0),
+          `endif
+                                                  
+          .USB_nCS                      (USB_CEn  ),
+
+          // TODO-maybe later: for CW610-style faster FIFO reading:
+          .O_data_available             (),
+          .I_fast_fifo_rdn              (1'b0),
+          .usb_drive_data               (),
+
+          .reg_address                  (reg_address),
+          .reg_bytecnt                  (reg_bytecnt), 
+          .write_data                   (write_data), 
+          .read_data                    (read_data_trace),
+          .reg_read                     (reg_read), 
+          .reg_write                    (reg_write), 
+          .reg_addrvalid                (1'b1),
+
+          .O_led_select                 (),
+          .O_error_flag                 (trace_error_flag),
+
+          // in Husky, these are controlled by userio module instead:
+          .userio_d                     ({pUSERIO_WIDTH{1'b0}}),
+          .O_userio_pwdriven            (),
+          .O_userio_drive_data          (),
+
+          .arm                          (),
+          .capturing                    (),
+
+          .trace_data_sdr               (trace_data_sdr),
+          .synchronized                 ()
+       );
+
+   `else
+      assign read_data_trace = 0;
+      assign trace_error_flag = 0;
+      assign trace_trig_out = 0;
+      assign trace_exists = 0;
+      assign trace_data_sdr = 0;
+      assign fe_clk = 0;
+
    `endif
 
 

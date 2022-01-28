@@ -37,6 +37,8 @@ compile:
 	-Wportbind \
 	-Wselect-range \
 	-D$(FIFOSIZE) \
+	-DTRACE \
+	-I../tracewhisperer/hdl/ \
 	-P cwhusky_tb.pADC_LOW_RES=$(ADC_LOW_RES) \
 	-P cwhusky_tb.pSLOW_ADC=$(SLOW_ADC) \
 	-P cwhusky_tb.pFAST_ADC=$(FAST_ADC) \
@@ -75,16 +77,23 @@ nofifo:
 	cwhusky_tb.v \
 	-g2005-sv \
 	-I../hdl \
+	-I../tracewhisperer/hdl/ \
 	-Wportbind \
 	-Wselect-range \
 	-DNOFIFO \
+	-DTRACE \
 
 lint:
 	verilator --lint-only -Wall \
+	--error-limit 0 \
+	-Wno-PINCONNECTEMPTY \
+	-Wno-ASSIGNDLY \
 	-f cmdfile_nofifo \
-	-I../hdl \
+	-I../hdl/ \
+	-I../tracewhisperer/hdl/ \
 	-D__ICARUS__ \
 	-DNOFIFO \
+	-DTRACE \
 	--top-module cwhusky_top \
 	2>&1 | tee lint.out \
 
@@ -95,6 +104,7 @@ fifo:
         ../vivado/cwhusky.srcs/sources_1/ip/usb_slow_fifo/usb_slow_fifo_sim_netlist.v \
         -y/mnt/c/Xilinx/Vivado/2019.2/ids_lite/ISE/verilog/src/unisims/ \
 	-I../hdl \
+	-DTRACE \
 	-g2005-sv \
 	-Wportbind \
 	-Wselect-range \

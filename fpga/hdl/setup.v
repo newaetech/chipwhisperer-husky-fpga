@@ -7,3 +7,4 @@
 `define LOGIC_ANALYZER
 `define FPGA_CLKGEN
 `define USERIO_DEBUG
+`define TRACE

@@ -36,11 +36,13 @@ module reg_la #(
    input  wire         reg_read,     // Read flag
    input  wire         reg_write,    // Write flag
 
-   input wire          target_hs1,
-   input wire          clkgen,
-   input wire          pll_fpga_clk,
+   input  wire         target_hs1,
+   input  wire         clkgen,
+   input  wire         pll_fpga_clk,
+   output wire         observer_clk,
+   output wire         observer_locked,
 
-   input wire          mmcm_shutdown, // triggered by XADC error
+   input  wire         mmcm_shutdown, // triggered by XADC error
 
    input  wire         glitchclk,
    input  wire         glitch_mmcm1_clk_out,
@@ -67,6 +69,8 @@ module reg_la #(
 
    input  wire [8:0]   tu_la_debug,
 
+   input  wire [7:0]   trace_data,
+   input  wire         trace_fe_clk,
 
    input  wire         glitch_go,
    input  wire         glitch_trigger_sourceclock,
@@ -74,7 +78,6 @@ module reg_la #(
 );
 
 
-    wire [15:0] la_exists_code = 16'h4c41;
     wire [15:0] capture_depth = pCAPTURE_DEPTH;
     wire [6:0] drp_observer_addr;
     wire [15:0] drp_observer_din;
@@ -83,15 +86,14 @@ module reg_la #(
     wire drp_observer_dwe;
     wire drp_observer_reset;
 
-    wire observer_clk;
     wire source_clk;
 
     reg [1:0] clock_source_reg;
     reg [2:0] trigger_source_reg;
-    reg [1:0] capture_group_reg;
+    reg [2:0] capture_group_reg;
     reg [3:0] read_select_reg;
     reg observer_powerdown;
-    wire observer_locked;
+    reg manual_capture;
 
     reg [7:0] reg_datao_reg;
     wire [7:0] reg_datao_drp_observer;
@@ -127,7 +129,8 @@ module reg_la #(
                             (trigger_source_reg == 3'b001)? glitch_go : 
                             (trigger_source_reg == 3'b010)? glitch_trigger_sourceclock :
                             (trigger_source_reg == 3'b011)? hs1 :
-                            (trigger_source_reg == 3'b100)? tu_la_debug[0] : 1'b0;
+                            (trigger_source_reg == 3'b100)? tu_la_debug[0] :
+                            (trigger_source_reg == 3'b101)? manual_capture : 1'b0;
 
 
    `ifndef __ICARUS__
@@ -209,6 +212,7 @@ module reg_la #(
    ) U_cg_observer_drp (
       .reset_i          (reset),
       .clk_usb          (clk_usb),
+      .selected         (1'b1),
       .reg_address      (reg_address), 
       .reg_bytecnt      (reg_bytecnt), 
       .reg_datao        (reg_datao_drp_observer), 
@@ -313,6 +317,18 @@ module reg_la #(
                capture8_source <= tu_la_debug[8];
            end
 
+           4: begin
+               capture0_source <= trace_data[0];
+               capture1_source <= trace_data[1];
+               capture2_source <= trace_data[2];
+               capture3_source <= trace_data[3];
+               capture4_source <= trace_data[4];
+               capture5_source <= trace_data[5];
+               capture6_source <= trace_data[6];
+               capture7_source <= trace_data[7];
+               capture8_source <= trace_fe_clk;
+           end
+
 
            default: begin
                capture0_source <= 1'b1;
@@ -401,12 +417,11 @@ module reg_la #(
       if (reg_read) begin
          case (reg_address)
              `LA_READ_SELECT:   reg_datao_reg = observer_data[reg_bytecnt*8 +: 8];
-             `LA_CAPTURE_GROUP: reg_datao_reg = {6'b0, capture_group_reg};
+             `LA_CAPTURE_GROUP: reg_datao_reg = {5'b0, capture_group_reg};
              `LA_STATUS:        reg_datao_reg = {6'b0, capturing, observer_locked};
              `LA_CLOCK_SOURCE:  reg_datao_reg = {6'b0, clock_source_reg};
              `LA_TRIGGER_SOURCE:reg_datao_reg = {5'b0, trigger_source_reg};
              `LA_POWERDOWN:     reg_datao_reg = {7'b0, observer_powerdown};
-             `LA_EXISTS:        reg_datao_reg = la_exists_code[reg_bytecnt*8 +: 8];
              `LA_CAPTURE_DEPTH: reg_datao_reg = capture_depth[reg_bytecnt*8 +: 8];
              default:           reg_datao_reg = 0;
          endcase
@@ -422,15 +437,17 @@ module reg_la #(
          capture_group_reg <= 0;
          read_select_reg <= 0;
          observer_powerdown <= 1;
+         manual_capture <= 0;
       end 
 
       else if (reg_write) begin
          case (reg_address)
              `LA_CLOCK_SOURCE:  clock_source_reg <= reg_datai[1:0];
              `LA_TRIGGER_SOURCE:trigger_source_reg <= reg_datai[2:0];
-             `LA_CAPTURE_GROUP: capture_group_reg <= reg_datai[1:0];
+             `LA_CAPTURE_GROUP: capture_group_reg <= reg_datai[2:0];
              `LA_READ_SELECT:   read_select_reg <= reg_datai[3:0];
              `LA_POWERDOWN:     observer_powerdown <= reg_datai[0];
+             `LA_MANUAL_CAPTURE:manual_capture <= reg_datai[0];
          endcase
       end
    end

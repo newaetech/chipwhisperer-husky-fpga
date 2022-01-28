@@ -31,6 +31,7 @@ module reg_mmcm_drp #(
 )(
    input  wire         reset_i,
    input  wire         clk_usb,
+   input  wire         selected,     // not really needed, just for compatibility with TraceWhisperer version of this module
    input  wire [7:0]   reg_address,  // Address of register
    input  wire [pBYTECNT_SIZE-1:0]  reg_bytecnt,  // Current byte count
    input  wire [7:0]   reg_datai,    // Data to write
@@ -56,7 +57,7 @@ module reg_mmcm_drp #(
    assign reg_datao = reg_datao_reg;
 
    always @(*) begin
-      if (reg_read) begin
+      if (reg_read && selected) begin
          case (reg_address)
            pDRP_ADDR: reg_datao_reg = {1'b0, drp_addr};
            pDRP_DATA: reg_datao_reg = drp_dout[reg_bytecnt*8 +: 8];
@@ -74,7 +75,7 @@ module reg_mmcm_drp #(
          drp_reset <= 1'b0;
       end
       else begin
-         if (reg_write) begin
+         if (reg_write && selected) begin
             if (reg_address == pDRP_ADDR) begin
                drp_addr <= reg_datai[6:0];
                drp_den <= 1'b1;
