@@ -26,7 +26,7 @@
 ../tracewhisperer/hdl/fe_capture_trace.v
 ../tracewhisperer/hdl/cdc_bus.v
 ../tracewhisperer/hdl/uart_core.v
-../tracewhisperer/phywhisperer-common/hardware/hdl/fe_capture_main.v
-../tracewhisperer/phywhisperer-common/hardware/hdl/reg_main.v
-../tracewhisperer/phywhisperer-common/hardware/hdl/pw_trigger.v
+../phywhisperer-common/hardware/hdl/fe_capture_main.v
+../phywhisperer-common/hardware/hdl/reg_main.v
+../phywhisperer-common/hardware/hdl/pw_trigger.v
 
