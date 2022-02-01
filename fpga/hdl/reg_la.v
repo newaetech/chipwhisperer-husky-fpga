@@ -94,6 +94,7 @@ module reg_la #(
     reg [3:0] read_select_reg;
     reg observer_powerdown;
     reg manual_capture;
+    reg [15:0] downsample;
 
     reg [7:0] reg_datao_reg;
     wire [7:0] reg_datao_drp_observer;
@@ -125,13 +126,11 @@ module reg_la #(
 `endif
 
 
-    wire capture_go_async = (trigger_source_reg == 3'b000)? capture_active : 
-                            (trigger_source_reg == 3'b001)? glitch_go : 
-                            (trigger_source_reg == 3'b010)? glitch_trigger_sourceclock :
-                            (trigger_source_reg == 3'b011)? hs1 :
-                            (trigger_source_reg == 3'b100)? tu_la_debug[0] :
-                            (trigger_source_reg == 3'b101)? manual_capture : 1'b0;
-
+    wire capture_go_async = manual_capture | ( (trigger_source_reg == 3'b000)? glitch_go : 
+                                               (trigger_source_reg == 3'b001)? capture_active : 
+                                               (trigger_source_reg == 3'b010)? glitch_trigger_sourceclock :
+                                               (trigger_source_reg == 3'b011)? hs1 :
+                                               (trigger_source_reg == 3'b100)? tu_la_debug[0] : 1'b0 );
 
    `ifndef __ICARUS__
       wire observer_clkfb;
@@ -350,6 +349,7 @@ module reg_la #(
    always @ (posedge observer_clk) begin
       if (reset) begin
          capture_count <= 0;
+         capturing <= 0;
          capture0_reg <= 0;
          capture1_reg <= 0;
          capture2_reg <= 0;
@@ -376,7 +376,7 @@ module reg_la #(
             capture8_reg <= {capture8_source, {(pCAPTURE_DEPTH-1){1'b0}}};
          end
 
-         else if (capturing) begin
+         else if (capturing && downsample_wr_en) begin
             capture0_reg <= {capture0_source, capture0_reg[pCAPTURE_DEPTH-1:1]};
             capture1_reg <= {capture1_source, capture1_reg[pCAPTURE_DEPTH-1:1]};
             capture2_reg <= {capture2_source, capture2_reg[pCAPTURE_DEPTH-1:1]};
@@ -394,6 +394,31 @@ module reg_la #(
          end
       end
    end
+
+   //Counter for downsampling (NOT proper decimation)
+   reg [15:0] downsample_ctr;
+   wire downsample_max;
+   reg downsample_wr_en;
+
+   assign downsample_max = (downsample_ctr == downsample) ? 1'b1 : 'b0;
+
+   always @(posedge observer_clk) begin
+      if (capture_go) begin
+         downsample_ctr <= 0;
+         downsample_wr_en <= 0;
+      end 
+      else begin
+         if (downsample_max) begin
+            downsample_ctr <= 0;
+            downsample_wr_en <= 1;
+         end
+         else begin
+            downsample_ctr <= downsample_ctr + 1;
+            downsample_wr_en <= 0;
+         end
+      end
+   end
+
 
 
    always @(posedge clk_usb) begin
@@ -423,6 +448,7 @@ module reg_la #(
              `LA_TRIGGER_SOURCE:reg_datao_reg = {5'b0, trigger_source_reg};
              `LA_POWERDOWN:     reg_datao_reg = {7'b0, observer_powerdown};
              `LA_CAPTURE_DEPTH: reg_datao_reg = capture_depth[reg_bytecnt*8 +: 8];
+             `LA_DOWNSAMPLE:    reg_datao_reg = downsample[reg_bytecnt*8 +: 8];
              default:           reg_datao_reg = 0;
          endcase
       end
@@ -438,6 +464,7 @@ module reg_la #(
          read_select_reg <= 0;
          observer_powerdown <= 1;
          manual_capture <= 0;
+         downsample <= 0;
       end 
 
       else if (reg_write) begin
@@ -448,6 +475,7 @@ module reg_la #(
              `LA_READ_SELECT:   read_select_reg <= reg_datai[3:0];
              `LA_POWERDOWN:     observer_powerdown <= reg_datai[0];
              `LA_MANUAL_CAPTURE:manual_capture <= reg_datai[0];
+             `LA_DOWNSAMPLE:    downsample[reg_bytecnt*8 +: 8] <= reg_datai;
          endcase
       end
    end

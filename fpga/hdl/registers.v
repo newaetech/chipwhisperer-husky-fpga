@@ -305,6 +305,7 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define LA_CAPTURE_GROUP        76
 `define LA_CAPTURE_DEPTH        77
 `define LA_READ_SELECT          78
+`define LA_DOWNSAMPLE           98
 
 `define CG1_DRP_RESET           79
 `define CG2_DRP_RESET           80
@@ -319,6 +320,7 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define USERIO_CW_DRIVEN        86
 `define USERIO_DEBUG_DRIVEN     87
 `define USERIO_DRIVE_DATA       88
+`define USERIO_READ             97
 
 `define CAPTURE_DONE            89
 

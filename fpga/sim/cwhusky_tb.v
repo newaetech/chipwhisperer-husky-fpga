@@ -301,6 +301,7 @@ module cwhusky_tb();
       #20;
       release U_dut.reg_clockglitch.U_clockglitch.glitch_trigger;
 
+      /* test register access to different blocks
       rdata[7:6] = `TW_TRACE_REG_SELECT;
       rdata[5:0] = `REG_NAME;
       $display("AAA %h", rdata);
@@ -312,6 +313,21 @@ module cwhusky_tb();
 
       read_1byte(8'hc0, rdata);
       $display("YYY %h", rdata);
+      */
+
+     /* manually test LA capture
+      write_1byte(`LA_CAPTURE_GROUP, 8'd1);
+      write_1byte(`LA_CLOCK_SOURCE, 8'd1);
+      write_1byte(`LA_DOWNSAMPLE, 8'd20);
+      write_1byte(`LA_MANUAL_CAPTURE, 8'd1);
+      #(pCLK_USB_PERIOD * 10);
+      write_1byte(`LA_MANUAL_CAPTURE, 8'd0);
+      for (i = 0; i < 10; i = i + 1) begin
+          target_io4_reg <= ~target_io4_reg;
+          repeat(20) @(posedge clk_adc);
+      end
+      #(pCLK_USB_PERIOD * 200);
+      */
 
       setup_done = 1;
 

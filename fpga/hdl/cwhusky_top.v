@@ -398,6 +398,8 @@ module cwhusky_top(
         .userio_cwdriven        (userio_cwdriven),
         .userio_drive_data      (userio_drive_data),
         .userio_debug_driven    (userio_debug_driven),
+        .userio_d               (USERIO_D),
+        .userio_clk             (USERIO_CLK),
 
         .trace_exists           (trace_exists),
         .la_exists              (la_exists),
@@ -663,7 +665,7 @@ module cwhusky_top(
           .pBYTECNT_SIZE                (pBYTECNT_SIZE),
           .pBUFFER_SIZE                 (pTRACE_BUFFER_SIZE),
           .pMATCH_RULES                 (pTRACE_MATCH_RULES),
-          .pUSERIO_WIDTH                (pUSERIO_WIDTH),
+          .pUSERIO_WIDTH                (1),
           .pMAIN_REG_SELECT             (`TW_MAIN_REG_SELECT),
           .pTRACE_REG_SELECT            (`TW_TRACE_REG_SELECT),
           .pREGISTERED_READ             (0)
@@ -723,7 +725,7 @@ module cwhusky_top(
           .O_error_flag                 (trace_error_flag),
 
           // in Husky, these are controlled by userio module instead:
-          .userio_d                     ({pUSERIO_WIDTH{1'b0}}),
+          .userio_d                     (1'b0),
           .O_userio_pwdriven            (),
           .O_userio_drive_data          (),
 

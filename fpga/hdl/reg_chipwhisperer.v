@@ -89,6 +89,8 @@ module reg_chipwhisperer #(
    output wire [pUSERIO_WIDTH-1:0] userio_cwdriven,
    output reg  [pUSERIO_WIDTH-1:0] userio_drive_data,
    output reg                      userio_debug_driven,
+   input  wire [pUSERIO_WIDTH-1:0] userio_d,
+   input  wire                     userio_clk,
 
    /* Main trigger connections */
    output wire        trigger_o,/* Trigger signal to capture system */
@@ -422,21 +424,23 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
    reg [7:0] reg_datao_reg;
    assign reg_datao = reg_datao_reg;
+   wire [8:0] userio_read = {userio_clk, userio_d};
 
    always @(*) begin
       if (reg_read) begin
          case (reg_address)
-           `CW_EXTCLK_ADDR: reg_datao_reg = registers_cwextclk; 
-           `CW_TRIGSRC_ADDR: reg_datao_reg = registers_cwtrigsrc; 
-           `CW_TRIGMOD_ADDR: reg_datao_reg = registers_cwtrigmod; 
-           `CW_IOROUTE_ADDR: reg_datao_reg = registers_iorouting[reg_bytecnt*8 +: 8];
-           `CW_IOREAD_ADDR: reg_datao_reg = {4'b0000, registers_ioread};
+           `CW_EXTCLK_ADDR:             reg_datao_reg = registers_cwextclk; 
+           `CW_TRIGSRC_ADDR:            reg_datao_reg = registers_cwtrigsrc; 
+           `CW_TRIGMOD_ADDR:            reg_datao_reg = registers_cwtrigmod; 
+           `CW_IOROUTE_ADDR:            reg_datao_reg = registers_iorouting[reg_bytecnt*8 +: 8];
+           `CW_IOREAD_ADDR:             reg_datao_reg = {4'b0000, registers_ioread};
 
-           `USERIO_CW_DRIVEN: reg_datao_reg = userio_cwdriven;
-           `USERIO_DEBUG_DRIVEN: reg_datao_reg = userio_debug_driven;
+           `USERIO_CW_DRIVEN:           reg_datao_reg = userio_cwdriven[reg_bytecnt*8 +: 8];
+           `USERIO_DEBUG_DRIVEN:        reg_datao_reg = {7'b0, userio_debug_driven};
+           `USERIO_READ:                reg_datao_reg = userio_read[reg_bytecnt*8 +: 8];
 
-           `EXTERNAL_CLOCK: reg_datao_reg = reg_external_clock;
-           `COMPONENTS_EXIST: reg_datao_reg = {6'b0, trace_exists, la_exists};
+           `EXTERNAL_CLOCK:             reg_datao_reg = reg_external_clock;
+           `COMPONENTS_EXIST:           reg_datao_reg = {6'b0, trace_exists, la_exists};
            default: reg_datao_reg = 0;
          endcase
       end
@@ -461,9 +465,9 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
            `CW_TRIGMOD_ADDR: registers_cwtrigmod <= reg_datai;
            `CW_IOROUTE_ADDR: registers_iorouting[reg_bytecnt*8 +: 8] <= reg_datai;
 
-           `USERIO_CW_DRIVEN: reg_userio_cwdriven <= reg_datai;
+           `USERIO_CW_DRIVEN: reg_userio_cwdriven[reg_bytecnt*8 +: 8] <= reg_datai;
            `USERIO_DEBUG_DRIVEN: userio_debug_driven <= reg_datai[0];
-           `USERIO_DRIVE_DATA: userio_drive_data <= reg_datai;
+           `USERIO_DRIVE_DATA: userio_drive_data[reg_bytecnt*8 +: 8] <= reg_datai;
 
            `EXTERNAL_CLOCK: reg_external_clock <= reg_datai[0];
            default: ;
