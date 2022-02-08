@@ -108,7 +108,6 @@ module cwhusky_top(
 );
 
     parameter pBYTECNT_SIZE = 7;
-    parameter pLA_CAPTURE_DEPTH = 512;
     parameter pUSERIO_WIDTH = 8;
     parameter pTRACE_BUFFER_SIZE = 64;
     parameter pTRACE_MATCH_RULES = 8;
@@ -199,6 +198,8 @@ module cwhusky_top(
    wire           fifo_wr;
    wire           fifo_read;
    wire           fifo_flush;
+   wire           trace_fifo_flush;
+   wire           la_fifo_flush;
    wire           reg_arm;
    wire           reg_arm_feclk;
    wire           clear_errors;
@@ -207,6 +208,17 @@ module cwhusky_top(
    wire           fifo_empty;
    wire           trace_fifo_error_flag;
    wire           synchronized;
+   wire           la_clear_read_flags;
+   wire           la_clear_write_flags;
+   wire           fifo_clear_read_flags;
+   wire           fifo_clear_write_flags;
+
+   wire           trace_fifo_wr;
+   wire           la_fifo_wr;
+   wire [17:0]    trace_wr_data;
+   wire [17:0]    la_wr_data;
+   wire           fifo_wr_clk;
+   wire           fifo_source_sel;
 
 
    assign USB_SPARE0 = enable_avrprog? 1'bz : stream_segment_available;
@@ -462,10 +474,12 @@ module cwhusky_top(
    );
 
    `ifdef LOGIC_ANALYZER
+   // NOTE: while this block is ifdef'd, building without LOGIC_ANALYZER
+   // and/or TRACE isn't tested and may not work. Think of this as just
+   // a start towards selectively enabling components.
    assign la_exists = 1;
    reg_la #(
-        .pBYTECNT_SIZE  (pBYTECNT_SIZE),
-        .pCAPTURE_DEPTH (pLA_CAPTURE_DEPTH)
+        .pBYTECNT_SIZE  (pBYTECNT_SIZE)
    ) reg_la (
         .reset                  (reg_rst),
         .clk_usb                (clk_usb_buf),
@@ -511,7 +525,14 @@ module cwhusky_top(
 
         .glitch_go              (glitch_go),
         .glitch_trigger_sourceclock (glitch_trigger),
-        .capture_active         (capture_active)
+        .capture_active         (capture_active),
+
+        .fifo_wr                (la_fifo_wr),
+        .fifo_wr_data           (la_wr_data),
+        .fifo_flush             (la_fifo_flush),
+        .fifo_empty             (fifo_empty),
+        .fifo_clear_read_flags  (la_clear_read_flags),
+        .fifo_clear_write_flags (la_clear_write_flags)
    );
    `else
        assign read_data_la = 0;
@@ -750,11 +771,11 @@ module cwhusky_top(
 
           .fifo_full                    (fifo_full),
           .fifo_overflow_blocked        (fifo_overflow_blocked),
-          .fifo_in_data                 (fifo_in_data),
-          .fifo_wr                      (fifo_wr),
+          .fifo_in_data                 (trace_wr_data),
+          .fifo_wr                      (trace_fifo_wr),
                                                
           .fifo_read                    (fifo_read),
-          .fifo_flush                   (fifo_flush),
+          .fifo_flush                   (trace_fifo_flush),
           .reg_arm                      (reg_arm),
           .reg_arm_feclk                (reg_arm_feclk),
           .clear_errors                 (clear_errors),
@@ -778,11 +799,39 @@ module cwhusky_top(
 
    `endif
 
+   // fifo_source_sel controls FIFO acccess.
+   // 0: trace
+   // 1: LA
+   // In order to capture LA, trace must be disabled (REG_TRACE_EN)
+   assign fifo_source_sel = ~trace_en; 
+   `ifdef __ICARUS__
+       assign fifo_wr_clk = fifo_source_sel? observer_clk : fe_clk;
+   `else
+       BUFGMUX #(
+          .CLK_SEL_TYPE("ASYNC")
+       ) U_fifo_clk_mux (
+          .O    (fifo_wr_clk),
+          .I0   (fe_clk),
+          .I1   (observer_clk),
+          .S    (fifo_source_sel)
+       );
+   `endif
+   assign fifo_in_data = fifo_source_sel? la_wr_data : trace_wr_data;
+   assign fifo_wr = fifo_source_sel? la_fifo_wr : trace_fifo_wr;
+
+   assign fifo_flush = trace_fifo_flush || la_fifo_flush;
+
+   assign fifo_clear_read_flags = reg_arm || la_clear_read_flags;
+   assign fifo_clear_write_flags = reg_arm_feclk || la_clear_write_flags;
+
    `ifndef NOFIFO // for clean compilation
+   // NOTE: this FIFO is shared by LOGIC_ANALYZER and TRACE.
+   // There are no other ifdef's around it, as per the note above in the
+   // LOGIC_ANALYZER block.
    fifo U_fifo (
       .reset_i                  (reg_rst),
       .cwusb_clk                (clk_usb_buf),
-      .fe_clk                   (fe_clk),
+      .fe_clk                   (fifo_wr_clk),
 
       .O_fifo_full              (fifo_full),
       .O_fifo_overflow_blocked  (fifo_overflow_blocked),
@@ -791,14 +840,14 @@ module cwhusky_top(
 
       .I_fifo_read              (fifo_read),
       .I_fifo_flush             (fifo_flush),
-      .I_clear_read_flags       (reg_arm),
-      .I_clear_write_flags      (reg_arm_feclk),
+      .I_clear_read_flags       (fifo_clear_read_flags),
+      .I_clear_write_flags      (fifo_clear_write_flags),
       .I_clear_errors           (clear_errors),
 
       .O_data                   (fifo_out_data),
       .O_fifo_status            (fifo_status),
       .O_fifo_empty             (fifo_empty),
-      .O_error_flag             (),
+      .O_error_flag             (trace_fifo_error_flag),
 
       .I_custom_fifo_stat_flag  (synchronized)      
    );

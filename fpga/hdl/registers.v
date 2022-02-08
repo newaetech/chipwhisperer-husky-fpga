@@ -304,8 +304,9 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define LA_MANUAL_CAPTURE       75
 `define LA_CAPTURE_GROUP        76
 `define LA_CAPTURE_DEPTH        77
-`define LA_READ_SELECT          78
-`define LA_DOWNSAMPLE           98
+`define LA_DOWNSAMPLE           78
+`define LA_ARM                  98
+`define LA_ENABLED              99
 
 `define CG1_DRP_RESET           79
 `define CG2_DRP_RESET           80
