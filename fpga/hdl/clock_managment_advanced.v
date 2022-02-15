@@ -96,6 +96,7 @@ module clock_managment_advanced #(
    ) U_reg_mmcm_drp (
       .reset_i          (reset),
       .clk_usb          (clk_usb),
+      .selected         (1'b1),
       .reg_address      (reg_address), 
       .reg_bytecnt      (reg_bytecnt), 
       .reg_datao        (reg_datao), 

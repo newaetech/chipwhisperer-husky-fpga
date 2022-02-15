@@ -41,6 +41,7 @@ module reg_chipwhisperer #(
    input  wire        target_hs1,
    output wire        target_hs2,
    output wire        extclk_o,
+   output wire        target_clk,
 
    /* Extern Trigger Connections */
    input  wire        trigger_io1_i,
@@ -54,6 +55,7 @@ module reg_chipwhisperer #(
    input  wire        trigger_advio_i, 
    input  wire        trigger_decodedio_i,
    input  wire        trigger_anapattern_i,
+   input  wire        trigger_trace_i,
 
    /* Clock Sources */
    input  wire        pll_fpga_clk,
@@ -82,12 +84,19 @@ module reg_chipwhisperer #(
 
    output wire        targetpower_off,
 
-   output reg  [pUSERIO_WIDTH-1:0] userio_cwdriven,
+   input  wire        trace_en,
+   input  wire [7:0]  trace_userio_dir,
+   output wire [pUSERIO_WIDTH-1:0] userio_cwdriven,
    output reg  [pUSERIO_WIDTH-1:0] userio_drive_data,
    output reg                      userio_debug_driven,
+   input  wire [pUSERIO_WIDTH-1:0] userio_d,
+   input  wire                     userio_clk,
 
    /* Main trigger connections */
-   output wire        trigger_o /* Trigger signal to capture system */
+   output wire        trigger_o,/* Trigger signal to capture system */
+
+   input  wire        trace_exists,
+   input  wire        la_exists
 ); 
 
    wire reset;
@@ -131,6 +140,8 @@ CW_TRIGMOD_ADDR, address 40 (0x28) - Trigger Module Enabled
     M M M = 000 Normal Edge-Mode Trigger
             001 Advanced IO Pattern Trigger
             010 Advanced SAD Trigger
+            011 Decoded IO Trigger
+            100 Trace Trigger
     FA = Output trigger to Front Panel A / Aux SMA
 
 CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
@@ -204,6 +215,8 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    reg [7:0] registers_cwtrigmod;
    reg [63:0] registers_iorouting;
    reg [3:0] registers_ioread;
+   reg reg_external_clock;
+   reg [pUSERIO_WIDTH-1:0] reg_userio_cwdriven;
 
    wire targetio_highz;
 
@@ -211,6 +224,8 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    assign extclk_o = (registers_cwextclk[2:0] == 3'b000) ? usbiohs2 :
                      (registers_cwextclk[2:0] == 3'b011) ? target_hs1 : 
                      1'b0;
+
+   assign target_clk = reg_external_clock? extclk_o : target_hs2;
 
    wire rearclk;
 
@@ -278,17 +293,17 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
    /* Target Power */
    reg reg_targetpower_off;
-   reg reg_targetpower_off_prev;
    always @(posedge clk_usb) begin
       reg_targetpower_off <= registers_iorouting[41];
-      reg_targetpower_off_prev <= reg_targetpower_off;
    end
 
    /* Target power switched ON from OFF state using PWM for programmable soft-start.
        Only in CW1200 currently. */
 `ifdef SUPPORT_SOFTPOWER
    reg targetpower_soft_on;
+   reg reg_targetpower_off_prev;
    always @(posedge clk_usb) begin
+          reg_targetpower_off_prev <= reg_targetpower_off;
           if ((reg_targetpower_off == 1'b0) && (reg_targetpower_off_prev == 1'b1)) begin
              targetpower_soft_on <= 1'b1;
           end else if (reg_targetpower_off == 1'b1) begin
@@ -351,8 +366,8 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    assign trigger = (registers_cwtrigmod[2:0] == 3'b000) ? trigger_ext :
                     (registers_cwtrigmod[2:0] == 3'b001) ? trigger_advio_i : 
                     (registers_cwtrigmod[2:0] == 3'b010) ? trigger_anapattern_i :
-                    (registers_cwtrigmod[2:0] == 3'b011) ? trigger_decodedio_i
-                    : 1'b0;
+                    (registers_cwtrigmod[2:0] == 3'b011) ? trigger_decodedio_i :
+                    (registers_cwtrigmod[2:0] == 3'b100) ? trigger_trace_i : 1'b0;
 
    assign trigger_ext_o = trigger_ext;
 
@@ -409,18 +424,23 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
    reg [7:0] reg_datao_reg;
    assign reg_datao = reg_datao_reg;
+   wire [8:0] userio_read = {userio_clk, userio_d};
 
    always @(*) begin
       if (reg_read) begin
          case (reg_address)
-           `CW_EXTCLK_ADDR: reg_datao_reg = registers_cwextclk; 
-           `CW_TRIGSRC_ADDR: reg_datao_reg = registers_cwtrigsrc; 
-           `CW_TRIGMOD_ADDR: reg_datao_reg = registers_cwtrigmod; 
-           `CW_IOROUTE_ADDR: reg_datao_reg = registers_iorouting[reg_bytecnt*8 +: 8];
-           `CW_IOREAD_ADDR: reg_datao_reg = {4'b0000, registers_ioread};
+           `CW_EXTCLK_ADDR:             reg_datao_reg = registers_cwextclk; 
+           `CW_TRIGSRC_ADDR:            reg_datao_reg = registers_cwtrigsrc; 
+           `CW_TRIGMOD_ADDR:            reg_datao_reg = registers_cwtrigmod; 
+           `CW_IOROUTE_ADDR:            reg_datao_reg = registers_iorouting[reg_bytecnt*8 +: 8];
+           `CW_IOREAD_ADDR:             reg_datao_reg = {4'b0000, registers_ioread};
 
-           `USERIO_CW_DRIVEN: reg_datao_reg = userio_cwdriven;
-           `USERIO_DEBUG_DRIVEN: reg_datao_reg = userio_debug_driven;
+           `USERIO_CW_DRIVEN:           reg_datao_reg = userio_cwdriven[reg_bytecnt*8 +: 8];
+           `USERIO_DEBUG_DRIVEN:        reg_datao_reg = {7'b0, userio_debug_driven};
+           `USERIO_READ:                reg_datao_reg = userio_read[reg_bytecnt*8 +: 8];
+
+           `EXTERNAL_CLOCK:             reg_datao_reg = reg_external_clock;
+           `COMPONENTS_EXIST:           reg_datao_reg = {6'b0, trace_exists, la_exists};
            default: reg_datao_reg = 0;
          endcase
       end
@@ -434,9 +454,10 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
          registers_cwtrigsrc <= 8'b00100000;
          registers_cwtrigmod <= 0;
          registers_iorouting <= 64'b00000010_00000001;
-         userio_cwdriven <= 8'b0;
+         reg_userio_cwdriven <= 8'b0;
          userio_debug_driven <= 1'b0;
          userio_drive_data <= 8'b0;
+         reg_external_clock <= 1'b0;
       end else if (reg_write) begin
          case (reg_address)
            `CW_EXTCLK_ADDR: registers_cwextclk <= reg_datai;
@@ -444,13 +465,22 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
            `CW_TRIGMOD_ADDR: registers_cwtrigmod <= reg_datai;
            `CW_IOROUTE_ADDR: registers_iorouting[reg_bytecnt*8 +: 8] <= reg_datai;
 
-           `USERIO_CW_DRIVEN: userio_cwdriven <= reg_datai;
+           `USERIO_CW_DRIVEN: reg_userio_cwdriven[reg_bytecnt*8 +: 8] <= reg_datai;
            `USERIO_DEBUG_DRIVEN: userio_debug_driven <= reg_datai[0];
-           `USERIO_DRIVE_DATA: userio_drive_data <= reg_datai;
+           `USERIO_DRIVE_DATA: userio_drive_data[reg_bytecnt*8 +: 8] <= reg_datai;
+
+           `EXTERNAL_CLOCK: reg_external_clock <= reg_datai[0];
            default: ;
          endcase
       end
    end
+
+   // USERIO drive direction can be set via USERIO_CW_DRIVEN, but this gets
+   // overwritten by USERIO_DEBUG_DRIVEN and trace_en:
+   // (1: output, 0: input)
+   assign userio_cwdriven = trace_en? trace_userio_dir : 
+                            userio_debug_driven? {pUSERIO_WIDTH{1'b1}} :
+                            reg_userio_cwdriven;
 
 
 endmodule

@@ -1,6 +1,8 @@
 `timescale 1 ns / 1 ps
 `default_nettype none
 `include "includes.v"
+`include "defines_trace.v"
+`include "defines_pw.v"
 
 /***********************************************************************
 This file is part of the ChipWhisperer Project. See www.newae.com for more
@@ -299,6 +301,44 @@ module cwhusky_tb();
       #20;
       release U_dut.reg_clockglitch.U_clockglitch.glitch_trigger;
 
+      /* test register access to different blocks
+      rdata[7:6] = `TW_TRACE_REG_SELECT;
+      rdata[5:0] = `REG_NAME;
+      $display("AAA %h", rdata);
+      rw_lots_bytes(rdata);
+      for (i = 0; i < 8; i = i + 1) begin
+          read_next_byte(rdata);
+          $display("XXX %h", rdata);
+      end
+
+      read_1byte(8'hc0, rdata);
+      $display("YYY %h", rdata);
+      */
+
+     /* manually test LA capture
+      write_1byte(`RESET, 8'd1);
+      write_1byte(`RESET, 8'd0);
+      rdata[7:6] = `TW_TRACE_REG_SELECT;
+      rdata[5:0] = `REG_TRACE_EN;
+      write_1byte(rdata, 8'd0);
+      write_1byte(`LA_CLOCK_SOURCE, 8'd1);
+      write_1byte(`LA_ARM, 8'd1);
+
+      rw_lots_bytes(`LA_CAPTURE_DEPTH);
+      write_next_byte((20 & 32'h0000_00FF));
+      write_next_byte((20 & 32'h0000_FF00)>>8);
+
+      write_1byte(`LA_CAPTURE_GROUP, 8'd1);
+      write_1byte(`LA_DOWNSAMPLE, 8'd1);
+      write_1byte(`LA_MANUAL_CAPTURE, 8'd1);
+      #(pCLK_USB_PERIOD * 10);
+      write_1byte(`LA_MANUAL_CAPTURE, 8'd0);
+      for (i = 0; i < 10; i = i + 1) begin
+          target_io4_reg <= ~target_io4_reg;
+          repeat(20) @(posedge clk_adc);
+      end
+      #(pCLK_USB_PERIOD * 200);
+      */
 
       setup_done = 1;
 
@@ -514,7 +554,8 @@ module cwhusky_tb();
          read_select = 1'b1;
    end
 
-assign #1 target_io4 = target_io4_reg;
+//assign #1 target_io4 = target_io4_reg;
+assign target_io4 = target_io4_reg;
 
 assign adc_clocks = {clk_adc_nom, clk_adc_fast, clk_adc_slow};
 
@@ -569,7 +610,7 @@ cwhusky_top U_dut (
     .USERIO_D           (             ),
     .USERIO_CLK         (1'b0         ),
     .PLL_STATUS         (1'b0         ),
-    .PLLFPGAP           (1'b0         ),
+    .PLLFPGAP           (clk_adc      ),
     .PLLFPGAN           (1'b0         )
 );
 

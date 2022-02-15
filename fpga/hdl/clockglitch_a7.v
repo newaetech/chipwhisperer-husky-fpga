@@ -347,6 +347,7 @@ module clockglitch_a7 #(
    ) U_cg_mmcm1_drp (
       .reset_i          (reset),
       .clk_usb          (clk_usb),
+      .selected         (1'b1),
       .reg_address      (reg_address), 
       .reg_bytecnt      (reg_bytecnt), 
       .reg_datao        (reg_datao_drp1), 
@@ -369,6 +370,7 @@ module clockglitch_a7 #(
    ) U_cg_mmcm2_drp (
       .reset_i          (reset),
       .clk_usb          (clk_usb),
+      .selected         (1'b1),
       .reg_address      (reg_address), 
       .reg_bytecnt      (reg_bytecnt), 
       .reg_datao        (reg_datao_drp2), 

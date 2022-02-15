@@ -9,17 +9,31 @@ create_clock -period 5.000 -name pll_fpga_clk -waveform {0.000 2.500} [get_nets 
 create_clock -period 20.000 -name target_hs1 -waveform {0.000 10.000} [get_nets target_hs1]
 create_clock -period 20.000 -name USBIOHS2 -waveform {0.000 10.500} [get_nets USBIOHS2]
 
+create_clock -period 40.000 -name TRACECLOCK -waveform {0.000 20.000} [get_nets USERIO_CLK_IBUF]
+
 # avoid multiple_clock analysis problems: 
 # (these are critical to avoiding HUGE increase in implementation runtime; 5 minutes becomes 24 hours!)
 set_case_analysis 0 [get_pins oadc/genclocks/clkdcm_mux/S]
 set_case_analysis 0 [get_pins oadc/genclocks/clkgenfx_mux/S]
 set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets oadc/genclocks/U_clkgen/inst/clk_out1]
 
+set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets {USERIO_CLK_IBUF}]
+set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets U_trace_top/fe_clk_pre]
+
+# TODO - needed if putting IDELAY on TRACECLOCK:
+#set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets reg_clockglitch/mux1out]
+#set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets reg_la/mux1out]
+
 set_case_analysis 1 [get_pins reg_clockglitch/sourceclk_mux1/S]
 set_case_analysis 0 [get_pins reg_clockglitch/sourceclk_mux2/S]
 
 set_case_analysis 1 [get_pins reg_la/sourceclk_mux1/S]
 set_case_analysis 0 [get_pins reg_la/sourceclk_mux2/S]
+
+create_generated_clock -name fe_clk -source [get_pins U_trace_top/U_fe_clock_mux2/I1] -combinational [get_pins U_trace_top/U_fe_clock_mux2/O]
+set_case_analysis 1 [get_pins U_trace_top/U_fe_clock_mux2/S]
+
+set_case_analysis 1 [get_pins U_fifo_clk_mux/S]
 
 # These are needed to meet timing on USB_Data:
 set_max_delay 20 -through [get_pins USB_Data_IOBUF*inst/T]
@@ -79,6 +93,14 @@ set_clock_groups -asynchronous \
 set_clock_groups -asynchronous \
                  -group [get_clocks observer_clk*] \
                  -group [get_clocks ADC_clk_fb]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks TRACECLOCK ] \
+                 -group [get_clocks {clk_usb USBIOHS2 observer_clk target_hs1 fe_clk}]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks fe_clk ] \
+                 -group [get_clocks {clk_usb observer_clk}]
 
 
 # include below if FPGA_CLKGEN:
@@ -309,8 +331,9 @@ set_false_path -to [get_ports VDBSPWM]
 set_input_delay -clock [get_clocks clk_usb] -add_delay 0.000 [get_ports {USERIO_CLK}]
 set_false_path -from [get_ports {USERIO_CLK}]
 
-set_input_delay -clock [get_clocks clk_usb] 0.0 [get_ports USERIO_D]
-set_output_delay -clock [get_clocks clk_usb] 0.0 [get_ports USERIO_D]
+#set_input_delay -clock [get_clocks TRACECLOCK] 0.0 [get_ports USERIO_D]
+set_input_delay -clock [get_clocks TRACECLOCK] 2.0 [get_ports USERIO_D]
+set_output_delay -clock [get_clocks TRACECLOCK] 0.0 [get_ports USERIO_D]
 set_false_path -to [get_ports USERIO_D]
 set_false_path -from [get_ports USERIO_D]
 
@@ -371,6 +394,41 @@ set_false_path -to [get_ports ADC_CLKP]
 set_false_path -to [get_ports glitchout_highpwr]
 set_false_path -to [get_ports glitchout_lowpwr]
 set_false_path -to [get_ports FPGA_CDIN]
+
+# quasi-static control signals:
+set_false_path -from [get_pins U_trace_top/U_reg_trace/O_swo_bitrate_div_reg*/C] -to [all_registers]
+set_false_path -from [get_pins U_trace_top/U_reg_trace/O_uart_stop_bits_reg*/C] -to [all_registers]
+set_false_path -from [get_pins U_trace_top/U_reg_trace/O_uart_data_bits_reg*/C] -to [all_registers]
+set_false_path -from [get_pins U_trace_top/U_reg_main/reg_timestamps_disable_reg/C] -to [all_registers]
+
+set_false_path -from [get_pins U_trace_top/U_reg_trace/O_trace_mask*_reg*/C] -to [all_registers]
+set_false_path -from [get_pins U_trace_top/U_reg_trace/O_trace_pattern*_reg*/C] -to [all_registers]
+set_false_path -from [get_pins U_trace_top/U_reg_trace/O_swo_enable_reg*/C] -to [all_registers]
+set_false_path -from [get_pins U_trace_top/U_reg_trace/O_pattern_trig_enable_reg*/C] -to [all_registers]
+set_false_path -from [get_pins U_trace_top/U_reg_trace/O_soft_trig_enable_reg*/C] -to [all_registers]
+set_false_path -from [get_pins U_trace_top/U_reg_trace/O_pattern_enable_reg*/C] -to [all_registers]
+
+set_false_path -from [get_pins U_trace_top/U_reg_main/reg_counter_quick_start_reg/C] -to [all_registers]
+set_false_path -from [get_pins U_trace_top/U_reg_main/reg_trigger_delay_reg*/C] -to [all_registers]
+set_false_path -from [get_pins U_trace_top/U_reg_main/reg_trigger_width_reg*/C] -to [all_registers]
+set_false_path -from [get_pins U_trace_top/U_reg_main/reg_num_triggers_reg*/C] -to [all_registers]
+set_false_path -from [get_pins U_trace_top/U_reg_main/reg_trigger_enable_reg/C] -to [all_registers]
+set_false_path -from [get_pins U_trace_top/U_reg_main/reg_capture_len_reg*/C] -to [all_registers]
+set_false_path -from [get_pins U_trace_top/U_reg_main/reg_count_writes_reg/C] -to [all_registers]
+set_false_path -from [get_pins U_trace_top/U_reg_main/reg_capture_while_trig_reg/C] -to [all_registers]
+set_false_path -from [get_pins U_trace_top/U_reg_main/reg_max_timestamp_reg*/C] -to [all_registers]
+set_false_path -from [get_pins U_trace_top/U_reg_trace/O_trace_width_reg*/C] -to [all_registers]
+set_false_path -from [get_pins U_trace_top/U_reg_trace/O_capture_raw_reg/C] -to [all_registers]
+set_false_path -from [get_pins U_trace_top/U_reg_trace/O_record_syncs_reg/C] -to [all_registers]
+
+set_false_path -from [get_pins U_trace_top/U_reg_main/reg_reset_reg/C] -to [all_registers]
+
+# CDC related exceptions:
+set_false_path -to [get_pins U_trace_top/reg_arm_pipe_reg[0]/D]
+set_false_path -to [get_pins U_trace_top/U_fe_capture_main/arm_pipe_reg[0]/D]
+set_false_path -from [get_pins U_trace_top/*/*_cdc/dst_req_reg/C] -to [get_pins U_trace_top/*/*_cdc/ack_pipe_reg[0]/D]
+set_false_path -from [get_pins U_trace_top/*/*_cdc/src_req_reg/C] -to [get_pins U_trace_top/*/*_cdc/req_pipe_reg[0]/D]
+
 
 # We're violating the SAM3U spec for fast reads, so these are not from spec...
 # read data is provided 1 cycle earlier from when it *appears* to be required, and so

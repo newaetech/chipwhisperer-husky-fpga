@@ -24,8 +24,7 @@ Author: Jean-Pierre Thibault <jpthibault@newae.com>
 *************************************************************************/
 
 module reg_la #(
-   parameter pBYTECNT_SIZE = 7,
-   parameter pCAPTURE_DEPTH = 1024
+   parameter pBYTECNT_SIZE = 7
 )(
    input  wire         reset,
    input  wire         clk_usb,
@@ -36,11 +35,13 @@ module reg_la #(
    input  wire         reg_read,     // Read flag
    input  wire         reg_write,    // Write flag
 
-   input wire          target_hs1,
-   input wire          clkgen,
-   input wire          pll_fpga_clk,
+   input  wire         target_hs1,
+   input  wire         clkgen,
+   input  wire         pll_fpga_clk,
+   output wire         observer_clk,
+   output wire         observer_locked,
 
-   input wire          mmcm_shutdown, // triggered by XADC error
+   input  wire         mmcm_shutdown, // triggered by XADC error
 
    input  wire         glitchclk,
    input  wire         glitch_mmcm1_clk_out,
@@ -67,15 +68,23 @@ module reg_la #(
 
    input  wire [8:0]   tu_la_debug,
 
+   input  wire [7:0]   trace_data,
+   input  wire         trace_fe_clk,
 
    input  wire         glitch_go,
    input  wire         glitch_trigger_sourceclock,
-   input  wire         capture_active
+   input  wire         capture_active,
+
+   output reg          fifo_wr,
+   output wire [17:0]  fifo_wr_data,
+   output reg          fifo_flush,
+   input  wire         fifo_empty,
+   output wire         fifo_clear_write_flags,
+   output wire         fifo_clear_read_flags
 );
 
 
-    wire [15:0] la_exists_code = 16'h4c41;
-    wire [15:0] capture_depth = pCAPTURE_DEPTH;
+    reg  [15:0] capture_depth;
     wire [6:0] drp_observer_addr;
     wire [15:0] drp_observer_din;
     wire [15:0] drp_observer_dout;
@@ -83,19 +92,28 @@ module reg_la #(
     wire drp_observer_dwe;
     wire drp_observer_reset;
 
-    wire observer_clk;
     wire source_clk;
 
     reg [1:0] clock_source_reg;
     reg [2:0] trigger_source_reg;
-    reg [1:0] capture_group_reg;
-    reg [3:0] read_select_reg;
+    reg [2:0] capture_group_reg;
     reg observer_powerdown;
-    wire observer_locked;
+    reg manual_capture;
+    reg [15:0] downsample;
+    reg reg_arm;
+    reg reg_enabled;
+
+    (* ASYNC_REG = "TRUE" *) reg [1:0] arm_pipe;
+    reg  arm_r;
+    reg  arm_r2;
+    reg  armed;
 
     reg [7:0] reg_datao_reg;
     wire [7:0] reg_datao_drp_observer;
     assign reg_datao = reg_datao_reg | reg_datao_drp_observer;
+
+    assign fifo_clear_write_flags = arm_r2;
+    assign fifo_clear_read_flags = reg_arm;
 
 `ifdef __ICARUS__
    assign source_clk = (clock_source_reg == 2'b01) ? clkgen : 
@@ -123,12 +141,11 @@ module reg_la #(
 `endif
 
 
-    wire capture_go_async = (trigger_source_reg == 3'b000)? capture_active : 
-                            (trigger_source_reg == 3'b001)? glitch_go : 
-                            (trigger_source_reg == 3'b010)? glitch_trigger_sourceclock :
-                            (trigger_source_reg == 3'b011)? hs1 :
-                            (trigger_source_reg == 3'b100)? tu_la_debug[0] : 1'b0;
-
+    wire capture_go_async = manual_capture | ( (trigger_source_reg == 3'b000)? glitch_go : 
+                                               (trigger_source_reg == 3'b001)? capture_active : 
+                                               (trigger_source_reg == 3'b010)? glitch_trigger_sourceclock :
+                                               (trigger_source_reg == 3'b011)? hs1 :
+                                               (trigger_source_reg == 3'b100)? tu_la_debug[0] : 1'b0 );
 
    `ifndef __ICARUS__
       wire observer_clkfb;
@@ -186,12 +203,22 @@ module reg_la #(
          .CLKFBIN                      (observer_clkfb)
       );
 
+     wire observer_clk_mr;
+      BUFMRCE #(
+         .INIT_OUT      (0),
+         .CE_TYPE       ("ASYNC")
+      ) U_observer_clk1 (
+         .I             (observer_clk_prebuf),
+         .O             (observer_clk_mr),
+         .CE            (~(observer_powerdown || mmcm_shutdown))
+      );
+
       BUFR #(
          .BUFR_DIVIDE   (1)
-      ) U_observer_clk (
-         .I             (observer_clk_prebuf),
+      ) U_observer_clk2 (
+         .I             (observer_clk_mr),
          .O             (observer_clk),
-         .CE            (~(observer_powerdown || mmcm_shutdown)),
+         .CE            (1'b1),
          .CLR           (1'b0)
       );
 
@@ -209,6 +236,7 @@ module reg_la #(
    ) U_cg_observer_drp (
       .reset_i          (reset),
       .clk_usb          (clk_usb),
+      .selected         (1'b1),
       .reg_address      (reg_address), 
       .reg_bytecnt      (reg_bytecnt), 
       .reg_datao        (reg_datao_drp_observer), 
@@ -237,20 +265,24 @@ module reg_la #(
          {capture_go_r2, capture_go_r, capture_go_pipe} <= {capture_go_r, capture_go_pipe, capture_go_async};
       end
    end
-   wire capture_go = capture_go_r & ~capture_go_r2;
+
+   // ~capturing is so that we don't restart capturing over ourselves, which 
+   // could otherwise happen e.g. in the case of a manually triggered capture:
+   wire capture_go = capture_go_r & ~capture_go_r2 & ~capturing & armed;
 
    // Do the capture.
-   reg [9:0] capture_count;
+   reg [15:0] capture_count;
    reg capturing;
-   reg [pCAPTURE_DEPTH-1:0] capture0_reg;
-   reg [pCAPTURE_DEPTH-1:0] capture1_reg;
-   reg [pCAPTURE_DEPTH-1:0] capture2_reg;
-   reg [pCAPTURE_DEPTH-1:0] capture3_reg;
-   reg [pCAPTURE_DEPTH-1:0] capture4_reg;
-   reg [pCAPTURE_DEPTH-1:0] capture5_reg;
-   reg [pCAPTURE_DEPTH-1:0] capture6_reg;
-   reg [pCAPTURE_DEPTH-1:0] capture7_reg;
-   reg [pCAPTURE_DEPTH-1:0] capture8_reg;
+   wire capturing_usb_pulse;
+   reg [1:0] capture0_reg;
+   reg [1:0] capture1_reg;
+   reg [1:0] capture2_reg;
+   reg [1:0] capture3_reg;
+   reg [1:0] capture4_reg;
+   reg [1:0] capture5_reg;
+   reg [1:0] capture6_reg;
+   reg [1:0] capture7_reg;
+   reg [1:0] capture8_reg;
 
    reg capture0_source;
    reg capture1_source;
@@ -261,6 +293,9 @@ module reg_la #(
    reg capture6_source;
    reg capture7_source;
    reg capture8_source;
+
+   reg ticktock;
+
 
    //always @(*) begin
    always @(posedge observer_clk) begin
@@ -313,6 +348,18 @@ module reg_la #(
                capture8_source <= tu_la_debug[8];
            end
 
+           4: begin
+               capture0_source <= trace_data[0];
+               capture1_source <= trace_data[1];
+               capture2_source <= trace_data[2];
+               capture3_source <= trace_data[3];
+               capture4_source <= trace_data[4];
+               capture5_source <= trace_data[5];
+               capture6_source <= trace_data[6];
+               capture7_source <= trace_data[7];
+               capture8_source <= trace_fe_clk;
+           end
+
 
            default: begin
                capture0_source <= 1'b1;
@@ -329,85 +376,107 @@ module reg_la #(
    end
 
 
-   reg [pCAPTURE_DEPTH-1:0] observer_data;
-
    always @ (posedge observer_clk) begin
       if (reset) begin
          capture_count <= 0;
-         capture0_reg <= 0;
-         capture1_reg <= 0;
-         capture2_reg <= 0;
-         capture3_reg <= 0;
-         capture4_reg <= 0;
-         capture5_reg <= 0;
-         capture6_reg <= 0;
-         capture7_reg <= 0;
-         capture8_reg <= 0;
+         capturing <= 1'b0;
+         capture0_reg <= 2'b0;
+         capture1_reg <= 2'b0;
+         capture2_reg <= 2'b0;
+         capture3_reg <= 2'b0;
+         capture4_reg <= 2'b0;
+         capture5_reg <= 2'b0;
+         capture6_reg <= 2'b0;
+         capture7_reg <= 2'b0;
+         capture8_reg <= 2'b0;
+         ticktock <= 1'b0;
+         fifo_wr <= 1'b0;
       end
 
       else begin
          if (capture_go) begin
             capture_count <= 0;
-            capturing <= 1;
-            capture0_reg <= {capture0_source, {(pCAPTURE_DEPTH-1){1'b0}}};
-            capture1_reg <= {capture1_source, {(pCAPTURE_DEPTH-1){1'b0}}};
-            capture2_reg <= {capture2_source, {(pCAPTURE_DEPTH-1){1'b0}}};
-            capture3_reg <= {capture3_source, {(pCAPTURE_DEPTH-1){1'b0}}};
-            capture4_reg <= {capture4_source, {(pCAPTURE_DEPTH-1){1'b0}}};
-            capture5_reg <= {capture5_source, {(pCAPTURE_DEPTH-1){1'b0}}};
-            capture6_reg <= {capture6_source, {(pCAPTURE_DEPTH-1){1'b0}}};
-            capture7_reg <= {capture7_source, {(pCAPTURE_DEPTH-1){1'b0}}};
-            capture8_reg <= {capture8_source, {(pCAPTURE_DEPTH-1){1'b0}}};
+            capturing <= 1'b1;
+            ticktock <= 1'b0;
+            fifo_wr <= 1'b0;
          end
 
-         else if (capturing) begin
-            capture0_reg <= {capture0_source, capture0_reg[pCAPTURE_DEPTH-1:1]};
-            capture1_reg <= {capture1_source, capture1_reg[pCAPTURE_DEPTH-1:1]};
-            capture2_reg <= {capture2_source, capture2_reg[pCAPTURE_DEPTH-1:1]};
-            capture3_reg <= {capture3_source, capture3_reg[pCAPTURE_DEPTH-1:1]};
-            capture4_reg <= {capture4_source, capture4_reg[pCAPTURE_DEPTH-1:1]};
-            capture5_reg <= {capture5_source, capture5_reg[pCAPTURE_DEPTH-1:1]};
-            capture6_reg <= {capture6_source, capture6_reg[pCAPTURE_DEPTH-1:1]};
-            capture7_reg <= {capture7_source, capture7_reg[pCAPTURE_DEPTH-1:1]};
-            capture8_reg <= {capture8_source, capture8_reg[pCAPTURE_DEPTH-1:1]};
+         else if (capturing && downsample_wr_en) begin
+            ticktock <= ~ticktock;
+            capture0_reg <= {capture0_reg[0], capture0_source};
+            capture1_reg <= {capture1_reg[0], capture1_source};
+            capture2_reg <= {capture2_reg[0], capture2_source};
+            capture3_reg <= {capture3_reg[0], capture3_source};
+            capture4_reg <= {capture4_reg[0], capture4_source};
+            capture5_reg <= {capture5_reg[0], capture5_source};
+            capture6_reg <= {capture6_reg[0], capture6_source};
+            capture7_reg <= {capture7_reg[0], capture7_source};
+            capture8_reg <= {capture8_reg[0], capture8_source};
 
-            if (capture_count < pCAPTURE_DEPTH-1)
+            if (ticktock)
+               fifo_wr <= 1'b1;
+            else
+               fifo_wr <= 1'b0;
+
+            if (capture_count < capture_depth-1)
                capture_count <= capture_count + 1;
             else
-               capturing <= 0;
+               capturing <= 1'b0;
+         end
+
+         else
+             fifo_wr <= 1'b0;
+      end
+   end
+
+   assign fifo_wr_data = {capture8_reg, 
+                          capture7_reg, 
+                          capture6_reg, 
+                          capture5_reg, 
+                          capture4_reg, 
+                          capture3_reg, 
+                          capture2_reg, 
+                          capture1_reg, 
+                          capture0_reg};
+
+   //Counter for downsampling (NOT proper decimation)
+   reg [15:0] downsample_ctr;
+   wire downsample_max;
+   reg downsample_wr_en;
+
+   assign downsample_max = (downsample_ctr == downsample) ? 1'b1 : 'b0;
+
+   always @(posedge observer_clk) begin
+      if (capture_go) begin
+         downsample_ctr <= 0;
+         downsample_wr_en <= 0;
+      end 
+      else begin
+         if (downsample_max) begin
+            downsample_ctr <= 0;
+            downsample_wr_en <= 1;
+         end
+         else begin
+            downsample_ctr <= downsample_ctr + 1;
+            downsample_wr_en <= 0;
          end
       end
    end
 
 
-   always @(posedge clk_usb) begin
-   //always @(*) begin
-       case (read_select_reg)
-           0: observer_data <= capture0_reg;
-           1: observer_data <= capture1_reg;
-           2: observer_data <= capture2_reg;
-           3: observer_data <= capture3_reg;
-           4: observer_data <= capture4_reg;
-           5: observer_data <= capture5_reg;
-           6: observer_data <= capture6_reg;
-           7: observer_data <= capture7_reg;
-           8: observer_data <= capture8_reg;
-           default: observer_data <= 'b11111111111111111100; // just some unusual pattern
-       endcase
-   end
-
    //always @(posedge clk_usb) begin
    always @(*) begin
       if (reg_read) begin
          case (reg_address)
-             `LA_READ_SELECT:   reg_datao_reg = observer_data[reg_bytecnt*8 +: 8];
-             `LA_CAPTURE_GROUP: reg_datao_reg = {6'b0, capture_group_reg};
+             `LA_CAPTURE_GROUP: reg_datao_reg = {5'b0, capture_group_reg};
              `LA_STATUS:        reg_datao_reg = {6'b0, capturing, observer_locked};
              `LA_CLOCK_SOURCE:  reg_datao_reg = {6'b0, clock_source_reg};
              `LA_TRIGGER_SOURCE:reg_datao_reg = {5'b0, trigger_source_reg};
              `LA_POWERDOWN:     reg_datao_reg = {7'b0, observer_powerdown};
-             `LA_EXISTS:        reg_datao_reg = la_exists_code[reg_bytecnt*8 +: 8];
              `LA_CAPTURE_DEPTH: reg_datao_reg = capture_depth[reg_bytecnt*8 +: 8];
+             `LA_DOWNSAMPLE:    reg_datao_reg = downsample[reg_bytecnt*8 +: 8];
+             `LA_ARM:           reg_datao_reg = reg_arm;
+             `LA_ENABLED:       reg_datao_reg = reg_enabled;
              default:           reg_datao_reg = 0;
          endcase
       end
@@ -420,20 +489,71 @@ module reg_la #(
          clock_source_reg <= 2'b10; // default to PLL
          trigger_source_reg <= 3'b000; // default to glitch
          capture_group_reg <= 0;
-         read_select_reg <= 0;
          observer_powerdown <= 1;
+         manual_capture <= 0;
+         downsample <= 0;
+         reg_arm <= 0;
+         reg_enabled <= 0;
       end 
 
       else if (reg_write) begin
          case (reg_address)
              `LA_CLOCK_SOURCE:  clock_source_reg <= reg_datai[1:0];
              `LA_TRIGGER_SOURCE:trigger_source_reg <= reg_datai[2:0];
-             `LA_CAPTURE_GROUP: capture_group_reg <= reg_datai[1:0];
-             `LA_READ_SELECT:   read_select_reg <= reg_datai[3:0];
+             `LA_CAPTURE_GROUP: capture_group_reg <= reg_datai[2:0];
              `LA_POWERDOWN:     observer_powerdown <= reg_datai[0];
+             `LA_ENABLED:       reg_enabled <= reg_datai[0];
+             `LA_CAPTURE_DEPTH: capture_depth[reg_bytecnt*8 +: 8] <= reg_datai;
+             `LA_MANUAL_CAPTURE:manual_capture <= reg_datai[0];
+             `LA_DOWNSAMPLE:    downsample[reg_bytecnt*8 +: 8] <= reg_datai;
          endcase
       end
+
+      // ARM register is special:
+      if (reg_write && (reg_address == `LA_ARM))
+          reg_arm <= reg_datai[0];
+      else if (capturing_usb_pulse)
+          reg_arm <= 1'b0;
+
    end
+
+   // Arm CDC:
+   always @ (posedge observer_clk) begin
+      if (reset) begin
+         arm_pipe <= 0;
+         arm_r <= 0;
+         arm_r2 <= 0;
+         armed <= 0;
+      end
+      else begin
+         {arm_r2, arm_r, arm_pipe} <= {arm_r, arm_pipe, reg_arm};
+         if (capturing)
+             armed <= 0;
+         else if (arm_r & ~arm_r2)
+             armed <= 1;
+      end
+   end
+
+   always @(posedge clk_usb) begin
+      if (reset) begin
+         fifo_flush <= 1'b0;
+      end
+      else begin
+         if (fifo_empty)
+            fifo_flush <= 1'b0;
+         else if (reg_arm & ~fifo_flush)
+            fifo_flush <= 1'b1;
+      end
+   end
+
+   cdc_pulse U_capture_done_pulse (
+      .reset_i       (reset),
+      .src_clk       (observer_clk),
+      .src_pulse     (capture_go),
+      .dst_clk       (clk_usb),
+      .dst_pulse     (capturing_usb_pulse)
+   );
+
 
 endmodule
 
