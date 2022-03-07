@@ -26,10 +26,10 @@
 ../tracewhisperer/hdl/fe_capture_trace.v
 ../tracewhisperer/hdl/cdc_bus.v
 ../tracewhisperer/hdl/uart_core.v
-../phywhisperer-common/hardware/hdl/fifo.v
-../phywhisperer-common/hardware/hdl/fe_capture_main.v
-../phywhisperer-common/hardware/hdl/reg_main.v
-../phywhisperer-common/hardware/hdl/pw_trigger.v
+../tracewhisperer/phywhisperer-common/hardware/hdl/fifo.v
+../tracewhisperer/phywhisperer-common/hardware/hdl/fe_capture_main.v
+../tracewhisperer/phywhisperer-common/hardware/hdl/reg_main.v
+../tracewhisperer/phywhisperer-common/hardware/hdl/pw_trigger.v
 ../tracewhisperer/sim/vivado/fifo_generator_0_sim_netlist.v
 ../tracewhisperer/sim/vivado/fifo_generator_tiny_sim_netlist.v
 vivado/adc_fast_fifo_sim_netlist.v
