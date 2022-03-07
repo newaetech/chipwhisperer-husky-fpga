@@ -188,6 +188,7 @@ module cwhusky_top(
    wire [pUSERIO_WIDTH-1:0] userio_debug_data;
 
    wire trace_trig_out;
+   wire trace_trig_out_adc;
 
    wire la_exists;
    wire trace_exists;
@@ -789,10 +790,19 @@ module cwhusky_top(
           .synchronized                 (synchronized)
        );
 
+       cdc_pulse U_trace_trig_cdc (
+          .reset_i       (reg_rst),
+          .src_clk       (fe_clk),
+          .src_pulse     (trace_trig_out),
+          .dst_clk       (ADC_clk_fb),
+          .dst_pulse     (trace_trig_out_adc)
+       );
+
    `else
       assign read_data_trace = 0;
       assign trace_error_flag = 0;
       assign trace_trig_out = 0;
+      assign trace_trig_out_adc = 0;
       assign trace_exists = 0;
       assign trace_data_sdr = 0;
       assign fe_clk = 0;
