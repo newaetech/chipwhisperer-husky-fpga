@@ -291,6 +291,7 @@ module cwhusky_top(
    wire cw_led_cap;
    wire cw_led_armed;
    wire trace_en;
+   wire trace_capture_on;
    wire [7:0] trace_userio_dir;
 
    // fast-flash red LEDs when some internal error has occurred:
@@ -706,7 +707,8 @@ module cwhusky_top(
           .pUSERIO_WIDTH                (1),
           .pMAIN_REG_SELECT             (`TW_MAIN_REG_SELECT),
           .pTRACE_REG_SELECT            (`TW_TRACE_REG_SELECT),
-          .pREGISTERED_READ             (0)
+          .pREGISTERED_READ             (0),
+          .pNUM_TRIGGER_WIDTH           (16)
        ) U_trace_top (
           .trace_clk_in                 (TRACECLOCK),
           .fe_clk                       (fe_clk),
@@ -716,6 +718,7 @@ module cwhusky_top(
           .flash_pattern                (),
           .buildtime                    (32'b0),
           .O_trace_en                   (trace_en),
+          .O_trace_capture_on           (trace_capture_on),
           .O_trace_userio_dir           (trace_userio_dir),
 
           .trace_data                   (TRACEDATA),
@@ -812,8 +815,9 @@ module cwhusky_top(
    // fifo_source_sel controls FIFO acccess.
    // 0: trace
    // 1: LA
-   // In order to capture LA, trace must be disabled (REG_TRACE_EN)
-   assign fifo_source_sel = ~trace_en; 
+   // In order to capture LA, trace must be disabled (REG_TRACE_EN) *or* its
+   // capture mode set to "off"
+   assign fifo_source_sel = ~trace_capture_on; 
    `ifdef __ICARUS__
        assign fifo_wr_clk = fifo_source_sel? observer_clk : fe_clk;
    `else
