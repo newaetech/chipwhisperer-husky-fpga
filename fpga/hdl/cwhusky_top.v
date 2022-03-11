@@ -187,6 +187,8 @@ module cwhusky_top(
    wire [pUSERIO_WIDTH-1:0] userio_drive_data;
    wire [pUSERIO_WIDTH-1:0] userio_debug_data;
 
+   wire decode_uart_input;
+   wire decodeio_active;
    wire trace_trig_out;
    wire trace_trig_out_adc;
 
@@ -394,10 +396,11 @@ module cwhusky_top(
         .trigger_io3_i          (target_io3),
         .trigger_io4_i          (target_io4),
         .trigger_nrst_i         (target_nRST),
-        .trigger_ext_o          (),
+        .trigger_ext_o          (decode_uart_input),
+        .decodeio_active        (decodeio_active),
         .trigger_advio_i        (1'b0),
         .trigger_anapattern_i   (1'b0),
-        .trigger_decodedio_i    (1'b0),
+        .trigger_decodedio_i    (trace_trig_out),
         .trigger_trace_i        (trace_trig_out),
         .pll_fpga_clk           (pll_fpga_clk),
         .glitchclk              (glitchclk),
@@ -694,7 +697,7 @@ module cwhusky_top(
    `ifdef TRACE
        wire TRACECLOCK = USERIO_CLK;
        wire [3:0] TRACEDATA  = USERIO_D[7:4];
-       wire swo = USERIO_D[2];
+       wire serial_in = decodeio_active? decode_uart_input : USERIO_D[2];
 
        reg [22:0] count_fe_clock;
        always @(posedge fe_clk) count_fe_clock <= count_fe_clock + 1;
@@ -722,7 +725,7 @@ module cwhusky_top(
           .O_trace_userio_dir           (trace_userio_dir),
 
           .trace_data                   (TRACEDATA),
-          .swo                          (swo),
+          .swo                          (serial_in),
           .O_trace_trig_out             (trace_trig_out),
           .m3_trig                      (ext_trigger),
           .O_soft_trig_passthru         (),     // N/A, used for CW305 DST only
