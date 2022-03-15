@@ -697,7 +697,8 @@ module cwhusky_top(
    `ifdef TRACE
        wire TRACECLOCK = USERIO_CLK;
        wire [3:0] TRACEDATA  = USERIO_D[7:4];
-       wire serial_in = decodeio_active? decode_uart_input : USERIO_D[2];
+       wire serial_in = decodeio_active? decode_uart_input : 
+                        trace_en?        USERIO_D[2] : 1'b1;
 
        reg [22:0] count_fe_clock;
        always @(posedge fe_clk) count_fe_clock <= count_fe_clock + 1;
