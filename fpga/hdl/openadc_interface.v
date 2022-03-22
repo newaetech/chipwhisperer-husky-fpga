@@ -91,10 +91,11 @@ module openadc_interface #(
     wire        segment_cycle_counter_en;
     wire [1:0]  led_select;
     wire       data_source_select;
-    wire [7:0] fifo_error_stat;
-    wire [7:0] fifo_first_error_stat;
+    wire [8:0] fifo_error_stat;
+    wire [8:0] fifo_first_error_stat;
     wire [2:0] fifo_first_error_state;
     wire       no_clip_errors;
+    wire       no_gain_errors;
     wire       clip_test;
     wire       clear_fifo_errors;
     wire       capture_done;
@@ -367,6 +368,7 @@ module openadc_interface #(
       .segment_cycle_counter_en     (segment_cycle_counter_en),
       .led_select                   (led_select),
       .no_clip_errors               (no_clip_errors),
+      .no_gain_errors               (no_gain_errors),
       .clip_test                    (clip_test),
 
       .extclk_change                (extclk_change),
@@ -499,6 +501,7 @@ module openadc_interface #(
       .clear_fifo_errors        (clear_fifo_errors),
       .stream_segment_available (stream_segment_available),
       .no_clip_errors           (no_clip_errors),
+      .no_gain_errors           (no_gain_errors),
       .clip_test                (clip_test),
       .underflow_count          (underflow_count),
       .no_underflow_errors      (no_underflow_errors),

@@ -83,6 +83,7 @@ module reg_openadc #(
    output wire        fifo_stream,
    output reg  [1:0]  led_select,
    output reg         no_clip_errors,
+   output reg         no_gain_errors,
    output reg         clip_test,
 
    input  wire        extclk_change,
@@ -213,7 +214,7 @@ module reg_openadc #(
                 `SEGMENT_CYCLE_COUNTER_EN: reg_datao_reg = {7'b0, segment_cycle_counter_en};
                 `DATA_SOURCE_SELECT: reg_datao_reg = data_source_select;
                 `LED_SELECT: reg_datao_reg = led_select;
-                `NO_CLIP_ERRORS: reg_datao_reg = no_clip_errors;
+                `NO_CLIP_ERRORS: reg_datao_reg = {6'b0, no_gain_errors, no_clip_errors};
                 `CLIP_TEST: reg_datao_reg = clip_test;
                 `CLKGEN_POWERDOWN: reg_datao_reg = {6'b0, adc_clkgen_power_down, clkgen_power_down};
                 `EXTCLK_MONITOR_DISABLED: reg_datao_reg = extclk_monitor_disabled;
@@ -243,6 +244,7 @@ module reg_openadc #(
          segment_cycle_counter_en <= 0;
          led_select <= 0;
          no_clip_errors <= 0;
+         no_gain_errors <= 0;
          clip_test <= 0;
          // CLKGEN MMCMs are powered down by default, because we can get too hot if all MMCMs are kept on:
          adc_clkgen_power_down <= 1;
@@ -265,7 +267,7 @@ module reg_openadc #(
             `SEGMENT_CYCLE_COUNTER_EN: segment_cycle_counter_en <= reg_datai[0];
             `DATA_SOURCE_SELECT: data_source_select <= reg_datai[0];
             `LED_SELECT: led_select <= reg_datai[1:0];
-            `NO_CLIP_ERRORS: no_clip_errors <= reg_datai[0];
+            `NO_CLIP_ERRORS: {no_gain_errors, no_clip_errors} <= reg_datai[1:0];
             `CLIP_TEST: clip_test <= reg_datai[0];
             `CLKGEN_POWERDOWN: {adc_clkgen_power_down, clkgen_power_down} <= reg_datai[1:0];
             `PHASE_ADDR: phase_out[reg_bytecnt*8 +: 8] <= reg_datai;

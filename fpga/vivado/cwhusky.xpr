@@ -54,13 +54,13 @@
     <Option Name="WTVcsLaunchSim" Val="0"/>
     <Option Name="WTRivieraLaunchSim" Val="0"/>
     <Option Name="WTActivehdlLaunchSim" Val="0"/>
-    <Option Name="WTXSimExportSim" Val="98"/>
-    <Option Name="WTModelSimExportSim" Val="98"/>
-    <Option Name="WTQuestaExportSim" Val="98"/>
-    <Option Name="WTIesExportSim" Val="98"/>
-    <Option Name="WTVcsExportSim" Val="98"/>
-    <Option Name="WTRivieraExportSim" Val="98"/>
-    <Option Name="WTActivehdlExportSim" Val="98"/>
+    <Option Name="WTXSimExportSim" Val="99"/>
+    <Option Name="WTModelSimExportSim" Val="99"/>
+    <Option Name="WTQuestaExportSim" Val="99"/>
+    <Option Name="WTIesExportSim" Val="99"/>
+    <Option Name="WTVcsExportSim" Val="99"/>
+    <Option Name="WTRivieraExportSim" Val="99"/>
+    <Option Name="WTActivehdlExportSim" Val="99"/>
     <Option Name="GenerateIPUpgradeLog" Val="TRUE"/>
     <Option Name="XSimRadix" Val="hex"/>
     <Option Name="XSimTimeUnit" Val="ns"/>
@@ -769,6 +769,20 @@
         <Define Name="ILA_UART"/>
       </Config>
     </FileSet>
+    <FileSet Name="ila_fifo_gain" Type="BlockSrcs" RelSrcDir="$PSRCDIR/ila_fifo_gain">
+      <File Path="$PSRCDIR/sources_1/ip/ila_fifo_gain/ila_fifo_gain.xci">
+        <FileInfo>
+          <Attr Name="UsedIn" Val="synthesis"/>
+          <Attr Name="UsedIn" Val="implementation"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+      </File>
+      <Config>
+        <Option Name="TopModule" Val="ila_fifo_gain"/>
+        <Option Name="VerilogDir" Val="$PPRDIR/../tracewhisperer/hdl"/>
+        <Option Name="UseBlackboxStub" Val="1"/>
+      </Config>
+    </FileSet>
   </FileSets>
   <Simulators>
     <Simulator Name="XSim">
@@ -1081,9 +1095,7 @@
     </Run>
     <Run Id="ila_simple_trigger_synth_1" Type="Ft3:Synth" SrcSet="ila_simple_trigger" Part="xc7a35tftg256-1" ConstrsSet="ila_simple_trigger" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_simple_trigger_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_simple_trigger_synth_1">
       <Strategy Version="1" Minor="2">
-        <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020">
-          <Desc>Vivado Synthesis Defaults</Desc>
-        </StratHandle>
+        <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
         <Step Id="synth_design"/>
       </Strategy>
       <GeneratedRun Dir="$PRUNDIR" File="gen_run.xml"/>
@@ -1092,6 +1104,16 @@
       <RQSFiles/>
     </Run>
     <Run Id="ila_uart_synth_1" Type="Ft3:Synth" SrcSet="ila_uart" Part="xc7a35tftg256-1" ConstrsSet="ila_uart" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_uart_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_uart_synth_1">
+      <Strategy Version="1" Minor="2">
+        <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
+        <Step Id="synth_design"/>
+      </Strategy>
+      <GeneratedRun Dir="$PRUNDIR" File="gen_run.xml"/>
+      <ReportStrategy Name="Vivado Synthesis Default Reports" Flow="Vivado Synthesis 2020"/>
+      <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
+      <RQSFiles/>
+    </Run>
+    <Run Id="ila_fifo_gain_synth_1" Type="Ft3:Synth" SrcSet="ila_fifo_gain" Part="xc7a35tftg256-1" ConstrsSet="ila_fifo_gain" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_fifo_gain_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_fifo_gain_synth_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020">
           <Desc>Vivado Synthesis Defaults</Desc>
@@ -1589,9 +1611,7 @@
     </Run>
     <Run Id="ila_simple_trigger_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-1" ConstrsSet="ila_simple_trigger" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_simple_trigger_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_simple_trigger_impl_1">
       <Strategy Version="1" Minor="2">
-        <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020">
-          <Desc>Default settings for Implementation.</Desc>
-        </StratHandle>
+        <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020"/>
         <Step Id="init_design"/>
         <Step Id="opt_design"/>
         <Step Id="power_opt_design"/>
@@ -1607,6 +1627,23 @@
       <RQSFiles/>
     </Run>
     <Run Id="ila_uart_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-1" ConstrsSet="ila_uart" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_uart_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_uart_impl_1">
+      <Strategy Version="1" Minor="2">
+        <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020"/>
+        <Step Id="init_design"/>
+        <Step Id="opt_design"/>
+        <Step Id="power_opt_design"/>
+        <Step Id="place_design"/>
+        <Step Id="post_place_power_opt_design"/>
+        <Step Id="phys_opt_design"/>
+        <Step Id="route_design"/>
+        <Step Id="post_route_phys_opt_design"/>
+        <Step Id="write_bitstream"/>
+      </Strategy>
+      <ReportStrategy Name="Vivado Implementation Default Reports" Flow="Vivado Implementation 2020"/>
+      <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
+      <RQSFiles/>
+    </Run>
+    <Run Id="ila_fifo_gain_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-1" ConstrsSet="ila_fifo_gain" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_fifo_gain_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_fifo_gain_impl_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020">
           <Desc>Default settings for Implementation.</Desc>
