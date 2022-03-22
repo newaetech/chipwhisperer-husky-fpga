@@ -204,7 +204,7 @@ module cwhusky_tb();
       else
          write_1byte(`ADC_LOW_RES, 0);
 
-      write_1byte(`NO_CLIP_ERRORS, 8'h1);
+      write_1byte(`NO_CLIP_ERRORS, 8'h3);
 
       // program number of samples:
       rw_lots_bytes(`PRESAMPLES_ADDR);
