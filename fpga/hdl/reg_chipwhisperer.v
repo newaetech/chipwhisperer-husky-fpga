@@ -57,6 +57,7 @@ module reg_chipwhisperer #(
    input  wire        trigger_decodedio_i,
    input  wire        trigger_anapattern_i,
    input  wire        trigger_trace_i,
+   input  wire        trigger_adc_i,
 
    /* Clock Sources */
    input  wire        pll_fpga_clk,
@@ -143,6 +144,7 @@ CW_TRIGMOD_ADDR, address 40 (0x28) - Trigger Module Enabled
             010 Advanced SAD Trigger
             011 Decoded IO Trigger
             100 Trace Trigger
+            101 ADC level trigger
     FA = Output trigger to Front Panel A / Aux SMA
 
 CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
@@ -368,7 +370,8 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
                     (registers_cwtrigmod[2:0] == 3'b001) ? trigger_advio_i : 
                     (registers_cwtrigmod[2:0] == 3'b010) ? trigger_anapattern_i :
                     (registers_cwtrigmod[2:0] == 3'b011) ? trigger_decodedio_i :
-                    (registers_cwtrigmod[2:0] == 3'b100) ? trigger_trace_i : 1'b0;
+                    (registers_cwtrigmod[2:0] == 3'b100) ? trigger_trace_i :
+                    (registers_cwtrigmod[2:0] == 3'b101) ? trigger_adc_i : 1'b0;
 
    assign decodeio_active = (registers_cwtrigmod[2:0] == 3'b011);
    assign trigger_ext_o = trigger_ext;

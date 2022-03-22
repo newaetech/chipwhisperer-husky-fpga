@@ -48,8 +48,7 @@ module reg_openadc #(
    output wire         cmd_arm_usb,
    output wire         trigger_mode,
    output wire         trigger_wait,
-   output wire [11:0]  trigger_level,
-   output wire         trigger_source,
+   output reg  [11:0]  trigger_adclevel,
    output wire         trigger_now,
    output wire [31:0]  trigger_offset,
    input  wire [31:0]  trigger_length,
@@ -96,8 +95,6 @@ module reg_openadc #(
 );
 
    wire reset;
-
-   assign  trigger_level = 12'b0;
 
    (* ASYNC_REG = "TRUE" *) reg[1:0] arm_pipe;
    reg arm_r;
@@ -160,7 +157,6 @@ module reg_openadc #(
    assign fifo_stream = registers_settings[4];
    assign trigger_wait = registers_settings[5];
    assign trigger_now = registers_settings[6];
-   assign trigger_source = registers_settings[7];
 
    assign registers_advclocksettings_read[4:0] = registers_advclocksettings[4:0];
    assign registers_advclocksettings_read[5] = clkblock_gen_locked_i;
@@ -220,6 +216,7 @@ module reg_openadc #(
                 `EXTCLK_MONITOR_DISABLED: reg_datao_reg = extclk_monitor_disabled;
                 `EXTCLK_MONITOR_STAT: reg_datao_reg = extclk_change;
                 `EXTCLK_CHANGE_LIMIT: reg_datao_reg = extclk_limit[reg_bytecnt*8 +: 8];
+                `ADC_TRIGGER_LEVEL: reg_datao_reg = trigger_adclevel[reg_bytecnt*8 +: 8];
                 default: reg_datao_reg = 0;
              endcase
           end
@@ -252,6 +249,7 @@ module reg_openadc #(
          phase_out <= 0;
          extclk_monitor_disabled <= 1;
          extclk_limit <= 32'd9; // corresponds to ~100 kHz tolerance
+         trigger_adclevel <= 12'd0;
       end else if (reg_write) begin
          case (reg_address)
             `GAIN_ADDR: registers_gain <= reg_datai;
@@ -273,6 +271,7 @@ module reg_openadc #(
             `PHASE_ADDR: phase_out[reg_bytecnt*8 +: 8] <= reg_datai;
             `EXTCLK_MONITOR_DISABLED: extclk_monitor_disabled <= reg_datai[0];
             `EXTCLK_CHANGE_LIMIT: extclk_limit[reg_bytecnt*8 +: 8] <= reg_datai;
+            `ADC_TRIGGER_LEVEL: trigger_adclevel[reg_bytecnt*8 +: 8] <= reg_datai;
             default: ;
          endcase
       end

@@ -41,6 +41,7 @@ module openadc_interface #(
     input  wire                         PLL_STATUS,
     input  wire                         DUT_CLK_i, // target_hs1
     input  wire                         DUT_trigger_i,
+    output reg                          trigger_adc,
     output wire                         amp_gain,
     output wire [7:0]                   fifo_dout,
 
@@ -84,7 +85,6 @@ module openadc_interface #(
     wire       reset;
 
     wire       dcm_gen_locked;
-    wire       trigger_source;
     wire       fifo_stream;
     wire [15:0] num_segments;
     wire [19:0] segment_cycles;
@@ -231,7 +231,7 @@ module openadc_interface #(
 
    reg [11:0] ADC_data_tofifo;
    reg [11:0] datacounter = 0;
-   wire [11:0] trigger_level;
+   wire [11:0] trigger_adclevel;
 
    always @(posedge ADC_clk_sample) begin
       ADC_data_tofifo <= data_source_select? ADC_data : datacounter;
@@ -256,14 +256,11 @@ module openadc_interface #(
    trigger_unit tu_inst(
       .reset                (reset),
       .adc_clk              (ADC_clk_sample),
-      .adc_data             (ADC_data_tofifo),
 
-      .ext_trigger_i        (DUT_trigger_i),
+      .trigger              (DUT_trigger_i),
       .trigger_level_i      (trigger_mode),
-      .trigger_wait_i       (trigger_wait),
-      .trigger_adclevel_i   (trigger_level),
-      .trigger_source_i     (trigger_source),
       .trigger_now_i        (trigger_now),
+      .trigger_wait_i       (trigger_wait),
       .arm_i                (cmd_arm_adc),
       .arm_o                (armed),
       .trigger_offset_i     (trigger_offset),
@@ -276,6 +273,32 @@ module openadc_interface #(
       .fifo_rst             (fifo_rst),
       .la_debug             (la_debug)
    );
+   
+   reg trigger_adc_allowed;
+   reg cmd_arm_adc_r;
+   // ADC trigger is simple except that we only want a single trigger generated:
+   always @(posedge ADC_clk_sample) begin
+       if (reset) begin
+           trigger_adc_allowed <= 1'b0;
+           trigger_adc <= 1'b0;
+           cmd_arm_adc_r <= 1'b0;
+       end
+       else begin
+           cmd_arm_adc_r <= cmd_arm_adc;
+
+           if (trigger_adc_allowed)
+               trigger_adc <= trigger_adclevel[11]? ADC_data_tofifo > trigger_adclevel:
+                                                    ADC_data_tofifo < trigger_adclevel;
+           else
+               trigger_adc <= 1'b0;
+
+           if (trigger_adc)
+               trigger_adc_allowed <= 1'b0;
+           else if (cmd_arm_adc && ~cmd_arm_adc_r)
+               trigger_adc_allowed <= 1'b1;
+       end
+   end
+
 
    assign reg_status[0] = armed;
    assign reg_status[1] = ~capture_active;
@@ -341,8 +364,7 @@ module openadc_interface #(
       .cmd_arm_usb                  (cmd_arm_usb),
       .trigger_mode                 (trigger_mode),
       .trigger_wait                 (trigger_wait),  
-      .trigger_source               (trigger_source),
-      .trigger_level                (trigger_level),
+      .trigger_adclevel             (trigger_adclevel),
       .trigger_now                  (trigger_now),
       .trigger_offset               (trigger_offset),
       .trigger_length               (trigger_length),
