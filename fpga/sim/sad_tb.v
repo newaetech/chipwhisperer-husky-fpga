@@ -302,6 +302,10 @@ initial begin
             errors += 1;
             $display("ERROR: SAD_STATUS shows that FIFO overflow occured!");
         end
+        if (rdata[3]) begin
+            errors += 1;
+            $display("ERROR: SAD_STATUS shows that FIFO is not empty when it should be!");
+        end
     end
 
     if (errors)

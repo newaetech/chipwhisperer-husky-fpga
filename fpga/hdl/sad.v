@@ -60,6 +60,7 @@ module sad #(
     wire fifo_underflow;
     reg  fifo_overflow_sticky;
     reg  fifo_underflow_sticky;
+    reg fifo_not_empty_error;
     reg  triggered;
     reg clear_status;
     reg clear_status_r;
@@ -76,7 +77,7 @@ module sad #(
             case (reg_address)
                 `SAD_REFERENCE: reg_datao = refsamples[reg_bytecnt*8 +: 8];
                 `SAD_THRESHOLD: reg_datao = threshold[reg_bytecnt*8 +: 8];
-                `SAD_STATUS: reg_datao = {5'b0, fifo_overflow_sticky, fifo_underflow_sticky, triggered};
+                `SAD_STATUS: reg_datao = {4'b0, fifo_not_empty_error, fifo_overflow_sticky, fifo_underflow_sticky, triggered};
                 default: reg_datao = 0;
             endcase
         end
@@ -120,12 +121,14 @@ module sad #(
             triggered <= 1'b0;
             fifo_overflow_sticky <= 1'b0;
             fifo_underflow_sticky <= 1'b0;
+            fifo_not_empty_error <= 1'b0;
         end
         else begin
             if (clear_status_adc) begin
                 triggered <= 1'b0;
                 fifo_overflow_sticky <= 1'b0;
                 fifo_underflow_sticky <= 1'b0;
+                fifo_not_empty_error <= 1'b0;
             end
             else begin
                 if (trigger)
@@ -134,6 +137,8 @@ module sad #(
                     fifo_overflow_sticky <= 1'b1;
                 if (fifo_underflow)
                     fifo_underflow_sticky <= 1'b1;
+                if ((state == pS_IDLE) && ~fifo_empty)
+                    fifo_not_empty_error <= 1'b1;
             end
         end
     end
@@ -256,6 +261,7 @@ module sad #(
                     for (c = 0; c < pREF_SAMPLES; c = c + 1) begin
                         if (individual_trigger[c]) begin
                             trigger <= 1'b1;
+                            fifo_wr <= 1'b0;
                             fifo_wr <= 1'b0;
                             state <= pS_FLUSH;
                         end
