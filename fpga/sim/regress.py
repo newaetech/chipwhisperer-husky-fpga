@@ -201,6 +201,17 @@ tests.append(dict(name  = 'downsample',
              TIMEOUT_CYCLES = 1000000,
              description = 'Downsample.'))
 
+tests.append(dict(name  = 'sad',
+             frequency = 1,
+             BITS_PER_SAMPLE = 8,
+             REF_SAMPLES = [8,64],
+             THRESHOLD = [10,50], # keep threshold low to avoid unintentional triggers - testbench isn't smart enough
+             LINEAR_RAMP = [0,1],
+             TIMEOUT_CYCLES = 10000,
+             TOP = 'sad_tb.v',
+             description = 'SAD block-level test.'))
+
+
 
 
 def print_tests():
@@ -282,7 +293,7 @@ for test in tests:
 
       run_test = True
       # build make command:
-      makeargs = ['make', 'all', 'VERBOSE=0']
+      makeargs = ['make', 'all', 'VERBOSE=1']
       makeargs.append("SEED=%d" % seed)
       if args.dump:
          makeargs.append('DUMP=1')
@@ -299,6 +310,8 @@ for test in tests:
                run_test = False
             elif i % test[key]:
                run_test = False
+         elif key == 'TOP' and test[key] == 'sad_tb.v':
+             makeargs[1] = 'all_sad'
          else:
             if type(test[key]) == list:
                value = random.randint(test[key][0], test[key][1])
@@ -308,6 +321,7 @@ for test in tests:
 
       # run:
       if run_test:
+         #print("Running: %s" % makeargs)
          p = subprocess.Popen(makeargs, stdout=outfile, stderr=outfile)
          processes.append((p,logfile,seed))
 
@@ -350,7 +364,7 @@ pbarpassed.close()
 #exit_codes = [p.wait() for p,l,s in processes]
 
 # sanity check:
-assert num_processes == pass_count + fail_count
+assert num_processes == pass_count + fail_count, "pass=%d, fail=%d" % (pass_count, fail_count)
 
 
 # Summarize results:

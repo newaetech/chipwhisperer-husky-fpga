@@ -337,6 +337,9 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define EXTERNAL_CLOCK          95
 `define COMPONENTS_EXIST        96
 
+`define SAD_REFERENCE           100
+`define SAD_THRESHOLD           101
+
 `define REGISTER_VERSION 1
 
 `define TW_MAIN_REG_SELECT      2'b10

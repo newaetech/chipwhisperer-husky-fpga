@@ -26,8 +26,51 @@ FIFOSIZE=REGULARFIFO
 ERRORS_OK=0
 PRESAMP_ERROR=0
 DOWNSAMPLE=0
+LINEAR_RAMP=1
+REF_SAMPLES=8
+BITS_PER_SAMPLE=12
+THRESHOLD=0
+VERBOSE=0
 
 all: compile run
+all_sad: compile_sad run
+
+compile_sad:
+	iverilog ../hdl/sad.v \
+	../hdl/sad_wrapper.v \
+	../hdl/usb_reg_main.v \
+	sad_tb.v \
+	vivado/sad_fifo_sim_netlist.v \
+	-y/tools/Xilinx/Vivado/2020.2/ids_lite/ISE/verilog/src/unisims/ \
+	-g2005-sv \
+	-I../hdl \
+	-Wportbind \
+	-Wselect-range \
+	-P sad_tb.pLINEAR_RAMP=$(LINEAR_RAMP) \
+	-P sad_tb.pREF_SAMPLES=$(REF_SAMPLES) \
+	-P sad_tb.pBITS_PER_SAMPLE=$(BITS_PER_SAMPLE) \
+	-P sad_tb.pTHRESHOLD=$(THRESHOLD) \
+	-P sad_tb.pDUMP=$(DUMP) \
+	-P sad_tb.pSEED=$(SEED) \
+	-P sad_tb.pVERBOSE=$(VERBOSE) \
+	-o $(EXEFILE) \
+
+sad_nofifo:
+	iverilog ../hdl/sad.v \
+	../hdl/sad_wrapper.v \
+	../hdl/usb_reg_main.v \
+	sad_tb.v \
+	-g2005-sv \
+	-DNOFIFO \
+	-I../hdl \
+	-Wportbind \
+	-Wselect-range \
+	-P sad_tb.pLINEAR_RAMP=$(LINEAR_RAMP) \
+	-P sad_tb.pREF_SAMPLES=$(REF_SAMPLES) \
+	-P sad_tb.pBITS_PER_SAMPLE=$(BITS_PER_SAMPLE) \
+	-P sad_tb.pDUMP=$(DUMP) \
+	-P sad_tb.pSEED=$(SEED) \
+	-o $(EXEFILE) \
 
 compile:
 	iverilog -ccmdfile \
