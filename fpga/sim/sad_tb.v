@@ -285,6 +285,25 @@ initial begin
     else if (pVERBOSE)
         $display("Got trigger at time %t.", $time);
     repeat(pREF_SAMPLES*2) #(pCLK_ADC_PERIOD);
+
+    read_1byte(`SAD_STATUS, rdata);
+    if (rdata == 8'd1)
+        $display("SAD_STATUS ok.");
+    else begin
+        if (~rdata[0]) begin
+            errors += 1;
+            $display("ERROR: SAD_STATUS shows that no trigger occured!");
+        end
+        if (rdata[1]) begin
+            errors += 1;
+            $display("ERROR: SAD_STATUS shows that FIFO underflow occured!");
+        end
+        if (rdata[2]) begin
+            errors += 1;
+            $display("ERROR: SAD_STATUS shows that FIFO overflow occured!");
+        end
+    end
+
     if (errors)
        $display("SIMULATION FAILED (%0d errors)", errors);
     else

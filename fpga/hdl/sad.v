@@ -58,6 +58,12 @@ module sad #(
     wire fifo_almost_empty;
     wire fifo_overflow;
     wire fifo_underflow;
+    reg  fifo_overflow_sticky;
+    reg  fifo_underflow_sticky;
+    reg  triggered;
+    reg clear_status;
+    reg clear_status_r;
+    wire clear_status_adc;
 
     reg [pREF_SAMPLES*pBITS_PER_SAMPLE-1:0] refsamples;
     reg [31:0] threshold; // must be wide enough so it doesn't overflow (must hold addition of pREF_SAMPLES numbers that are each pBITS_PER_SAMPLE bits wide)
@@ -70,6 +76,7 @@ module sad #(
             case (reg_address)
                 `SAD_REFERENCE: reg_datao = refsamples[reg_bytecnt*8 +: 8];
                 `SAD_THRESHOLD: reg_datao = threshold[reg_bytecnt*8 +: 8];
+                `SAD_STATUS: reg_datao = {5'b0, fifo_overflow_sticky, fifo_underflow_sticky, triggered};
                 default: reg_datao = 0;
             endcase
         end
@@ -82,13 +89,52 @@ module sad #(
         if (reset) begin
             refsamples <= 0;
             threshold <= 0;
+            clear_status_r <= 0;
         end 
-        else if (reg_write) begin
-            case (reg_address)
-                `SAD_REFERENCE: refsamples[reg_bytecnt*8 +: 8] <= reg_datai;
-                `SAD_THRESHOLD: threshold[reg_bytecnt*8 +: 8] <= reg_datai;
-                default: ;
-            endcase
+        else begin
+            clear_status_r <= clear_status;
+            if (reg_write) begin
+                case (reg_address)
+                    `SAD_REFERENCE: refsamples[reg_bytecnt*8 +: 8] <= reg_datai;
+                    `SAD_THRESHOLD: threshold[reg_bytecnt*8 +: 8] <= reg_datai;
+                    default: ;
+                endcase
+                if (reg_address == `SAD_STATUS)
+                    clear_status <= 1'b1;
+                else
+                    clear_status <= 1'b0;
+            end
+        end
+    end
+
+   cdc_pulse U_clear_status_cdc (
+      .reset_i       (reset),
+      .src_clk       (clk_usb),
+      .src_pulse     (clear_status && ~clear_status_r),
+      .dst_clk       (adc_sampleclk),
+      .dst_pulse     (clear_status_adc)
+   );
+
+    always @(posedge adc_sampleclk) begin
+        if (reset) begin
+            triggered <= 1'b0;
+            fifo_overflow_sticky <= 1'b0;
+            fifo_underflow_sticky <= 1'b0;
+        end
+        else begin
+            if (clear_status_adc) begin
+                triggered <= 1'b0;
+                fifo_overflow_sticky <= 1'b0;
+                fifo_underflow_sticky <= 1'b0;
+            end
+            else begin
+                if (trigger)
+                    triggered <= 1'b1;
+                if (fifo_overflow)
+                    fifo_overflow_sticky <= 1'b1;
+                if (fifo_underflow)
+                    fifo_underflow_sticky <= 1'b1;
+            end
         end
     end
 
@@ -98,11 +144,8 @@ module sad #(
     reg counter_active [0:pREF_SAMPLES-1];
     reg use_ref_samples [0:pREF_SAMPLES-1];
     reg individual_trigger [0:pREF_SAMPLES-1];
-    // TODO: these need to be wider, since we're adding many pBITS_PER_SAMPLE-wide numbers...
-    reg [31:0] sad_counter [0:pREF_SAMPLES-1];
-    reg [31:0] next_sad_counter [0:pREF_SAMPLES-1];
-
-    wire [11:0] minusref = refsamples[counter_counter[0]*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
+    // TODO: these need to be wider, since we're adding many pBITS_PER_SAMPLE-wide numbers... hard-coded here for pBITS_PER_SAMPLE=8, pREF_SAMPLES=128
+    reg [15:0] sad_counter [0:pREF_SAMPLES-1];
 
     // instantiate counters and do most of the heavy lifting:
     genvar i;
@@ -136,15 +179,6 @@ module sad #(
                end
             end
 
-
-            /*
-            always @(posedge adc_sampleclk) begin
-                if (use_ref_samples[i])
-                    next_sad_counter[i] <= sad_counter[i] + adc_datain - refsamples[counter_counter[i]*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
-                else
-                    next_sad_counter[i] <= sad_counter[i] + adc_datain - fifo_out;
-            end
-            */
 
             always @ (posedge adc_sampleclk) begin
                 if (counter_active[i]) begin

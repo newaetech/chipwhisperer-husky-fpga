@@ -339,6 +339,7 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 
 `define SAD_REFERENCE           100
 `define SAD_THRESHOLD           101
+`define SAD_STATUS              102
 
 `define REGISTER_VERSION 1
 
