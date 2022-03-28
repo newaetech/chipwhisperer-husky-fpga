@@ -34,7 +34,7 @@ parameter pBITS_PER_SAMPLE = 12;
 parameter pTHRESHOLD = 0;
 parameter pADDR_WIDTH = 8;
 parameter pTIMEOUT_CYCLES = 5000;
-parameter pSLOP = 1;
+parameter pSLOP = 2;
 parameter pVERBOSE = 0;
 
 // we don't actually use these but tb_reg_tasks.v needs them to exist:
@@ -71,6 +71,7 @@ integer warnings;
 integer i;
 integer seed;
 integer delta;
+integer abs_delta;
 integer total_delta;
 reg done_altering;
 reg trigger_expected;
@@ -163,21 +164,26 @@ initial begin
         @(posedge clk_adc) adc_datain = $urandom_range(0, 2**pBITS_PER_SAMPLE-1);
 
     // apply a pattern that's close, but (probably) over the threshold:
-    //
     for (i = 0; i < pREF_SAMPLES; i = i + 1) begin
         @(posedge clk_adc);
-        if ($urandom_range(0, pREF_SAMPLES/4) == 0) begin // deviate from pattern or not
-            // TODO: for SAD if ($urandom_range(0,1)) begin // deviate positively or negatively
-            // for now, only deviate positively, since DUT doesn't handle the other direction yet
-            delta = $urandom_range(0, 2**pBITS_PER_SAMPLE-1 - pattern[i]);
-            total_delta += delta;
+        if ($urandom_range(0, pREF_SAMPLES/8) == 0) begin // deviate from pattern or not
+            if ($urandom_range(0,1)) begin // positive delta
+                delta = $urandom_range(0, 2**pBITS_PER_SAMPLE-1 - pattern[i]);
+                total_delta += delta;
+            end
+
+            else begin // negative delta
+                delta = -$urandom_range(0, pattern[i]);
+                total_delta -= delta;
+                //$display("NEGATIVE!");
+            end
         end
         else
             delta = 0;
         adc_datain = pattern[i] + delta;
     end
     if (total_delta <= threshold) begin
-        delta = (threshold - total_delta + 1);
+        delta = (threshold - total_delta + 10);
         total_delta += delta;
         adc_datain += delta;
         // TODO: if we don't have enough headspace, check other direction... if we still can't, then issue the warning
@@ -206,19 +212,26 @@ initial begin
         if ((done_altering == 0) && ($urandom_range(0, pREF_SAMPLES/2) == 0)) begin // deviate from pattern or not
             if (pVERBOSE)
                 $display("Deviating for sample %d", i);
-            // TODO: for SAD if ($urandom_range(0,1)) begin // deviate positively or negatively
-            // for now, only deviate positively, since DUT doesn't handle the other direction yet
-            delta = threshold;
-            while (total_delta + delta >= threshold) begin
-                delta = $urandom_range(0, 2**pBITS_PER_SAMPLE-1 - pattern[i]);
+            abs_delta = threshold;
+            while (total_delta + abs_delta >= threshold) begin
+                if ($urandom_range(0,1)) begin // positive delta
+                    delta = $urandom_range(0, 2**pBITS_PER_SAMPLE-1 - pattern[i]);
+                    abs_delta = delta;
+                end
+                else begin // negative delta
+                    delta = -$urandom_range(0, pattern[i]);
+                    abs_delta = -delta;
+                end
                 //$display("Trying delta=%d...", delta);
             end
-            total_delta = total_delta + delta;
+            total_delta = total_delta + abs_delta;
             if (total_delta*2 > threshold)
                 done_altering = 1;
         end
         else
             delta = 0;
+        //if (delta < 0)
+        //    $display("NEGATIVE!");
         adc_datain = pattern[i] + delta;
     end
     repeat (3) @(posedge clk_adc);
@@ -245,7 +258,7 @@ initial begin
             if (delta <= pSLOP)
                 warnings += 1;
             else begin
-                $display("ERROR: delta exceeds margin");
+                $display("ERROR: trigger delta exceeds margin");
                 errors += 1;
             end
         end
@@ -260,7 +273,7 @@ initial begin
         if (delta <= pSLOP)
             warnings += 1;
         else begin
-            $display("ERROR: delta exceeds margin");
+            $display("ERROR: trigger delta exceeds margin");
             errors += 1;
         end
     end
