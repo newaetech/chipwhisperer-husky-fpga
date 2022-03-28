@@ -35,6 +35,7 @@ parameter pTHRESHOLD = 0;
 parameter pADDR_WIDTH = 8;
 parameter pTIMEOUT_CYCLES = 5000;
 parameter pSLOP = 2;
+parameter pTHRESHOLD_MARGIN = 20;
 parameter pVERBOSE = 0;
 
 // we don't actually use these but tb_reg_tasks.v needs them to exist:
@@ -182,16 +183,19 @@ initial begin
             delta = 0;
         adc_datain = pattern[i] + delta;
     end
-    if (total_delta <= threshold) begin
-        delta = (threshold - total_delta + 10);
-        total_delta += delta;
-        adc_datain += delta;
-        // TODO: if we don't have enough headspace, check other direction... if we still can't, then issue the warning
-        //warnings += 1;
-        if (pVERBOSE)
-            $display("extra delta = %d", delta);
-        //$display("WARNING!: didn't exceed threshold! Will expect simulation to fail. Time=%t", $time);
-        //expect_fail = 1;
+    if (total_delta <= threshold + pTHRESHOLD_MARGIN) begin
+        delta = (threshold - total_delta + pTHRESHOLD_MARGIN);
+        if (adc_datain + delta >= 2**pBITS_PER_SAMPLE) begin
+            $display("WARNING!: didn't exceed threshold! Will expect simulation to fail. Time=%t", $time);
+            expect_fail = 1;
+            warnings += 1;
+        end
+        else begin
+            total_delta += delta;
+            adc_datain += delta;
+            if (pVERBOSE)
+                $display("extra delta = %d", delta);
+        end
     end
 
 
