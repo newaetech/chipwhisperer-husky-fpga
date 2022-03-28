@@ -191,6 +191,7 @@ module cwhusky_top(
    wire decodeio_active;
    wire trace_trig_out;
    wire trigger_adc;
+   wire trigger_sad;
    wire trace_trig_out_adc;
 
    wire la_exists;
@@ -321,6 +322,7 @@ module cwhusky_top(
         .DUT_CLK_i              (extclk_mux),
         .DUT_trigger_i          (ext_trigger),
         .trigger_adc            (trigger_adc),
+        .trigger_sad            (trigger_sad),
         .amp_gain               (VDBSPWM),
         .fifo_dout              (fifo_dout),
         .clkgen                 (clkgen),
@@ -401,10 +403,10 @@ module cwhusky_top(
         .trigger_ext_o          (decode_uart_input),
         .decodeio_active        (decodeio_active),
         .trigger_advio_i        (1'b0),
-        .trigger_anapattern_i   (1'b0),
         .trigger_decodedio_i    (trace_trig_out),
         .trigger_trace_i        (trace_trig_out),
         .trigger_adc_i          (trigger_adc),
+        .trigger_sad_i          (trigger_sad),
         .pll_fpga_clk           (pll_fpga_clk),
         .glitchclk              (glitchclk),
 

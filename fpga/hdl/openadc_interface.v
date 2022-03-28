@@ -42,6 +42,7 @@ module openadc_interface #(
     input  wire                         DUT_CLK_i, // target_hs1
     input  wire                         DUT_trigger_i,
     output reg                          trigger_adc,
+    output wire                         trigger_sad,
     output wire                         amp_gain,
     output wire [7:0]                   fifo_dout,
 
@@ -332,6 +333,7 @@ module openadc_interface #(
    wire [7:0] reg_datao_oadc;
    wire [7:0] reg_datao_fifo;
    wire [7:0] reg_datao_mmcm_drp;
+   wire [7:0] reg_datao_sad;
 
    wire [31:0] fifo_read_count;
    wire [31:0] fifo_read_count_error_freeze;
@@ -342,7 +344,26 @@ module openadc_interface #(
    wire [7:0] underflow_count;
    wire no_underflow_errors;
 
-   assign reg_datao = reg_datao_oadc | reg_datao_fifo | reg_datao_mmcm_drp;
+   assign reg_datao = reg_datao_oadc | reg_datao_fifo | reg_datao_mmcm_drp | reg_datao_sad;
+
+   sad #(
+       .pBYTECNT_SIZE           (pBYTECNT_SIZE),
+       .pREF_SAMPLES            (128),
+       .pBITS_PER_SAMPLE        (8)
+   ) U_sad (
+       .reset                   (reset        ),
+       .adc_datain              (ADC_data_tofifo),
+       .adc_sampleclk           (ADC_clk_sample),
+       .arm_i                   (armed        ),
+       .clk_usb                 (clk_usb      ),
+       .reg_address             (reg_address  ),
+       .reg_bytecnt             (reg_bytecnt  ),
+       .reg_datai               (reg_datai    ),
+       .reg_datao               (reg_datao_sad),
+       .reg_read                (reg_read     ),
+       .reg_write               (reg_write    ),
+       .trigger                 (trigger_sad  )
+   );
 
    reg_openadc #(
       .pBYTECNT_SIZE    (pBYTECNT_SIZE)

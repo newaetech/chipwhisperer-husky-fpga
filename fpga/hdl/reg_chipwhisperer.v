@@ -55,9 +55,9 @@ module reg_chipwhisperer #(
    output wire        decodeio_active,
    input  wire        trigger_advio_i, 
    input  wire        trigger_decodedio_i,
-   input  wire        trigger_anapattern_i,
    input  wire        trigger_trace_i,
    input  wire        trigger_adc_i,
+   input  wire        trigger_sad_i,
 
    /* Clock Sources */
    input  wire        pll_fpga_clk,
@@ -368,7 +368,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    wire trigger;
    assign trigger = (registers_cwtrigmod[2:0] == 3'b000) ? trigger_ext :
                     (registers_cwtrigmod[2:0] == 3'b001) ? trigger_advio_i : 
-                    (registers_cwtrigmod[2:0] == 3'b010) ? trigger_anapattern_i :
+                    (registers_cwtrigmod[2:0] == 3'b010) ? trigger_sad_i :
                     (registers_cwtrigmod[2:0] == 3'b011) ? trigger_decodedio_i :
                     (registers_cwtrigmod[2:0] == 3'b100) ? trigger_trace_i :
                     (registers_cwtrigmod[2:0] == 3'b101) ? trigger_adc_i : 1'b0;

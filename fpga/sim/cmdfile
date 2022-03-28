@@ -21,6 +21,7 @@
 ../hdl/slow_debug.v
 ../hdl/reg_la.v
 ../hdl/userio.v
+../hdl/sad.v
 ../tracewhisperer/hdl/trace_top.v
 ../tracewhisperer/hdl/reg_trace.v
 ../tracewhisperer/hdl/fe_capture_trace.v
@@ -37,5 +38,6 @@ vivado/adc_fast_fifo_sim_netlist.v
 vivado/usb_slow_fifo_sim_netlist.v
 vivado/tiny_adc_fast_fifo_sim_netlist.v
 vivado/tiny_usb_slow_fifo_sim_netlist.v
+vivado/sad_fifo_sim_netlist.v
 -y/tools/Xilinx/Vivado/2020.2/ids_lite/ISE/verilog/src/unisims/
 

@@ -21,6 +21,7 @@
 ../hdl/slow_debug.v
 ../hdl/reg_la.v
 ../hdl/userio.v
+../hdl/sad.v
 ../tracewhisperer/hdl/trace_top.v
 ../tracewhisperer/hdl/reg_trace.v
 ../tracewhisperer/hdl/fe_capture_trace.v
