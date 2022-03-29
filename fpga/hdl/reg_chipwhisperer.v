@@ -53,6 +53,7 @@ module reg_chipwhisperer #(
    /* Advanced IO Trigger Connections */
    output wire        trigger_ext_o,
    output wire        decodeio_active,
+   output wire        sad_active,
    input  wire        trigger_advio_i, 
    input  wire        trigger_decodedio_i,
    input  wire        trigger_trace_i,
@@ -374,6 +375,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
                     (registers_cwtrigmod[2:0] == 3'b101) ? trigger_adc_i : 1'b0;
 
    assign decodeio_active = (registers_cwtrigmod[2:0] == 3'b011);
+   assign sad_active = (registers_cwtrigmod[2:0] == 3'b010);
    assign trigger_ext_o = trigger_ext;
 
    assign trigger_o = trigger;

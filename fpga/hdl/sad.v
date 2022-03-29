@@ -34,9 +34,10 @@ module sad #(
     input wire          reset,
 
     //ADC Sample Input
-    input wire [11:0]   adc_datain,
+    input wire [pBITS_PER_SAMPLE-1:0] adc_datain,
     input wire          adc_sampleclk,
     input wire          arm_i,
+    input wire          active,
 
     //USB register interface
     input wire          clk_usb,
@@ -47,6 +48,7 @@ module sad #(
     input  wire         reg_read,     // Read flag
     input  wire         reg_write,    // Write flag
 
+    input  wire         ext_trigger,  // debug only
     output reg          trigger
 );
 
@@ -149,7 +151,7 @@ module sad #(
     reg counter_active [0:pREF_SAMPLES-1];
     reg use_ref_samples [0:pREF_SAMPLES-1];
     reg individual_trigger [0:pREF_SAMPLES-1];
-    // TODO: these need to be wider, since we're adding many pBITS_PER_SAMPLE-wide numbers... hard-coded here for pBITS_PER_SAMPLE=8, pREF_SAMPLES=128
+    // TODO: these need to be wider than pBITS_PER_SAMPLE since we're adding many pBITS_PER_SAMPLE-wide numbers... hard-coded here for pBITS_PER_SAMPLE=8, pREF_SAMPLES=128
     reg [15:0] sad_counter [0:pREF_SAMPLES-1];
 
     // instantiate counters and do most of the heavy lifting:
@@ -157,7 +159,7 @@ module sad #(
     generate 
         for (i = 0; i < pREF_SAMPLES; i = i + 1) begin: gen_counter_registers
             always @(posedge adc_sampleclk) begin
-                if (reset) 
+                if (state == pS_IDLE)
                     sad_counter[i] <= 0;
                 else if (counter_active[i]) begin
                     if (use_ref_samples[i]) begin
@@ -194,8 +196,10 @@ module sad #(
                         counter_counter[i] <= 0;
                     end
                 end
-                else
+                else begin
                     use_ref_samples[i] <= 1'b1;
+                    counter_counter[i] <= 0;
+                end
             end
 
             always @ (posedge adc_sampleclk) begin
@@ -235,11 +239,9 @@ module sad #(
                     trigger <= 1'b0;
                     fifo_wr <= 1'b0;
                     fifo_rd <= 1'b0;
-                    for (c = 0; c < pREF_SAMPLES; c = c + 1) begin
+                    for (c = 0; c < pREF_SAMPLES; c = c + 1)
                         counter_active[c] <= 0;
-                        counter_counter[c] <= 0;
-                    end
-                    if (arm_i)
+                    if (arm_i && active)
                         state <= pS_INITIALIZING;
                 end
 
@@ -258,18 +260,24 @@ module sad #(
                     // In this state all the counters are running.
                     // When this state is entered, most counters are still "initializing";
                     // when use_ref_samples[counter] goes low, this indicates that that counter is done initializing
-                    for (c = 0; c < pREF_SAMPLES; c = c + 1) begin
-                        if (individual_trigger[c]) begin
-                            trigger <= 1'b1;
-                            fifo_wr <= 1'b0;
-                            fifo_wr <= 1'b0;
-                            state <= pS_FLUSH;
+                    if (~(arm_i && active)) begin // exit to FLUSH if no longer armed
+                        fifo_wr <= 1'b0;
+                        state <= pS_FLUSH;
+                    end
+                    else begin
+                        for (c = 0; c < pREF_SAMPLES; c = c + 1) begin
+                            if (individual_trigger[c]) begin
+                                trigger <= 1'b1;
+                                fifo_wr <= 1'b0;
+                                state <= pS_FLUSH;
+                            end
                         end
                     end
                 end
 
                 pS_FLUSH: begin
                     // empty FIFO so we're ready for the next round
+                    fifo_wr <= 1'b0;
                     if (fifo_almost_empty) begin
                         fifo_rd <= 1'b0;
                         state <= pS_IDLE;
@@ -316,14 +324,14 @@ module sad #(
     wire [11:0] refsample2 = refsamples[2*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
     wire [11:0] refsample3 = refsamples[3*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
 
-    wire [31:0] sad_counter0 = sad_counter[0];
-    wire [31:0] sad_counter1 = sad_counter[1];
-    wire [31:0] sad_counter2 = sad_counter[2];
-    wire [31:0] sad_counter3 = sad_counter[3];
-    wire [31:0] sad_counter4 = sad_counter[4];
-    wire [31:0] sad_counter5 = sad_counter[5];
-    wire [31:0] sad_counter6 = sad_counter[6];
-    wire [31:0] sad_counter7 = sad_counter[7];
+    wire [15:0] sad_counter0 = sad_counter[0];
+    wire [15:0] sad_counter1 = sad_counter[1];
+    wire [15:0] sad_counter2 = sad_counter[2];
+    wire [15:0] sad_counter3 = sad_counter[3];
+    wire [15:0] sad_counter4 = sad_counter[4];
+    wire [15:0] sad_counter5 = sad_counter[5];
+    wire [15:0] sad_counter6 = sad_counter[6];
+    wire [15:0] sad_counter7 = sad_counter[7];
 
     wire [6:0] counter_counter0 = counter_counter[0];
     wire [6:0] counter_counter1 = counter_counter[1];
@@ -346,7 +354,31 @@ module sad #(
                                          counter_active[2],
                                          counter_active[1],
                                          counter_active[0]};
-    wire [7:0] individual_trigger_debug  =  {individual_trigger[7],
+    wire [31:0] individual_trigger_debug =  {individual_trigger[31],
+                                             individual_trigger[30],
+                                             individual_trigger[29],
+                                             individual_trigger[28],
+                                             individual_trigger[27],
+                                             individual_trigger[26],
+                                             individual_trigger[25],
+                                             individual_trigger[24],
+                                             individual_trigger[23],
+                                             individual_trigger[22],
+                                             individual_trigger[21],
+                                             individual_trigger[20],
+                                             individual_trigger[19],
+                                             individual_trigger[18],
+                                             individual_trigger[17],
+                                             individual_trigger[16],
+                                             individual_trigger[15],
+                                             individual_trigger[14],
+                                             individual_trigger[13],
+                                             individual_trigger[12],
+                                             individual_trigger[11],
+                                             individual_trigger[10],
+                                             individual_trigger[9],
+                                             individual_trigger[8],
+                                             individual_trigger[7],
                                              individual_trigger[6],
                                              individual_trigger[5],
                                              individual_trigger[4],
@@ -354,6 +386,22 @@ module sad #(
                                              individual_trigger[2],
                                              individual_trigger[1],
                                              individual_trigger[0]};
+
+   `ifdef ILA_SAD
+       ila_sad U_ila_sad (
+          .clk            (clk_usb),              // input wire clk
+          .probe0         (adc_datain),           // input wire [7:0]  probe0 
+          .probe1         (state),                // input wire [1:0]  probe1 
+          .probe2         (individual_trigger_debug),// input wire [31:0]  probe2 
+          .probe3         (trigger),              // input wire [0:0]  probe3 
+          .probe4         (sad_counter0),         // input wire [15:0]  probe4 
+          .probe5         (sad_counter1),         // input wire [15:0]  probe5 
+          .probe6         (refsamples[31:0]),     // input wire [31:0]  probe6 
+          .probe7         (counter_counter0),     // input wire [6:0]  probe7 
+          .probe8         (arm_i),                // input wire [0:0]  probe8 
+          .probe9         (ext_trigger)           // input wire [0:0]  probe9
+       );
+   `endif
 
 
 endmodule

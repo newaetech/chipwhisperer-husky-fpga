@@ -250,7 +250,7 @@ end
 initial begin
     wait (setup_done);
     @(posedge clk_usb) arm = 1'b1;
-    @(posedge clk_usb) arm = 1'b0;
+    //@(posedge clk_usb) arm = 1'b0;
     wait (trigger);
     while (~trigger_expected) begin
         if (trigger && !expect_fail) begin

@@ -189,6 +189,7 @@ module cwhusky_top(
 
    wire decode_uart_input;
    wire decodeio_active;
+   wire sad_active;
    wire trace_trig_out;
    wire trigger_adc;
    wire trigger_sad;
@@ -323,6 +324,7 @@ module cwhusky_top(
         .DUT_trigger_i          (ext_trigger),
         .trigger_adc            (trigger_adc),
         .trigger_sad            (trigger_sad),
+        .sad_active             (sad_active),
         .amp_gain               (VDBSPWM),
         .fifo_dout              (fifo_dout),
         .clkgen                 (clkgen),
@@ -402,6 +404,7 @@ module cwhusky_top(
         .trigger_nrst_i         (target_nRST),
         .trigger_ext_o          (decode_uart_input),
         .decodeio_active        (decodeio_active),
+        .sad_active             (sad_active),
         .trigger_advio_i        (1'b0),
         .trigger_decodedio_i    (trace_trig_out),
         .trigger_trace_i        (trace_trig_out),

@@ -41,6 +41,7 @@ module openadc_interface #(
     input  wire                         PLL_STATUS,
     input  wire                         DUT_CLK_i, // target_hs1
     input  wire                         DUT_trigger_i,
+    input  wire                         sad_active,
     output reg                          trigger_adc,
     output wire                         trigger_sad,
     output wire                         amp_gain,
@@ -348,13 +349,14 @@ module openadc_interface #(
 
    sad #(
        .pBYTECNT_SIZE           (pBYTECNT_SIZE),
-       .pREF_SAMPLES            (128),
+       .pREF_SAMPLES            (32),
        .pBITS_PER_SAMPLE        (8)
    ) U_sad (
        .reset                   (reset        ),
-       .adc_datain              (ADC_data_tofifo),
+       .adc_datain              (ADC_data_tofifo[11:4]),
        .adc_sampleclk           (ADC_clk_sample),
        .arm_i                   (armed        ),
+       .active                  (sad_active   ),
        .clk_usb                 (clk_usb      ),
        .reg_address             (reg_address  ),
        .reg_bytecnt             (reg_bytecnt  ),
@@ -362,6 +364,7 @@ module openadc_interface #(
        .reg_datao               (reg_datao_sad),
        .reg_read                (reg_read     ),
        .reg_write               (reg_write    ),
+       .ext_trigger             (DUT_trigger_i),
        .trigger                 (trigger_sad  )
    );
 

@@ -92,6 +92,7 @@ sad #(
     .adc_datain         (adc_datain),
     .adc_sampleclk      (clk_adc),
     .arm_i              (arm_i),
+    .active             (1'b1),
     .clk_usb            (clk_usb),
     .reg_address        (reg_address),
     .reg_bytecnt        (reg_bytecnt),
@@ -99,6 +100,7 @@ sad #(
     .reg_datao          (read_data_sad),
     .reg_read           (reg_read),
     .reg_write          (reg_write),
+    .ext_trigger        (1'b0),
     .trigger            (trigger)
 );
 
