@@ -23,42 +23,6 @@ Author: Jean-Pierre Thibault <jpthibault@newae.com>
   along with chipwhisperer.  If not, see <http://www.gnu.org/licenses/>.
 *************************************************************************/
 
-
-/* NOTE!
-* This is not functional! This shows rough modifications to the previous
-* version in an attempt to make it run faster. The previous version runs at
-* ~100 MHz; these modifications take it up to ~150 MHz. This is still too far
-* from our target 200 MHz. This approach was optimized for low storage, but it
-* looks like it's not feasible for the Husky FPGA fabric speed. It would be
-* possible to make this functional by tweaking the control logic timing, but
-* since this won't go fast enough for Husky, this approach is abandoned. Look
-* to the next commit for a different approach which optimizes for speed
-* instead.
-*
-* High-level idea of how this works: first, realize that we must maintain
-* pREF_SAMPLES SAD counters. We use a *single* FIFO into which we push the ADC
-* sample. Once a SAD counter has summed pREF_SAMPLES samples, we need to start
-* substracting expired sums; since we're doing sums of *absolute* differences,
-    * we have 4 cases to consider to maintain a correct SAD counter:
-*       1- current sample  > reference sample and pREF_SAMPLES-old sample  > reference sample;
-*       2- current sample  > reference sample and pREF_SAMPLES-old sample <= reference sample;
-*       3- current sample  > reference sample and pREF_SAMPLES-old sample  > reference sample;
-*       4- current sample <= reference sample and pREF_SAMPLES-old sample <= reference sample;
-* This allows use to use a single pREF_SAMPLES-deep FIFO (instead of
-* pREF_SAMPLES FIFOs, each pREF_SAMPLES deep). This is a significant
-* area/storage optimization, especially if pREF_SAMPLES is large. However the
-* 4 cases that have to be considered make timing tricky.
-* One speed optimization which was tried here is to store an extra bit for
-* each pREF_SAMPLES so that the pREF_SAMPLES-old sample vs reference sample
-* comparison does not have to be repeated. Here we've also tried pre-computing
-* everything which composes the SAD counters update value. But it's still not
-* fast enough for this FPGA fabric.
-* 
-* Saving this for posterity in case the right application for this comes along
-* later: one which needs a large pREF_SAMPLES but which doesn't need to go "too
-* fast" (< 150 MHz on an Artix7).
-*/
-
 module sad #(
     // Note: pREF_SAMPLES * pBITS_PER_SAMPLE / 8 must not exceed 2**pBYTECNT_SIZE
     // FIFO allows up to 1024 pREF_SAMPLES and 12 pBITS_PER_SAMPLE; if either is
@@ -88,15 +52,13 @@ module sad #(
     output reg          trigger
 );
 
-    wire [pBITS_PER_SAMPLE-1:0] fifo_out;
-    reg  [pBITS_PER_SAMPLE-1:0] fifo_out_r;
+    wire [pBITS_PER_SAMPLE-1:0] fifo_out [0:pREF_SAMPLES-1];
     reg  fifo_wr;
     reg  fifo_rd;
-    wire fifo_full;
-    wire fifo_empty;
-    wire fifo_almost_empty;
-    wire fifo_overflow;
-    wire fifo_underflow;
+    wire fifo_empty[0:pREF_SAMPLES-1];
+    wire fifo_almost_empty[0:pREF_SAMPLES-1];
+    wire fifo_overflow[0:pREF_SAMPLES-1];
+    wire fifo_underflow[0:pREF_SAMPLES-1];
     reg  fifo_overflow_sticky;
     reg  fifo_underflow_sticky;
     reg fifo_not_empty_error;
@@ -118,8 +80,6 @@ module sad #(
                 `SAD_REFERENCE: reg_datao = refsamples[reg_bytecnt*8 +: 8];
                 `SAD_THRESHOLD: reg_datao = threshold[reg_bytecnt*8 +: 8];
                 `SAD_STATUS: reg_datao = {4'b0, fifo_not_empty_error, fifo_overflow_sticky, fifo_underflow_sticky, triggered};
-                `SAD_BITS_PER_SAMPLE: reg_datao = pBITS_PER_SAMPLE;
-                `SAD_REF_SAMPLES: reg_datao = pREF_SAMPLES;
                 default: reg_datao = 0;
             endcase
         end
@@ -175,11 +135,13 @@ module sad #(
             else begin
                 if (trigger)
                     triggered <= 1'b1;
-                if (fifo_overflow)
+                // Note: since all FIFOs share the same read/write signal, we
+                // only need to look at one fifo's status signals.
+                if (fifo_overflow[0])
                     fifo_overflow_sticky <= 1'b1;
-                if (fifo_underflow)
+                if (fifo_underflow[0])
                     fifo_underflow_sticky <= 1'b1;
-                if ((state == pS_IDLE) && ~fifo_empty)
+                if ((state == pS_IDLE) && ~fifo_empty[0])
                     fifo_not_empty_error <= 1'b1;
             end
         end
@@ -187,194 +149,79 @@ module sad #(
 
 
     reg counter_active [0:pREF_SAMPLES-1];
+    reg counter_active_r [0:pREF_SAMPLES-1];
+    reg counter_active_r2 [0:pREF_SAMPLES-1];
     reg use_ref_samples [0:pREF_SAMPLES-1];
+    reg use_ref_samples_r [0:pREF_SAMPLES-1];
     reg individual_trigger [0:pREF_SAMPLES-1];
-    // these need to be wider than pBITS_PER_SAMPLE since we're adding many pBITS_PER_SAMPLE-wide numbers... 
-    //reg [14:0] sad_counter [0:pREF_SAMPLES-1]; // pBITS_PER_SAMPLE=8, pREF_SAMPLES=128
-    reg [13:0] sad_counter [0:pREF_SAMPLES-1]; // pBITS_PER_SAMPLE=8, pREF_SAMPLES=32
-    //reg [9:0] sad_counter [0:pREF_SAMPLES-1]; // pBITS_PER_SAMPLE=5, pREF_SAMPLES=32
-    reg [13:0] counter_incr [0:pREF_SAMPLES-1]; // pBITS_PER_SAMPLE=8, pREF_SAMPLES=32
+    // TODO: these need to be wider than pBITS_PER_SAMPLE since we're adding many pBITS_PER_SAMPLE-wide numbers... hard-coded here for pBITS_PER_SAMPLE=8, pREF_SAMPLES=128
+    reg [15:0] sad_counter [0:pREF_SAMPLES-1];
+    reg [pBITS_PER_SAMPLE-1:0] counter_incr [0:pREF_SAMPLES-1]; // pBITS_PER_SAMPLE=8, pREF_SAMPLES=32
+    reg [pBITS_PER_SAMPLE-1:0] fifo_out_r [0:pREF_SAMPLES-1];
 
-    reg sign [0:pREF_SAMPLES-1];
-    wire [pREF_SAMPLES-1:0] allsigns = {sign[31],
-                                        sign[30],
-                                        sign[29],
-                                        sign[28],
-                                        sign[27],
-                                        sign[26],
-                                        sign[25],
-                                        sign[24],
-                                        sign[23],
-                                        sign[22],
-                                        sign[21],
-                                        sign[20],
-                                        sign[19],
-                                        sign[18],
-                                        sign[17],
-                                        sign[16],
-                                        sign[15],
-                                        sign[14],
-                                        sign[13],
-                                        sign[12],
-                                        sign[11],
-                                        sign[10],
-                                        sign[9],
-                                        sign[8],
-                                        sign[7],
-                                        sign[6],
-                                        sign[5],
-                                        sign[4],
-                                        sign[3],
-                                        sign[2],
-                                        sign[1],
-                                        sign[0]};
-    wire [pREF_SAMPLES-1:0] allsignouts;
-    wire signout [0:pREF_SAMPLES-1];
-    reg [1:0] nextcase [0:pREF_SAMPLES-1];
-
-    assign signout[31] = allsignouts[31];
-    assign signout[30] = allsignouts[30];
-    assign signout[29] = allsignouts[29];
-    assign signout[28] = allsignouts[28];
-    assign signout[27] = allsignouts[27];
-    assign signout[26] = allsignouts[26];
-    assign signout[25] = allsignouts[25];
-    assign signout[24] = allsignouts[24];
-    assign signout[23] = allsignouts[23];
-    assign signout[22] = allsignouts[22];
-    assign signout[21] = allsignouts[21];
-    assign signout[20] = allsignouts[20];
-    assign signout[19] = allsignouts[19];
-    assign signout[18] = allsignouts[18];
-    assign signout[17] = allsignouts[17];
-    assign signout[16] = allsignouts[16];
-    assign signout[15] = allsignouts[15];
-    assign signout[14] = allsignouts[14];
-    assign signout[13] = allsignouts[13];
-    assign signout[12] = allsignouts[12];
-    assign signout[11] = allsignouts[11];
-    assign signout[10] = allsignouts[10];
-    assign signout[9] = allsignouts[9];
-    assign signout[8] = allsignouts[8];
-    assign signout[7] = allsignouts[7];
-    assign signout[6] = allsignouts[6];
-    assign signout[5] = allsignouts[5];
-    assign signout[4] = allsignouts[4];
-    assign signout[3] = allsignouts[3];
-    assign signout[2] = allsignouts[2];
-    assign signout[1] = allsignouts[1];
-    assign signout[0] = allsignouts[0];
-
-    always @(posedge adc_sampleclk)
-        fifo_out_r <= fifo_out;
-
-    // instantiate counters and do most of the heavy lifting:
+    /* Instantiate counters and do most of the heavy lifting.
+    * High-level approach is that we have a FIFO for each of the pREF_SAMPLES
+    * SAD counters, which makes it easy to discard old differences from the
+    * running counter.
+    * We use some pre-registering of signals to make timing as easy as
+    * possible; meets 200 MHz with ease for Husky. But it's BIG! We can fit
+    * pREF_SAMPLES=32 with pBITS_PER_SAMPLE=12, but not pREF_SAMPLES=64.
+    */
     genvar i;
     generate 
         for (i = 0; i < pREF_SAMPLES; i = i + 1) begin: gen_counter_registers
+
+            `ifdef NOFIFO
+               //for clean iverilog compilation
+            `else
+               // Here we instantiate one small FIFO for each SAD counter. We
+               // could just as easily instantiate a single large FIFO instead
+               // but this may make timing closure easier?
+               sad_fifo U_fifo(
+                  .clk          (adc_sampleclk),
+                  .rst          (reset),
+                  .din          (counter_incr[i]),
+                  .wr_en        (fifo_wr),
+                  .rd_en        (fifo_rd),
+                  .dout         (fifo_out[i]),
+                  .full         (),
+                  .empty        (fifo_empty[i]),
+                  .almost_empty (fifo_almost_empty[i]),
+                  .overflow     (fifo_overflow[i]),
+                  .underflow    (fifo_underflow[i])
+               );
+           `endif
+
+            always @ (posedge adc_sampleclk)
+                nextrefsample[i] <= refsamples[counter_counter[i]*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
+
             always @(posedge adc_sampleclk) begin
-                if (state == pS_IDLE)
+                if (state == pS_IDLE) begin
                     sad_counter[i] <= 0;
-                else if (counter_active[i]) begin
-                    if (use_ref_samples[i]) begin
-                        //sad_counter[i] <= sad_counter[i] + nextrefsample[i] - adc_datain ;
-                        if (adc_datain > nextrefsample[i]) begin
-                            //sad_counter[i] <= sad_counter[i] + adc_datain - nextrefsample[i];
-                            nextcase[i] <= 1;
-                            sign[i] <= 1'b1;
-                        end
-                        else begin
-                            //sad_counter[i] <= sad_counter[i] + nextrefsample[i];
-                            nextcase[i] <= 0;
-                            sign[i] <= 1'b0;
-                        end
+                    counter_incr[i] <= 0;
+                end
 
-                        if (nextcase[i])
-                            sad_counter[i] <= sad_counter[i] + adc_datain - nextrefsample[i];
+                else begin
+                    counter_active_r[i] <= counter_active[i];
+                    counter_active_r2[i] <= counter_active_r[i];
+                    use_ref_samples_r[i] <= use_ref_samples[i];
+                    fifo_out_r[i] <= fifo_out[i];
+                    if (counter_active_r2[i])
+                        if (use_ref_samples_r[i])
+                            sad_counter[i] <= sad_counter[i] + counter_incr[i];
                         else
-                            sad_counter[i] <= sad_counter[i] + nextrefsample[i];
+                            sad_counter[i] <= sad_counter[i] + counter_incr[i] - fifo_out_r[i];
 
-                    end
-
-                    else begin
-                        //sad_counter[i] <= sad_counter[i] + adc_datain - fifo_out;
-
-                        ////if ( (fifo_out   > refsamples[counter_counter[i]*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE]) && 
-                        //if ( signout[i] && 
-                        //     (adc_datain > refsamples[counter_counter[i]*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE]) )
-                        //    sad_counter[i] <= sad_counter[i] + adc_datain - fifo_out;
-                        ////else if ( (fifo_out   <= refsamples[counter_counter[i]*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE]) && 
-                        //else if ( ~signout[i] && 
-                        //          (adc_datain <= refsamples[counter_counter[i]*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE]) )
-                        //    sad_counter[i] <= sad_counter[i] - adc_datain + fifo_out;
-                        ////else if ( (fifo_out   >  refsamples[counter_counter[i]*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE]) && 
-                        //else if ( signout[i] && 
-                        //          (adc_datain <= refsamples[counter_counter[i]*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE]) )
-                        //    sad_counter[i] <= sad_counter[i] - adc_datain - fifo_out + (refsamples[counter_counter[i]*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE] *2);
-                        //else
-                        //    sad_counter[i] <= sad_counter[i] + adc_datain + fifo_out - (refsamples[counter_counter[i]*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE] *2);
-
-
-                        if ( signout[i] && (adc_datain > nextrefsample[i]) ) begin
-                            nextcase[i] <= 0;
-                            sign[i] <= 1'b1;
-                        end
-                        else if ( ~signout[i] && (adc_datain <= nextrefsample[i]) ) begin
-                            nextcase[i] <= 1;
-                            sign[i] <= 1'b0;
-                        end
-                        else if ( signout[i] && (adc_datain <= nextrefsample[i]) ) begin
-                            nextcase[i] <= 2;
-                            sign[i] <= 1'b0;
-                        end
-                        else begin
-                            nextcase[i] <= 3;
-                            sign[i] <= 1'b1;
-                        end
-
-
-                        if (nextcase[i] == 0)
-                            //counter_incr[i] <= adc_datain - fifo_out_r;
-                            sad_counter[i] <= sad_counter[i] + adc_datain - fifo_out_r;
-                        else if (nextcase[i] == 1)
-                            //counter_incr[i] <= -adc_datain + fifo_out_r;
-                            sad_counter[i] <= sad_counter[i] - adc_datain + fifo_out_r;
-                        else if (nextcase[i] == 2)
-                            //counter_incr[i] <= -adc_datain - fifo_out_r + (nextrefsample[i] *2);
-                            sad_counter[i] <= sad_counter[i] - adc_datain - fifo_out_r + (nextrefsample[i] *2);
+                    if (counter_active_r[i]) begin
+                        if (adc_datain > nextrefsample[i])
+                            counter_incr[i] <= adc_datain - nextrefsample[i];
                         else
-                            //counter_incr[i] <= adc_datain + fifo_out_r - (nextrefsample[i] *2);
-                            sad_counter[i] <= sad_counter[i] + adc_datain + fifo_out_r - (nextrefsample[i] *2);
-
-                        /*
-                        if ( signout[i] && (adc_datain > nextrefsample[i]) ) begin
-                            sad_counter[i] <= sad_counter[i] + adc_datain - fifo_out_r;
-                            sign[i] <= 1'b1;
-                        end
-                        else if ( ~signout[i] && (adc_datain <= nextrefsample[i]) ) begin
-                            sad_counter[i] <= sad_counter[i] - adc_datain + fifo_out_r;
-                            sign[i] <= 1'b0;
-                        end
-                        else if ( signout[i] && (adc_datain <= nextrefsample[i]) ) begin
-                            sad_counter[i] <= sad_counter[i] - adc_datain - fifo_out_r + (nextrefsample[i] *2);
-                            sign[i] <= 1'b0;
-                        end
-                        else begin
-                            sad_counter[i] <= sad_counter[i] + adc_datain + fifo_out_r - (nextrefsample[i] *2);
-                            sign[i] <= 1'b1;
-                        end
-                        */
-
-                        //sad_counter[i] <= sad_counter[i] + counter_incr[i];
-
+                            counter_incr[i] <= nextrefsample[i] - adc_datain;
                     end
 
                end
             end
 
-            always @ (posedge adc_sampleclk) begin
-                nextrefsample[i] <= refsamples[counter_counter[i]*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
-            end
 
             always @ (posedge adc_sampleclk) begin
                 if (counter_active[i]) begin
@@ -439,18 +286,18 @@ module sad #(
                     fifo_wr <= 1'b1;
                     counter <= counter + 1;
                     counter_active[counter] <= 1'b1;
-                    if (counter == pREF_SAMPLES-1) begin
-                        state <= pS_RUNNING;
+                    if (counter == pREF_SAMPLES-2)
                         fifo_rd <= 1'b1;
-                    end
+                    else if (counter == pREF_SAMPLES-1)
+                        state <= pS_RUNNING;
                 end
 
                 pS_RUNNING: begin
                     // In this state all the counters are running.
                     // When this state is entered, most counters are still "initializing";
                     // when use_ref_samples[counter] goes low, this indicates that that counter is done initializing
-                    if (~(arm_i && active)) begin // exit to FLUSH if no longer armed
-                        fifo_wr <= 1'b0;
+                    if (~(arm_i && active)) begin       // exit to FLUSH if no longer armed & active
+                        fifo_wr <= 1'b0;                // TODO: should we keep running if not armed?
                         state <= pS_FLUSH;
                     end
                     else begin
@@ -458,7 +305,7 @@ module sad #(
                             if (individual_trigger[c]) begin
                                 trigger <= 1'b1;
                                 fifo_wr <= 1'b0;
-                                state <= pS_FLUSH;
+                                state <= pS_FLUSH; // TODO: should we go to flush here, or just keep running?
                             end
                         end
                     end
@@ -467,7 +314,7 @@ module sad #(
                 pS_FLUSH: begin
                     // empty FIFO so we're ready for the next round
                     fifo_wr <= 1'b0;
-                    if (fifo_almost_empty) begin
+                    if (fifo_almost_empty[0]) begin
                         fifo_rd <= 1'b0;
                         state <= pS_IDLE;
                     end
@@ -478,26 +325,7 @@ module sad #(
     end
 
 
-
-    `ifdef NOFIFO
-       //for clean iverilog compilation
-
-    `else
-       sad_fifo U_fifo(
-          .clk          (adc_sampleclk),
-          .rst          (reset),
-          .din          ({allsigns, adc_datain}),
-          .wr_en        (fifo_wr),
-          .rd_en        (fifo_rd),
-          .dout         ({allsignouts, fifo_out}),
-          .full         (fifo_full),
-          .empty        (fifo_empty),
-          .almost_empty (fifo_almost_empty),
-          .overflow     (fifo_overflow),
-          .underflow    (fifo_underflow)
-       );
-
-   `endif
+    // DEBUG STUFF:
 
     // strictly for easier debugging:
     wire state_idle = (state == pS_IDLE);
@@ -524,6 +352,14 @@ module sad #(
     wire [6:0] counter_counter1 = counter_counter[1];
     wire [6:0] counter_counter2 = counter_counter[2];
     wire [6:0] counter_counter3 = counter_counter[3];
+
+    wire [7:0] fifo_out0 = fifo_out[0];
+    wire [7:0] nextrefsample0 = nextrefsample[0];
+    wire [7:0] nextrefsample1 = nextrefsample[1];
+    wire [7:0] nextrefsample2 = nextrefsample[2];
+    wire [7:0] nextrefsample3 = nextrefsample[3];
+    wire [7:0] counter_incr0 = counter_incr[0];
+    wire use_ref_samples_r0 = use_ref_samples_r[0];
 
     wire [7:0] use_ref_samples_debug =  {use_ref_samples[7],
                                          use_ref_samples[6],

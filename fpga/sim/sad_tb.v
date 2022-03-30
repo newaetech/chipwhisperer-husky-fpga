@@ -238,7 +238,7 @@ initial begin
         //    $display("NEGATIVE!");
         adc_datain = pattern[i] + delta;
     end
-    repeat (3) @(posedge clk_adc);
+    repeat (5) @(posedge clk_adc);
     trigger_expected = 1'b1;
     if (pVERBOSE) begin
         $display("Total delta: %d", total_delta);
@@ -377,27 +377,6 @@ sad_wrapper #(
     .USB_ALEn           (usb_alen_out ),
     .trigger            (trigger)
 );
-
-/*
-sad #(
-    .pBYTECNT_SIZE      (7),
-    .pREF_SAMPLES       (pREF_SAMPLES),
-    .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE)
-) U_dut (
-    .reset              (reset),
-    .adc_datain         ( ),
-    .adc_sampleclk      (clk_adc),
-    .arm_i              (arm),
-    .clk_usb            (clk_usb),
-    .reg_address        ( ),
-    .reg_bytecnt        ( ),
-    .reg_datai          ( ),
-    .reg_datao          ( ),
-    .reg_read           ( ),
-    .reg_write          ( ),
-    .trigger            ( )
-);
-*/
 
 
 endmodule

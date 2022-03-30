@@ -36,7 +36,8 @@ all: compile run
 all_sad: compile_sad run
 
 compile_sad:
-	iverilog ../hdl/sad.v \
+	iverilog \
+	../hdl/sad.v \
 	../hdl/sad_wrapper.v \
 	../hdl/usb_reg_main.v \
 	../hdl/cdc_pulse.v \
@@ -57,7 +58,8 @@ compile_sad:
 	-o $(EXEFILE) \
 
 sad_nofifo:
-	iverilog ../hdl/sad.v \
+	iverilog \
+	../hdl/sad.v \
 	../hdl/sad_wrapper.v \
 	../hdl/usb_reg_main.v \
 	../hdl/cdc_pulse.v \

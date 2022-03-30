@@ -354,6 +354,7 @@ module openadc_interface #(
    ) U_sad (
        .reset                   (reset        ),
        .adc_datain              (ADC_data_tofifo[11:4]),
+       //.adc_datain              (ADC_data_tofifo),
        .adc_sampleclk           (ADC_clk_sample),
        .arm_i                   (armed        ),
        .active                  (sad_active   ),

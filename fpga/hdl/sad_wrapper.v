@@ -53,12 +53,16 @@ module sad_wrapper #(
    wire         reg_read;
    wire         reg_write;
    wire [7:0]   reg_address;
+   reg [11:0] adc_datain_r;
 
    wire [7:0] read_data_sad;
    always @(posedge clk_usb) read_data <= read_data_sad;
 
    assign USB_Data = cmdfifo_isout ? cmdfifo_dout : 8'bZ;
    assign cmdfifo_din = USB_Data;
+
+   always @(posedge clk_adc)
+       adc_datain_r <= adc_datain;
 
    usb_reg_main #(
       .pBYTECNT_SIZE    (pBYTECNT_SIZE)
@@ -87,9 +91,9 @@ sad #(
     .pBYTECNT_SIZE      (7),
     .pREF_SAMPLES       (pREF_SAMPLES),
     .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE)
-) U_dut (
+) U_big_dut (
     .reset              (reset),
-    .adc_datain         (adc_datain),
+    .adc_datain         (adc_datain_r[pBITS_PER_SAMPLE-1:0]),
     .adc_sampleclk      (clk_adc),
     .arm_i              (arm_i),
     .active             (1'b1),
@@ -103,6 +107,30 @@ sad #(
     .ext_trigger        (1'b0),
     .trigger            (trigger)
 );
+
+/* instantiate alongside known-working area-optimized version for debug:
+slowsad #(
+    .pBYTECNT_SIZE      (7),
+    .pREF_SAMPLES       (pREF_SAMPLES),
+    .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE)
+) U_slow_dut (
+    .reset              (reset),
+    .adc_datain         (adc_datain_r[pBITS_PER_SAMPLE-1:0]),
+    .adc_sampleclk      (clk_adc),
+    .arm_i              (arm_i),
+    .active             (1'b1),
+    .clk_usb            (clk_usb),
+    .reg_address        (reg_address),
+    .reg_bytecnt        (reg_bytecnt),
+    .reg_datai          (write_data),
+    .reg_datao          (read_data_sad),
+    .reg_read           (reg_read),
+    .reg_write          (reg_write),
+    .ext_trigger        (1'b0),
+    .trigger            (trigger)
+);
+*/
+
 
 
 endmodule
