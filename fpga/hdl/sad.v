@@ -23,6 +23,12 @@ Author: Jean-Pierre Thibault <jpthibault@newae.com>
   along with chipwhisperer.  If not, see <http://www.gnu.org/licenses/>.
 *************************************************************************/
 
+/* Note!
+* Not verified. Turns out this variant (using BRAMs for a single ultra-wide
+* FIFO) doesn't fit or make sense for Husky. Saving for posterity in case it's
+* useful in the future.
+*/
+
 module sad #(
     // Note: pREF_SAMPLES * pBITS_PER_SAMPLE / 8 must not exceed 2**pBYTECNT_SIZE
     // FIFO allows up to 1024 pREF_SAMPLES and 12 pBITS_PER_SAMPLE; if either is
@@ -55,10 +61,10 @@ module sad #(
     wire [pBITS_PER_SAMPLE-1:0] fifo_out [0:pREF_SAMPLES-1];
     reg  fifo_wr;
     reg  fifo_rd;
-    wire fifo_empty[0:pREF_SAMPLES-1];
-    wire fifo_almost_empty[0:pREF_SAMPLES-1];
-    wire fifo_overflow[0:pREF_SAMPLES-1];
-    wire fifo_underflow[0:pREF_SAMPLES-1];
+    wire fifo_empty;
+    wire fifo_almost_empty;
+    wire fifo_overflow;
+    wire fifo_underflow;
     reg  fifo_overflow_sticky;
     reg  fifo_underflow_sticky;
     reg fifo_not_empty_error;
@@ -137,11 +143,11 @@ module sad #(
                     triggered <= 1'b1;
                 // Note: since all FIFOs share the same read/write signal, we
                 // only need to look at one fifo's status signals.
-                if (fifo_overflow[0])
+                if (fifo_overflow)
                     fifo_overflow_sticky <= 1'b1;
-                if (fifo_underflow[0])
+                if (fifo_underflow)
                     fifo_underflow_sticky <= 1'b1;
-                if ((state == pS_IDLE) && ~fifo_empty[0])
+                if ((state == pS_IDLE) && ~fifo_empty)
                     fifo_not_empty_error <= 1'b1;
             end
         end
@@ -159,10 +165,99 @@ module sad #(
     reg [pBITS_PER_SAMPLE-1:0] counter_incr [0:pREF_SAMPLES-1]; // pBITS_PER_SAMPLE=8, pREF_SAMPLES=32
     reg [pBITS_PER_SAMPLE-1:0] fifo_out_r [0:pREF_SAMPLES-1];
 
+    wire [pBITS_PER_SAMPLE*pREF_SAMPLES-1:0] fifo_in = {counter_incr[63], //  ugh...
+                                                        counter_incr[62],
+                                                        counter_incr[61],
+                                                        counter_incr[60],
+                                                        counter_incr[59],
+                                                        counter_incr[58],
+                                                        counter_incr[57],
+                                                        counter_incr[56],
+                                                        counter_incr[55],
+                                                        counter_incr[54],
+                                                        counter_incr[53],
+                                                        counter_incr[52],
+                                                        counter_incr[51],
+                                                        counter_incr[50],
+                                                        counter_incr[49],
+                                                        counter_incr[48],
+                                                        counter_incr[47],
+                                                        counter_incr[46],
+                                                        counter_incr[45],
+                                                        counter_incr[44],
+                                                        counter_incr[43],
+                                                        counter_incr[42],
+                                                        counter_incr[41],
+                                                        counter_incr[40],
+                                                        counter_incr[39],
+                                                        counter_incr[38],
+                                                        counter_incr[37],
+                                                        counter_incr[36],
+                                                        counter_incr[35],
+                                                        counter_incr[34],
+                                                        counter_incr[33],
+                                                        counter_incr[32],
+                                                        counter_incr[31],
+                                                        counter_incr[30],
+                                                        counter_incr[29],
+                                                        counter_incr[28],
+                                                        counter_incr[27],
+                                                        counter_incr[26],
+                                                        counter_incr[25],
+                                                        counter_incr[24],
+                                                        counter_incr[23],
+                                                        counter_incr[22],
+                                                        counter_incr[21],
+                                                        counter_incr[20],
+                                                        counter_incr[19],
+                                                        counter_incr[18],
+                                                        counter_incr[17],
+                                                        counter_incr[16],
+                                                        counter_incr[15],
+                                                        counter_incr[14],
+                                                        counter_incr[13],
+                                                        counter_incr[12],
+                                                        counter_incr[11],
+                                                        counter_incr[10],
+                                                        counter_incr[9],
+                                                        counter_incr[8],
+                                                        counter_incr[7],
+                                                        counter_incr[6],
+                                                        counter_incr[5],
+                                                        counter_incr[4],
+                                                        counter_incr[3],
+                                                        counter_incr[2],
+                                                        counter_incr[1],
+                                                        counter_incr[0]};
+    wire [pBITS_PER_SAMPLE*pREF_SAMPLES-1:0] fifo_out_wide;
+
+     `ifdef NOFIFO
+        //for clean iverilog compilation
+     `else
+        // Here we instantiate one small FIFO for each SAD counter. We
+        // could just as easily instantiate a single large FIFO instead
+        // but this may make timing closure easier?
+        sad_fifo U_fifo(
+           .clk          (adc_sampleclk),
+           .rst          (reset),
+           .din          (fifo_in),
+           .wr_en        (fifo_wr),
+           .rd_en        (fifo_rd),
+           .dout         (fifo_out_wide),
+           .full         (),
+           .empty        (fifo_empty),
+           .almost_empty (fifo_almost_empty),
+           .overflow     (fifo_overflow),
+           .underflow    (fifo_underflow)
+        );
+    `endif
+
+
     /* Instantiate counters and do most of the heavy lifting.
     * High-level approach is that we have a FIFO for each of the pREF_SAMPLES
     * SAD counters, which makes it easy to discard old differences from the
-    * running counter.
+    * running counter. Here these FIFOs are actually combined into a single
+    * big FIFO so that it may be implemented with BRAMs.
     * We use some pre-registering of signals to make timing as easy as
     * possible; meets 200 MHz with ease for Husky. But it's BIG! We can fit
     * pREF_SAMPLES=32 with pBITS_PER_SAMPLE=12, but not pREF_SAMPLES=64.
@@ -171,26 +266,7 @@ module sad #(
     generate 
         for (i = 0; i < pREF_SAMPLES; i = i + 1) begin: gen_counter_registers
 
-            `ifdef NOFIFO
-               //for clean iverilog compilation
-            `else
-               // Here we instantiate one small FIFO for each SAD counter. We
-               // could just as easily instantiate a single large FIFO instead
-               // but this may make timing closure easier?
-               sad_fifo U_fifo(
-                  .clk          (adc_sampleclk),
-                  .rst          (reset),
-                  .din          (counter_incr[i]),
-                  .wr_en        (fifo_wr),
-                  .rd_en        (fifo_rd),
-                  .dout         (fifo_out[i]),
-                  .full         (),
-                  .empty        (fifo_empty[i]),
-                  .almost_empty (fifo_almost_empty[i]),
-                  .overflow     (fifo_overflow[i]),
-                  .underflow    (fifo_underflow[i])
-               );
-           `endif
+            assign fifo_out[i] = fifo_out_wide[i*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
 
             always @ (posedge adc_sampleclk)
                 nextrefsample[i] <= refsamples[counter_counter[i]*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
@@ -314,7 +390,7 @@ module sad #(
                 pS_FLUSH: begin
                     // empty FIFO so we're ready for the next round
                     fifo_wr <= 1'b0;
-                    if (fifo_almost_empty[0]) begin
+                    if (fifo_almost_empty) begin
                         fifo_rd <= 1'b0;
                         state <= pS_IDLE;
                     end
@@ -353,7 +429,6 @@ module sad #(
     wire [6:0] counter_counter2 = counter_counter[2];
     wire [6:0] counter_counter3 = counter_counter[3];
 
-    wire [7:0] fifo_out0 = fifo_out[0];
     wire [7:0] nextrefsample0 = nextrefsample[0];
     wire [7:0] nextrefsample1 = nextrefsample[1];
     wire [7:0] nextrefsample2 = nextrefsample[2];
