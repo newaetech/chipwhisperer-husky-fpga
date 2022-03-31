@@ -29,7 +29,8 @@ module sad #(
     // exceeded, the FIFO must be updated in Vivado.
     parameter pBYTECNT_SIZE = 7,
     parameter pREF_SAMPLES = 8, 
-    parameter pBITS_PER_SAMPLE = 12
+    parameter pBITS_PER_SAMPLE = 12,
+    parameter pDIRTY_ENABLED = 0
 )(
     input wire          reset,
 
@@ -67,11 +68,15 @@ module sad #(
     reg clear_status_r;
     wire clear_status_adc;
 
+    reg [pBITS_PER_SAMPLE-1:0] maxdev;
+    reg dirty[0:pREF_SAMPLES-1];
+    reg [4:0] dirty_counter [0:pREF_SAMPLES-1];
     reg [pREF_SAMPLES*pBITS_PER_SAMPLE-1:0] refsamples;
     reg [pBITS_PER_SAMPLE-1:0] nextrefsample [0:pREF_SAMPLES-1];
     reg [31:0] threshold; // must be wide enough so it doesn't overflow (must hold addition of pREF_SAMPLES numbers that are each pBITS_PER_SAMPLE bits wide)
     reg [4:0] counter; // must be wide enough to count to pREF_SAMPLES-1
     reg [4:0] counter_counter [0:pREF_SAMPLES-1]; // must be wide enough to count to pREF_SAMPLES-1
+
 
     // register reads:
     always @(*) begin
@@ -80,6 +85,7 @@ module sad #(
                 `SAD_REFERENCE: reg_datao = refsamples[reg_bytecnt*8 +: 8];
                 `SAD_THRESHOLD: reg_datao = threshold[reg_bytecnt*8 +: 8];
                 `SAD_STATUS: reg_datao = {4'b0, fifo_not_empty_error, fifo_overflow_sticky, fifo_underflow_sticky, triggered};
+                `SAD_MAX_DEV: reg_datao = maxdev[reg_bytecnt*8 +: 8];
                 default: reg_datao = 0;
             endcase
         end
@@ -93,6 +99,7 @@ module sad #(
             refsamples <= 0;
             threshold <= 0;
             clear_status_r <= 0;
+            maxdev <= 0;
         end 
         else begin
             clear_status_r <= clear_status;
@@ -100,6 +107,7 @@ module sad #(
                 case (reg_address)
                     `SAD_REFERENCE: refsamples[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_THRESHOLD: threshold[reg_bytecnt*8 +: 8] <= reg_datai;
+                    `SAD_MAX_DEV: maxdev[reg_bytecnt*8 +: 8] <= reg_datai;
                     default: ;
                 endcase
                 if (reg_address == `SAD_STATUS)
@@ -199,6 +207,7 @@ module sad #(
                 if (state == pS_IDLE) begin
                     sad_counter[i] <= 0;
                     counter_incr[i] <= 0;
+                    dirty[i] <= 0;
                 end
 
                 else begin
@@ -217,6 +226,19 @@ module sad #(
                             counter_incr[i] <= adc_datain - nextrefsample[i];
                         else
                             counter_incr[i] <= nextrefsample[i] - adc_datain;
+                    end
+
+                    // This was an idea: if any single sample difference exceeds maxdev, mark
+                    // that sad_counter as "dirty" has scrolled off. "dirty" counters will not cause a trigger.
+                    // However in practice this doesn't seem to yield better results (there is still jitter in
+                    // SAD-captured traces). Leaving it here, disabled by default, in case it's useful later.
+                    if (pDIRTY_ENABLED) begin
+                        if (dirty[i] && counter_counter[i] == dirty_counter[i])
+                            dirty[i] <= 1'b0;
+                        else if (maxdev && counter_incr[i] > maxdev) begin
+                            dirty[i] <= 1'b1;
+                            dirty_counter[i] <= counter_counter[i];
+                        end
                     end
 
                end
@@ -239,7 +261,7 @@ module sad #(
             end
 
             always @ (posedge adc_sampleclk) begin
-                if (counter_active[i] && ~use_ref_samples[i] && sad_counter[i] <= threshold)
+                if (~dirty[i] && counter_active[i] && ~use_ref_samples[i] && sad_counter[i] <= threshold)
                     individual_trigger[i] <= 1'b1;
                 else
                     individual_trigger[i] <= 1'b0;
@@ -409,6 +431,15 @@ module sad #(
                                              individual_trigger[2],
                                              individual_trigger[1],
                                              individual_trigger[0]};
+    wire [7:0] dirty_debug =  {dirty[7],
+                               dirty[6],
+                               dirty[5],
+                               dirty[4],
+                               dirty[3],
+                               dirty[2],
+                               dirty[1],
+                               dirty[0]};
+    wire [4:0] dirty_counter0 = dirty_counter[0];
 
    `ifdef ILA_SAD
        ila_sad U_ila_sad (
