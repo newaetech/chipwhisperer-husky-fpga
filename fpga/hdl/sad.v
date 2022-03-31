@@ -28,8 +28,8 @@ module sad #(
     // FIFO allows up to 1024 pREF_SAMPLES and 12 pBITS_PER_SAMPLE; if either is
     // exceeded, the FIFO must be updated in Vivado.
     parameter pBYTECNT_SIZE = 7,
-    parameter pREF_SAMPLES = 8, 
-    parameter pBITS_PER_SAMPLE = 12,
+    parameter pREF_SAMPLES = 32, 
+    parameter pBITS_PER_SAMPLE = 8,
     parameter pDIRTY_ENABLED = 0
 )(
     input wire          reset,
@@ -85,6 +85,8 @@ module sad #(
                 `SAD_REFERENCE: reg_datao = refsamples[reg_bytecnt*8 +: 8];
                 `SAD_THRESHOLD: reg_datao = threshold[reg_bytecnt*8 +: 8];
                 `SAD_STATUS: reg_datao = {4'b0, fifo_not_empty_error, fifo_overflow_sticky, fifo_underflow_sticky, triggered};
+                `SAD_BITS_PER_SAMPLE: reg_datao = pBITS_PER_SAMPLE;
+                `SAD_REF_SAMPLES: reg_datao = pREF_SAMPLES;
                 `SAD_MAX_DEV: reg_datao = maxdev[reg_bytecnt*8 +: 8];
                 default: reg_datao = 0;
             endcase
