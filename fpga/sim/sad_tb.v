@@ -37,6 +37,7 @@ parameter pTIMEOUT_CYCLES = 5000;
 parameter pSLOP = 2;
 parameter pTHRESHOLD_MARGIN = 20;
 parameter pVERBOSE = 0;
+parameter pTRIGGERS = 2;
 
 // we don't actually use these but tb_reg_tasks.v needs them to exist:
 parameter pSTREAM = 0;
@@ -150,6 +151,11 @@ initial begin
     write_next_byte((threshold & 32'h00FF_0000)>>16);
     write_next_byte((threshold & 32'hFF00_0000)>>24);
 
+    if (pTRIGGERS > 1)
+        write_1byte(`SAD_MULTIPLE_TRIGGERS, 1);
+    else
+        write_1byte(`SAD_MULTIPLE_TRIGGERS, 0);
+
     #(pCLK_USB_PERIOD*10) setup_done = 1;
 end
 
@@ -209,40 +215,44 @@ initial begin
         @(posedge clk_adc) adc_datain = $urandom_range(0, 2**pBITS_PER_SAMPLE-1);
 
     // now apply a pattern that's definitely under the threshold:
-    done_altering = 0;
-    total_delta = 0;
-    for (i = 0; i < pREF_SAMPLES; i = i + 1) begin
-        @(posedge clk_adc);
-        if ((done_altering == 0) && ($urandom_range(0, pREF_SAMPLES/2) == 0)) begin // deviate from pattern or not
-            if (pVERBOSE)
-                $display("Deviating for sample %d", i);
-            abs_delta = threshold;
-            while (total_delta + abs_delta >= threshold) begin
-                if ($urandom_range(0,1)) begin // positive delta
-                    delta = $urandom_range(0, 2**pBITS_PER_SAMPLE-1 - pattern[i]);
-                    abs_delta = delta;
+    repeat (pTRIGGERS) begin // do it more than once to make sure we recover after the first
+        done_altering = 0;
+        total_delta = 0;
+        for (i = 0; i < pREF_SAMPLES; i = i + 1) begin
+            @(posedge clk_adc);
+            if ((done_altering == 0) && ($urandom_range(0, pREF_SAMPLES/2) == 0)) begin // deviate from pattern or not
+                if (pVERBOSE)
+                    $display("Deviating for sample %d", i);
+                abs_delta = threshold;
+                while (total_delta + abs_delta >= threshold) begin
+                    if ($urandom_range(0,1)) begin // positive delta
+                        delta = $urandom_range(0, 2**pBITS_PER_SAMPLE-1 - pattern[i]);
+                        abs_delta = delta;
+                    end
+                    else begin // negative delta
+                        delta = -$urandom_range(0, pattern[i]);
+                        abs_delta = -delta;
+                    end
+                    //$display("Trying delta=%d...", delta);
                 end
-                else begin // negative delta
-                    delta = -$urandom_range(0, pattern[i]);
-                    abs_delta = -delta;
-                end
-                //$display("Trying delta=%d...", delta);
+                total_delta = total_delta + abs_delta;
+                if (total_delta*2 > threshold)
+                    done_altering = 1;
             end
-            total_delta = total_delta + abs_delta;
-            if (total_delta*2 > threshold)
-                done_altering = 1;
+            else
+                delta = 0;
+            //if (delta < 0)
+            //    $display("NEGATIVE!");
+            adc_datain = pattern[i] + delta;
         end
-        else
-            delta = 0;
-        //if (delta < 0)
-        //    $display("NEGATIVE!");
-        adc_datain = pattern[i] + delta;
-    end
-    repeat (5) @(posedge clk_adc);
-    trigger_expected = 1'b1;
-    if (pVERBOSE) begin
-        $display("Total delta: %d", total_delta);
-        $display("Threshold:   %d", threshold);
+        trigger_expected = 1'b1;
+        if (pVERBOSE) begin
+            $display("Total delta: %d", total_delta);
+            $display("Threshold:   %d", threshold);
+        end
+        repeat($urandom_range(8,4*pREF_SAMPLES))
+            @(posedge clk_adc) adc_datain = $urandom_range(0, 2**pBITS_PER_SAMPLE-1);
+        trigger_expected = 1'b0;
     end
 end
 
@@ -250,15 +260,31 @@ end
 initial begin
     wait (setup_done);
     @(posedge clk_usb) arm = 1'b1;
-    //@(posedge clk_usb) arm = 1'b0;
-    wait (trigger);
-    while (~trigger_expected) begin
-        if (trigger && !expect_fail) begin
-            $display("Warning: unexpected trigger at time %t", $time);
+    repeat (pTRIGGERS) begin
+        wait (trigger);
+        while (~trigger_expected) begin
+            if (trigger && !expect_fail) begin
+                $display("Warning: unexpected trigger at time %t", $time);
+                unexpected = $time;
+                wait (trigger_expected);
+                repeat (5) @(posedge clk_adc);
+                delta = ($time-unexpected)/pCLK_ADC_PERIOD;
+                $display("Trigger was expected %d cycles later", delta);
+                if (delta <= pSLOP)
+                    warnings += 1;
+                else begin
+                    $display("ERROR: trigger delta exceeds margin");
+                    errors += 1;
+                end
+            end
+        end
+
+        if (~trigger && ~expect_fail) begin
+            $display("Warning: not getting expected trigger at time %t", $time);
             unexpected = $time;
-            wait (trigger_expected);
+            wait (trigger);
             delta = ($time-unexpected)/pCLK_ADC_PERIOD;
-            $display("Trigger was expected %d cycles later", delta);
+            $display("Trigger received %d cycles later", delta);
             if (delta <= pSLOP)
                 warnings += 1;
             else begin
@@ -266,24 +292,13 @@ initial begin
                 errors += 1;
             end
         end
+
+        else if (pVERBOSE)
+            $display("Got trigger at time %t.", $time);
+
+        #(pCLK_ADC_PERIOD);
     end
 
-    if (~trigger && ~expect_fail) begin
-        $display("Warning: not getting expected trigger at time %t", $time);
-        unexpected = $time;
-        wait (trigger);
-        delta = ($time-unexpected)/pCLK_ADC_PERIOD;
-        $display("Trigger received %d cycles later", delta);
-        if (delta <= pSLOP)
-            warnings += 1;
-        else begin
-            $display("ERROR: trigger delta exceeds margin");
-            errors += 1;
-        end
-    end
-
-    else if (pVERBOSE)
-        $display("Got trigger at time %t.", $time);
     repeat(pREF_SAMPLES*2) #(pCLK_ADC_PERIOD);
 
     read_1byte(`SAD_STATUS, rdata);

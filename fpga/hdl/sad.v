@@ -68,6 +68,7 @@ module sad #(
     reg clear_status_r;
     wire clear_status_adc;
 
+    reg multiple_triggers;
     reg [pBITS_PER_SAMPLE-1:0] maxdev;
     reg dirty[0:pREF_SAMPLES-1];
     reg [4:0] dirty_counter [0:pREF_SAMPLES-1];
@@ -88,6 +89,7 @@ module sad #(
                 `SAD_BITS_PER_SAMPLE: reg_datao = pBITS_PER_SAMPLE;
                 `SAD_REF_SAMPLES: reg_datao = pREF_SAMPLES;
                 `SAD_MAX_DEV: reg_datao = maxdev[reg_bytecnt*8 +: 8];
+                `SAD_MULTIPLE_TRIGGERS: reg_datao = {7'b0, multiple_triggers};
                 default: reg_datao = 0;
             endcase
         end
@@ -102,6 +104,7 @@ module sad #(
             threshold <= 0;
             clear_status_r <= 0;
             maxdev <= 0;
+            multiple_triggers <= 0;
         end 
         else begin
             clear_status_r <= clear_status;
@@ -110,6 +113,7 @@ module sad #(
                     `SAD_REFERENCE: refsamples[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_THRESHOLD: threshold[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_MAX_DEV: maxdev[reg_bytecnt*8 +: 8] <= reg_datai;
+                    `SAD_MULTIPLE_TRIGGERS: multiple_triggers <= reg_datai[0];
                     default: ;
                 endcase
                 if (reg_address == `SAD_STATUS)
@@ -163,6 +167,7 @@ module sad #(
     reg counter_active_r2 [0:pREF_SAMPLES-1];
     reg use_ref_samples [0:pREF_SAMPLES-1];
     reg use_ref_samples_r [0:pREF_SAMPLES-1];
+    reg use_ref_samples_r2 [0:pREF_SAMPLES-1];
     reg individual_trigger [0:pREF_SAMPLES-1];
     // TODO: these need to be wider than pBITS_PER_SAMPLE since we're adding many pBITS_PER_SAMPLE-wide numbers... hard-coded here for pBITS_PER_SAMPLE=8, pREF_SAMPLES=32
     reg [12:0] sad_counter [0:pREF_SAMPLES-1];
@@ -216,6 +221,7 @@ module sad #(
                     counter_active_r[i] <= counter_active[i];
                     counter_active_r2[i] <= counter_active_r[i];
                     use_ref_samples_r[i] <= use_ref_samples[i];
+                    use_ref_samples_r2[i] <= use_ref_samples_r[i];
                     fifo_out_r[i] <= fifo_out[i];
                     if (counter_active_r2[i])
                         if (use_ref_samples_r[i])
@@ -263,7 +269,7 @@ module sad #(
             end
 
             always @ (posedge adc_sampleclk) begin
-                if (~dirty[i] && counter_active[i] && ~use_ref_samples[i] && sad_counter[i] <= threshold)
+                if (~dirty[i] && counter_active[i] && ~use_ref_samples_r2[i] && sad_counter[i] <= threshold)
                     individual_trigger[i] <= 1'b1;
                 else
                     individual_trigger[i] <= 1'b0;
@@ -320,16 +326,19 @@ module sad #(
                     // In this state all the counters are running.
                     // When this state is entered, most counters are still "initializing";
                     // when use_ref_samples[counter] goes low, this indicates that that counter is done initializing
-                    if (~(arm_i && active)) begin       // exit to FLUSH if no longer armed & active
-                        fifo_wr <= 1'b0;                // TODO: should we keep running if not armed?
+                    trigger <= 1'b0;
+                    if (~active) begin       // exit to FLUSH if no longer active
+                        fifo_wr <= 1'b0;
                         state <= pS_FLUSH;
                     end
                     else begin
                         for (c = 0; c < pREF_SAMPLES; c = c + 1) begin
                             if (individual_trigger[c]) begin
                                 trigger <= 1'b1;
-                                fifo_wr <= 1'b0;
-                                state <= pS_FLUSH; // TODO: should we go to flush here, or just keep running?
+                                if (~multiple_triggers) begin // are we done?
+                                    fifo_wr <= 1'b0;
+                                    state <= pS_FLUSH;
+                                end
                             end
                         end
                     end
@@ -371,6 +380,7 @@ module sad #(
     wire [15:0] sad_counter5 = sad_counter[5];
     wire [15:0] sad_counter6 = sad_counter[6];
     wire [15:0] sad_counter7 = sad_counter[7];
+    wire [15:0] sad_counter30 = sad_counter[30];
 
     wire [6:0] counter_counter0 = counter_counter[0];
     wire [6:0] counter_counter1 = counter_counter[1];
@@ -383,6 +393,9 @@ module sad #(
     wire [7:0] nextrefsample2 = nextrefsample[2];
     wire [7:0] nextrefsample3 = nextrefsample[3];
     wire [7:0] counter_incr0 = counter_incr[0];
+    wire [7:0] counter_incr30 = counter_incr[30];
+    wire counter_active_debug30 = counter_active[30];
+    wire use_ref_samples_debug30 = use_ref_samples[30];
     wire use_ref_samples_r0 = use_ref_samples_r[0];
 
     wire [7:0] use_ref_samples_debug =  {use_ref_samples[7],
