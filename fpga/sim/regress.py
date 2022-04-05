@@ -206,8 +206,10 @@ tests.append(dict(name  = 'sad',
              BITS_PER_SAMPLE = 8,
              REF_SAMPLES = 32, # maximum supported by target (could do more by upsizing internal registers)
              THRESHOLD = [10,50], # keep threshold low to avoid unintentional triggers - testbench isn't smart enough
-             LINEAR_RAMP = [0,1],
-             TIMEOUT_CYCLES = 10000,
+             TRIGGERS = 10,
+             FLUSH = [0,1],
+             LINEAR_RAMP = 0,
+             TIMEOUT_CYCLES = 2000,
              TOP = 'sad_tb.v',
              description = 'SAD block-level test.'))
 

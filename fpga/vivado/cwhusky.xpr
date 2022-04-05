@@ -54,13 +54,13 @@
     <Option Name="WTVcsLaunchSim" Val="0"/>
     <Option Name="WTRivieraLaunchSim" Val="0"/>
     <Option Name="WTActivehdlLaunchSim" Val="0"/>
-    <Option Name="WTXSimExportSim" Val="111"/>
-    <Option Name="WTModelSimExportSim" Val="111"/>
-    <Option Name="WTQuestaExportSim" Val="111"/>
-    <Option Name="WTIesExportSim" Val="111"/>
-    <Option Name="WTVcsExportSim" Val="111"/>
-    <Option Name="WTRivieraExportSim" Val="111"/>
-    <Option Name="WTActivehdlExportSim" Val="111"/>
+    <Option Name="WTXSimExportSim" Val="124"/>
+    <Option Name="WTModelSimExportSim" Val="124"/>
+    <Option Name="WTQuestaExportSim" Val="124"/>
+    <Option Name="WTIesExportSim" Val="124"/>
+    <Option Name="WTVcsExportSim" Val="124"/>
+    <Option Name="WTRivieraExportSim" Val="124"/>
+    <Option Name="WTActivehdlExportSim" Val="124"/>
     <Option Name="GenerateIPUpgradeLog" Val="TRUE"/>
     <Option Name="XSimRadix" Val="hex"/>
     <Option Name="XSimTimeUnit" Val="ns"/>
@@ -804,6 +804,23 @@
         <Option Name="UseBlackboxStub" Val="1"/>
       </Config>
     </FileSet>
+    <FileSet Name="sad_debug_fifo" Type="BlockSrcs" RelSrcDir="$PSRCDIR/sad_debug_fifo">
+      <File Path="$PSRCDIR/sources_1/ip/sad_debug_fifo/sad_debug_fifo.xci">
+        <FileInfo>
+          <Attr Name="UsedIn" Val="synthesis"/>
+          <Attr Name="UsedIn" Val="implementation"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+      </File>
+      <Config>
+        <Option Name="TopModule" Val="sad_debug_fifo"/>
+        <Option Name="VerilogDir" Val="$PPRDIR/../tracewhisperer/hdl"/>
+        <Option Name="UseBlackboxStub" Val="1"/>
+        <Define Name="TINYFIFO"/>
+        <Define Name="SAD_DEBUG"/>
+        <Define Name="ILA_SAD"/>
+      </Config>
+    </FileSet>
   </FileSets>
   <Simulators>
     <Simulator Name="XSim">
@@ -1147,6 +1164,18 @@
     <Run Id="ila_sad_synth_1" Type="Ft3:Synth" SrcSet="ila_sad" Part="xc7a35tftg256-1" ConstrsSet="ila_sad" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_sad_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_sad_synth_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
+        <Step Id="synth_design"/>
+      </Strategy>
+      <GeneratedRun Dir="$PRUNDIR" File="gen_run.xml"/>
+      <ReportStrategy Name="Vivado Synthesis Default Reports" Flow="Vivado Synthesis 2020"/>
+      <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
+      <RQSFiles/>
+    </Run>
+    <Run Id="sad_debug_fifo_synth_1" Type="Ft3:Synth" SrcSet="sad_debug_fifo" Part="xc7a35tftg256-1" ConstrsSet="sad_debug_fifo" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/sad_debug_fifo_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/sad_debug_fifo_synth_1">
+      <Strategy Version="1" Minor="2">
+        <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020">
+          <Desc>Vivado Synthesis Defaults</Desc>
+        </StratHandle>
         <Step Id="synth_design"/>
       </Strategy>
       <GeneratedRun Dir="$PRUNDIR" File="gen_run.xml"/>
@@ -1692,6 +1721,25 @@
     <Run Id="ila_sad_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-1" ConstrsSet="ila_sad" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_sad_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_sad_impl_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020"/>
+        <Step Id="init_design"/>
+        <Step Id="opt_design"/>
+        <Step Id="power_opt_design"/>
+        <Step Id="place_design"/>
+        <Step Id="post_place_power_opt_design"/>
+        <Step Id="phys_opt_design"/>
+        <Step Id="route_design"/>
+        <Step Id="post_route_phys_opt_design"/>
+        <Step Id="write_bitstream"/>
+      </Strategy>
+      <ReportStrategy Name="Vivado Implementation Default Reports" Flow="Vivado Implementation 2020"/>
+      <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
+      <RQSFiles/>
+    </Run>
+    <Run Id="sad_debug_fifo_impl_1" Type="Ft2:EntireDesign" Part="xc7a35tftg256-1" ConstrsSet="sad_debug_fifo" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="sad_debug_fifo_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/sad_debug_fifo_impl_1">
+      <Strategy Version="1" Minor="2">
+        <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020">
+          <Desc>Default settings for Implementation.</Desc>
+        </StratHandle>
         <Step Id="init_design"/>
         <Step Id="opt_design"/>
         <Step Id="power_opt_design"/>

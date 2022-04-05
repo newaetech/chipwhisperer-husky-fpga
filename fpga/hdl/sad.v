@@ -78,6 +78,10 @@ module sad #(
     reg [4:0] counter; // must be wide enough to count to pREF_SAMPLES-1
     reg [4:0] counter_counter [0:pREF_SAMPLES-1]; // must be wide enough to count to pREF_SAMPLES-1
 
+    `ifdef SAD_DEBUG
+        reg [pBITS_PER_SAMPLE-1:0] trigger_index;
+    `endif
+
 
     // register reads:
     always @(*) begin
@@ -90,6 +94,10 @@ module sad #(
                 `SAD_REF_SAMPLES: reg_datao = pREF_SAMPLES;
                 `SAD_MAX_DEV: reg_datao = maxdev[reg_bytecnt*8 +: 8];
                 `SAD_MULTIPLE_TRIGGERS: reg_datao = {7'b0, multiple_triggers};
+                `ifdef SAD_DEBUG
+                    `SAD_DEBUG_TRIGGER_INDEX: reg_datao = trigger_index[reg_bytecnt*8 +: 8];
+                    `SAD_DEBUG_FIFO_RD: reg_datao = debug_fifo_out_usb;
+                `endif
                 default: reg_datao = 0;
             endcase
         end
@@ -215,6 +223,10 @@ module sad #(
                     sad_counter[i] <= 0;
                     counter_incr[i] <= 0;
                     dirty[i] <= 0;
+                    counter_active_r[i] <= 0;
+                    counter_active_r2[i] <= 0;
+                    use_ref_samples_r[i] <= 0;
+                    use_ref_samples_r2[i] <= 0;
                 end
 
                 else begin
@@ -223,11 +235,12 @@ module sad #(
                     use_ref_samples_r[i] <= use_ref_samples[i];
                     use_ref_samples_r2[i] <= use_ref_samples_r[i];
                     fifo_out_r[i] <= fifo_out[i];
-                    if (counter_active_r2[i])
+                    if (counter_active_r2[i]) begin
                         if (use_ref_samples_r[i])
                             sad_counter[i] <= sad_counter[i] + counter_incr[i];
                         else
                             sad_counter[i] <= sad_counter[i] + counter_incr[i] - fifo_out_r[i];
+                    end
 
                     if (counter_active_r[i]) begin
                         if (adc_datain > nextrefsample[i])
@@ -269,7 +282,7 @@ module sad #(
             end
 
             always @ (posedge adc_sampleclk) begin
-                if (~dirty[i] && counter_active[i] && ~use_ref_samples_r2[i] && sad_counter[i] <= threshold)
+                if (~dirty[i] && counter_active[i] && ~use_ref_samples_r2[i] && sad_counter[i] <= threshold && (counter_counter[i] == 2))
                     individual_trigger[i] <= 1'b1;
                 else
                     individual_trigger[i] <= 1'b0;
@@ -335,6 +348,10 @@ module sad #(
                         for (c = 0; c < pREF_SAMPLES; c = c + 1) begin
                             if (individual_trigger[c]) begin
                                 trigger <= 1'b1;
+                                `ifdef SAD_DEBUG
+                                    if (~triggered)
+                                        trigger_index <= c;
+                                `endif
                                 if (~multiple_triggers) begin // are we done?
                                     fifo_wr <= 1'b0;
                                     state <= pS_FLUSH;
@@ -380,14 +397,28 @@ module sad #(
     wire [15:0] sad_counter5 = sad_counter[5];
     wire [15:0] sad_counter6 = sad_counter[6];
     wire [15:0] sad_counter7 = sad_counter[7];
+    wire [15:0] sad_counter8 = sad_counter[8];
+    wire [15:0] sad_counter9 = sad_counter[9];
+    wire [15:0] sad_counter10 = sad_counter[10];
+    wire [15:0] sad_counter11 = sad_counter[11];
+    wire [15:0] sad_counter12 = sad_counter[12];
+    wire [15:0] sad_counter13 = sad_counter[13];
+    wire [15:0] sad_counter29 = sad_counter[29];
     wire [15:0] sad_counter30 = sad_counter[30];
+    wire [15:0] sad_counter31 = sad_counter[31];
 
     wire [6:0] counter_counter0 = counter_counter[0];
     wire [6:0] counter_counter1 = counter_counter[1];
     wire [6:0] counter_counter2 = counter_counter[2];
     wire [6:0] counter_counter3 = counter_counter[3];
+    wire [6:0] counter_counter9 = counter_counter[9];
+    wire [6:0] counter_counter10 = counter_counter[10];
+    wire [6:0] counter_counter11 = counter_counter[11];
+    wire [6:0] counter_counter12 = counter_counter[12];
+    wire [6:0] counter_counter13 = counter_counter[13];
 
     wire [7:0] fifo_out0 = fifo_out[0];
+    wire fifo_empty0 = fifo_empty[0];
     wire [7:0] nextrefsample0 = nextrefsample[0];
     wire [7:0] nextrefsample1 = nextrefsample[1];
     wire [7:0] nextrefsample2 = nextrefsample[2];
@@ -456,6 +487,65 @@ module sad #(
                                dirty[0]};
     wire [4:0] dirty_counter0 = dirty_counter[0];
 
+    `ifdef SAD_DEBUG
+        wire debug_wr;
+        wire debug_rd;
+        wire debug_almost_full;
+        wire debug_overflow;
+        wire debug_underflow;
+        reg reg_read_r;
+        reg debug_rd_usb;
+        wire debug_reg_rd;
+        wire debug_empty;
+        wire [pBITS_PER_SAMPLE-1:0] debug_fifo_out;
+
+        assign debug_wr = triggered? 1'b0 : fifo_wr;
+        always @(posedge clk_usb) begin
+            reg_read_r <= reg_read;
+            if (reg_read && (reg_address == `SAD_DEBUG_FIFO_RD) && ~reg_read_r)
+                debug_rd_usb <= 1'b1;
+            else
+                debug_rd_usb <= 1'b0;
+        end
+
+       cdc_pulse U_debug_rd (
+          .reset_i       (reset),
+          .src_clk       (clk_usb),
+          .src_pulse     (debug_rd_usb),
+          .dst_clk       (adc_sampleclk),
+          .dst_pulse     (debug_reg_rd)
+       );
+
+       assign debug_rd = (fifo_wr && debug_almost_full) || debug_reg_rd;
+
+       (* ASYNC_REG = "TRUE" *) reg [pBITS_PER_SAMPLE-1:0] debug_fifo_out_usb;
+       always @ (posedge clk_usb)
+           debug_fifo_out_usb <= debug_fifo_out;
+
+        `ifdef NOFIFO
+           //for clean iverilog compilation
+        `else
+             sad_debug_fifo U_debug_fifo(
+                .clk          (adc_sampleclk),
+                .rst          (reset),
+                .din          (adc_datain),
+                .wr_en        (debug_wr),
+                .rd_en        (debug_rd),
+                .dout         (debug_fifo_out),
+                .full         (),
+                .empty        (debug_empty),
+                .almost_full  (debug_almost_full),
+                .almost_empty (),
+                .overflow     (debug_overflow),
+                .underflow    (debug_underflow)
+             );
+         `endif
+
+     `else
+       (* ASYNC_REG = "TRUE" *) reg [pBITS_PER_SAMPLE-1:0] debug_fifo_out_usb;
+    `endif
+
+
    `ifdef ILA_SAD
        ila_sad U_ila_sad (
           .clk            (clk_usb),              // input wire clk
@@ -468,7 +558,13 @@ module sad #(
           .probe6         (refsamples[31:0]),     // input wire [31:0]  probe6 
           .probe7         (counter_counter0),     // input wire [6:0]  probe7 
           .probe8         (arm_i),                // input wire [0:0]  probe8 
-          .probe9         (ext_trigger)           // input wire [0:0]  probe9
+          .probe9         (ext_trigger),          // input wire [0:0]  probe9
+          .probe10        (debug_overflow),       // input wire [0:0]  probe10
+          .probe11        (debug_underflow),      // input wire [0:0]  probe11
+          .probe12        (debug_wr),             // input wire [0:0]  probe12
+          .probe13        (debug_rd),             // input wire [0:0]  probe13
+          .probe14        (debug_empty),          // input wire [0:0]  probe14
+          .probe15        (debug_rd_usb)          // input wire [0:0]  probe15
        );
    `endif
 

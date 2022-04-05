@@ -27,8 +27,11 @@ ERRORS_OK=0
 PRESAMP_ERROR=0
 DOWNSAMPLE=0
 LINEAR_RAMP=1
+INPUTS_FROM_FILE=0
 REF_SAMPLES=8
 BITS_PER_SAMPLE=12
+TRIGGERS=1
+FLUSH=0
 THRESHOLD=0
 VERBOSE=0
 
@@ -49,12 +52,16 @@ compile_sad:
 	-Wportbind \
 	-Wselect-range \
 	-P sad_tb.pLINEAR_RAMP=$(LINEAR_RAMP) \
+	-P sad_tb.pINPUTS_FROM_FILE=$(INPUTS_FROM_FILE) \
 	-P sad_tb.pREF_SAMPLES=$(REF_SAMPLES) \
 	-P sad_tb.pBITS_PER_SAMPLE=$(BITS_PER_SAMPLE) \
 	-P sad_tb.pTHRESHOLD=$(THRESHOLD) \
+	-P sad_tb.pTRIGGERS=$(TRIGGERS) \
+	-P sad_tb.pFLUSH=$(FLUSH) \
 	-P sad_tb.pDUMP=$(DUMP) \
 	-P sad_tb.pSEED=$(SEED) \
 	-P sad_tb.pVERBOSE=$(VERBOSE) \
+	-P sad_tb.pTIMEOUT_CYCLES=$(TIMEOUT_CYCLES) \
 	-o $(EXEFILE) \
 
 sad_nofifo:
