@@ -41,6 +41,7 @@ module openadc_interface #(
     input  wire                         PLL_STATUS,
     input  wire                         DUT_CLK_i, // target_hs1
     input  wire                         DUT_trigger_i,
+    input  wire                         trigger_io4_i, // debug only
     input  wire                         sad_active,
     output reg                          trigger_adc,
     output wire                         trigger_sad,
@@ -66,6 +67,9 @@ module openadc_interface #(
 
     output reg                          flash_pattern,
 
+    // for UART triggering:
+    output wire                         armed,
+
     // for debug only:
     output wire                         slow_fifo_wr,
     output wire                         slow_fifo_rd,
@@ -83,7 +87,6 @@ module openadc_interface #(
 
     wire       capture_go;
     wire       adc_capture_done;
-    wire       armed;
     wire       reset;
 
     wire       dcm_gen_locked;
@@ -277,16 +280,16 @@ module openadc_interface #(
    );
    
    reg trigger_adc_allowed;
-   reg cmd_arm_adc_r;
+   reg armed_and_ready_r;
    // ADC trigger is simple except that we only want a single trigger generated:
    always @(posedge ADC_clk_sample) begin
        if (reset) begin
            trigger_adc_allowed <= 1'b0;
            trigger_adc <= 1'b0;
-           cmd_arm_adc_r <= 1'b0;
+           armed_and_ready_r <= 1'b0;
        end
        else begin
-           cmd_arm_adc_r <= cmd_arm_adc;
+           armed_and_ready_r <= armed_and_ready;
 
            if (trigger_adc_allowed)
                trigger_adc <= trigger_adclevel[11]? ADC_data_tofifo > trigger_adclevel:
@@ -296,10 +299,21 @@ module openadc_interface #(
 
            if (trigger_adc)
                trigger_adc_allowed <= 1'b0;
-           else if (cmd_arm_adc && ~cmd_arm_adc_r)
+           else if (armed_and_ready && ~armed_and_ready_r)
                trigger_adc_allowed <= 1'b1;
        end
    end
+
+   `ifdef ILA_ADC_TRIG
+       ila_adc_trig U_ila_adc_trig (
+          .clk            (clk_usb),              // input wire clk
+          .probe0         (trigger_adc),          // input wire [0:0]  probe0 
+          .probe1         (trigger_adc_allowed),  // input wire [0:0]  probe1 
+          .probe2         (trigger_adclevel),     // input wire [11:0]  probe2 
+          .probe3         (ADC_data_tofifo),      // input wire [11:0]  probe3 
+          .probe4         (armed_and_ready)       // input wire [0:0]  probe4 
+       );
+   `endif
 
 
    assign reg_status[0] = armed;
@@ -356,7 +370,7 @@ module openadc_interface #(
        .adc_datain              (ADC_data_tofifo[11:4]),
        //.adc_datain              (ADC_data_tofifo),
        .adc_sampleclk           (ADC_clk_sample),
-       .arm_i                   (armed        ),
+       .armed_and_ready         (armed_and_ready),
        .active                  (sad_active   ),
        .clk_usb                 (clk_usb      ),
        .reg_address             (reg_address  ),
@@ -366,6 +380,7 @@ module openadc_interface #(
        .reg_read                (reg_read     ),
        .reg_write               (reg_write    ),
        .ext_trigger             (DUT_trigger_i),
+       .io4                     (trigger_io4_i),
        .trigger                 (trigger_sad  )
    );
 

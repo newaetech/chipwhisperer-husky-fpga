@@ -37,7 +37,7 @@ module sad #(
     //ADC Sample Input
     input wire [pBITS_PER_SAMPLE-1:0] adc_datain,
     input wire          adc_sampleclk,
-    input wire          arm_i,
+    input wire          armed_and_ready,
     input wire          active,
 
     //USB register interface
@@ -50,6 +50,7 @@ module sad #(
     input  wire         reg_write,    // Write flag
 
     input  wire         ext_trigger,  // debug only
+    input  wire         io4,  // debug only
     output reg          trigger
 );
 
@@ -320,7 +321,7 @@ module sad #(
                     fifo_rd <= 1'b0;
                     for (c = 0; c < pREF_SAMPLES; c = c + 1)
                         counter_active[c] <= 0;
-                    if (arm_i && active)
+                    if (armed_and_ready && active)
                         state <= pS_INITIALIZING;
                 end
 
@@ -557,14 +558,11 @@ module sad #(
           .probe5         (sad_counter1),         // input wire [15:0]  probe5 
           .probe6         (refsamples[31:0]),     // input wire [31:0]  probe6 
           .probe7         (counter_counter0),     // input wire [6:0]  probe7 
-          .probe8         (arm_i),                // input wire [0:0]  probe8 
+          .probe8         (armed_and_ready),      // input wire [0:0]  probe8 
           .probe9         (ext_trigger),          // input wire [0:0]  probe9
-          .probe10        (debug_overflow),       // input wire [0:0]  probe10
-          .probe11        (debug_underflow),      // input wire [0:0]  probe11
-          .probe12        (debug_wr),             // input wire [0:0]  probe12
-          .probe13        (debug_rd),             // input wire [0:0]  probe13
-          .probe14        (debug_empty),          // input wire [0:0]  probe14
-          .probe15        (debug_rd_usb)          // input wire [0:0]  probe15
+          .probe10        (io4 ),                 // input wire [0:0]  probe10
+          .probe11        (sad_counter2),         // input wire [15:0]  probe11 
+          .probe12        (sad_counter3)          // input wire [15:0]  probe12 
        );
    `endif
 

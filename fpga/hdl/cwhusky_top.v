@@ -226,6 +226,7 @@ module cwhusky_top(
    wire           fifo_wr_clk;
    wire           fifo_source_sel;
 
+   wire           armed;
 
    assign USB_SPARE0 = enable_avrprog? 1'bz : stream_segment_available;
 
@@ -322,12 +323,14 @@ module cwhusky_top(
         .PLL_STATUS             (PLL_STATUS),
         .DUT_CLK_i              (extclk_mux),
         .DUT_trigger_i          (ext_trigger),
+        .trigger_io4_i          (target_io4),
         .trigger_adc            (trigger_adc),
         .trigger_sad            (trigger_sad),
         .sad_active             (sad_active),
         .amp_gain               (VDBSPWM),
         .fifo_dout              (fifo_dout),
         .clkgen                 (clkgen),
+        .armed                  (armed),
 
         .reg_address            (reg_address),
         .reg_bytecnt            (reg_bytecnt), 
@@ -784,6 +787,7 @@ module cwhusky_top(
 
           .arm                          (),
           .capturing                    (),
+          //.husky_armed                  (armed),
 
           .fifo_full                    (fifo_full),
           .fifo_overflow_blocked        (fifo_overflow_blocked),
