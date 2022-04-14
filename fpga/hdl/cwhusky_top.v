@@ -206,8 +206,8 @@ module cwhusky_top(
    wire           fifo_flush;
    wire           trace_fifo_flush;
    wire           la_fifo_flush;
-   wire           reg_arm;
-   wire           reg_arm_feclk;
+   wire           trace_arm_usb;
+   wire           trace_arm_fe;
    wire           clear_errors;
    wire [17:0]    fifo_out_data;
    wire [5:0]     fifo_status;
@@ -226,7 +226,7 @@ module cwhusky_top(
    wire           fifo_wr_clk;
    wire           fifo_source_sel;
 
-   wire           armed;
+   wire           cmd_arm_usb;
 
    assign USB_SPARE0 = enable_avrprog? 1'bz : stream_segment_available;
 
@@ -330,7 +330,7 @@ module cwhusky_top(
         .amp_gain               (VDBSPWM),
         .fifo_dout              (fifo_dout),
         .clkgen                 (clkgen),
-        .armed                  (armed),
+        .cmd_arm_usb            (cmd_arm_usb),
 
         .reg_address            (reg_address),
         .reg_bytecnt            (reg_bytecnt), 
@@ -730,6 +730,7 @@ module cwhusky_top(
           .usb_clk                      (clk_usb_buf),
           .reset_pin                    (1'b0),
           .fpga_reset                   (),
+          .I_external_arm               (cmd_arm_usb),
           .flash_pattern                (),
           .buildtime                    (32'b0),
           .O_trace_en                   (trace_en),
@@ -785,9 +786,9 @@ module cwhusky_top(
           .O_userio_pwdriven            (),
           .O_userio_drive_data          (),
 
-          .arm                          (),
+          .arm_usb                      (trace_arm_usb),
+          .arm_fe                       (trace_arm_fe),
           .capturing                    (),
-          //.husky_armed                  (armed),
 
           .fifo_full                    (fifo_full),
           .fifo_overflow_blocked        (fifo_overflow_blocked),
@@ -796,8 +797,6 @@ module cwhusky_top(
                                                
           .fifo_read                    (fifo_read),
           .fifo_flush                   (trace_fifo_flush),
-          .reg_arm                      (reg_arm),
-          .reg_arm_feclk                (reg_arm_feclk),
           .clear_errors                 (clear_errors),
                                                
           .fifo_out_data                (fifo_out_data),
@@ -851,8 +850,8 @@ module cwhusky_top(
 
    assign fifo_flush = trace_fifo_flush || la_fifo_flush;
 
-   assign fifo_clear_read_flags = reg_arm || la_clear_read_flags;
-   assign fifo_clear_write_flags = reg_arm_feclk || la_clear_write_flags;
+   assign fifo_clear_read_flags = trace_arm_usb || la_clear_read_flags;
+   assign fifo_clear_write_flags = trace_arm_fe || la_clear_write_flags;
 
    `ifndef NOFIFO // for clean compilation
    // NOTE: this FIFO is shared by LOGIC_ANALYZER and TRACE.

@@ -68,7 +68,7 @@ module openadc_interface #(
     output reg                          flash_pattern,
 
     // for UART triggering:
-    output wire                         armed,
+    output wire                         cmd_arm_usb,
 
     // for debug only:
     output wire                         slow_fifo_wr,
@@ -79,7 +79,7 @@ module openadc_interface #(
 
     wire        dcm_locked;
     wire        ADC_clk_sample;
-
+    wire        armed;
 
     wire [15:0] phase_requested;
     wire       phase_load;
@@ -253,7 +253,6 @@ module openadc_interface #(
    //0 = arm as soon as cmd_arm goes high (e.g.: if trigger is already in active state, trigger)
    wire trigger_wait;
    wire cmd_arm_adc;
-   wire cmd_arm_usb;
    wire trigger_now;
    wire [31:0] trigger_offset;
    wire [31:0] trigger_length;
