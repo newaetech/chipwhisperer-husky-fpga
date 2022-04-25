@@ -345,7 +345,7 @@ module sad #(
                         fifo_wr <= 1'b0;
                         state <= pS_FLUSH;
                     end
-                    else begin
+                    else if (armed_and_ready && active) begin
                         for (c = 0; c < pREF_SAMPLES; c = c + 1) begin
                             if (individual_trigger[c]) begin
                                 trigger <= 1'b1;
@@ -365,10 +365,10 @@ module sad #(
                 pS_FLUSH: begin
                     // empty FIFO so we're ready for the next round
                     fifo_wr <= 1'b0;
-                    if (fifo_almost_empty[0]) begin
+                    if (fifo_almost_empty[0] || fifo_empty[0])
                         fifo_rd <= 1'b0;
+                    if (~armed_and_ready || clear_status_adc)
                         state <= pS_IDLE;
-                    end
                 end
 
             endcase
@@ -562,7 +562,16 @@ module sad #(
           .probe9         (ext_trigger),          // input wire [0:0]  probe9
           .probe10        (io4 ),                 // input wire [0:0]  probe10
           .probe11        (sad_counter2),         // input wire [15:0]  probe11 
-          .probe12        (sad_counter3)          // input wire [15:0]  probe12 
+          .probe12        (sad_counter3),         // input wire [15:0]  probe12 
+          .probe13        (fifo_almost_empty[0]), // input wire [0:0]  probe13 
+          .probe14        (fifo_empty[0]),        // input wire [0:0]  probe14 
+          .probe15        (fifo_underflow[0]),    // input wire [0:0]  probe15 
+          .probe16        (fifo_overflow[0]),     // input wire [0:0]  probe16 
+          .probe17        (fifo_underflow_sticky),// input wire [0:0]  probe17 
+          .probe18        (fifo_overflow_sticky), // input wire [0:0]  probe18 
+          .probe19        (fifo_wr),              // input wire [0:0]  probe19 
+          .probe20        (fifo_rd),              // input wire [0:0]  probe20 
+          .probe21        (active)                // input wire [0:0]  probe21 
        );
    `endif
 
