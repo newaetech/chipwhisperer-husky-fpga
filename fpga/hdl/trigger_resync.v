@@ -34,15 +34,19 @@ module trigger_resync(
    reg async_trigger = 1'b0;
    reg [31:0] glitch_delay_cnt;
 
-   // This must be coded just so, otherwise Vivado will throw a "Synth 8-91
-   // ambiguous clock" error. Or maybe we could get rid of the posedge exttrig
-   // argument...
-   always @(posedge clk or posedge exttrig) begin
-      if (exttrig == 1'b1)
-         async_trigger <= 1'b1;
-      else
-         async_trigger <= 1'b0;
-   end
+   `ifdef ASYNC_TRIGGER
+       // This must be coded just so, otherwise Vivado will throw a "Synth 8-91
+       // ambiguous clock" error. Or maybe we could get rid of the posedge exttrig
+       // argument...
+       always @(posedge clk or posedge exttrig) begin
+   `else
+       always @(posedge clk) begin
+          if (exttrig == 1'b1)
+             async_trigger <= 1'b1;
+          else if (glitch_delay_cnt >= offset)
+             async_trigger <= 1'b0;
+       end
+   `endif
 
    always @(posedge clk) begin
       if (~async_trigger)
