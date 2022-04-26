@@ -40,8 +40,8 @@ module reg_chipwhisperer #(
    input  wire        usbiohs2,
    input  wire        target_hs1,
    output wire        target_hs2,
-   output wire        extclk_o,
-   output wire        target_clk,
+   output wire        extclk_o,         // for frequency measurement and ADC_CLKP/N to PLL
+   output wire        target_clk,       // for trace
 
    /* Extern Trigger Connections */
    input  wire        trigger_io1_i,

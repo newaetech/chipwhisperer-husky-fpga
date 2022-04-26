@@ -205,7 +205,7 @@ module reg_clockglitch #(
 
    wire exttrigger_resync;
 
-   reg oneshot;
+   reg oneshot = 1'b0;
 
    always @(posedge sourceclk) begin
       if (clockglitch_powerdown)
@@ -221,7 +221,9 @@ module reg_clockglitch #(
    end 
 
    always @(posedge sourceclk) begin
-      if (manual_rs2 & manual_dly)
+      if (reset)
+         oneshot <= 1'b0;
+      else if (manual_rs2 & manual_dly)
          oneshot <= 1'b1;
       else if (exttrigger_resync)
          oneshot <= 1'b0;

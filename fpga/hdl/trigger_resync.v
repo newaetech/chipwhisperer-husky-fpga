@@ -24,53 +24,38 @@ Author: Colin O'Flynn <coflynn@newae.com>
 
 
 module trigger_resync(
-   input wire   reset,
-   input wire   clk,    // clkgen or HS1
-   input wire   exttrig,
-   input wire [31:0] offset,
-   output wire  exttrigger_resync
+   input  wire          reset,
+   input  wire          clk,    // clkgen or HS1
+   input  wire          exttrig,
+   input  wire [31:0]   offset,
+   output reg           exttrigger_resync
 );
 
-   reg data_status;
-   reg async_trigger_inv;
-   always @(posedge clk or posedge exttrig) begin
-      if (exttrig == 1'b1)
-         async_trigger_inv <= 1'b0;
-      else
-         async_trigger_inv <= data_status;
-   end
-
-   //async_trigger_inv gets set to '0' once trigger happens
-   //and will get set back to '1' once we are no longer triggering
-
-    /* Glitch Delay */
+   reg async_trigger = 1'b0;
    reg [31:0] glitch_delay_cnt;
 
-   //Counter is reset when trigger low
-   always @(posedge clk) begin
-      if (async_trigger_inv == 1'b1) begin
-         glitch_delay_cnt <= 0;
-      end else begin
-         if (glitch_delay_cnt != 32'hFFFFFFFF)
-            glitch_delay_cnt <= glitch_delay_cnt + 1;
-      end
-   end 
-
+   // This must be coded just so, otherwise Vivado will throw a "Synth 8-91
+   // ambiguous clock" error. Or maybe we could get rid of the posedge exttrig
+   // argument...
    always @(posedge clk or posedge exttrig) begin
       if (exttrig == 1'b1)
-         data_status <= 1'b0;
-      else if (reset)
-         data_status <= 1'b1;
-      else if (glitch_delay_cnt >= offset)
-         data_status <= 1'b1;
+         async_trigger <= 1'b1;
+      else
+         async_trigger <= 1'b0;
    end
 
-   reg exttrigger_resync_reg;
+   always @(posedge clk) begin
+      if (~async_trigger)
+         glitch_delay_cnt <= 0;
+      else if (glitch_delay_cnt != 32'hFFFFFFFF)
+         glitch_delay_cnt <= glitch_delay_cnt + 1;
 
-   always @(posedge clk)
-      exttrigger_resync_reg <= (glitch_delay_cnt == offset) ? ~async_trigger_inv : 1'b0;
+      if (glitch_delay_cnt == offset)
+         exttrigger_resync <= 1'b1;
+      else
+         exttrigger_resync <= 1'b0;
+   end
 
-   assign exttrigger_resync = exttrigger_resync_reg;
 
 endmodule
 `default_nettype wire
