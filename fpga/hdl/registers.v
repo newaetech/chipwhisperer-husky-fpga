@@ -249,7 +249,6 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define DECIMATE_ADDR           15
 `define SAMPLES_ADDR            16
 `define PRESAMPLES_ADDR         17
-`define GLITCHCYCLES_CNT        19
 `define TRIGGER_DUR_ADDR        20
 `define ADC_TRIGGER_LEVEL       21
 `define CLOCKGLITCH_OFFSET      25
@@ -286,7 +285,6 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define CLOCKGLITCH_SETTINGS    51
 `define CLOCKGLITCH_NUM_GLITCHES 52
 `define CW_IOROUTE_ADDR         55
-`define GLITCH_RECONFIG_RB_ADDR 56
 `define CW_IOREAD_ADDR          59
 
 `define CG1_DRP_ADDR            62

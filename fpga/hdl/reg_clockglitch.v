@@ -73,10 +73,6 @@ module reg_clockglitch #(
    wire phase2_done;
 
    
-`ifdef SUPPORT_GLITCH_READBACK
-    reg [127:0] clockglitch_readback_reg;
-`endif
-
    // @ Address 56, 8 bytes (+8 extra reserved for future...)
    //
    // [1 .. 0 ] = Offset (DCM Load Value, MSB = 1, LSB=0)
@@ -285,13 +281,6 @@ module reg_clockglitch #(
             `CLOCKGLITCH_OFFSET: reg_datao_reg = clockglitch_offset_reg[reg_bytecnt*8 +: 8];
             `CLOCKGLITCH_POWERDOWN: reg_datao_reg = {7'b0, clockglitch_powerdown};
             `CLOCKGLITCH_NUM_GLITCHES: reg_datao_reg = glitch_count;
-
-`ifdef SUPPORT_GLITCH_READBACK
-            // ***** be careful to not add registers in this ifdef block unless you really mean to! *****
-            `GLITCH_RECONFIG_RB_ADDR: reg_datao_reg = clockglitch_readback_reg[reg_bytecnt*8 +: 8];
-            `GLITCHCYCLES_CNT: reg_datao_reg = clockglitch_cnt[reg_bytecnt*8 +: 8];
-            // ***** be careful to not add registers in this ifdef block unless you really mean to! *****
-`endif
             default: reg_datao_reg = 0;
          endcase
       end
@@ -310,10 +299,6 @@ module reg_clockglitch #(
          clockglitch_powerdown <= 1;
          max_glitches1toN_reg <= 0;
          num_glitches <= 1;
-`ifdef SUPPORT_GLITCH_READBACK
-         clockglitch_cnt_rst <= 0;
-         clockglitch_readback_reg <= {8'd0, 8'd10, 8'd0, 8'd10, 16'd0, 16'd0};
-`endif
       end 
 
       else if (clockglitch_settings_reg[16])
@@ -329,10 +314,6 @@ module reg_clockglitch #(
             `CLOCKGLITCH_POWERDOWN: clockglitch_powerdown <= reg_datai[0];
             `CLOCKGLITCH_REPEATS: max_glitches1toN_reg[reg_bytecnt*8 +: 8] <= reg_datai;
             `CLOCKGLITCH_NUM_GLITCHES: num_glitches <= reg_datai;
-`ifdef SUPPORT_GLITCH_READBACK
-            `GLITCHCYCLES_CNT: clockglitch_cnt_rst <= reg_datai[0];
-            `GLITCH_RECONFIG_RB_ADDR: clockglitch_readback_reg[reg_bytecnt*8 +: 8] <= reg_datai;
-`endif
          default: ;
          endcase
       end
