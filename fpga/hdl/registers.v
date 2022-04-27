@@ -282,7 +282,9 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define CLKGEN_POWERDOWN        48
 
 `define CLOCKGLITCH_POWERDOWN   49
+`define CLOCKGLITCH_REPEATS     50
 `define CLOCKGLITCH_SETTINGS    51
+`define CLOCKGLITCH_NUM_GLITCHES 52
 `define CW_IOROUTE_ADDR         55
 `define GLITCH_RECONFIG_RB_ADDR 56
 `define CW_IOREAD_ADDR          59
