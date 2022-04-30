@@ -35,8 +35,8 @@ POSSIBILITY OF SUCH DAMAGE.
 
 module reg_clockglitch #(
    parameter pBYTECNT_SIZE = 7,
-   parameter pMAX_GLITCHES = 8,
-   parameter pNUM_GLITCH_WIDTH = 3 // size as log2(pMAX_GLITCHES)
+   parameter pMAX_GLITCHES = 32,
+   parameter pNUM_GLITCH_WIDTH = 5 // size as log2(pMAX_GLITCHES)
 )(
    input  wire         reset,
    input  wire         clk_usb,
@@ -151,29 +151,23 @@ module reg_clockglitch #(
 
    wire [2:0] glitch_type;
    wire [1:0] glitch_trigger_src;
-   reg  [12:0] max_glitches;
    wire [12:0] max_glitches0;
    reg  [13*(pMAX_GLITCHES-1)-1:0] max_glitches1toN_reg;
    reg  [pNUM_GLITCH_WIDTH-1:0] num_glitches;
-   wire [pNUM_GLITCH_WIDTH-1:0] glitch_count;
+   wire [pNUM_GLITCH_WIDTH-1:0] glitch_done_count;
+   wire trigger_resync_idle;
    wire sourceclk;
 
    wire [31:0] offset = clockglitch_offset_reg[exttrigger_index*32 +: 32];
    wire exttrigger_done;
-   wire [2:0] exttrigger_index;
+   wire [pNUM_GLITCH_WIDTH-1:0] exttrigger_index;
    wire exttrigger_resync;
 
    assign glitch_type = clockglitch_settings_reg[46:44];
    assign glitch_trigger_src = clockglitch_settings_reg[43:42];
    assign max_glitches0 = {clockglitch_settings_reg[62:58], clockglitch_settings_reg[55:48]};
 
-   always @(posedge sourceclk) begin
-      if (exttrigger_index <= 1)
-          max_glitches <= max_glitches0;
-      else
-          max_glitches <= max_glitches1toN_reg[(exttrigger_index-2)*13 +: 13];
-   end
-
+   wire [13*pMAX_GLITCHES-1:0] all_max_glitches = {max_glitches1toN_reg, max_glitches0};
 
 `ifdef __ICARUS__
    assign sourceclk = (clockglitch_settings_reg[57:56] == 2'b01) ? clkgen : 
@@ -222,7 +216,7 @@ module reg_clockglitch #(
    always @(posedge sourceclk) begin
       if (clockglitch_powerdown)
          glitch_trigger <= 1'b0;
-      if (glitch_trigger_src == 2'b10)
+      else if (glitch_trigger_src == 2'b10)
          glitch_trigger <= 1'b1;
       else if (glitch_trigger_src == 2'b00)
          glitch_trigger <= manual_rs2 & manual_dly;
@@ -280,7 +274,7 @@ module reg_clockglitch #(
             `CLOCKGLITCH_SETTINGS: reg_datao_reg = clockglitch_settings_read[reg_bytecnt*8 +: 8];
             `CLOCKGLITCH_OFFSET: reg_datao_reg = clockglitch_offset_reg[reg_bytecnt*8 +: 8];
             `CLOCKGLITCH_POWERDOWN: reg_datao_reg = {7'b0, clockglitch_powerdown};
-            `CLOCKGLITCH_NUM_GLITCHES: reg_datao_reg = glitch_count;
+            `CLOCKGLITCH_NUM_GLITCHES: reg_datao_reg = glitch_done_count;
             default: reg_datao_reg = 0;
          endcase
       end
@@ -332,18 +326,22 @@ module reg_clockglitch #(
       .index                (exttrigger_index),
       .glitch_go            (glitch_go),
       .num_glitches         (num_glitches),
-      .glitch_count         (glitch_count)
+      .glitch_done_count    (glitch_done_count),
+      .idle                 (trigger_resync_idle)
    );
 
  /* Glitch Hardware */
  clockglitch_a7 #(
-    .pBYTECNT_SIZE    (pBYTECNT_SIZE)
+    .pBYTECNT_SIZE          (pBYTECNT_SIZE),
+    .pMAX_GLITCHES          (pMAX_GLITCHES),
+    .pNUM_GLITCH_WIDTH      (pNUM_GLITCH_WIDTH)
  ) U_clockglitch (
     .source_clk             (sourceclk),
     .reset                  (reset),
     .glitched_clk           (glitchclk),
     .glitch_trigger         (glitch_trigger),
-    .max_glitches           (max_glitches),
+    .all_max_glitches       (all_max_glitches),
+    .trigger_resync_idle    (trigger_resync_idle),
     .glitch_type            (glitch_type),
     .clk_usb                (clk_usb),
     .mmcm_rst               (mmcm_rst),

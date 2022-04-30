@@ -24,8 +24,8 @@ Author: Colin O'Flynn <coflynn@newae.com>, Jean-Pierre Thibault <jpthibault@newa
 
 
 module trigger_resync #(
-   parameter pMAX_GLITCHES = 8,
-   parameter pNUM_GLITCH_WIDTH = 3,
+   parameter pMAX_GLITCHES = 32,
+   parameter pNUM_GLITCH_WIDTH = 5,
    parameter pSYNC_STAGES = 2
 )(
    input  wire                          reset,
@@ -35,9 +35,10 @@ module trigger_resync #(
    input  wire [pNUM_GLITCH_WIDTH-1:0]  num_glitches,
    output reg                           exttrigger_resync,
    output reg                           done,
-   output reg [2:0]                     index,
-   output reg [pNUM_GLITCH_WIDTH-1:0]   glitch_count,
-   input  wire                          glitch_go // caution: synchronous to negedge of MMCM1 clock
+   output reg [pNUM_GLITCH_WIDTH-1:0]   index,
+   output reg [pNUM_GLITCH_WIDTH-1:0]   glitch_done_count,
+   input  wire                          glitch_go, // caution: synchronous to negedge of MMCM1 clock
+   output wire                          idle
 );
 
    reg async_trigger = 1'b0;
@@ -54,6 +55,8 @@ module trigger_resync #(
    reg [1:0] state = pS_IDLE;
 
    wire glitch_condition = (glitch_delay_cnt == offset);
+
+   assign idle = (state == pS_IDLE);
 
    `ifdef ASYNC_TRIGGER
        // This must be coded just so, otherwise Vivado will throw a "Synth 8-91
@@ -79,9 +82,9 @@ module trigger_resync #(
    always @(posedge clk) begin
        {glitch_go_sync_r, glitch_go_sync, glitch_go_pipe} <= {glitch_go_sync, glitch_go_pipe, glitch_go};
        if (state == pS_IDLE)
-           glitch_count <= 0;
+           glitch_done_count <= 0;
        else if (glitch_go_sync_r & ~glitch_go_sync)
-           glitch_count <= glitch_count + 1;
+           glitch_done_count <= glitch_done_count + 1;
    end
 
 
@@ -133,7 +136,7 @@ module trigger_resync #(
                end
 
                pS_DONE: begin
-                   if (glitch_count == num_glitches) begin
+                   if (~exttrig && (glitch_done_count == num_glitches)) begin
                        state <= pS_IDLE;
                        done <= 1'b1;
                    end

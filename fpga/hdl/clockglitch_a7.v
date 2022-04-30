@@ -32,7 +32,10 @@ POSSIBILITY OF SUCH DAMAGE.
 *************************************************************************/
 
 module clockglitch_a7 #(
-   parameter pBYTECNT_SIZE = 7
+   parameter pBYTECNT_SIZE = 7,
+   parameter pMAX_GLITCHES = 32,
+   parameter pNUM_GLITCH_WIDTH = 5,
+   parameter pSYNC_STAGES = 2
 )(
     input wire                          reset,
    // Source Clock
@@ -43,7 +46,8 @@ module clockglitch_a7 #(
 
     // Glitch request
     input wire                          glitch_trigger,
-    input wire [12:0]                   max_glitches,
+    input wire [13*pMAX_GLITCHES-1:0]   all_max_glitches,
+    input wire                          trigger_resync_idle,
     input wire [2:0]                    glitch_type,
      /*
      000 = Glitch is XORd with Clock (Positive or Negative going glitch)
@@ -121,6 +125,27 @@ module clockglitch_a7 #(
     wire [7:0] reg_datao_drp1;
     wire [7:0] reg_datao_drp2;
     assign reg_datao = reg_datao_drp1 | reg_datao_drp2;
+
+   (*ASYNC_REG = "True" *) reg [13*pMAX_GLITCHES-1:0] all_max_glitches_reg;
+   wire [12:0] max_glitches;
+   reg [pNUM_GLITCH_WIDTH-1:0] glitch_count;
+
+   (* ASYNC_REG = "TRUE" *) reg  [pSYNC_STAGES-1:0] idle_pipe;
+   reg clockglitch_idle;
+
+   // resetting glitch_count to 0 is the tricky bit here... another approach
+   // would be a CDC'd pulse when *entering* idle, but this is a bit simpler
+   // and should work:
+   always @(negedge glitch_mmcm1_clk_out_buf) begin
+       {clockglitch_idle, idle_pipe} <= {idle_pipe, trigger_resync_idle};
+       all_max_glitches_reg <= all_max_glitches;
+       if (~glitch_go & glitch_go_r)
+           glitch_count <= glitch_count + 1;
+       else if (clockglitch_idle)
+           glitch_count <= 0;
+   end
+   assign max_glitches = all_max_glitches_reg[glitch_count*13 +: 13];
+
 
     mmcm_phaseshift_interface U_offset_phaseshift (
       .clk_usb          (clk_usb),

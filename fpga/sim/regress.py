@@ -213,6 +213,35 @@ tests.append(dict(name  = 'sad',
              TOP = 'sad_tb.v',
              description = 'SAD block-level test.'))
 
+tests.append(dict(name  = 'glitches_short',
+             frequency = 1,
+             FIFO_SAMPLES = 30,
+             SHORT_TRIGGER = [0,1],
+             NUM_GLITCHES = [1, 31], #TODO
+             #NUM_GLITCHES = 8,
+             #MAX_GLITCH_REPEATS = 3,
+             #MAX_GLITCH_OFFSET = 4,
+             MAX_GLITCH_REPEATS = 10,
+             MAX_GLITCH_OFFSET = 11,
+             description = 'Test programmable multiple glitches, quick and short.'))
+
+tests.append(dict(name  = 'glitches_long',
+             frequency = 2,
+             FIFO_SAMPLES = 30,
+             SHORT_TRIGGER = [0,1],
+             NUM_GLITCHES = [3, 8],
+             MAX_GLITCH_REPEATS = 1000,
+             MAX_GLITCH_OFFSET = 1010,
+             description = 'Test programmable multiple glitches, slow and long.'))
+
+tests.append(dict(name  = 'glitches_lots',
+             frequency = 4,
+             FIFO_SAMPLES = 30,
+             SHORT_TRIGGER = [0,1],
+             NUM_GLITCHES = 31, # TODO
+             MAX_GLITCH_REPEATS = 100,
+             MAX_GLITCH_OFFSET = 110,
+             description = 'Test programmable multiple glitches, lots of them.'))
 
 
 
