@@ -154,7 +154,7 @@ module reg_clockglitch #(
    wire [12:0] max_glitches0;
    reg  [13*(pMAX_GLITCHES-1)-1:0] max_glitches1toN_reg;
    reg  [pNUM_GLITCH_WIDTH-1:0] num_glitches;
-   wire [pNUM_GLITCH_WIDTH-1:0] glitch_done_count;
+   wire [pNUM_GLITCH_WIDTH:0] glitch_done_count;
    wire trigger_resync_idle;
    wire sourceclk;
 
@@ -292,7 +292,7 @@ module reg_clockglitch #(
          clockglitch_offset_reg <= 0;
          clockglitch_powerdown <= 1;
          max_glitches1toN_reg <= 0;
-         num_glitches <= 1;
+         num_glitches <= 0;
       end 
 
       else if (clockglitch_settings_reg[16])

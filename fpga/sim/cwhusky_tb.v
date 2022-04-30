@@ -46,7 +46,7 @@ module cwhusky_tb();
    parameter pTRIGGER_NOW = 0;
    parameter pREAD_DELAY = 0;
    parameter pNUM_SEGMENTS = 0;
-   parameter pNUM_GLITCHES = 0;
+   parameter pNUM_GLITCHES = 1;
    parameter pMAX_GLITCH_OFFSET= 0;
    parameter pMAX_GLITCH_REPEATS= 0;
    parameter pSEGMENT_CYCLES = 1;
@@ -350,7 +350,7 @@ module cwhusky_tb();
               write_next_byte(remaining_reps[i*8 +: 8]);
 
           // set number of glitches:
-          write_1byte(`CLOCKGLITCH_NUM_GLITCHES, pNUM_GLITCHES);
+          write_1byte(`CLOCKGLITCH_NUM_GLITCHES, pNUM_GLITCHES-1);
 
           // enable glitching
           write_1byte(`CLOCKGLITCH_POWERDOWN, 8'h00);
@@ -602,11 +602,15 @@ module cwhusky_tb();
        expected_glitch = 1'b0;
        repeat(100) @(negedge glitch_clock);
        glitch_compare = 0;
-       glitches_done = 1;
        if (glitch_errors) begin
            errors += glitch_errors;
            $display("ERROR: %0d glitch comparison failures", glitch_errors);
        end
+       if (~U_dut.reg_clockglitch.resync.idle) begin
+           errors += 1;
+           $display("ERROR: glitch trigger_resync FSM not in idle when it should be done.");
+       end
+       glitches_done = 1;
    end
 
    // Then we flag any differences:
