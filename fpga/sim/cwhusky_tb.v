@@ -450,9 +450,9 @@ module cwhusky_tb();
              trigger_cycles = 5;
          else begin
              if (pNUM_SEGMENTS > 1)
-                 trigger_cycles = $urandom_range(2, fifo_samples-2);
+                 trigger_cycles = $urandom_range(3, fifo_samples-2);
              else
-                 trigger_cycles = $urandom_range(2, 2*fifo_samples+offset); // to cover the case where trigger is held longer than the capture
+                 trigger_cycles = $urandom_range(3, 2*fifo_samples+offset); // to cover the case where trigger is held longer than the capture
          end
 
          repeat (trigger_cycles) @(posedge clk_adc);
@@ -606,6 +606,8 @@ module cwhusky_tb();
            errors += glitch_errors;
            $display("ERROR: %0d glitch comparison failures", glitch_errors);
        end
+       wait (~target_io4);
+       repeat(10) @(posedge clk_adc);
        if (~U_dut.reg_clockglitch.resync.idle) begin
            errors += 1;
            $display("ERROR: glitch trigger_resync FSM not in idle when it should be done.");
