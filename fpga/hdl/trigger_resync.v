@@ -42,6 +42,8 @@ module trigger_resync #(
 );
 
    reg async_trigger = 1'b0;
+   reg exttrig_r;
+   reg [31:0] offset_r;
    reg [31:0] glitch_delay_cnt;
 
    (* ASYNC_REG = "TRUE" *) reg  [pSYNC_STAGES-1:0] glitch_go_pipe;
@@ -54,7 +56,7 @@ module trigger_resync #(
    localparam pS_DONE = 3;
    reg [1:0] state = pS_IDLE;
 
-   wire glitch_condition = (glitch_delay_cnt == offset);
+   wire glitch_condition = (glitch_delay_cnt == offset_r);
 
    assign idle = (state == pS_IDLE);
 
@@ -65,12 +67,14 @@ module trigger_resync #(
        always @(posedge clk or posedge exttrig) begin
    `else
        always @(posedge clk) begin
+   `endif
+          exttrig_r <= exttrig;
+          offset_r <= offset;
           if (exttrig == 1'b1)
              async_trigger <= 1'b1;
           else if (done)
              async_trigger <= 1'b0;
        end
-   `endif
 
 
    // Count glitch_go's, to know when we're done:
@@ -119,10 +123,11 @@ module trigger_resync #(
                end
 
                pS_WAIT: begin
-                   //if (exttrigger_resync) begin
                    if (glitch_condition) begin
-                       if (index < num_glitches)
+                       if (index < num_glitches) begin
+                           index <= index + 1;
                            state <= pS_NEXT;
+                       end
                        else begin
                            state <= pS_DONE;
                            index <= index + 1;
@@ -131,12 +136,11 @@ module trigger_resync #(
                end
 
                pS_NEXT: begin
-                   index <= index + 1;
                    state <= pS_WAIT;
                end
 
                pS_DONE: begin
-                   if (~exttrig && (glitch_done_count == (num_glitches+1))) begin
+                   if (~exttrig_r && (glitch_done_count == (num_glitches+1))) begin
                        state <= pS_IDLE;
                        done <= 1'b1;
                    end

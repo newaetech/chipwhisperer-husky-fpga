@@ -127,7 +127,7 @@ module clockglitch_a7 #(
     assign reg_datao = reg_datao_drp1 | reg_datao_drp2;
 
    (*ASYNC_REG = "True" *) reg [13*pMAX_GLITCHES-1:0] all_max_glitches_reg;
-   wire [12:0] max_glitches;
+   reg [12:0] max_glitches;
    reg [pNUM_GLITCH_WIDTH-1:0] glitch_count;
 
    (* ASYNC_REG = "TRUE" *) reg  [pSYNC_STAGES-1:0] idle_pipe;
@@ -139,12 +139,8 @@ module clockglitch_a7 #(
    always @(negedge glitch_mmcm1_clk_out_buf) begin
        {clockglitch_idle, idle_pipe} <= {idle_pipe, trigger_resync_idle};
        all_max_glitches_reg <= all_max_glitches;
-       if (~glitch_go & glitch_go_r)
-           glitch_count <= glitch_count + 1;
-       else if (clockglitch_idle)
-           glitch_count <= 0;
+       max_glitches <= all_max_glitches_reg[glitch_count*13 +: 13];
    end
-   assign max_glitches = all_max_glitches_reg[glitch_count*13 +: 13];
 
 
     mmcm_phaseshift_interface U_offset_phaseshift (
@@ -173,7 +169,7 @@ module clockglitch_a7 #(
    wire glitchstream;
 
 
-   reg [12:0] glitch_cnt;
+   reg [12:0] glitch_len_cnt;
    (* ASYNC_REG = "TRUE" *) reg[2:0] glitch_trigger_pipe;
    reg glitch_trigger_resync;
 
@@ -198,23 +194,30 @@ module clockglitch_a7 #(
       glitch_go_r <= glitch_go;
       // Careful because it's possible for glitch_trigger_resync to be > 1 cycle.
       // Also note that max_glitches = <number of cycles to glitch> - 1
-      if (max_glitches > 0) begin
+      if (clockglitch_idle)
+          glitch_count <= 0;
+
+      else if (max_glitches > 0) begin
           if (glitch_trigger_resync)
              glitch_go <= 'b1;
-          else if (glitch_cnt >= max_glitches)
+          else if (glitch_len_cnt == max_glitches) begin
              glitch_go <= 'b0;
+             glitch_count <= glitch_count + 1;
+           end
       end
       else begin
-          if (glitch_go)
+          if (glitch_go) begin
               glitch_go <= 1'b0;
+              glitch_count <= glitch_count + 1;
+          end
           else if (glitch_trigger_resync)
               glitch_go <= 1'b1;
       end
 
       if (glitch_go)
-         glitch_cnt <= glitch_cnt + 13'd1;
+         glitch_len_cnt <= glitch_len_cnt + 13'd1;
       else
-         glitch_cnt <= 0;
+         glitch_len_cnt <= 0;
    end
 
 
