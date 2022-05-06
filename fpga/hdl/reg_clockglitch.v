@@ -122,8 +122,8 @@ module reg_clockglitch #(
     [41] (Byte 5, Bit 1)  = MMCM Reset
     [43..42] (Byte 5, Bit [3..2]) = Glitch trigger source
          00 = Manual
-         01 = Capture Trigger (with offset, continous)
-         10 = Continous
+         01 = Capture Trigger (with offset, continuous)
+         10 = Continuous
          11 = Capture Trigger (with offset, single-shot when manual glitch is '1')
 
     [46..44] (Byte 5, Bit [6..4]) = Glitch Type
@@ -154,6 +154,8 @@ module reg_clockglitch #(
    wire [12:0] max_glitches0;
    reg  [13*(pMAX_GLITCHES-1)-1:0] max_glitches1toN_reg;
    reg  [pNUM_GLITCH_WIDTH-1:0] num_glitches;
+   reg  fsm_reset;
+   wire [1:0] trigger_resync_state;
    wire [pNUM_GLITCH_WIDTH:0] glitch_done_count;
    wire trigger_resync_idle;
    wire sourceclk;
@@ -162,6 +164,9 @@ module reg_clockglitch #(
    wire exttrigger_done;
    wire [pNUM_GLITCH_WIDTH-1:0] exttrigger_index;
    wire exttrigger_resync;
+   wire multiple_glitches_supported;
+   wire continuous_mode;
+   wire ext_single_mode;
 
    assign glitch_type = clockglitch_settings_reg[46:44];
    assign glitch_trigger_src = clockglitch_settings_reg[43:42];
@@ -226,6 +231,11 @@ module reg_clockglitch #(
          glitch_trigger <= exttrigger_resync & oneshot;
    end 
 
+   assign multiple_glitches_supported = (glitch_trigger_src == 2'b01) ||
+                                        (glitch_trigger_src == 2'b11);
+   assign continuous_mode = (glitch_trigger_src == 2'b10);
+   assign ext_single_mode = (glitch_trigger_src == 2'b11);
+
    always @(posedge sourceclk) begin
       if (reset)
          oneshot <= 1'b0;
@@ -275,6 +285,8 @@ module reg_clockglitch #(
             `CLOCKGLITCH_OFFSET: reg_datao_reg = clockglitch_offset_reg[reg_bytecnt*8 +: 8];
             `CLOCKGLITCH_POWERDOWN: reg_datao_reg = {7'b0, clockglitch_powerdown};
             `CLOCKGLITCH_NUM_GLITCHES: reg_datao_reg = glitch_done_count;
+            `CLOCKGLITCH_MULTIPLE_STATE: reg_datao_reg = trigger_resync_state;
+            `CLOCKGLITCH_REPEATS: reg_datao_reg = max_glitches1toN_reg[reg_bytecnt*8 +: 8];
             default: reg_datao_reg = 0;
          endcase
       end
@@ -308,6 +320,7 @@ module reg_clockglitch #(
             `CLOCKGLITCH_POWERDOWN: clockglitch_powerdown <= reg_datai[0];
             `CLOCKGLITCH_REPEATS: max_glitches1toN_reg[reg_bytecnt*8 +: 8] <= reg_datai;
             `CLOCKGLITCH_NUM_GLITCHES: num_glitches <= reg_datai;
+            `CLOCKGLITCH_MULTIPLE_STATE: fsm_reset <= reg_datai[0];
          default: ;
          endcase
       end
@@ -318,7 +331,11 @@ module reg_clockglitch #(
       .pNUM_GLITCH_WIDTH    (pNUM_GLITCH_WIDTH)
    ) resync(
       .reset                (reset),
+      .fsm_reset            (fsm_reset),
       .clk                  (sourceclk),
+      .clk_usb              (clk_usb),
+      .ext_single_mode      (ext_single_mode),
+      .oneshot              (oneshot),
       .exttrig              (exttrigger),
       .offset               (offset),
       .exttrigger_resync    (exttrigger_resync),
@@ -327,7 +344,8 @@ module reg_clockglitch #(
       .glitch_go            (glitch_go),
       .num_glitches         (num_glitches),
       .glitch_done_count    (glitch_done_count),
-      .idle                 (trigger_resync_idle)
+      .idle                 (trigger_resync_idle),
+      .fsm_state            (trigger_resync_state)
    );
 
  /* Glitch Hardware */
@@ -342,6 +360,8 @@ module reg_clockglitch #(
     .glitch_trigger         (glitch_trigger),
     .all_max_glitches       (all_max_glitches),
     .trigger_resync_idle    (trigger_resync_idle),
+    .multiple_glitches_supported (multiple_glitches_supported),
+    .continuous_mode        (continuous_mode),
     .glitch_type            (glitch_type),
     .clk_usb                (clk_usb),
     .mmcm_rst               (mmcm_rst),

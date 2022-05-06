@@ -284,6 +284,7 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define CLOCKGLITCH_REPEATS     50
 `define CLOCKGLITCH_SETTINGS    51
 `define CLOCKGLITCH_NUM_GLITCHES 52
+`define CLOCKGLITCH_MULTIPLE_STATE 53
 `define CW_IOROUTE_ADDR         55
 `define CW_IOREAD_ADDR          59
 

@@ -29,7 +29,11 @@ module trigger_resync #(
    parameter pSYNC_STAGES = 2
 )(
    input  wire                          reset,
+   input  wire                          fsm_reset,
    input  wire                          clk,    // clkgen or HS1
+   input  wire                          clk_usb, // for debug only
+   input  wire                          ext_single_mode,
+   input  wire                          oneshot,
    input  wire                          exttrig,
    input  wire [31:0]                   offset,
    input  wire [pNUM_GLITCH_WIDTH-1:0]  num_glitches,
@@ -38,7 +42,8 @@ module trigger_resync #(
    output reg [pNUM_GLITCH_WIDTH-1:0]   index,
    output reg [pNUM_GLITCH_WIDTH:0]     glitch_done_count,
    input  wire                          glitch_go, // caution: synchronous to negedge of MMCM1 clock
-   output wire                          idle
+   output wire                          idle,
+   output wire [1:0]                    fsm_state
 );
 
    reg async_trigger = 1'b0;
@@ -55,6 +60,7 @@ module trigger_resync #(
    localparam pS_NEXT = 2;
    localparam pS_DONE = 3;
    reg [1:0] state = pS_IDLE;
+   assign fsm_state = state;
 
    wire glitch_condition = (glitch_delay_cnt == offset_r);
 
@@ -70,7 +76,8 @@ module trigger_resync #(
    `endif
           exttrig_r <= exttrig;
           offset_r <= offset;
-          if (exttrig == 1'b1)
+          // important: don't start FSM if glitches aren't going to be generated (otherwise it'll get stuck in DONE)
+          if ((exttrig == 1'b1) && (ext_single_mode? oneshot : 1'b1))
              async_trigger <= 1'b1;
           else if (done)
              async_trigger <= 1'b0;
@@ -140,7 +147,7 @@ module trigger_resync #(
                end
 
                pS_DONE: begin
-                   if (~exttrig_r && (glitch_done_count == (num_glitches+1))) begin
+                   if ((~exttrig_r && (glitch_done_count == (num_glitches+1))) || fsm_reset) begin
                        state <= pS_IDLE;
                        done <= 1'b1;
                    end
@@ -150,6 +157,22 @@ module trigger_resync #(
            endcase
        end
    end
+
+`ifdef ILA_TRIGGER_RESYNC
+    ila_trigger_resync U_ila_trigger_resync (
+       .clk            (clk_usb),              // input wire clk
+       .probe0         (state),                // input wire [1:0]  probe0 
+       .probe1         (async_trigger),        // input wire [0:0]  probe1 
+       .probe2         (exttrig),              // input wire [0:0]  probe2 
+       .probe3         (done),                 // input wire [0:0]  probe3 
+       .probe4         (glitch_condition),     // input wire [0:0]  probe4 
+       .probe5         (glitch_done_count),    // input wire [4:0]  probe5 
+       .probe6         (exttrigger_resync),    // input wire [0:0]  probe6 
+       .probe7         (glitch_delay_cnt),     // input wire [31:0] probe7 
+       .probe8         (num_glitches),         // input wire [4:0]  probe8 
+       .probe9         (offset_r)              // input wire [31:0] probe9 
+    );
+`endif
 
 
 endmodule

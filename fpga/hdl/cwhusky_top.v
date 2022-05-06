@@ -283,7 +283,7 @@ module cwhusky_top(
       assign userio_debug_data[4] = fast_fifo_read;
       assign userio_debug_data[5] = fifo_error_flag;
       assign userio_debug_data[6] = glitchclk;
-      assign userio_debug_data[7] = 1'bz;
+      assign userio_debug_data[7] = glitch_enable;
 
    `else
       assign userio_debug_data[7:0] = 8'bz;
