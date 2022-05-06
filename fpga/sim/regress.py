@@ -240,6 +240,14 @@ tests.append(dict(name  = 'glitches_lots',
              MAX_GLITCH_OFFSET = 110,
              description = 'Test programmable multiple glitches, lots of them.'))
 
+tests.append(dict(name  = 'glitches_single',
+             frequency = 6,
+             FIFO_SAMPLES = 30,
+             SHORT_TRIGGER = [0,1],
+             NUM_GLITCHES = 1,
+             MAX_GLITCH_REPEATS = 2000,
+             MAX_GLITCH_OFFSET = 2010,
+             description = 'Test single glitch.'))
 
 
 def print_tests():
