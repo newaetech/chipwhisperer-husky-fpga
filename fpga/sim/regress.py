@@ -231,6 +231,16 @@ tests.append(dict(name  = 'glitches_long',
              MAX_GLITCH_OFFSET = 1010,
              description = 'Test programmable multiple glitches, slow and long.'))
 
+tests.append(dict(name  = 'glitches_very_long_and_slow',
+             frequency = 10,
+             FIFO_SAMPLES = 30,
+             SHORT_TRIGGER = [0,1],
+             NUM_GLITCHES = 2,
+             MAX_GLITCH_REPEATS = 10,
+             MAX_GLITCH_OFFSET = 200000,
+             TIMEOUT_CYCLES = 1000000,
+             description = 'Test programmable multiple glitches beyond 2^16. Very slow!'))
+
 tests.append(dict(name  = 'glitches_lots',
              frequency = 4,
              FIFO_SAMPLES = 30,
