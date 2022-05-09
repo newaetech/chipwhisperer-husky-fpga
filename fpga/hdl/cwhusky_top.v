@@ -882,6 +882,20 @@ module cwhusky_top(
    );
    `endif
 
+`ifdef ILA_SHARED_FIFO
+    ila_shared_fifo U_ila_shared_fifo (
+       .clk            (clk_usb_buf),          // input wire clk
+       .probe0         (fifo_wr),              // input wire [0:0]  probe0 
+       .probe1         (fifo_full),            // input wire [0:0]  probe1 
+       .probe2         (fifo_overflow_blocked),// input wire [0:0]  probe2 
+       .probe3         (fifo_read),            // input wire [0:0]  probe3 
+       .probe4         (fifo_flush),           // input wire [0:0]  probe4 
+       .probe5         (trace_fifo_error_flag),// input wire [0:0]  probe5 
+       .probe6         (fifo_source_sel)       // input wire [0:0]  probe6 
+    );
+`endif
+
+
 
 
 endmodule

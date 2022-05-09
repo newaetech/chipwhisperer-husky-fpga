@@ -36,10 +36,10 @@ set_case_analysis 1 [get_pins U_trace_top/U_fe_clock_mux2/S]
 set_case_analysis 1 [get_pins U_fifo_clk_mux/S]
 
 # These are needed to meet timing on USB_Data:
-set_max_delay 20 -through [get_pins USB_Data_IOBUF*inst/T]
-set_max_delay 20 -through [get_pins U_usb_reg_main/reg_address_reg*/Q]
-set_max_delay 20 -through [get_pins oadc/U_fifo/fifo_read_count_reg*/Q]
-set_max_delay 20 -through [get_pins oadc/U_reg_openadc_adcfifo/fast_fifo_read_mode_reg/Q]
+set_max_delay 15 -through [get_pins USB_Data_IOBUF*inst/T]
+set_max_delay 15 -through [get_pins U_usb_reg_main/reg_address_reg*/Q]
+set_max_delay 15 -through [get_pins oadc/U_fifo/fifo_read_count_reg*/Q]
+set_max_delay 15 -through [get_pins oadc/U_reg_openadc_adcfifo/fast_fifo_read_mode_reg/Q]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks clk_usb ] \

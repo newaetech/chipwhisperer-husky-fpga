@@ -554,6 +554,23 @@ module reg_la #(
       .dst_pulse     (capturing_usb_pulse)
    );
 
+`ifdef ILA_LA
+    ila_la U_ila_la (
+       .clk            (clk_usb),              // input wire clk
+       .probe0         (fifo_wr),              // input wire [0:0]  probe0 
+       .probe1         (armed),                // input wire [0:0]  probe1 
+       .probe2         (fifo_empty),           // input wire [0:0]  probe2 
+       .probe3         (fifo_flush),           // input wire [0:0]  probe3 
+       .probe4         (fifo_clear_write_flags),// input wire [0:0]  probe4 
+       .probe5         (fifo_clear_read_flags),// input wire [0:0]  probe5 
+       .probe6         (reg_arm),              // input wire [0:0]  probe6 
+       .probe7         (capture_go_async),     // input wire [0:0]  probe7 
+       .probe8         (capture_go),           // input wire [0:0]  probe8 
+       .probe9         (capture_count),        // input wire [15:0] probe9 
+       .probe10        (capturing)             // input wire [0:0]  probe10
+    );
+`endif
+
 
 endmodule
 
