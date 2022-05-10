@@ -113,7 +113,7 @@ tests.append(dict(name  = 'full_stream',
 
 
 tests.append(dict(name  = 'both_fifos',
-             frequency = 2,
+             frequency = 3,
              FIFOSIZE = "TINYFIFO",
              description = 'Read beyond what the slow FIFO can hold, to verify proper transitioning, using tiny FIFOs to manage the run time.',
              ADC_LOW_RES = [0,1],
@@ -202,7 +202,7 @@ tests.append(dict(name  = 'downsample',
              description = 'Downsample.'))
 
 tests.append(dict(name  = 'sad',
-             frequency = 1,
+             frequency = 2,
              BITS_PER_SAMPLE = 8,
              REF_SAMPLES = 32, # maximum supported by target (could do more by upsizing internal registers)
              THRESHOLD = [10,50], # keep threshold low to avoid unintentional triggers - testbench isn't smart enough
@@ -214,7 +214,7 @@ tests.append(dict(name  = 'sad',
              description = 'SAD block-level test.'))
 
 tests.append(dict(name  = 'glitches_short',
-             frequency = 1,
+             frequency = 3,
              FIFO_SAMPLES = 30,
              SHORT_TRIGGER = [0,1],
              NUM_GLITCHES = [1, 32],
@@ -223,7 +223,7 @@ tests.append(dict(name  = 'glitches_short',
              description = 'Test programmable multiple glitches, quick and short.'))
 
 tests.append(dict(name  = 'glitches_long',
-             frequency = 2,
+             frequency = 6,
              FIFO_SAMPLES = 30,
              SHORT_TRIGGER = [0,1],
              NUM_GLITCHES = [4, 8],
@@ -232,7 +232,8 @@ tests.append(dict(name  = 'glitches_long',
              description = 'Test programmable multiple glitches, slow and long.'))
 
 tests.append(dict(name  = 'glitches_very_long_and_slow',
-             frequency = 10,
+             #frequency = 10,
+             frequency = 0, # this is just too slow to run!
              FIFO_SAMPLES = 30,
              SHORT_TRIGGER = [0,1],
              NUM_GLITCHES = 2,
@@ -242,7 +243,7 @@ tests.append(dict(name  = 'glitches_very_long_and_slow',
              description = 'Test programmable multiple glitches beyond 2^16. Very slow!'))
 
 tests.append(dict(name  = 'glitches_lots',
-             frequency = 4,
+             frequency = 8,
              FIFO_SAMPLES = 30,
              SHORT_TRIGGER = [0,1],
              NUM_GLITCHES = 32,
@@ -251,7 +252,7 @@ tests.append(dict(name  = 'glitches_lots',
              description = 'Test programmable multiple glitches, lots of them.'))
 
 tests.append(dict(name  = 'glitches_single',
-             frequency = 6,
+             frequency = 10,
              FIFO_SAMPLES = 30,
              SHORT_TRIGGER = [0,1],
              NUM_GLITCHES = 1,
