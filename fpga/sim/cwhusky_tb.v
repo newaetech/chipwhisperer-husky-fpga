@@ -266,28 +266,6 @@ module cwhusky_tb();
 
       // setup glitches:
       if (pNUM_GLITCHES) begin
-          /*
-          // TEMP: manual glitch
-          rw_lots_bytes(`CLOCKGLITCH_SETTINGS);
-          write_next_byte(8'h00); // byte 0
-          write_next_byte(8'h00); // byte 1
-          write_next_byte(8'h00); // byte 2
-          write_next_byte(8'h00); // byte 3
-          write_next_byte(8'h00); // byte 4
-          write_next_byte(8'h80); // byte 5: manual go
-          write_next_byte(8'h01); // byte 6: reps=1
-          write_next_byte(8'h01); // byte 7: source=clkgen
-          rw_lots_bytes(`CLOCKGLITCH_SETTINGS);
-          write_next_byte(8'h00); // byte 0
-          write_next_byte(8'h00); // byte 1
-          write_next_byte(8'h00); // byte 2
-          write_next_byte(8'h00); // byte 3
-          write_next_byte(8'h00); // byte 4
-          write_next_byte(8'h00); // byte 5: manual go done
-          write_next_byte(8'h01); // byte 6: reps=1
-          write_next_byte(8'h01); // byte 7: source=clkgen
-          */
-
           $display("pNUM_GLITCHES = %d", pNUM_GLITCHES);
           $display("pMAX_GLITCH_REPEATS = %d", pMAX_GLITCH_REPEATS);
           $display("pMAX_GLITCH_OFFSET = %d", pMAX_GLITCH_OFFSET);
@@ -311,6 +289,7 @@ module cwhusky_tb();
           #10 release U_dut.reg_clockglitch.U_clockglitch.glitch_go;
 
           // setup ext_single glitch, type=enable only
+          //
           rw_lots_bytes(`CLOCKGLITCH_SETTINGS);
           write_next_byte(8'h00); // byte 0
           write_next_byte(8'h00); // byte 1
@@ -320,6 +299,7 @@ module cwhusky_tb();
           write_next_byte(8'hcc); // byte 5: ext_single, enable only, manual go (manual is required for ext_single)
           write_next_byte(reps[7:0]); // byte 6: LSB of reps
           write_next_byte({1'b0, reps[12:8], 2'b01}); // byte 7: MSB of reps, source=clkgen
+          //
 
           // first ext_offset can be anything:
           rw_lots_bytes(`CLOCKGLITCH_OFFSET);
@@ -354,6 +334,74 @@ module cwhusky_tb();
 
           // enable glitching
           write_1byte(`CLOCKGLITCH_POWERDOWN, 8'h00);
+
+          /*
+          // TEMP: manual glitch
+          rw_lots_bytes(`CLOCKGLITCH_SETTINGS);
+          write_next_byte(8'h00); // byte 0
+          write_next_byte(8'h00); // byte 1
+          write_next_byte(8'h00); // byte 2
+          write_next_byte(8'h00); // byte 3
+          write_next_byte(8'h00); // byte 4
+          write_next_byte(8'h80); // byte 5: manual go
+          write_next_byte(8'h01); // byte 6: reps=1
+          write_next_byte(8'h01); // byte 7: source=clkgen
+          rw_lots_bytes(`CLOCKGLITCH_SETTINGS);
+          write_next_byte(8'h00); // byte 0
+          write_next_byte(8'h00); // byte 1
+          write_next_byte(8'h00); // byte 2
+          write_next_byte(8'h00); // byte 3
+          write_next_byte(8'h00); // byte 4
+          write_next_byte(8'h00); // byte 5: manual go done
+          write_next_byte(8'h01); // byte 6: reps=1
+          write_next_byte(8'h01); // byte 7: source=clkgen
+
+          #(pCLK_USB_PERIOD*100);
+
+          // TEMP: manual glitch
+          rw_lots_bytes(`CLOCKGLITCH_SETTINGS);
+          write_next_byte(8'h00); // byte 0
+          write_next_byte(8'h00); // byte 1
+          write_next_byte(8'h00); // byte 2
+          write_next_byte(8'h00); // byte 3
+          write_next_byte(8'h00); // byte 4
+          write_next_byte(8'h80); // byte 5: manual go
+          write_next_byte(8'h01); // byte 6: reps=1
+          write_next_byte(8'h01); // byte 7: source=clkgen
+          rw_lots_bytes(`CLOCKGLITCH_SETTINGS);
+          write_next_byte(8'h00); // byte 0
+          write_next_byte(8'h00); // byte 1
+          write_next_byte(8'h00); // byte 2
+          write_next_byte(8'h00); // byte 3
+          write_next_byte(8'h00); // byte 4
+          write_next_byte(8'h00); // byte 5: manual go done
+          write_next_byte(8'h01); // byte 6: reps=1
+          write_next_byte(8'h01); // byte 7: source=clkgen
+          */
+
+
+          /* debug exiting continuous mode
+          rw_lots_bytes(`CLOCKGLITCH_SETTINGS);
+          write_next_byte(8'h00); // byte 0
+          write_next_byte(8'h00); // byte 1
+          write_next_byte(8'h00); // byte 2
+          write_next_byte(8'h00); // byte 3
+          write_next_byte(8'h00); // byte 4
+          write_next_byte(8'h08); // byte 5: continuous
+          write_next_byte(reps[7:0]); // byte 6: LSB of reps
+          write_next_byte({1'b0, reps[12:8], 2'b01}); // byte 7: MSB of reps, source=clkgen
+
+          rw_lots_bytes(`CLOCKGLITCH_SETTINGS);
+          write_next_byte(8'h00); // byte 0
+          write_next_byte(8'h00); // byte 1
+          write_next_byte(8'h00); // byte 2
+          write_next_byte(8'h00); // byte 3
+          write_next_byte(8'h00); // byte 4
+          write_next_byte(8'h0c); // byte 5: single-shot
+          write_next_byte(reps[7:0]); // byte 6: LSB of reps
+          write_next_byte({1'b0, reps[12:8], 2'b01}); // byte 7: MSB of reps, source=clkgen
+          */
+
 
       end
 
@@ -435,6 +483,7 @@ module cwhusky_tb();
                settings[3] = 1'b1; // arm
                settings[6] = 1'b1; // trigger now
                write_1byte(`SETTINGS_ADDR, settings);
+               glitches_done = 1'b1; // glitch stuff won't happen with TRIGGER_NOW so don't wait for it
             end
             else begin
                write_1byte(`SETTINGS_ADDR, settings);
@@ -542,7 +591,7 @@ module cwhusky_tb();
       // TODO-temporary to manually verify if fast reads get disabled: (clean up later)
       write_1byte(`ECHO_ADDR, 155);
       read_1byte(`ECHO_ADDR, rdata);
-      //$display("Read %d", rdata);
+      //$display("XXX Read %d", rdata);
 
       if (pSTREAM)
          // clear stream mode:
