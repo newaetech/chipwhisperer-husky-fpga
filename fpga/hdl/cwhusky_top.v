@@ -728,7 +728,7 @@ module cwhusky_top(
           .trace_clk_in                 (TRACECLOCK),
           .fe_clk                       (fe_clk),
           .usb_clk                      (clk_usb_buf),
-          .reset_pin                    (1'b0),
+          .reset_pin                    (reg_rst),
           .fpga_reset                   (),
           .I_external_arm               (cmd_arm_usb),
           .flash_pattern                (),
