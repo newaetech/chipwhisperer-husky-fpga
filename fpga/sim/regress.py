@@ -113,7 +113,7 @@ tests.append(dict(name  = 'full_stream',
 
 
 tests.append(dict(name  = 'both_fifos',
-             frequency = 2,
+             frequency = 3,
              FIFOSIZE = "TINYFIFO",
              description = 'Read beyond what the slow FIFO can hold, to verify proper transitioning, using tiny FIFOs to manage the run time.',
              ADC_LOW_RES = [0,1],
@@ -201,6 +201,64 @@ tests.append(dict(name  = 'downsample',
              TIMEOUT_CYCLES = 1000000,
              description = 'Downsample.'))
 
+tests.append(dict(name  = 'sad',
+             frequency = 2,
+             BITS_PER_SAMPLE = 8,
+             REF_SAMPLES = 32, # maximum supported by target (could do more by upsizing internal registers)
+             THRESHOLD = [10,50], # keep threshold low to avoid unintentional triggers - testbench isn't smart enough
+             TRIGGERS = 10,
+             FLUSH = [0,1],
+             LINEAR_RAMP = 0,
+             TIMEOUT_CYCLES = 2000,
+             TOP = 'sad_tb.v',
+             description = 'SAD block-level test.'))
+
+tests.append(dict(name  = 'glitches_short',
+             frequency = 3,
+             FIFO_SAMPLES = 30,
+             SHORT_TRIGGER = [0,1],
+             NUM_GLITCHES = [1, 32],
+             MAX_GLITCH_REPEATS = 10,
+             MAX_GLITCH_OFFSET = 11,
+             description = 'Test programmable multiple glitches, quick and short.'))
+
+tests.append(dict(name  = 'glitches_long',
+             frequency = 6,
+             FIFO_SAMPLES = 30,
+             SHORT_TRIGGER = [0,1],
+             NUM_GLITCHES = [4, 8],
+             MAX_GLITCH_REPEATS = 1000,
+             MAX_GLITCH_OFFSET = 1010,
+             description = 'Test programmable multiple glitches, slow and long.'))
+
+tests.append(dict(name  = 'glitches_very_long_and_slow',
+             #frequency = 10,
+             frequency = 0, # this is just too slow to run!
+             FIFO_SAMPLES = 30,
+             SHORT_TRIGGER = [0,1],
+             NUM_GLITCHES = 2,
+             MAX_GLITCH_REPEATS = 10,
+             MAX_GLITCH_OFFSET = 200000,
+             TIMEOUT_CYCLES = 1000000,
+             description = 'Test programmable multiple glitches beyond 2^16. Very slow!'))
+
+tests.append(dict(name  = 'glitches_lots',
+             frequency = 8,
+             FIFO_SAMPLES = 30,
+             SHORT_TRIGGER = [0,1],
+             NUM_GLITCHES = 32,
+             MAX_GLITCH_REPEATS = 100,
+             MAX_GLITCH_OFFSET = 110,
+             description = 'Test programmable multiple glitches, lots of them.'))
+
+tests.append(dict(name  = 'glitches_single',
+             frequency = 10,
+             FIFO_SAMPLES = 30,
+             SHORT_TRIGGER = [0,1],
+             NUM_GLITCHES = 1,
+             MAX_GLITCH_REPEATS = 2000,
+             MAX_GLITCH_OFFSET = 2010,
+             description = 'Test single glitch.'))
 
 
 def print_tests():
@@ -282,7 +340,7 @@ for test in tests:
 
       run_test = True
       # build make command:
-      makeargs = ['make', 'all', 'VERBOSE=0']
+      makeargs = ['make', 'all', 'VERBOSE=1']
       makeargs.append("SEED=%d" % seed)
       if args.dump:
          makeargs.append('DUMP=1')
@@ -299,6 +357,8 @@ for test in tests:
                run_test = False
             elif i % test[key]:
                run_test = False
+         elif key == 'TOP' and test[key] == 'sad_tb.v':
+             makeargs[1] = 'all_sad'
          else:
             if type(test[key]) == list:
                value = random.randint(test[key][0], test[key][1])
@@ -308,6 +368,7 @@ for test in tests:
 
       # run:
       if run_test:
+         #print("Running: %s" % makeargs)
          p = subprocess.Popen(makeargs, stdout=outfile, stderr=outfile)
          processes.append((p,logfile,seed))
 
@@ -350,7 +411,7 @@ pbarpassed.close()
 #exit_codes = [p.wait() for p,l,s in processes]
 
 # sanity check:
-assert num_processes == pass_count + fail_count
+assert num_processes == pass_count + fail_count, "pass=%d, fail=%d" % (pass_count, fail_count)
 
 
 # Summarize results:

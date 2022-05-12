@@ -21,11 +21,13 @@
 ../hdl/slow_debug.v
 ../hdl/reg_la.v
 ../hdl/userio.v
+../hdl/sad.v
 ../tracewhisperer/hdl/trace_top.v
 ../tracewhisperer/hdl/reg_trace.v
 ../tracewhisperer/hdl/fe_capture_trace.v
 ../tracewhisperer/hdl/cdc_bus.v
 ../tracewhisperer/hdl/uart_core.v
+../tracewhisperer/hdl/simple_trigger.v
 ../tracewhisperer/phywhisperer-common/hardware/hdl/fifo.v
 ../tracewhisperer/phywhisperer-common/hardware/hdl/fe_capture_main.v
 ../tracewhisperer/phywhisperer-common/hardware/hdl/reg_main.v
@@ -36,5 +38,6 @@ vivado/adc_fast_fifo_sim_netlist.v
 vivado/usb_slow_fifo_sim_netlist.v
 vivado/tiny_adc_fast_fifo_sim_netlist.v
 vivado/tiny_usb_slow_fifo_sim_netlist.v
+vivado/sad_fifo_sim_netlist.v
 -y/tools/Xilinx/Vivado/2020.2/ids_lite/ISE/verilog/src/unisims/
 

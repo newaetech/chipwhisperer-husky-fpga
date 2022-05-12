@@ -56,12 +56,13 @@ module fifo_top_husky(
     output wire         fifo_overflow, //If overflow happens (bad during stream mode)
     input  wire         stream_mode, //1=Enable stream mode, 0=Normal
     output reg          error_flag,
-    output reg [7:0]    error_stat,
-    output reg [7:0]    first_error_stat,
+    output reg [8:0]    error_stat,
+    output reg [8:0]    first_error_stat,
     output reg [2:0]    first_error_state,
     input  wire         clear_fifo_errors,
     output reg          stream_segment_available,
     input  wire         no_clip_errors,
+    input  wire         no_gain_errors,
     input  wire         clip_test,
     output reg [7:0]    underflow_count,
     input  wire         no_underflow_errors,  // disables flagging of *slow* FIFO underflow errors only
@@ -122,9 +123,12 @@ module fifo_top_husky(
     reg                 slow_fifo_underflow_masked;
 
     reg  [3:0]          done_wait_count;
+    reg                 gain_error;
     reg                 segment_error;
     reg                 clip_error;
+    reg                 gain_too_low;
     reg                 downsample_error;
+    wire                clear_fifo_errors_adc;
 
     reg                 fifo_rst_pre;
     reg                 reset_done;
@@ -224,10 +228,13 @@ module fifo_top_husky(
     wire presamp_error = presamp_done && (state == pS_PRESAMP_FILLING);
 
     always @ (posedge adc_sampleclk) begin
-        if (reset)
+        if (reset) begin
             clip_error <= 1'b0;
+            gain_too_low <= 1'b0;
+            gain_error <= 1'b0;
+        end
         else begin
-            if (no_clip_errors)
+            if (no_clip_errors || clear_fifo_errors_adc)
                 clip_error <= 1'b0;
             else if (slow_fifo_wr && ( (slow_fifo_din[11:0]  == {12{1'b1}} || slow_fifo_din[11:0]  == {12{1'b0}}) ||
                                        (slow_fifo_din[23:12] == {12{1'b1}} || slow_fifo_din[23:12] == {12{1'b0}}) ||
@@ -235,6 +242,20 @@ module fifo_top_husky(
                 clip_error <= 1'b1;
             else if (clip_test)
                 clip_error <= adc_datain == {12{1'b1}} || adc_datain == {12{1'b0}};
+
+            if (no_gain_errors || clear_fifo_errors_adc)
+                gain_too_low <= 1'b0;
+            else if (capture_go)
+                gain_too_low <= 1'b1;
+            else if (slow_fifo_wr && ( (slow_fifo_din[11]? slow_fifo_din[10:9]  != 2'b00 : slow_fifo_din[10:4]  == 7'b0) ||
+                                       (slow_fifo_din[23]? slow_fifo_din[22:21] != 2'b00 : slow_fifo_din[22:16] == 7'b0) ||
+                                       (slow_fifo_din[35]? slow_fifo_din[34:33] != 2'b00 : slow_fifo_din[34:28] == 7'b0) ) )
+                gain_too_low <= 1'b0;
+
+            if (no_gain_errors || clear_fifo_errors_adc)
+                gain_error <= 1'b0;
+            else if ((state == pS_IDLE) && (state_r == pS_DONE) && gain_too_low)
+                gain_error <= 1'b1;
         end
     end
 
@@ -390,11 +411,20 @@ module fifo_top_husky(
    reg reset_done_r;
    reg reset_done_r2;
 
+   (* ASYNC_REG = "TRUE" *) reg[1:0] clear_fifo_errors_pipe;
+   reg clear_fifo_errors_r;
+   reg clear_fifo_errors_r2;
+   assign clear_fifo_errors_adc = clear_fifo_errors_r2;
+
+
     always @(posedge adc_sampleclk) begin
        if (reset) begin
           reset_done_pipe <= 0;
           reset_done_r <= 1'b0;
           reset_done_r2 <= 1'b0;
+          clear_fifo_errors_pipe <= 0;
+          clear_fifo_errors_r <= 1'b0;
+          clear_fifo_errors_r2 <= 1'b0;
           arming <= 1'b0;
           armed_and_ready <= 1'b0;
           capture_go_r <= 1'b0;
@@ -402,6 +432,7 @@ module fifo_top_husky(
        else begin
           capture_go_r <= capture_go;
           {reset_done_r2, reset_done_r, reset_done_pipe} <= {reset_done_r, reset_done_pipe, reset_done};
+          {clear_fifo_errors_r2, clear_fifo_errors_r, clear_fifo_errors_pipe} <= {clear_fifo_errors_r, clear_fifo_errors_pipe, clear_fifo_errors};
           arm_r <= arm_i;
           arm_fifo_rst_adc <= ~arm_r & arm_i;
           if (arm_i && ~arm_r && ~arming) begin
@@ -473,9 +504,10 @@ module fifo_top_husky(
           slow_fifo_underflow_masked = slow_fifo_underflow && ~no_underflow_errors && (slow_fifo_underflow_count == pMAX_UNDERFLOWS);
     end
 
-    function [7:0] error_bits (input [7:0] current_error);
+    function [8:0] error_bits (input [8:0] current_error);
        begin
           error_bits = current_error;
+          if (gain_error)                    error_bits[8] = 1'b1;
           if (segment_error)                 error_bits[7] = 1'b1;
           if (downsample_error)              error_bits[6] = 1'b1;
           if (clip_error)                    error_bits[5] = 1'b1;
@@ -504,7 +536,8 @@ module fifo_top_husky(
              first_error_state <= pS_IDLE;
           end
           else begin
-             if (segment_error || downsample_error || clip_error || presamp_error || fast_fifo_overflow || fast_fifo_underflow || slow_fifo_overflow || slow_fifo_underflow_masked) begin
+             if (gain_error || segment_error || downsample_error || clip_error || presamp_error || 
+                 fast_fifo_overflow || fast_fifo_underflow || slow_fifo_overflow || slow_fifo_underflow_masked) begin
                 error_flag <= 1;
                 if (!error_flag) begin
                    first_error_stat <= error_bits(first_error_stat);
@@ -820,7 +853,6 @@ module fifo_top_husky(
    );
 
 
-
    `ifdef ILA_FIFO
        `ifdef ILA_DEBUG_FAST_FIFO
            ila_fast_fifo U_ila_fast_fifo (
@@ -927,6 +959,21 @@ module fifo_top_husky(
           .probe8         (slow_fifo_underflow),  // input wire [0:0]  probe8 
           .probe9         (error_flag),           // input wire [0:0]  probe9 
           .probe10        (fast_fifo_dout)        // input wire [11:0] probe10 
+       );
+   `endif
+
+   `ifdef ILA_FIFO_GAIN
+       ila_fifo_gain U_ila_fifo_gain (
+          .clk            (clk_usb),              // input wire clk
+          .probe0         (gain_too_low),         // input wire [0:0]  probe0 
+          .probe1         (clip_error),           // input wire [0:0]  probe1 
+          .probe2         (clear_fifo_errors_adc),// input wire [0:0]  probe2 
+          .probe3         (clear_fifo_errors),    // input wire [0:0]  probe3 
+          .probe4         (gain_error),           // input wire [0:0]  probe4 
+          .probe5         (error_flag),           // input wire [0:0]  probe5 
+          .probe6         (error_stat),           // input wire [8:0]  probe6 
+          .probe7         (slow_fifo_wr),         // input wire [0:0]  probe7 
+          .probe8         (slow_fifo_din)         // input wire [35:0] probe8 
        );
    `endif
 

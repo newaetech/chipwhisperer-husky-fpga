@@ -40,8 +40,8 @@ module reg_chipwhisperer #(
    input  wire        usbiohs2,
    input  wire        target_hs1,
    output wire        target_hs2,
-   output wire        extclk_o,
-   output wire        target_clk,
+   output wire        extclk_o,         // for frequency measurement and ADC_CLKP/N to PLL
+   output wire        target_clk,       // for trace
 
    /* Extern Trigger Connections */
    input  wire        trigger_io1_i,
@@ -52,10 +52,13 @@ module reg_chipwhisperer #(
 
    /* Advanced IO Trigger Connections */
    output wire        trigger_ext_o,
+   output wire        decodeio_active,
+   output wire        sad_active,
    input  wire        trigger_advio_i, 
    input  wire        trigger_decodedio_i,
-   input  wire        trigger_anapattern_i,
    input  wire        trigger_trace_i,
+   input  wire        trigger_adc_i,
+   input  wire        trigger_sad_i,
 
    /* Clock Sources */
    input  wire        pll_fpga_clk,
@@ -142,6 +145,7 @@ CW_TRIGMOD_ADDR, address 40 (0x28) - Trigger Module Enabled
             010 Advanced SAD Trigger
             011 Decoded IO Trigger
             100 Trace Trigger
+            101 ADC level trigger
     FA = Output trigger to Front Panel A / Aux SMA
 
 CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
@@ -365,10 +369,13 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    wire trigger;
    assign trigger = (registers_cwtrigmod[2:0] == 3'b000) ? trigger_ext :
                     (registers_cwtrigmod[2:0] == 3'b001) ? trigger_advio_i : 
-                    (registers_cwtrigmod[2:0] == 3'b010) ? trigger_anapattern_i :
+                    (registers_cwtrigmod[2:0] == 3'b010) ? trigger_sad_i :
                     (registers_cwtrigmod[2:0] == 3'b011) ? trigger_decodedio_i :
-                    (registers_cwtrigmod[2:0] == 3'b100) ? trigger_trace_i : 1'b0;
+                    (registers_cwtrigmod[2:0] == 3'b100) ? trigger_trace_i :
+                    (registers_cwtrigmod[2:0] == 3'b101) ? trigger_adc_i : 1'b0;
 
+   assign decodeio_active = (registers_cwtrigmod[2:0] == 3'b011);
+   assign sad_active = (registers_cwtrigmod[2:0] == 3'b010);
    assign trigger_ext_o = trigger_ext;
 
    assign trigger_o = trigger;

@@ -41,8 +41,8 @@ module reg_openadc_adcfifo #(
    output reg          low_res_lsb,
    output reg          fast_fifo_read_mode,
    output reg  [16:0]  stream_segment_threshold,
-   input  wire [7:0]   fifo_error_stat,
-   input  wire [7:0]   fifo_first_error_stat,
+   input  wire [8:0]   fifo_error_stat,
+   input  wire [8:0]   fifo_first_error_stat,
    input  wire [2:0]   fifo_first_error_state,
    output reg          clear_fifo_errors,
 
@@ -67,14 +67,14 @@ module reg_openadc_adcfifo #(
    reg [7:0] reg_datao_reg;
    assign reg_datao = reg_datao_reg;
 
-   wire [8:0] fifo_stat = {fifo_empty, fifo_error_stat};
+   wire [9:0] fifo_stat = {fifo_empty, fifo_error_stat};
 
 
    always @(*) begin
       if (reg_read) begin
          case (reg_address)
             `FIFO_STAT:                 reg_datao_reg = fifo_stat[reg_bytecnt*8 +: 8];
-            `FIFO_FIRST_ERROR:          reg_datao_reg = fifo_first_error_stat;
+            `FIFO_FIRST_ERROR:          reg_datao_reg = fifo_first_error_stat[reg_bytecnt*8 +: 8];
             `FIFO_FIRST_ERROR_STATE:    reg_datao_reg = {5'b0, fifo_first_error_state};
             `DEBUG_FIFO_READS:          reg_datao_reg = fifo_read_count[reg_bytecnt*8 +: 8];
             `DEBUG_FIFO_READS_FREEZE:   reg_datao_reg = fifo_read_count_error_freeze[reg_bytecnt*8 +: 8];
@@ -107,14 +107,12 @@ module reg_openadc_adcfifo #(
             `STREAM_SEGMENT_THRESHOLD:
                stream_segment_threshold[reg_bytecnt*8 +: 8] <= reg_datai; 
             `FIFO_STAT:
-               clear_fifo_errors <= 1'b1;
+               clear_fifo_errors <= reg_datai[0];
             `FIFO_NO_UNDERFLOW_ERROR:
                no_underflow_errors <= reg_datai[0];
             default: ;
          endcase
       end
-      else
-         clear_fifo_errors <= 1'b0;
    end
 
    always @(posedge clk_usb) begin

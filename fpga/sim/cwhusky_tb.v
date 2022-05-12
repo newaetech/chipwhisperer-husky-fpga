@@ -46,6 +46,9 @@ module cwhusky_tb();
    parameter pTRIGGER_NOW = 0;
    parameter pREAD_DELAY = 0;
    parameter pNUM_SEGMENTS = 0;
+   parameter pNUM_GLITCHES = 1;
+   parameter pMAX_GLITCH_OFFSET= 0;
+   parameter pMAX_GLITCH_REPEATS= 0;
    parameter pSEGMENT_CYCLES = 1;
    parameter pSEGMENT_CYCLE_COUNTER_EN = 0;
    parameter pSTREAM = 0;
@@ -120,7 +123,7 @@ module cwhusky_tb();
    reg  setup_done;
    reg  trigger_done;
    reg  target_io4_reg;
-   int i, j;
+   int i, j, k;
    reg i12BitReadCount;
    int trigger_gen_index;
    int segment_read_index;
@@ -133,6 +136,13 @@ module cwhusky_tb();
    int samples_to_read;
    int offset;
    int trigger_cycles;
+   reg [12:0] reps;
+   reg [13*31-1:0] remaining_reps = 0;      // allow for up to 32 glitches
+   reg [31:0] ext_offset;
+   reg glitches_done;
+
+   int all_reps[0:31];
+   int all_offs[0:31];
 
    // initialization thread:
    initial begin
@@ -204,7 +214,7 @@ module cwhusky_tb();
       else
          write_1byte(`ADC_LOW_RES, 0);
 
-      write_1byte(`NO_CLIP_ERRORS, 8'h1);
+      write_1byte(`NO_CLIP_ERRORS, 8'h3);
 
       // program number of samples:
       rw_lots_bytes(`PRESAMPLES_ADDR);
@@ -254,17 +264,150 @@ module cwhusky_tb();
       // random delay before trigger:
       //#($urandom_range(0, 100)*pCLK_USB_PERIOD);
 
-      // TEMP:
-      rw_lots_bytes(`CLOCKGLITCH_SETTINGS);
-      write_next_byte(8'h00); // byte 0
-      write_next_byte(8'h00); // byte 1
-      write_next_byte(8'h00); // byte 2
-      write_next_byte(8'h00); // byte 3
-      write_next_byte(8'h00); // byte 4
-      //write_next_byte(8'h08); // byte 5: continuous glitch
-      write_next_byte(8'h00); // byte 5: manual
-      write_next_byte(8'h01); // byte 6: reps=1
-      write_next_byte(8'h01); // byte 7: source=clkgen
+      // setup glitches:
+      if (pNUM_GLITCHES) begin
+          $display("pNUM_GLITCHES = %d", pNUM_GLITCHES);
+          $display("pMAX_GLITCH_REPEATS = %d", pMAX_GLITCH_REPEATS);
+          $display("pMAX_GLITCH_OFFSET = %d", pMAX_GLITCH_OFFSET);
+          // choose the first reps:
+          reps = $urandom_range(0, pMAX_GLITCH_REPEATS);
+          all_reps[0] = reps;
+
+          // first set clock source, otherwise other settings won't take (like the manual bit):
+          rw_lots_bytes(`CLOCKGLITCH_SETTINGS);
+          write_next_byte(8'h00); // byte 0
+          write_next_byte(8'h00); // byte 1
+          write_next_byte(8'h00); // byte 2
+          write_next_byte(8'h00); // byte 3
+          write_next_byte(8'h00); // byte 4
+          write_next_byte(8'h00); // byte 5
+          write_next_byte(8'h00); // byte 6
+          write_next_byte(8'h01); // byte 7 source=clkgen
+
+          // simulation artifact: prevent glitch output being X
+          force U_dut.reg_clockglitch.U_clockglitch.glitch_go = 1'b0;
+          #10 release U_dut.reg_clockglitch.U_clockglitch.glitch_go;
+
+          // setup ext_single glitch, type=enable only
+          //
+          rw_lots_bytes(`CLOCKGLITCH_SETTINGS);
+          write_next_byte(8'h00); // byte 0
+          write_next_byte(8'h00); // byte 1
+          write_next_byte(8'h00); // byte 2
+          write_next_byte(8'h00); // byte 3
+          write_next_byte(8'h00); // byte 4
+          write_next_byte(8'hcc); // byte 5: ext_single, enable only, manual go (manual is required for ext_single)
+          write_next_byte(reps[7:0]); // byte 6: LSB of reps
+          write_next_byte({1'b0, reps[12:8], 2'b01}); // byte 7: MSB of reps, source=clkgen
+          //
+
+          // first ext_offset can be anything:
+          rw_lots_bytes(`CLOCKGLITCH_OFFSET);
+          ext_offset = $urandom_range(0, pMAX_GLITCH_OFFSET);
+          all_offs[0] = ext_offset;
+          $display("\tglitch  0: offset = %4d, rep = %4d", ext_offset, reps);
+          for (j = 0; j < 4; j = j + 1)
+              write_next_byte(ext_offset[j*8 +: 8]); // byte 0
+          // set up remaining reps; at the same time, randomize the
+          // ext_offsets and ensure we have legal combinations:
+          for (i = 1; i < pNUM_GLITCHES; i = i + 1) begin
+              if (pMAX_GLITCH_OFFSET < reps) begin
+                  $display("CONFIGURATION ERROR: can't randomize ext_offset legally");
+                  errors += 1;
+              end
+              ext_offset = $urandom_range(reps, pMAX_GLITCH_OFFSET);
+              reps = $urandom_range(0, pMAX_GLITCH_REPEATS);
+              all_offs[i] = ext_offset;
+              all_reps[i] = reps;
+              remaining_reps[(i-1)*13 +: 13] = reps;
+              $display("\tglitch %2d: offset = %4d, rep = %4d", i, ext_offset, reps);
+              for (j = 0; j < 4; j = j + 1)
+                  write_next_byte(ext_offset[j*8 +: 8]); // byte 0
+          end
+          rw_lots_bytes(`CLOCKGLITCH_REPEATS);
+          // up to 31 glitches; program all reps for simplicity, so that's 31*13/8 = 51 bytes:
+          for (i = 0; i < 51; i = i + 1)
+              write_next_byte(remaining_reps[i*8 +: 8]);
+
+          // set number of glitches:
+          write_1byte(`CLOCKGLITCH_NUM_GLITCHES, pNUM_GLITCHES-1);
+
+          // enable glitching
+          write_1byte(`CLOCKGLITCH_POWERDOWN, 8'h00);
+
+          /* to debug manual glitch:
+          rw_lots_bytes(`CLOCKGLITCH_SETTINGS);
+          write_next_byte(8'h00); // byte 0
+          write_next_byte(8'h00); // byte 1
+          write_next_byte(8'h00); // byte 2
+          write_next_byte(8'h00); // byte 3
+          write_next_byte(8'h00); // byte 4
+          write_next_byte(8'h80); // byte 5: manual go
+          //write_next_byte(8'h01); // byte 6: reps=1
+          //write_next_byte(8'h01); // byte 7: source=clkgen
+          write_next_byte(all_reps[0][7:0]); // byte 6: LSB of reps
+          write_next_byte({1'b0, all_reps[0][12:8], 2'b01}); // byte 7: MSB of reps, source=clkgen
+          rw_lots_bytes(`CLOCKGLITCH_SETTINGS);
+          write_next_byte(8'h00); // byte 0
+          write_next_byte(8'h00); // byte 1
+          write_next_byte(8'h00); // byte 2
+          write_next_byte(8'h00); // byte 3
+          write_next_byte(8'h00); // byte 4
+          write_next_byte(8'h00); // byte 5: manual go done
+          //write_next_byte(8'h01); // byte 6: reps=1
+          //write_next_byte(8'h01); // byte 7: source=clkgen
+          write_next_byte(all_reps[0][7:0]); // byte 6: LSB of reps
+          write_next_byte({1'b0, all_reps[0][12:8], 2'b01}); // byte 7: MSB of reps, source=clkgen
+          #(pCLK_USB_PERIOD*100);
+          rw_lots_bytes(`CLOCKGLITCH_SETTINGS);
+          write_next_byte(8'h00); // byte 0
+          write_next_byte(8'h00); // byte 1
+          write_next_byte(8'h00); // byte 2
+          write_next_byte(8'h00); // byte 3
+          write_next_byte(8'h00); // byte 4
+          write_next_byte(8'h80); // byte 5: manual go
+          //write_next_byte(8'h01); // byte 6: reps=1
+          //write_next_byte(8'h01); // byte 7: source=clkgen
+          write_next_byte(all_reps[0][7:0]); // byte 6: LSB of reps
+          write_next_byte({1'b0, all_reps[0][12:8], 2'b01}); // byte 7: MSB of reps, source=clkgen
+          rw_lots_bytes(`CLOCKGLITCH_SETTINGS);
+          write_next_byte(8'h00); // byte 0
+          write_next_byte(8'h00); // byte 1
+          write_next_byte(8'h00); // byte 2
+          write_next_byte(8'h00); // byte 3
+          write_next_byte(8'h00); // byte 4
+          write_next_byte(8'h00); // byte 5: manual go done
+          //write_next_byte(8'h01); // byte 6: reps=1
+          //write_next_byte(8'h01); // byte 7: source=clkgen
+          write_next_byte(all_reps[0][7:0]); // byte 6: LSB of reps
+          write_next_byte({1'b0, all_reps[0][12:8], 2'b01}); // byte 7: MSB of reps, source=clkgen
+          */
+
+
+          /* debug exiting continuous mode
+          rw_lots_bytes(`CLOCKGLITCH_SETTINGS);
+          write_next_byte(8'h00); // byte 0
+          write_next_byte(8'h00); // byte 1
+          write_next_byte(8'h00); // byte 2
+          write_next_byte(8'h00); // byte 3
+          write_next_byte(8'h00); // byte 4
+          write_next_byte(8'h08); // byte 5: continuous
+          write_next_byte(reps[7:0]); // byte 6: LSB of reps
+          write_next_byte({1'b0, reps[12:8], 2'b01}); // byte 7: MSB of reps, source=clkgen
+
+          rw_lots_bytes(`CLOCKGLITCH_SETTINGS);
+          write_next_byte(8'h00); // byte 0
+          write_next_byte(8'h00); // byte 1
+          write_next_byte(8'h00); // byte 2
+          write_next_byte(8'h00); // byte 3
+          write_next_byte(8'h00); // byte 4
+          write_next_byte(8'h0c); // byte 5: single-shot
+          write_next_byte(reps[7:0]); // byte 6: LSB of reps
+          write_next_byte({1'b0, reps[12:8], 2'b01}); // byte 7: MSB of reps, source=clkgen
+          */
+
+
+      end
 
       if (pTRIGGER_DELAY) begin
          //wait (U_dut.oadc.U_fifo.fast_fifo_full);
@@ -274,32 +417,6 @@ module cwhusky_tb();
 
       // it takes up to ~700 clock cycles after reset for things to get going again:
       #(pCLK_USB_PERIOD*900);
-
-      // TEMP: manual glitch
-      rw_lots_bytes(`CLOCKGLITCH_SETTINGS);
-      write_next_byte(8'h00); // byte 0
-      write_next_byte(8'h00); // byte 1
-      write_next_byte(8'h00); // byte 2
-      write_next_byte(8'h00); // byte 3
-      write_next_byte(8'h00); // byte 4
-      write_next_byte(8'h80); // byte 5: manual go
-      write_next_byte(8'h01); // byte 6: reps=1
-      write_next_byte(8'h01); // byte 7: source=clkgen
-
-      rw_lots_bytes(`CLOCKGLITCH_SETTINGS);
-      write_next_byte(8'h00); // byte 0
-      write_next_byte(8'h00); // byte 1
-      write_next_byte(8'h00); // byte 2
-      write_next_byte(8'h00); // byte 3
-      write_next_byte(8'h00); // byte 4
-      write_next_byte(8'h00); // byte 5: manual go done
-      write_next_byte(8'h01); // byte 6: reps=1
-      write_next_byte(8'h01); // byte 7: source=clkgen
-
-      #(pCLK_USB_PERIOD*5);
-      force U_dut.reg_clockglitch.U_clockglitch.glitch_trigger = 1'b1;
-      #20;
-      release U_dut.reg_clockglitch.U_clockglitch.glitch_trigger;
 
       /* test register access to different blocks
       rdata[7:6] = `TW_TRACE_REG_SELECT;
@@ -370,6 +487,7 @@ module cwhusky_tb();
                settings[3] = 1'b1; // arm
                settings[6] = 1'b1; // trigger now
                write_1byte(`SETTINGS_ADDR, settings);
+               glitches_done = 1'b1; // glitch stuff won't happen with TRIGGER_NOW so don't wait for it
             end
             else begin
                write_1byte(`SETTINGS_ADDR, settings);
@@ -385,9 +503,9 @@ module cwhusky_tb();
              trigger_cycles = 5;
          else begin
              if (pNUM_SEGMENTS > 1)
-                 trigger_cycles = $urandom_range(2, fifo_samples-2);
+                 trigger_cycles = $urandom_range(3, fifo_samples-2);
              else
-                 trigger_cycles = $urandom_range(2, 2*fifo_samples+offset); // to cover the case where trigger is held longer than the capture
+                 trigger_cycles = $urandom_range(3, 2*fifo_samples+offset); // to cover the case where trigger is held longer than the capture
          end
 
          repeat (trigger_cycles) @(posedge clk_adc);
@@ -477,7 +595,10 @@ module cwhusky_tb();
       // TODO-temporary to manually verify if fast reads get disabled: (clean up later)
       write_1byte(`ECHO_ADDR, 155);
       read_1byte(`ECHO_ADDR, rdata);
-      //$display("Read %d", rdata);
+      if (rdata != 155) begin
+          errors += 1;
+          $display("ERROR: reading after fast reads");
+      end
 
       if (pSTREAM)
          // clear stream mode:
@@ -499,6 +620,8 @@ module cwhusky_tb();
          $display("ERROR: FIFO status error (%d).", rdata[4:0]);
       end
 
+      wait(glitches_done);
+
       $display("Done reading.");
       $display("Good reads: %d", good_reads);
       $display("Bad reads: %d", bad_reads);
@@ -510,6 +633,51 @@ module cwhusky_tb();
    end
 
 
+   // check glitch output thread:
+   // First we generate the expected glitch enable:
+   reg expected_glitch;
+   wire glitch_clock = U_dut.reg_clockglitch.U_clockglitch.glitch_mmcm1_clk_out_buf;
+   int glitch_errors;
+   reg glitch_compare;
+   initial begin
+       expected_glitch = 1'b0;
+       glitch_errors = 0;
+       glitch_compare = 0;
+       glitches_done = 0;
+       wait (FPGA_TRIGOUT);
+       glitch_compare = 1;
+       repeat (10 + all_offs[0]) @(negedge glitch_clock);
+       for (k = 1; k < pNUM_GLITCHES; k = k + 1) begin
+           expected_glitch = 1'b1;
+           repeat(all_reps[k-1]+1) @(negedge glitch_clock);
+           expected_glitch = 1'b0;
+           repeat(all_offs[k] - all_reps[k-1] + 1) @(negedge glitch_clock);
+       end
+       expected_glitch = 1'b1;
+       repeat(all_reps[pNUM_GLITCHES-1]+1) @(negedge glitch_clock);
+       expected_glitch = 1'b0;
+       repeat(100) @(negedge glitch_clock);
+       glitch_compare = 0;
+       if (glitch_errors) begin
+           errors += glitch_errors;
+           $display("ERROR: %0d glitch comparison failures", glitch_errors);
+       end
+       wait (~target_io4);
+       repeat(10) @(posedge clk_adc);
+       if (~U_dut.reg_clockglitch.resync.idle) begin
+           errors += 1;
+           $display("ERROR: glitch trigger_resync FSM not in idle when it should be done.");
+       end
+       glitches_done = 1;
+   end
+
+   // Then we flag any differences:
+   wire glitch_enable = U_dut.reg_clockglitch.U_clockglitch.glitch_enable;
+   wire glitch_error = (glitch_enable ^ expected_glitch);
+   always @(glitch_clock) begin
+       if (glitch_compare & glitch_error)
+           glitch_errors += 1;
+   end
 
    // timeout thread:
    initial begin

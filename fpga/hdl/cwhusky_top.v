@@ -187,7 +187,13 @@ module cwhusky_top(
    wire [pUSERIO_WIDTH-1:0] userio_drive_data;
    wire [pUSERIO_WIDTH-1:0] userio_debug_data;
 
+   wire decode_uart_input;
+   wire decodeio_active;
+   wire sad_active;
    wire trace_trig_out;
+   wire trigger_adc;
+   wire trigger_sad;
+   wire trace_trig_out_adc;
 
    wire la_exists;
    wire trace_exists;
@@ -200,8 +206,8 @@ module cwhusky_top(
    wire           fifo_flush;
    wire           trace_fifo_flush;
    wire           la_fifo_flush;
-   wire           reg_arm;
-   wire           reg_arm_feclk;
+   wire           trace_arm_usb;
+   wire           trace_arm_fe;
    wire           clear_errors;
    wire [17:0]    fifo_out_data;
    wire [5:0]     fifo_status;
@@ -220,6 +226,7 @@ module cwhusky_top(
    wire           fifo_wr_clk;
    wire           fifo_source_sel;
 
+   wire           cmd_arm_usb;
 
    assign USB_SPARE0 = enable_avrprog? 1'bz : stream_segment_available;
 
@@ -276,7 +283,7 @@ module cwhusky_top(
       assign userio_debug_data[4] = fast_fifo_read;
       assign userio_debug_data[5] = fifo_error_flag;
       assign userio_debug_data[6] = glitchclk;
-      assign userio_debug_data[7] = 1'bz;
+      assign userio_debug_data[7] = glitch_enable;
 
    `else
       assign userio_debug_data[7:0] = 8'bz;
@@ -290,6 +297,7 @@ module cwhusky_top(
    wire cw_led_cap;
    wire cw_led_armed;
    wire trace_en;
+   wire trace_capture_on;
    wire [7:0] trace_userio_dir;
 
    // fast-flash red LEDs when some internal error has occurred:
@@ -315,9 +323,14 @@ module cwhusky_top(
         .PLL_STATUS             (PLL_STATUS),
         .DUT_CLK_i              (extclk_mux),
         .DUT_trigger_i          (ext_trigger),
+        .trigger_io4_i          (target_io4),
+        .trigger_adc            (trigger_adc),
+        .trigger_sad            (trigger_sad),
+        .sad_active             (sad_active),
         .amp_gain               (VDBSPWM),
         .fifo_dout              (fifo_dout),
         .clkgen                 (clkgen),
+        .cmd_arm_usb            (cmd_arm_usb),
 
         .reg_address            (reg_address),
         .reg_bytecnt            (reg_bytecnt), 
@@ -392,11 +405,14 @@ module cwhusky_top(
         .trigger_io3_i          (target_io3),
         .trigger_io4_i          (target_io4),
         .trigger_nrst_i         (target_nRST),
-        .trigger_ext_o          (),
+        .trigger_ext_o          (decode_uart_input),
+        .decodeio_active        (decodeio_active),
+        .sad_active             (sad_active),
         .trigger_advio_i        (1'b0),
-        .trigger_anapattern_i   (1'b0),
-        .trigger_decodedio_i    (1'b0),
+        .trigger_decodedio_i    (trace_trig_out),
         .trigger_trace_i        (trace_trig_out),
+        .trigger_adc_i          (trigger_adc),
+        .trigger_sad_i          (trigger_sad),
         .pll_fpga_clk           (pll_fpga_clk),
         .glitchclk              (glitchclk),
 
@@ -692,7 +708,8 @@ module cwhusky_top(
    `ifdef TRACE
        wire TRACECLOCK = USERIO_CLK;
        wire [3:0] TRACEDATA  = USERIO_D[7:4];
-       wire swo = USERIO_D[2];
+       wire serial_in = decodeio_active? decode_uart_input : 
+                        trace_en?        USERIO_D[2] : 1'b1;
 
        reg [22:0] count_fe_clock;
        always @(posedge fe_clk) count_fe_clock <= count_fe_clock + 1;
@@ -705,20 +722,23 @@ module cwhusky_top(
           .pUSERIO_WIDTH                (1),
           .pMAIN_REG_SELECT             (`TW_MAIN_REG_SELECT),
           .pTRACE_REG_SELECT            (`TW_TRACE_REG_SELECT),
-          .pREGISTERED_READ             (0)
+          .pREGISTERED_READ             (0),
+          .pNUM_TRIGGER_WIDTH           (16)
        ) U_trace_top (
           .trace_clk_in                 (TRACECLOCK),
           .fe_clk                       (fe_clk),
           .usb_clk                      (clk_usb_buf),
-          .reset_pin                    (1'b0),
+          .reset_pin                    (reg_rst),
           .fpga_reset                   (),
+          .I_external_arm               (cmd_arm_usb),
           .flash_pattern                (),
           .buildtime                    (32'b0),
           .O_trace_en                   (trace_en),
+          .O_trace_capture_on           (trace_capture_on),
           .O_trace_userio_dir           (trace_userio_dir),
 
           .trace_data                   (TRACEDATA),
-          .swo                          (swo),
+          .swo                          (serial_in),
           .O_trace_trig_out             (trace_trig_out),
           .m3_trig                      (ext_trigger),
           .O_soft_trig_passthru         (),     // N/A, used for CW305 DST only
@@ -766,7 +786,8 @@ module cwhusky_top(
           .O_userio_pwdriven            (),
           .O_userio_drive_data          (),
 
-          .arm                          (),
+          .arm_usb                      (trace_arm_usb),
+          .arm_fe                       (trace_arm_fe),
           .capturing                    (),
 
           .fifo_full                    (fifo_full),
@@ -776,8 +797,6 @@ module cwhusky_top(
                                                
           .fifo_read                    (fifo_read),
           .fifo_flush                   (trace_fifo_flush),
-          .reg_arm                      (reg_arm),
-          .reg_arm_feclk                (reg_arm_feclk),
           .clear_errors                 (clear_errors),
                                                
           .fifo_out_data                (fifo_out_data),
@@ -789,10 +808,19 @@ module cwhusky_top(
           .synchronized                 (synchronized)
        );
 
+       cdc_pulse U_trace_trig_cdc (
+          .reset_i       (reg_rst),
+          .src_clk       (fe_clk),
+          .src_pulse     (trace_trig_out),
+          .dst_clk       (ADC_clk_fb),
+          .dst_pulse     (trace_trig_out_adc)
+       );
+
    `else
       assign read_data_trace = 0;
       assign trace_error_flag = 0;
       assign trace_trig_out = 0;
+      assign trace_trig_out_adc = 0;
       assign trace_exists = 0;
       assign trace_data_sdr = 0;
       assign fe_clk = 0;
@@ -802,8 +830,9 @@ module cwhusky_top(
    // fifo_source_sel controls FIFO acccess.
    // 0: trace
    // 1: LA
-   // In order to capture LA, trace must be disabled (REG_TRACE_EN)
-   assign fifo_source_sel = ~trace_en; 
+   // In order to capture LA, trace must be disabled (REG_TRACE_EN) *or* its
+   // capture mode set to "off"
+   assign fifo_source_sel = ~trace_capture_on; 
    `ifdef __ICARUS__
        assign fifo_wr_clk = fifo_source_sel? observer_clk : fe_clk;
    `else
@@ -821,8 +850,8 @@ module cwhusky_top(
 
    assign fifo_flush = trace_fifo_flush || la_fifo_flush;
 
-   assign fifo_clear_read_flags = reg_arm || la_clear_read_flags;
-   assign fifo_clear_write_flags = reg_arm_feclk || la_clear_write_flags;
+   assign fifo_clear_read_flags = trace_arm_usb || la_clear_read_flags;
+   assign fifo_clear_write_flags = trace_arm_fe || la_clear_write_flags;
 
    `ifndef NOFIFO // for clean compilation
    // NOTE: this FIFO is shared by LOGIC_ANALYZER and TRACE.
@@ -852,6 +881,20 @@ module cwhusky_top(
       .I_custom_fifo_stat_flag  (synchronized)      
    );
    `endif
+
+`ifdef ILA_SHARED_FIFO
+    ila_shared_fifo U_ila_shared_fifo (
+       .clk            (clk_usb_buf),          // input wire clk
+       .probe0         (fifo_wr),              // input wire [0:0]  probe0 
+       .probe1         (fifo_full),            // input wire [0:0]  probe1 
+       .probe2         (fifo_overflow_blocked),// input wire [0:0]  probe2 
+       .probe3         (fifo_read),            // input wire [0:0]  probe3 
+       .probe4         (fifo_flush),           // input wire [0:0]  probe4 
+       .probe5         (trace_fifo_error_flag),// input wire [0:0]  probe5 
+       .probe6         (fifo_source_sel)       // input wire [0:0]  probe6 
+    );
+`endif
+
 
 
 

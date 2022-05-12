@@ -32,7 +32,10 @@ POSSIBILITY OF SUCH DAMAGE.
 *************************************************************************/
 
 module clockglitch_a7 #(
-   parameter pBYTECNT_SIZE = 7
+   parameter pBYTECNT_SIZE = 7,
+   parameter pMAX_GLITCHES = 32,
+   parameter pNUM_GLITCH_WIDTH = 5,
+   parameter pSYNC_STAGES = 2
 )(
     input wire                          reset,
    // Source Clock
@@ -43,7 +46,10 @@ module clockglitch_a7 #(
 
     // Glitch request
     input wire                          glitch_trigger,
-    input wire [12:0]                   max_glitches,
+    input wire [13*pMAX_GLITCHES-1:0]   all_max_glitches,
+    input wire                          trigger_resync_idle,
+    input wire                          multiple_glitches_supported,
+    input wire                          continuous_mode,
     input wire [2:0]                    glitch_type,
      /*
      000 = Glitch is XORd with Clock (Positive or Negative going glitch)
@@ -122,6 +128,23 @@ module clockglitch_a7 #(
     wire [7:0] reg_datao_drp2;
     assign reg_datao = reg_datao_drp1 | reg_datao_drp2;
 
+   (*ASYNC_REG = "True" *) reg [13*pMAX_GLITCHES-1:0] all_max_glitches_reg;
+   reg [12:0] max_glitches;
+   reg [pNUM_GLITCH_WIDTH-1:0] glitch_count;
+
+   (* ASYNC_REG = "TRUE" *) reg  [pSYNC_STAGES-1:0] idle_pipe;
+   reg clockglitch_idle;
+
+   // resetting glitch_count to 0 is the tricky bit here... another approach
+   // would be a CDC'd pulse when *entering* idle, but this is a bit simpler
+   // and should work:
+   always @(negedge glitch_mmcm1_clk_out_buf) begin
+       {clockglitch_idle, idle_pipe} <= {idle_pipe, trigger_resync_idle};
+       all_max_glitches_reg <= all_max_glitches;
+       max_glitches <= all_max_glitches_reg[glitch_count*13 +: 13];
+   end
+
+
     mmcm_phaseshift_interface U_offset_phaseshift (
       .clk_usb          (clk_usb),
       .reset            (mmcm_rst),
@@ -148,9 +171,12 @@ module clockglitch_a7 #(
    wire glitchstream;
 
 
-   reg [12:0] glitch_cnt;
+   reg [12:0] glitch_len_cnt;
    (* ASYNC_REG = "TRUE" *) reg[2:0] glitch_trigger_pipe;
    reg glitch_trigger_resync;
+   (* ASYNC_REG = "TRUE" *) reg[2:0] continuous_mode_pipe;
+   reg continuous_mode_r;
+   reg continuous_mode_r2;
 
    // We need to use negedge here to avoid extra glitches.
    // The reason is that glitch_go will always lag the MMCM1 clock, and so
@@ -161,9 +187,13 @@ module clockglitch_a7 #(
        if (reset) begin
            glitch_trigger_pipe <= 0;
            glitch_trigger_resync <= 0;
+           continuous_mode_r2 <= 0;
+           continuous_mode_r <= 0;
+           continuous_mode_pipe <= 0;
        end
        else begin
            {glitch_trigger_resync, glitch_trigger_pipe} <= {glitch_trigger_pipe, glitch_trigger};
+           {continuous_mode_r2, continuous_mode_r, continuous_mode_pipe} <= {continuous_mode_r, continuous_mode_pipe, continuous_mode};
        end
 
    end
@@ -173,23 +203,39 @@ module clockglitch_a7 #(
       glitch_go_r <= glitch_go;
       // Careful because it's possible for glitch_trigger_resync to be > 1 cycle.
       // Also note that max_glitches = <number of cycles to glitch> - 1
-      if (max_glitches > 0) begin
+
+      // In continuous mode, we need an explicit way to turn it off. Order is important here!
+      if (continuous_mode_r2 && ~continuous_mode_r)
+          glitch_go <= 1'b0;
+      else if (continuous_mode_r)
+          glitch_go <= 1'b1;
+
+      else if (clockglitch_idle && multiple_glitches_supported)
+          glitch_count <= 0;
+
+      else if (max_glitches > 0) begin
           if (glitch_trigger_resync)
              glitch_go <= 'b1;
-          else if (glitch_cnt >= max_glitches)
+          else if (glitch_len_cnt == max_glitches) begin
              glitch_go <= 'b0;
+             if (multiple_glitches_supported)
+                 glitch_count <= glitch_count + 1;
+           end
       end
       else begin
-          if (glitch_go)
+          if (glitch_go) begin
               glitch_go <= 1'b0;
+              if (multiple_glitches_supported)
+                  glitch_count <= glitch_count + 1;
+          end
           else if (glitch_trigger_resync)
               glitch_go <= 1'b1;
       end
 
       if (glitch_go)
-         glitch_cnt <= glitch_cnt + 13'd1;
+         glitch_len_cnt <= glitch_len_cnt + 13'd1;
       else
-         glitch_cnt <= 0;
+         glitch_len_cnt <= 0;
    end
 
 
@@ -385,6 +431,20 @@ module clockglitch_a7 #(
       .drp_reset        (drp2_reset)
    ); 
 
+
+`ifdef ILA_CLOCKGLITCH_A7
+    ila_clockglitch_a7 U_ila_clockglitch_a7 (
+       .clk            (clk_usb),              // input wire clk
+       .probe0         (glitch_trigger),       // input wire [0:0]  probe0 
+       .probe1         (glitch_trigger_resync),// input wire [0:0]  probe1 
+       .probe2         (glitch_go),            // input wire [0:0]  probe2 
+       .probe3         (max_glitches),         // input wire [12:0] probe3 
+       .probe4         (glitch_len_cnt),       // input wire [12:0] probe4 
+       .probe5         (clockglitch_idle),     // input wire [0:0]  probe5 
+       .probe6         (glitch_count),         // input wire [4:0]  probe6 
+       .probe7         (continuous_mode_r2)    // input wire [0:0]  probe7 
+    );
+`endif
 
 
 `ifdef ILA_GLITCH_PS

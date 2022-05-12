@@ -249,8 +249,8 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define DECIMATE_ADDR           15
 `define SAMPLES_ADDR            16
 `define PRESAMPLES_ADDR         17
-`define GLITCHCYCLES_CNT        19
 `define TRIGGER_DUR_ADDR        20
+`define ADC_TRIGGER_LEVEL       21
 `define CLOCKGLITCH_OFFSET      25
 `define OFFSET_ADDR             26
 `define DATA_SOURCE_SELECT      27
@@ -281,9 +281,11 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define CLKGEN_POWERDOWN        48
 
 `define CLOCKGLITCH_POWERDOWN   49
+`define CLOCKGLITCH_REPEATS     50
 `define CLOCKGLITCH_SETTINGS    51
+`define CLOCKGLITCH_NUM_GLITCHES 52
+`define CLOCKGLITCH_MULTIPLE_STATE 53
 `define CW_IOROUTE_ADDR         55
-`define GLITCH_RECONFIG_RB_ADDR 56
 `define CW_IOREAD_ADDR          59
 
 `define CG1_DRP_ADDR            62
@@ -335,6 +337,16 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 
 `define EXTERNAL_CLOCK          95
 `define COMPONENTS_EXIST        96
+
+`define SAD_REFERENCE           100
+`define SAD_THRESHOLD           101
+`define SAD_STATUS              102
+`define SAD_BITS_PER_SAMPLE     103
+`define SAD_REF_SAMPLES         104
+`define SAD_MAX_DEV             105
+`define SAD_MULTIPLE_TRIGGERS   106
+`define SAD_DEBUG_TRIGGER_INDEX 107
+`define SAD_DEBUG_FIFO_RD       108
 
 `define REGISTER_VERSION 1
 

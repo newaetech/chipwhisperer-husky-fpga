@@ -11,6 +11,9 @@ SHORT_TRIGGER = 0
 TRIGGER_DELAY=1500
 READ_DELAY=100
 NUM_SEGMENTS = 1
+NUM_GLITCHES = 1
+MAX_GLITCH_REPEATS = 0
+MAX_GLITCH_OFFSET = 0
 SEGMENT_CYCLES = 100
 SEGMENT_CYCLE_COUNTER_EN = 0
 TRIGGER_NOW=0
@@ -26,8 +29,62 @@ FIFOSIZE=REGULARFIFO
 ERRORS_OK=0
 PRESAMP_ERROR=0
 DOWNSAMPLE=0
+LINEAR_RAMP=1
+INPUTS_FROM_FILE=0
+REF_SAMPLES=8
+BITS_PER_SAMPLE=12
+TRIGGERS=1
+FLUSH=0
+THRESHOLD=0
+VERBOSE=0
 
 all: compile run
+all_sad: compile_sad run
+
+compile_sad:
+	iverilog \
+	../hdl/sad.v \
+	../hdl/sad_wrapper.v \
+	../hdl/usb_reg_main.v \
+	../hdl/cdc_pulse.v \
+	sad_tb.v \
+	vivado/sad_fifo_sim_netlist.v \
+	-y/tools/Xilinx/Vivado/2020.2/ids_lite/ISE/verilog/src/unisims/ \
+	-g2005-sv \
+	-I../hdl \
+	-Wportbind \
+	-Wselect-range \
+	-P sad_tb.pLINEAR_RAMP=$(LINEAR_RAMP) \
+	-P sad_tb.pINPUTS_FROM_FILE=$(INPUTS_FROM_FILE) \
+	-P sad_tb.pREF_SAMPLES=$(REF_SAMPLES) \
+	-P sad_tb.pBITS_PER_SAMPLE=$(BITS_PER_SAMPLE) \
+	-P sad_tb.pTHRESHOLD=$(THRESHOLD) \
+	-P sad_tb.pTRIGGERS=$(TRIGGERS) \
+	-P sad_tb.pFLUSH=$(FLUSH) \
+	-P sad_tb.pDUMP=$(DUMP) \
+	-P sad_tb.pSEED=$(SEED) \
+	-P sad_tb.pVERBOSE=$(VERBOSE) \
+	-P sad_tb.pTIMEOUT_CYCLES=$(TIMEOUT_CYCLES) \
+	-o $(EXEFILE) \
+
+sad_nofifo:
+	iverilog \
+	../hdl/sad.v \
+	../hdl/sad_wrapper.v \
+	../hdl/usb_reg_main.v \
+	../hdl/cdc_pulse.v \
+	sad_tb.v \
+	-g2005-sv \
+	-DNOFIFO \
+	-I../hdl \
+	-Wportbind \
+	-Wselect-range \
+	-P sad_tb.pLINEAR_RAMP=$(LINEAR_RAMP) \
+	-P sad_tb.pREF_SAMPLES=$(REF_SAMPLES) \
+	-P sad_tb.pBITS_PER_SAMPLE=$(BITS_PER_SAMPLE) \
+	-P sad_tb.pDUMP=$(DUMP) \
+	-P sad_tb.pSEED=$(SEED) \
+	-o $(EXEFILE) \
 
 compile:
 	iverilog -ccmdfile \
@@ -51,6 +108,9 @@ compile:
 	-P cwhusky_tb.pTRIGGER_DELAY=$(TRIGGER_DELAY) \
 	-P cwhusky_tb.pREAD_DELAY=$(READ_DELAY) \
 	-P cwhusky_tb.pNUM_SEGMENTS=$(NUM_SEGMENTS) \
+	-P cwhusky_tb.pNUM_GLITCHES=$(NUM_GLITCHES) \
+	-P cwhusky_tb.pMAX_GLITCH_OFFSET=$(MAX_GLITCH_OFFSET) \
+	-P cwhusky_tb.pMAX_GLITCH_REPEATS=$(MAX_GLITCH_REPEATS) \
 	-P cwhusky_tb.pSHORT_TRIGGER=$(SHORT_TRIGGER) \
 	-P cwhusky_tb.pSEGMENT_CYCLES=$(SEGMENT_CYCLES) \
 	-P cwhusky_tb.pSEGMENT_CYCLE_COUNTER_EN=$(SEGMENT_CYCLE_COUNTER_EN) \

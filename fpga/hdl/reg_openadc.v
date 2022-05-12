@@ -48,8 +48,7 @@ module reg_openadc #(
    output wire         cmd_arm_usb,
    output wire         trigger_mode,
    output wire         trigger_wait,
-   output wire [11:0]  trigger_level,
-   output wire         trigger_source,
+   output reg  [11:0]  trigger_adclevel,
    output wire         trigger_now,
    output wire [31:0]  trigger_offset,
    input  wire [31:0]  trigger_length,
@@ -83,6 +82,7 @@ module reg_openadc #(
    output wire        fifo_stream,
    output reg  [1:0]  led_select,
    output reg         no_clip_errors,
+   output reg         no_gain_errors,
    output reg         clip_test,
 
    input  wire        extclk_change,
@@ -95,8 +95,6 @@ module reg_openadc #(
 );
 
    wire reset;
-
-   assign  trigger_level = 12'b0;
 
    (* ASYNC_REG = "TRUE" *) reg[1:0] arm_pipe;
    reg arm_r;
@@ -159,7 +157,6 @@ module reg_openadc #(
    assign fifo_stream = registers_settings[4];
    assign trigger_wait = registers_settings[5];
    assign trigger_now = registers_settings[6];
-   assign trigger_source = registers_settings[7];
 
    assign registers_advclocksettings_read[4:0] = registers_advclocksettings[4:0];
    assign registers_advclocksettings_read[5] = clkblock_gen_locked_i;
@@ -213,12 +210,13 @@ module reg_openadc #(
                 `SEGMENT_CYCLE_COUNTER_EN: reg_datao_reg = {7'b0, segment_cycle_counter_en};
                 `DATA_SOURCE_SELECT: reg_datao_reg = data_source_select;
                 `LED_SELECT: reg_datao_reg = led_select;
-                `NO_CLIP_ERRORS: reg_datao_reg = no_clip_errors;
+                `NO_CLIP_ERRORS: reg_datao_reg = {6'b0, no_gain_errors, no_clip_errors};
                 `CLIP_TEST: reg_datao_reg = clip_test;
                 `CLKGEN_POWERDOWN: reg_datao_reg = {6'b0, adc_clkgen_power_down, clkgen_power_down};
                 `EXTCLK_MONITOR_DISABLED: reg_datao_reg = extclk_monitor_disabled;
                 `EXTCLK_MONITOR_STAT: reg_datao_reg = extclk_change;
                 `EXTCLK_CHANGE_LIMIT: reg_datao_reg = extclk_limit[reg_bytecnt*8 +: 8];
+                `ADC_TRIGGER_LEVEL: reg_datao_reg = trigger_adclevel[reg_bytecnt*8 +: 8];
                 default: reg_datao_reg = 0;
              endcase
           end
@@ -243,6 +241,7 @@ module reg_openadc #(
          segment_cycle_counter_en <= 0;
          led_select <= 0;
          no_clip_errors <= 0;
+         no_gain_errors <= 0;
          clip_test <= 0;
          // CLKGEN MMCMs are powered down by default, because we can get too hot if all MMCMs are kept on:
          adc_clkgen_power_down <= 1;
@@ -250,6 +249,7 @@ module reg_openadc #(
          phase_out <= 0;
          extclk_monitor_disabled <= 1;
          extclk_limit <= 32'd9; // corresponds to ~100 kHz tolerance
+         trigger_adclevel <= 12'd0;
       end else if (reg_write) begin
          case (reg_address)
             `GAIN_ADDR: registers_gain <= reg_datai;
@@ -265,12 +265,13 @@ module reg_openadc #(
             `SEGMENT_CYCLE_COUNTER_EN: segment_cycle_counter_en <= reg_datai[0];
             `DATA_SOURCE_SELECT: data_source_select <= reg_datai[0];
             `LED_SELECT: led_select <= reg_datai[1:0];
-            `NO_CLIP_ERRORS: no_clip_errors <= reg_datai[0];
+            `NO_CLIP_ERRORS: {no_gain_errors, no_clip_errors} <= reg_datai[1:0];
             `CLIP_TEST: clip_test <= reg_datai[0];
             `CLKGEN_POWERDOWN: {adc_clkgen_power_down, clkgen_power_down} <= reg_datai[1:0];
             `PHASE_ADDR: phase_out[reg_bytecnt*8 +: 8] <= reg_datai;
             `EXTCLK_MONITOR_DISABLED: extclk_monitor_disabled <= reg_datai[0];
             `EXTCLK_CHANGE_LIMIT: extclk_limit[reg_bytecnt*8 +: 8] <= reg_datai;
+            `ADC_TRIGGER_LEVEL: trigger_adclevel[reg_bytecnt*8 +: 8] <= reg_datai;
             default: ;
          endcase
       end

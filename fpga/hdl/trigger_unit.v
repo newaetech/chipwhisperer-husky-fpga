@@ -25,15 +25,12 @@ module trigger_unit(
     input wire               reset,          //system reset
 
     input wire               adc_clk,        //ADC sample clock
-    input wire [11:0]        adc_data,       //ADC data
 
-    input wire               ext_trigger_i,
+    input wire               trigger,
     input wire               trigger_level_i,    //1 = trigger on high or rising edge
                                                  //0 = trigger on low or falling edge
     input wire               trigger_wait_i,     //1 = wait for trigger to go to 'inactive' state first (e.g.: edge sensitive)
                                                  //0 = don't wait
-    input wire [11:0]        trigger_adclevel_i, //Internal (e.g.: from ADC) trigger level 
-    input wire               trigger_source_i,   //0 = External trigger, 1 = internal trigger
     input wire               trigger_now_i,      //1 = Trigger immediatly when armed
     input wire               arm_i,              //1 = arm, edge-sensitive so must be reset to 0 before arming again. Wait until the
                                                  //    arm_o goes high before doing this, otherwise the arm won't take effect.
@@ -50,15 +47,6 @@ module trigger_unit(
     input wire               fifo_rst,             // for debug only
     output wire [8:0]        la_debug              // for debug only
     );
-
-   //**** Trigger Logic Selection ****
-   wire trigger;
-   wire adc_trigger;
-
-   //Compare incomming data to requested level
-   assign adc_trigger = adc_data > trigger_adclevel_i;
-
-   assign trigger = (trigger_source_i) ? adc_trigger : ext_trigger_i;
 
    //**** Trigger Logic *****
    reg armed;
@@ -174,6 +162,8 @@ module trigger_unit(
       arm_i_dly <= arm_i;
 
    always @(posedge adc_clk) begin
+      // don't count in the case of adc_trigger: it makes timing more difficult, it's not
+      // likely useful, and it could be calculated by the host
       if (trigger == trigger_level_i)
          trigger_length_o <= trigger_length_o + 32'd1;
       else if (arm_i & ~arm_i_dly)
