@@ -335,8 +335,7 @@ module cwhusky_tb();
           // enable glitching
           write_1byte(`CLOCKGLITCH_POWERDOWN, 8'h00);
 
-          /*
-          // TEMP: manual glitch
+          /* to debug manual glitch:
           rw_lots_bytes(`CLOCKGLITCH_SETTINGS);
           write_next_byte(8'h00); // byte 0
           write_next_byte(8'h00); // byte 1
@@ -344,8 +343,10 @@ module cwhusky_tb();
           write_next_byte(8'h00); // byte 3
           write_next_byte(8'h00); // byte 4
           write_next_byte(8'h80); // byte 5: manual go
-          write_next_byte(8'h01); // byte 6: reps=1
-          write_next_byte(8'h01); // byte 7: source=clkgen
+          //write_next_byte(8'h01); // byte 6: reps=1
+          //write_next_byte(8'h01); // byte 7: source=clkgen
+          write_next_byte(all_reps[0][7:0]); // byte 6: LSB of reps
+          write_next_byte({1'b0, all_reps[0][12:8], 2'b01}); // byte 7: MSB of reps, source=clkgen
           rw_lots_bytes(`CLOCKGLITCH_SETTINGS);
           write_next_byte(8'h00); // byte 0
           write_next_byte(8'h00); // byte 1
@@ -353,12 +354,11 @@ module cwhusky_tb();
           write_next_byte(8'h00); // byte 3
           write_next_byte(8'h00); // byte 4
           write_next_byte(8'h00); // byte 5: manual go done
-          write_next_byte(8'h01); // byte 6: reps=1
-          write_next_byte(8'h01); // byte 7: source=clkgen
-
+          //write_next_byte(8'h01); // byte 6: reps=1
+          //write_next_byte(8'h01); // byte 7: source=clkgen
+          write_next_byte(all_reps[0][7:0]); // byte 6: LSB of reps
+          write_next_byte({1'b0, all_reps[0][12:8], 2'b01}); // byte 7: MSB of reps, source=clkgen
           #(pCLK_USB_PERIOD*100);
-
-          // TEMP: manual glitch
           rw_lots_bytes(`CLOCKGLITCH_SETTINGS);
           write_next_byte(8'h00); // byte 0
           write_next_byte(8'h00); // byte 1
@@ -366,8 +366,10 @@ module cwhusky_tb();
           write_next_byte(8'h00); // byte 3
           write_next_byte(8'h00); // byte 4
           write_next_byte(8'h80); // byte 5: manual go
-          write_next_byte(8'h01); // byte 6: reps=1
-          write_next_byte(8'h01); // byte 7: source=clkgen
+          //write_next_byte(8'h01); // byte 6: reps=1
+          //write_next_byte(8'h01); // byte 7: source=clkgen
+          write_next_byte(all_reps[0][7:0]); // byte 6: LSB of reps
+          write_next_byte({1'b0, all_reps[0][12:8], 2'b01}); // byte 7: MSB of reps, source=clkgen
           rw_lots_bytes(`CLOCKGLITCH_SETTINGS);
           write_next_byte(8'h00); // byte 0
           write_next_byte(8'h00); // byte 1
@@ -375,8 +377,10 @@ module cwhusky_tb();
           write_next_byte(8'h00); // byte 3
           write_next_byte(8'h00); // byte 4
           write_next_byte(8'h00); // byte 5: manual go done
-          write_next_byte(8'h01); // byte 6: reps=1
-          write_next_byte(8'h01); // byte 7: source=clkgen
+          //write_next_byte(8'h01); // byte 6: reps=1
+          //write_next_byte(8'h01); // byte 7: source=clkgen
+          write_next_byte(all_reps[0][7:0]); // byte 6: LSB of reps
+          write_next_byte({1'b0, all_reps[0][12:8], 2'b01}); // byte 7: MSB of reps, source=clkgen
           */
 
 
@@ -591,7 +595,10 @@ module cwhusky_tb();
       // TODO-temporary to manually verify if fast reads get disabled: (clean up later)
       write_1byte(`ECHO_ADDR, 155);
       read_1byte(`ECHO_ADDR, rdata);
-      //$display("XXX Read %d", rdata);
+      if (rdata != 155) begin
+          errors += 1;
+          $display("ERROR: reading after fast reads");
+      end
 
       if (pSTREAM)
          // clear stream mode:
