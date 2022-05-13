@@ -234,12 +234,14 @@ module openadc_interface #(
    end
 
 
+   reg [11:0] ADC_data_tofifo_pre;
    reg [11:0] ADC_data_tofifo;
    reg [11:0] datacounter = 0;
    wire [11:0] trigger_adclevel;
 
    always @(posedge ADC_clk_sample) begin
-      ADC_data_tofifo <= data_source_select? ADC_data : datacounter;
+      ADC_data_tofifo <= ADC_data_tofifo_pre; // resample to account for delay in fifo_top_husky.v
+      ADC_data_tofifo_pre <= data_source_select? ADC_data : datacounter;
       datacounter <= datacounter + 1;
    end
 
@@ -360,6 +362,7 @@ module openadc_interface #(
 
    assign reg_datao = reg_datao_oadc | reg_datao_fifo | reg_datao_mmcm_drp | reg_datao_sad;
 
+   /* TODO-temp to explore timing closure
    sad #(
        .pBYTECNT_SIZE           (pBYTECNT_SIZE),
        .pREF_SAMPLES            (32),
@@ -382,6 +385,9 @@ module openadc_interface #(
        .io4                     (trigger_io4_i),
        .trigger                 (trigger_sad  )
    );
+   */
+  assign trigger_sad = 1'b0;
+  assign reg_datao_sad = 0;
 
    reg_openadc #(
       .pBYTECNT_SIZE    (pBYTECNT_SIZE)

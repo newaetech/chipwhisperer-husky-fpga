@@ -152,8 +152,8 @@ module reg_la #(
       wire observer_clk_prebuf;
       MMCME2_ADV #(
          .BANDWIDTH                    ("OPTIMIZED"), // Jitter programming (OPTIMIZED, HIGH, LOW)
-         .CLKFBOUT_MULT_F              (3.0), // Multiply value for all CLKOUT (2.000-64.000)
-         .CLKOUT0_DIVIDE_F             (2.0),
+         .CLKFBOUT_MULT_F              (5.0), // Multiply value for all CLKOUT (2.000-64.000)
+         .CLKOUT0_DIVIDE_F             (4.0),
          .CLKFBOUT_PHASE               (0.0), // Phase offset in degrees of CLKFB (-360.000-360.000).
          .CLKIN1_PERIOD                (5.0),
          .CLKOUT0_DUTY_CYCLE           (0.5),
@@ -418,9 +418,10 @@ module reg_la #(
             else
                fifo_wr <= 1'b0;
 
-            if (capture_count < capture_depth-1)
-               capture_count <= capture_count + 1;
-            else
+           // TODO: need to make sure that not resetting capture_count here
+           // doesn't break anything
+            capture_count <= capture_count + 1;
+            if (capture_count == capture_depth-1)
                capturing <= 1'b0;
          end
 
