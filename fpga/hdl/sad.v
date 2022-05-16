@@ -78,6 +78,7 @@ module sad #(
     reg [31:0] threshold; // must be wide enough so it doesn't overflow (must hold addition of pREF_SAMPLES numbers that are each pBITS_PER_SAMPLE bits wide)
     reg [4:0] counter; // must be wide enough to count to pREF_SAMPLES-1
     reg [4:0] counter_counter [0:pREF_SAMPLES-1]; // must be wide enough to count to pREF_SAMPLES-1
+    reg [pBITS_PER_SAMPLE-1:0] adc_datain_r;
 
     `ifdef SAD_DEBUG
         reg [pBITS_PER_SAMPLE-1:0] trigger_index;
@@ -149,6 +150,7 @@ module sad #(
             fifo_not_empty_error <= 1'b0;
         end
         else begin
+            adc_datain_r <= adc_datain;
             if (clear_status_adc) begin
                 triggered <= 1'b0;
                 fifo_overflow_sticky <= 1'b0;
@@ -244,10 +246,10 @@ module sad #(
                     end
 
                     if (counter_active_r[i]) begin
-                        if (adc_datain > nextrefsample[i])
-                            counter_incr[i] <= adc_datain - nextrefsample[i];
+                        if (adc_datain_r > nextrefsample[i])
+                            counter_incr[i] <= adc_datain_r - nextrefsample[i];
                         else
-                            counter_incr[i] <= nextrefsample[i] - adc_datain;
+                            counter_incr[i] <= nextrefsample[i] - adc_datain_r;
                     end
 
                     // This was an idea: if any single sample difference exceeds maxdev, mark
@@ -529,7 +531,7 @@ module sad #(
              sad_debug_fifo U_debug_fifo(
                 .clk          (adc_sampleclk),
                 .rst          (reset),
-                .din          (adc_datain),
+                .din          (adc_datain_r),
                 .wr_en        (debug_wr),
                 .rd_en        (debug_rd),
                 .dout         (debug_fifo_out),
@@ -550,7 +552,7 @@ module sad #(
    `ifdef ILA_SAD
        ila_sad U_ila_sad (
           .clk            (clk_usb),              // input wire clk
-          .probe0         (adc_datain),           // input wire [7:0]  probe0 
+          .probe0         (adc_datain_r),         // input wire [7:0]  probe0 
           .probe1         (state),                // input wire [1:0]  probe1 
           .probe2         (individual_trigger_debug),// input wire [31:0]  probe2 
           .probe3         (trigger),              // input wire [0:0]  probe3 

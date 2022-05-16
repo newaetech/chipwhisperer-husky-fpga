@@ -3,6 +3,7 @@ set_property CONFIG_VOLTAGE 3.3 [current_design]
 
 
 create_clock -period 10.400 -name clk_usb -waveform {0.000 5.200} [get_nets clk_usb]
+#create_clock -period 5.000 -name ADC_clk_fb -waveform {0.000 2.500} [get_nets ADC_clk_fb_prebuf]
 create_clock -period 5.000 -name ADC_clk_fb -waveform {0.000 2.500} [get_nets ADC_clk_fb]
 create_clock -period 5.000 -name pll_fpga_clk -waveform {0.000 2.500} [get_nets pll_fpga_clk]
 
@@ -277,8 +278,10 @@ set_false_path -to [get_ports USB_SPARE0]
 # from spec!
 set_input_delay -clock ADC_clk_fb -max 1.450 [get_ports ADC_DP]
 set_input_delay -clock ADC_clk_fb -max 1.450 [get_ports ADC_DP] -clock_fall -add_delay
-set_input_delay -clock ADC_clk_fb -min 0.350 [get_ports ADC_DP]
-set_input_delay -clock ADC_clk_fb -min 0.350 [get_ports ADC_DP] -clock_fall -add_delay
+#set_input_delay -clock ADC_clk_fb -min 0.350 [get_ports ADC_DP]
+#set_input_delay -clock ADC_clk_fb -min 0.350 [get_ports ADC_DP] -clock_fall -add_delay
+set_input_delay -clock ADC_clk_fb -min 1.300 [get_ports ADC_DP]
+set_input_delay -clock ADC_clk_fb -min 1.300 [get_ports ADC_DP] -clock_fall -add_delay
 
 
 set_input_delay -clock clk_usb 0.000 [get_ports target_io1]

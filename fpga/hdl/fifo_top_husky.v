@@ -241,7 +241,7 @@ module fifo_top_husky(
         else
             segment_cycles_adjusted <= segment_cycles;
         next_segment_go <= next_segment_go_pre; // this would add a cycle of latency but we've compensate by registering the ADC input in openadc_interface.v
-        //presamp_done <= presamp_done_pre;
+        //presamp_done <= presamp_done_pre; // TODO: just to see if if helps...
         last_segment <= (segment_counter == (num_segments-1));
         last_sample <= (sample_counter == (max_samples_i-2));
         presamp_done1_r <= presamp_done1;

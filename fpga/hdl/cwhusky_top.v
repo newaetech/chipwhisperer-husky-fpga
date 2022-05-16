@@ -617,6 +617,7 @@ module cwhusky_top(
       assign ADC_clk_fb = ADC_clk_fbp;
 
    `else
+      wire ADC_clk_fb_prebuf;
       IBUFDS #(
          .DIFF_TERM        ("FALSE"),
          .IBUF_LOW_PWR     ("FALSE"),
@@ -624,8 +625,14 @@ module cwhusky_top(
       ) U_IBUFDS_adc_clk_fb (
          .I                (ADC_clk_fbp),
          .IB               (ADC_clk_fbn),
-         .O                (ADC_clk_fb)
+         .O                (ADC_clk_fb_prebuf)
       );
+
+      BUFG BUFG_adc_clk (
+         .O(ADC_clk_fb),
+         .I(ADC_clk_fb_prebuf)
+      );
+
    `endif
 
 
