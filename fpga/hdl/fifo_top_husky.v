@@ -224,8 +224,8 @@ module fifo_top_husky(
 
     reg  presamp_done1_r;
     wire presamp_done1 = (capture_go && (segment_counter == 0));
-    wire next_segment_go_pre = segment_cycle_counter_en?  (segment_cycle_counter == segment_cycles_adjusted) :
-                                                      (capture_go && ~capture_go_r);
+    wire next_segment_go_pre = segment_cycle_counter_en?  ((segment_cycle_counter == segment_cycles_adjusted) && (segment_cycles > 0)) :
+                                                          (capture_go && ~capture_go_r);
 
     wire presamp_done_pre = presamp_done1_r || next_segment_go;
     wire presamp_error = presamp_done && (state == pS_PRESAMP_FILLING);
@@ -1040,7 +1040,7 @@ module fifo_top_husky(
           slow_fifo_rd_adc <= slow_fifo_rd;
 
        ila_segments2 U_ila_segments2 (
-          .clk            (adc_sampleclk),        // input wire clk
+          .clk            (clk_usb),              // input wire clk
           .probe0         (state_idle),           // input wire [0:0]  probe0 
           .probe1         (state_done),           // input wire [0:0]  probe1 
           .probe2         (state_presamp_filling),// input wire [0:0]  probe2 
