@@ -220,28 +220,23 @@ module fifo_top_husky(
 
     assign stop_capture_conditions = fifo_rst_pre || adc_capture_stop;
 
-    //assign fsm_fast_wr_en = ((state == pS_PRESAMP_FILLING) || (state == pS_PRESAMP_FULL) || (state == pS_TRIGGERED));
-
     reg  presamp_done1_r;
     wire presamp_done1 = (capture_go && (segment_counter == 0));
     wire next_segment_go_pre = segment_cycle_counter_en?  ((segment_cycle_counter == segment_cycles_adjusted) && (segment_cycles > 0)) :
                                                           (capture_go && ~capture_go_r);
 
-    wire presamp_done_pre = presamp_done1_r || next_segment_go;
+    wire presamp_done = presamp_done1_r || next_segment_go;
     wire presamp_error = presamp_done && (state == pS_PRESAMP_FILLING);
 
     reg next_segment_go;
-    wire presamp_done = presamp_done_pre;
-    //reg presamp_done;
     reg last_segment;
     reg last_sample;
     always @(posedge adc_sampleclk) begin
-        if (segment_cycles > 1) // TODO: temporary; do this in Python instead
+        if (segment_cycles > 1) // alternatively, could do this in Python instead  (but why- everything works now)
             segment_cycles_adjusted <= segment_cycles - 2;
         else
             segment_cycles_adjusted <= segment_cycles;
         next_segment_go <= next_segment_go_pre; // this would add a cycle of latency but we've compensate by registering the ADC input in openadc_interface.v
-        //presamp_done <= presamp_done_pre; // TODO: just to see if if helps...
         last_segment <= (segment_counter == (num_segments-1));
         last_sample <= (sample_counter == (max_samples_i-2));
         presamp_done1_r <= presamp_done1;
@@ -619,7 +614,7 @@ module fifo_top_husky(
           fast_write_count <= 0;
        end
        else begin
-          fast_write_count_init <= presample_i % 3; // TODO: alternatively, this could be precomputed in Python
+          fast_write_count_init <= presample_i % 3; // alternatively, this could be precomputed in Python
           if (state == pS_IDLE)
              fast_write_count <= fast_write_count_init;
           else if (fast_fifo_wr && (state == pS_TRIGGERED))
