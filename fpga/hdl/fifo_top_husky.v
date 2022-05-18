@@ -117,6 +117,7 @@ module fifo_top_husky(
 
     reg [1:0]           fast_read_count;
     reg [2:0]           fast_write_count;
+    reg [2:0]           fast_write_count_init;
     reg                 filling_out_to_done;
     reg                 slow_fifo_underflow_sticky;
     reg [1:0]           slow_fifo_underflow_count;
@@ -214,18 +215,32 @@ module fifo_top_husky(
     wire state_done = (state == pS_DONE);
 
     wire stop_capture_conditions;
-    wire fsm_fast_wr_en;
+    reg fsm_fast_wr_en;
+    reg [19:0] segment_cycles_adjusted;
 
     assign stop_capture_conditions = fifo_rst_pre || adc_capture_stop;
 
-    assign fsm_fast_wr_en = ((state == pS_PRESAMP_FILLING) || (state == pS_PRESAMP_FULL) || (state == pS_TRIGGERED));
-
+    reg  presamp_done1_r;
     wire presamp_done1 = (capture_go && (segment_counter == 0));
-    wire next_segment_go = segment_cycle_counter_en?  ((segment_cycle_counter == (segment_cycles-1)) && (segment_cycles>0)) :
-                                                      (capture_go && ~capture_go_r);
+    wire next_segment_go_pre = segment_cycle_counter_en?  ((segment_cycle_counter == segment_cycles_adjusted) && (segment_cycles > 0)) :
+                                                          (capture_go && ~capture_go_r);
 
-    wire presamp_done = presamp_done1 || (next_segment_go && segment_counter > 0);
+    wire presamp_done = presamp_done1_r || next_segment_go;
     wire presamp_error = presamp_done && (state == pS_PRESAMP_FILLING);
+
+    reg next_segment_go;
+    reg last_segment;
+    reg last_sample;
+    always @(posedge adc_sampleclk) begin
+        if (segment_cycles > 1) // alternatively, could do this in Python instead  (but why- everything works now)
+            segment_cycles_adjusted <= segment_cycles - 2;
+        else
+            segment_cycles_adjusted <= segment_cycles;
+        next_segment_go <= next_segment_go_pre; // this would add a cycle of latency but we've compensate by registering the ADC input in openadc_interface.v
+        last_segment <= (segment_counter == (num_segments-1));
+        last_sample <= (sample_counter == (max_samples_i-2));
+        presamp_done1_r <= presamp_done1;
+    end
 
     always @ (posedge adc_sampleclk) begin
         if (reset) begin
@@ -288,6 +303,7 @@ module fifo_top_husky(
                 segment_cycle_counter <= 0;
                 filling_out_to_done <= 0;
                 segment_error <= 1'b0;
+                fsm_fast_wr_en <= 1'b0;
 
                 if ((downsample_i > 0) && ((presample_i > 0) || (num_segments > 1)))
                    downsample_error <= 1'b1;
@@ -295,10 +311,14 @@ module fifo_top_husky(
                    downsample_error <= 1'b0;
 
                 if (armed_and_ready && ~adc_capture_stop) begin
-                   if (arm_i & (presample_i > 0))
+                   if (presample_i > 0) begin
+                      fsm_fast_wr_en <= 1'b1;
                       state <= pS_PRESAMP_FILLING;
-                   else if (capture_go)
+                   end
+                   else if (capture_go_r) begin
+                      fsm_fast_wr_en <= 1'b1;
                       state <= pS_TRIGGERED;
+                   end
                 end
              end
 
@@ -308,21 +328,28 @@ module fifo_top_husky(
                    segment_error <= 1'b1;
                 if (segment_counter > 0)
                    segment_cycle_counter <= segment_cycle_counter + 1;
-                if (stop_capture_conditions)
+                if (stop_capture_conditions) begin
+                   fsm_fast_wr_en <= 1'b0;
                    state <= pS_DONE;
-                else if (presamp_done)
+                end
+                else if (presamp_done) begin
                    state <= pS_TRIGGERED;
-                else if (presample_counter == (presample_i-2))
+                end
+                else if (presample_counter == (presample_i-2)) begin
                    state <= pS_PRESAMP_FULL;
-                else if (fast_fifo_wr)
+                end
+                else if (fast_fifo_wr) begin
                    presample_counter <= presample_counter + 1;
+                end
              end
 
              pS_PRESAMP_FULL: begin
                 if (segment_counter > 0)
                    segment_cycle_counter <= segment_cycle_counter + 1;
-                if (stop_capture_conditions)
+                if (stop_capture_conditions) begin
+                   fsm_fast_wr_en <= 1'b0;
                    state <= pS_DONE;
+                end
                 else if (presamp_done) begin
                    segment_cycle_counter <= 0;
                    sample_counter <= presample_i;
@@ -341,17 +368,19 @@ module fifo_top_husky(
                 fast_fifo_rd_en <= 1'b1;
                 segment_cycle_counter <= segment_cycle_counter + 1;
 
-                if (stop_capture_conditions || ((sample_counter == (max_samples_i-1)) && fast_fifo_wr && (segment_counter == (num_segments-1))) || (filling_out_to_done && fast_fifo_wr)) begin
+                if (stop_capture_conditions || (last_sample && fast_fifo_wr && last_segment) || (filling_out_to_done && fast_fifo_wr)) begin
                    if (fast_write_count == 2) begin
                       adc_capture_stop <= 1'b1;
                       done_wait_count <= 10;  // established by trial/error to account for the latency in the Xilinx FIFO updating its empty flag
+                      fsm_fast_wr_en <= 1'b0;
                       state <= pS_DONE;
                    end
                    else
                       filling_out_to_done <= 1'b1;
                 end
 
-                else if ((sample_counter == (max_samples_i-1)) && (segment_counter < (num_segments-1)) && fast_fifo_wr) begin
+                else if (last_sample && ~last_segment && fast_fifo_wr) begin
+                   fsm_fast_wr_en <= 1'b0;
                    state <= pS_SEGMENT_DONE;
                 end
 
@@ -368,12 +397,14 @@ module fifo_top_husky(
                       segment_counter <= segment_counter + 1;
                       sample_counter <= 0;
                       presample_counter <= 0;
+                      fsm_fast_wr_en <= 1'b1;
                       state <= pS_PRESAMP_FILLING;
                    end
                    else if (next_segment_go) begin
                       segment_counter <= segment_counter + 1;
                       segment_cycle_counter <= 0;
                       sample_counter <= 0;
+                      fsm_fast_wr_en <= 1'b1;
                       state <= pS_TRIGGERED;
                    end
                 end
@@ -583,10 +614,10 @@ module fifo_top_husky(
           fast_write_count <= 0;
        end
        else begin
+          fast_write_count_init <= presample_i % 3; // alternatively, this could be precomputed in Python
           if (state == pS_IDLE)
-             // note: if it's too hard to meet timing on this, re-code so that timing constraints can be removed, since it's static
-             fast_write_count <= presample_i % 3;
-          if (fast_fifo_wr && (state == pS_TRIGGERED))
+             fast_write_count <= fast_write_count_init;
+          else if (fast_fifo_wr && (state == pS_TRIGGERED))
              if (fast_write_count < 2)
                 fast_write_count <= fast_write_count + 1;
              else
@@ -1004,7 +1035,7 @@ module fifo_top_husky(
           slow_fifo_rd_adc <= slow_fifo_rd;
 
        ila_segments2 U_ila_segments2 (
-          .clk            (adc_sampleclk),        // input wire clk
+          .clk            (clk_usb),              // input wire clk
           .probe0         (state_idle),           // input wire [0:0]  probe0 
           .probe1         (state_done),           // input wire [0:0]  probe1 
           .probe2         (state_presamp_filling),// input wire [0:0]  probe2 

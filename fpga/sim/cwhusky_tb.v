@@ -497,7 +497,7 @@ module cwhusky_tb();
          else if (pSEGMENT_CYCLE_COUNTER_EN == 0)
             target_io4_reg = 1'b1;
 
-         trigger_counter_value[trigger_gen_index] = U_dut.oadc.U_fifo.adc_datain - pPRESAMPLES + offset;
+         trigger_counter_value[trigger_gen_index] = U_dut.oadc.U_fifo.adc_datain - pPRESAMPLES + offset + 1;
 
          if (pSHORT_TRIGGER)
              trigger_cycles = 5;
