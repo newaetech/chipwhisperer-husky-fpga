@@ -5,6 +5,15 @@ ChipWhisperer-Husky.
 # Implementation
 Husky uses a Xilinx XC7A35 FPGA. Implementation is done with Vivado 2020.2.
 
+Implementation should run cleanly (no setup or hold timing violations) but
+timing is tight and small timing failures can occur if you're unlucky. The
+usual culprits are:
+* `ADC_clk_fb` clock: in `fifo_top_husky.v` for logic around counting
+  samples and segments, or writing data from the fast FIFO to the slow FIFO.
+* `oberver_clk` clock: logic in the TraceWhisperer UART receiver, or in
+  `reg_la.v`.
+* setup and/or hold violations on the `ADC_DP` inputs.
+
 # Testing
 
 CW-Husky is tested in two ways:
