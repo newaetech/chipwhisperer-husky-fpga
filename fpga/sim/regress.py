@@ -144,7 +144,7 @@ tests.append(dict(name  = 'presamp_error',
 
 
 tests.append(dict(name  = 'segments_counter',
-             frequency = 3,
+             frequency = 5,
              #frequency = 0,
              PRESAMPLES = 0,
              FIFO_SAMPLES = [50,400],
@@ -159,6 +159,37 @@ tests.append(dict(name  = 'segments_counter',
              SHORT_TRIGGER = [0,1],
              TIMEOUT_CYCLES = 100000,
              description = 'Segmented capture, by cycle counter.'))
+
+# rule: segment_cycles >= fifo_samples + 10
+tests.append(dict(name  = 'segments_quick_nopresamp',
+             frequency = 1,
+             PRESAMPLES = 0,
+             FIFO_SAMPLES = [25,30],
+             READ_DELAY = [100, 500],
+             SEGMENT_CYCLES = [40,45],
+             SEGMENT_CYCLE_COUNTER_EN = [0,1],
+             NUM_SEGMENTS = [5,10],
+             TRIGGER_DELAY = [2500, 4000],
+             TRIGGER_NOW = 0,
+             OFFSET_ENABLE = 0,
+             SHORT_TRIGGER = [0,1],
+             description = 'Segmented capture, very short segments, without presamples.'))
+
+# rule: segment_cycles >= fifo_samples + presamples AND segment_cycles >= fifo_samples + 10
+tests.append(dict(name  = 'segments_quick_presample',
+             frequency = 1,
+             PRESAMPLES = [8,20],
+             FIFO_SAMPLES = [25,30],
+             READ_DELAY = [100, 500],
+             SEGMENT_CYCLES = [51,60],
+             SEGMENT_CYCLE_COUNTER_EN = [0,1],
+             NUM_SEGMENTS = [5,10],
+             TRIGGER_DELAY = [2500, 4000],
+             TRIGGER_NOW = 0,
+             OFFSET_ENABLE = 0,
+             SHORT_TRIGGER = [0,1],
+             description = 'Segmented capture, very short segments, with presamples.'))
+
 
 tests.append(dict(name  = 'segments_trigger',
              frequency = 3,
