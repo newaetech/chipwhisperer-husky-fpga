@@ -776,7 +776,7 @@ cwhusky_top U_dut (
     .ADC_OVR_SDOUT      (1'b0         ),
     .FPGA_CDOUT         (1'b0         ),
     .USERIO_D           (             ),
-    .USERIO_CLK         (1'b0         ),
+    .USERIO_CLK         (             ),
     .PLL_STATUS         (1'b0         ),
     .PLLFPGAP           (clk_adc      ),
     .PLLFPGAN           (1'b0         )

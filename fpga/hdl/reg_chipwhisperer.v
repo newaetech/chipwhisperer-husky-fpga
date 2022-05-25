@@ -91,7 +91,8 @@ module reg_chipwhisperer #(
    input  wire [7:0]  trace_userio_dir,
    output wire [pUSERIO_WIDTH-1:0] userio_cwdriven,
    output reg  [pUSERIO_WIDTH-1:0] userio_drive_data,
-   output reg                      userio_debug_driven,
+   output reg                      userio_fpga_debug,
+   output reg                      userio_target_debug,
    input  wire [pUSERIO_WIDTH-1:0] userio_d,
    input  wire                     userio_clk,
 
@@ -443,7 +444,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
            `CW_IOREAD_ADDR:             reg_datao_reg = {4'b0000, registers_ioread};
 
            `USERIO_CW_DRIVEN:           reg_datao_reg = userio_cwdriven[reg_bytecnt*8 +: 8];
-           `USERIO_DEBUG_DRIVEN:        reg_datao_reg = {7'b0, userio_debug_driven};
+           `USERIO_DEBUG_DRIVEN:        reg_datao_reg = {6'b0, userio_target_debug, userio_fpga_debug};
            `USERIO_READ:                reg_datao_reg = userio_read[reg_bytecnt*8 +: 8];
 
            `EXTERNAL_CLOCK:             reg_datao_reg = reg_external_clock;
@@ -462,7 +463,8 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
          registers_cwtrigmod <= 0;
          registers_iorouting <= 64'b00000010_00000001;
          reg_userio_cwdriven <= 8'b0;
-         userio_debug_driven <= 1'b0;
+         userio_fpga_debug <= 1'b0;
+         userio_target_debug <= 1'b0;
          userio_drive_data <= 8'b0;
          reg_external_clock <= 1'b0;
       end else if (reg_write) begin
@@ -473,7 +475,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
            `CW_IOROUTE_ADDR: registers_iorouting[reg_bytecnt*8 +: 8] <= reg_datai;
 
            `USERIO_CW_DRIVEN: reg_userio_cwdriven[reg_bytecnt*8 +: 8] <= reg_datai;
-           `USERIO_DEBUG_DRIVEN: userio_debug_driven <= reg_datai[0];
+           `USERIO_DEBUG_DRIVEN: {userio_target_debug, userio_fpga_debug} <= reg_datai[1:0];
            `USERIO_DRIVE_DATA: userio_drive_data[reg_bytecnt*8 +: 8] <= reg_datai;
 
            `EXTERNAL_CLOCK: reg_external_clock <= reg_datai[0];
@@ -483,10 +485,11 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    end
 
    // USERIO drive direction can be set via USERIO_CW_DRIVEN, but this gets
-   // overwritten by USERIO_DEBUG_DRIVEN and trace_en:
+   // overwritten by userio_fpga_debug, userio_target_debug and trace_en:
    // (1: output, 0: input)
    assign userio_cwdriven = trace_en? trace_userio_dir : 
-                            userio_debug_driven? {pUSERIO_WIDTH{1'b1}} :
+                            userio_fpga_debug? {pUSERIO_WIDTH{1'b1}} :
+                            userio_target_debug? 8'b1110_0000 :
                             reg_userio_cwdriven;
 
 

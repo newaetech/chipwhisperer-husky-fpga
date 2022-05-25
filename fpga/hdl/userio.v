@@ -37,7 +37,7 @@ module userio #(
    inout  wire [pWIDTH-1:0]             userio_d,
    input  wire [pWIDTH-1:0]             I_userio_drive_data,
    input  wire [pWIDTH-1:0]             I_userio_cwdriven,
-   input  wire                          I_userio_debug_driven,
+   input  wire                          I_userio_fpga_debug,
    input  wire [pWIDTH-1:0]             I_userio_debug_data,
    input  wire                          userio_clk
 );
@@ -46,7 +46,7 @@ module userio #(
 
    generate
       for (i = 0; i < pWIDTH; i = i + 1) begin
-         assign userio_d[i] = I_userio_debug_driven? I_userio_debug_data[i] :
+         assign userio_d[i] = I_userio_fpga_debug? I_userio_debug_data[i] :
                               I_userio_cwdriven[i]?  I_userio_drive_data[i] : 1'bz;
       end
    endgenerate

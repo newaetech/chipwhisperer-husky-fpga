@@ -18,6 +18,7 @@ set_case_analysis 0 [get_pins oadc/genclocks/clkgenfx_mux/S]
 set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets oadc/genclocks/U_clkgen/inst/clk_out1]
 
 set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets {USERIO_CLK_IBUF}]
+set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets {U_trace_top/VCC_2}]
 set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets U_trace_top/fe_clk_pre]
 
 # TODO - needed if putting IDELAY on TRACECLOCK:

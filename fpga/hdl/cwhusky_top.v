@@ -70,7 +70,7 @@ module cwhusky_top(
     input wire          PLLFPGAN,
 
     inout  wire [7:0]   USERIO_D,
-    input  wire         USERIO_CLK,
+    inout  wire         USERIO_CLK,
 
     input wire          FPGA_CDOUT, /* Input FROM SAM3U */
     output wire         FPGA_CDIN, /* Output TO SAM3U */
@@ -81,14 +81,14 @@ module cwhusky_top(
     input  wire         SAM_CS, // TODO: why not using this?
 
     /* XMEGA Programming - not used, but need to ensure line is floating */
-    output wire         target_PDID,
-    output wire         target_PDIC,
+    inout  wire         target_PDID,
+    inout  wire         target_PDIC,
 
     /* Spare Lines - AVR Programming */
     inout  wire         target_nRST,
-    input wire          target_MISO,
-    output wire         target_MOSI,
-    output wire         target_SCK,
+    inout  wire         target_MISO,
+    inout  wire         target_MOSI,
+    inout  wire         target_SCK,
 
     /* Target IO Interfaces */
     inout wire          target_io4, // Normally trigger
@@ -182,9 +182,11 @@ module cwhusky_top(
 
    wire flash_pattern;
 
-   wire userio_debug_driven;
+   wire userio_fpga_debug;
+   wire userio_target_debug;
    wire [pUSERIO_WIDTH-1:0] userio_cwdriven;
    wire [pUSERIO_WIDTH-1:0] userio_drive_data;
+   wire [pUSERIO_WIDTH-1:0] userio_drive_data_reg;
    wire [pUSERIO_WIDTH-1:0] userio_debug_data;
 
    wire decode_uart_input;
@@ -440,8 +442,9 @@ module cwhusky_top(
         .trace_en               (trace_en),
         .trace_userio_dir       (trace_userio_dir),
         .userio_cwdriven        (userio_cwdriven),
-        .userio_drive_data      (userio_drive_data),
-        .userio_debug_driven    (userio_debug_driven),
+        .userio_drive_data      (userio_drive_data_reg),
+        .userio_fpga_debug      (userio_fpga_debug),
+        .userio_target_debug    (userio_target_debug),
         .userio_d               (USERIO_D),
         .userio_clk             (USERIO_CLK),
 
@@ -451,6 +454,15 @@ module cwhusky_top(
         .trigger_o              (ext_trigger)
    );
 
+   assign userio_drive_data = userio_target_debug? {target_MOSI, // carries TDI on USERIO_D7
+                                                    target_PDID, // carries TMS/SWDIO on USERIO_D6
+                                                    target_SCK,  // carries TCLK/SWDCLK on USERIO_D5
+                                                    5'b0         // USERIO_D4:D0 undriven (TDO on USERIO_D3)
+                                                   } : userio_drive_data_reg;
+
+   // TODO: not sure this is kosher, but it seems to work?
+   assign USERIO_CLK = userio_target_debug? target_PDIC : 1'bz;
+
    userio #(
       .pWIDTH                   (pUSERIO_WIDTH)
    ) U_userio (
@@ -458,7 +470,7 @@ module cwhusky_top(
       .userio_d                 (USERIO_D),
       .userio_clk               (USERIO_CLK),
       .I_userio_cwdriven        (userio_cwdriven),
-      .I_userio_debug_driven    (userio_debug_driven),
+      .I_userio_fpga_debug      (userio_fpga_debug),
       .I_userio_drive_data      (userio_drive_data),
       .I_userio_debug_data      (userio_debug_data)
    );
@@ -576,7 +588,8 @@ module cwhusky_top(
    assign target_SCK = (target_highz) ? 1'bZ :
                        (enable_avrprog) ? SAM_SPCK : 1'bZ;
 
-   assign SAM_MISO = (enable_avrprog) ? target_MISO : 1'bZ;
+   assign SAM_MISO = (userio_target_debug)? USERIO_D[3] :
+                     (enable_avrprog) ? target_MISO : 1'bZ;
 
 
    // generate ADC output differential clock
@@ -753,7 +766,20 @@ module cwhusky_top(
    wire fe_clk;
 
    `ifdef TRACE
+
        wire TRACECLOCK = USERIO_CLK;
+       /*
+       wire TRACECLOCK;
+      `ifndef __ICARUS__
+          IBUFG IBUFG_traceclock (
+             .O(TRACECLOCK),
+             .I(USERIO_CLK)
+          );
+      `else
+          assign TRACECLOCK = USERIO_CLK;
+      `endif
+       */
+
        wire [3:0] TRACEDATA  = USERIO_D[7:4];
        wire serial_in = decodeio_active? decode_uart_input : 
                         trace_en?        USERIO_D[2] : 1'b1;
