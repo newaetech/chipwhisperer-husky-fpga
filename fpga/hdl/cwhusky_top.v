@@ -184,6 +184,7 @@ module cwhusky_top(
 
    wire userio_fpga_debug;
    wire userio_target_debug;
+   wire userio_target_debug_swd;
    wire [pUSERIO_WIDTH-1:0] userio_cwdriven;
    wire [pUSERIO_WIDTH-1:0] userio_drive_data;
    wire [pUSERIO_WIDTH-1:0] userio_drive_data_reg;
@@ -445,6 +446,7 @@ module cwhusky_top(
         .userio_drive_data      (userio_drive_data_reg),
         .userio_fpga_debug      (userio_fpga_debug),
         .userio_target_debug    (userio_target_debug),
+        .userio_target_debug_swd(userio_target_debug_swd),
         .userio_d               (USERIO_D),
         .userio_clk             (USERIO_CLK),
 
@@ -457,7 +459,7 @@ module cwhusky_top(
    assign userio_drive_data = userio_target_debug? {target_MOSI, // carries TDI on USERIO_D7
                                                     target_PDID, // carries TMS/SWDIO on USERIO_D6
                                                     target_SCK,  // carries TCLK/SWDCLK on USERIO_D5
-                                                    5'b0         // USERIO_D4:D0 undriven (TDO on USERIO_D3)
+                                                    5'b0         // USERIO_D4:D0 undriven (TDO input on USERIO_D3)
                                                    } : userio_drive_data_reg;
 
    // TODO: not sure this is kosher, but it seems to work?
@@ -572,7 +574,10 @@ module cwhusky_top(
    wire target_highz = target_npower;
    assign target_poweron = ~target_npower;
 
-   assign target_PDID = (target_highz) ? 1'bZ :
+   assign target_PDID =/* (userio_target_debug & userio_target_debug_swd & USERIO_CLK)? target_PDID : // SWDIO: host-driven phase
+                        (userio_target_debug & userio_target_debug_swd & ~USERIO_CLK)? 1'bZ :       // SWDIO: target-driven phase
+                       */ (target_highz) ? 1'bZ :
+                        (userio_target_debug & userio_target_debug_swd & ~USERIO_CLK) ? USERIO_D[6] :
                         (enable_output_pdid) ? output_pdid : 1'bZ;
 
    assign target_PDIC = (target_highz) ? 1'bZ:
