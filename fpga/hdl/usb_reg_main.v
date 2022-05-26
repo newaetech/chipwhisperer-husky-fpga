@@ -52,6 +52,7 @@ module usb_reg_main #(
 
    reg isoutreg, isoutregdly;
    reg cwusb_wrn_rs, cwusb_wrn_rs_dly;
+   reg cwusb_cen_r;
    reg cwusb_alen_r;
    reg reg_write_dly;
    reg drive_data_out;
@@ -63,6 +64,7 @@ module usb_reg_main #(
       isoutregdly <= isoutreg;
 
       cwusb_alen_r <= cwusb_alen;
+      cwusb_cen_r <= cwusb_cen;
 
       cwusb_wrn_rs <= cwusb_wrn;
       cwusb_wrn_rs_dly <= cwusb_wrn_rs;
@@ -82,7 +84,11 @@ module usb_reg_main #(
       fast_fifo_read_r <= fast_fifo_read;
       reg_address <= cwusb_addr;
 
-      if (~cwusb_cen & ~cwusb_wrn_rs)
+      // Used to consider only cwusb_wrn_rs and cwusb_cen; then proper
+      // register read/write started failing on a frequent number of bitfiles.
+      // Wasn't able to confirm (with ILAs) that this was the issue, but after
+      // adding cwusb_cen_r no more "bad bitfiles" were encountered:
+      if (~cwusb_wrn_rs & (~cwusb_cen | ~cwusb_cen_r))
          reg_datao <= cwusb_din;
 
       if (~cwusb_wrn_rs)
@@ -120,11 +126,11 @@ module usb_reg_main #(
 	    .probe7         (reg_address),  // input wire [7:0]  probe7 
 	    .probe8         (reg_bytecnt),  // input wire [6:0]  probe8 
 	    .probe9         (reg_datao),    // input wire [7:0]  probe9
-        .probe10        (reg_datai),    // input wire [7:0]  probe10
-        .probe11        (reg_read),     // input wire [0:0]  probe11
-        .probe12        (reg_write),    // input wire [0:0]  probe12
-        .probe13        (fast_fifo_read),// input wire [0:0]  probe13
-        .probe14        (drive_data_out)// input wire [0:0]  probe14
+            .probe10        (reg_datai),    // input wire [7:0]  probe10
+            .probe11        (reg_read),     // input wire [0:0]  probe11
+            .probe12        (reg_write),    // input wire [0:0]  probe12
+            .probe13        (fast_fifo_read),// input wire [0:0]  probe13
+            .probe14        (drive_data_out)// input wire [0:0]  probe14
        );
    `endif
 
@@ -132,17 +138,19 @@ module usb_reg_main #(
        //wire fifo_read_address = (reg_address == `ADCREAD_ADDR);
        ila_usb_lite U_ila_usb (
 	    .clk            (clk_usb),      // input wire clk
-	    .probe0         (cwusb_dout),   // input wire [7:0]  probe0 
+	    //.probe0         (cwusb_dout),   // input wire [7:0]  probe0 
+	    .probe0         (reg_datao),    // input wire [7:0]  probe0 
 	    .probe1         (cwusb_isout),  // input wire [0:0]  probe1 
 	    .probe2         (cwusb_rdn),    // input wire [0:0]  probe2 
 	    .probe3         (cwusb_wrn),    // input wire [0:0]  probe3 
 	    .probe4         (cwusb_cen),    // input wire [0:0]  probe4 
-        .probe5         (reg_read),     // input wire [0:0]  probe5
-        .probe6         (reg_write),    // input wire [0:0]  probe6
-        .probe7         (fast_fifo_read),// input wire [0:0]  probe7
-        .probe8         (drive_data_out),// input wire [0:0]  probe8
-        //.probe9         (fifo_read_address)// input wire [0:0]  probe9
-        .probe9         (reg_address)    // input wire [7:0]  probe9
+            .probe5         (reg_read),     // input wire [0:0]  probe5
+            .probe6         (reg_write),    // input wire [0:0]  probe6
+            .probe7         (fast_fifo_read),// input wire [0:0]  probe7
+            .probe8         (drive_data_out),// input wire [0:0]  probe8
+            //.probe9         (fifo_read_address)// input wire [0:0]  probe9
+            //.probe9         (reg_address)    // input wire [7:0]  probe9
+            .probe9         (cwusb_dout)     // input wire [7:0]  probe9
        );
    `endif
 
