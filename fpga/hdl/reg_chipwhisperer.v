@@ -98,7 +98,8 @@ module reg_chipwhisperer #(
    input  wire                     userio_clk,
 
    /* Main trigger connections */
-   output wire        trigger_o,/* Trigger signal to capture system */
+   output wire        trigger_o,        // Trigger signal to capture system
+   output wire        trig_glitch_o,    // trig/glitch MCX 
 
    input  wire        trace_exists,
    input  wire        la_exists
@@ -216,7 +217,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
  */
 
-   reg registers_cwauxio; // TODO: tie to scope.io.aux_io property
+   reg [1:0] registers_cwauxio; // TODO: tie bit 0to scope.io.aux_io property, bit 1 to trig vs glitch out
    reg [7:0] registers_cwextclk;
    reg [7:0] registers_cwtrigsrc;
    reg [7:0] registers_cwtrigmod;
@@ -258,7 +259,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    assign target_hs2 = (registers_cwextclk[6] & (~targetio_highz)) ? rearclk : 1'bZ;
 
 
-   assign auxio = (registers_cwauxio)? rearclk : 1'bZ;
+   assign auxio = (registers_cwauxio[0])? rearclk : 1'bZ;
 
 
 `ifdef __ICARUS__
@@ -387,7 +388,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    assign trigger_ext_o = trigger_ext;
 
    assign trigger_o = trigger;
-
+   assign trig_glitch_o = registers_cwauxio[1] ? glitchclk : trigger_o;
 
 
 /* IO Routing */
@@ -444,7 +445,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    always @(*) begin
       if (reg_read) begin
          case (reg_address)
-           `CW_AUX_IO:                  reg_datao_reg = {7'b0, registers_cwauxio};
+           `CW_AUX_IO:                  reg_datao_reg = {6'b0, registers_cwauxio};
            `CW_EXTCLK_ADDR:             reg_datao_reg = registers_cwextclk; 
            `CW_TRIGSRC_ADDR:            reg_datao_reg = registers_cwtrigsrc; 
            `CW_TRIGMOD_ADDR:            reg_datao_reg = registers_cwtrigmod; 
@@ -476,10 +477,10 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
          userio_target_debug_swd <= 1'b0;
          userio_drive_data <= 8'b0;
          reg_external_clock <= 1'b0;
-         registers_cwauxio <= 1'b0;
+         registers_cwauxio <= 2'b0;
       end else if (reg_write) begin
          case (reg_address)
-           `CW_AUX_IO: registers_cwauxio <= reg_datai[0];
+           `CW_AUX_IO: registers_cwauxio <= reg_datai[1:0];
            `CW_EXTCLK_ADDR: registers_cwextclk <= reg_datai;
            `CW_TRIGSRC_ADDR: registers_cwtrigsrc <= reg_datai;
            `CW_TRIGMOD_ADDR: registers_cwtrigmod <= reg_datai;

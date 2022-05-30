@@ -103,8 +103,8 @@ module cwhusky_top(
 
     output wire         target_poweron,
 
-    output wire         FPGA_TRIGOUT, //trigger out MCX
-    inout  wire         AUXIO //clock MCX
+    output wire         TRIG_GLITCHOUT, //trigger/glitch out MCX
+    inout  wire         AUXIO // AUX I/O MCX
 );
 
     parameter pBYTECNT_SIZE = 7;
@@ -453,7 +453,8 @@ module cwhusky_top(
         .trace_exists           (trace_exists),
         .la_exists              (la_exists),
 
-        .trigger_o              (ext_trigger)
+        .trigger_o              (ext_trigger),
+        .trig_glitch_o          (TRIG_GLITCHOUT)
    );
 
    assign userio_drive_data = userio_target_debug? {target_MOSI, // carries TDI on USERIO_D7
@@ -537,7 +538,7 @@ module cwhusky_top(
         .hs1                    (target_hs1),
         .hs2                    (target_hs2),
         .aux_mcx                (AUXIO),
-        .trig_mcx               (FPGA_TRIGOUT),
+        .trig_mcx               (TRIG_GLITCHOUT),
         .adc_sample_clk         (ADC_clk_fb),
         .userio0                (USERIO_D[0]),
         .userio1                (USERIO_D[1]),
@@ -568,8 +569,6 @@ module cwhusky_top(
        assign read_data_la = 0;
        assign la_exists = 0;
    `endif
-
-   assign FPGA_TRIGOUT = ext_trigger;
 
    wire target_highz = target_npower;
    assign target_poweron = ~target_npower;

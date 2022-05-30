@@ -204,7 +204,7 @@ set_property -dict { PACKAGE_PIN N12 IOSTANDARD LVCMOS33 }  [get_ports USERIO_CL
 
 
 # MCX:
-set_property -dict { PACKAGE_PIN R15 IOSTANDARD LVCMOS33 }  [get_ports FPGA_TRIGOUT]
+set_property -dict { PACKAGE_PIN R15 IOSTANDARD LVCMOS33 }  [get_ports TRIG_GLITCHOUT]
 set_property -dict { PACKAGE_PIN N14 IOSTANDARD LVCMOS33 }  [get_ports AUXIO]
 
 # SAM3U - SPI
@@ -367,8 +367,8 @@ set_false_path -to [get_ports target_PDIC]
 set_false_path -to [get_ports target_SCK]
 set_false_path -to [get_ports target_nRST]
 
-set_output_delay -clock [get_clocks clk_usb] 0.0 [get_ports FPGA_TRIGOUT]
-set_false_path -to [get_ports FPGA_TRIGOUT]
+set_output_delay -clock [get_clocks clk_usb] 0.0 [get_ports TRIG_GLITCHOUT]
+set_false_path -to [get_ports TRIG_GLITCHOUT]
 
 set_input_delay -clock clk_usb 0.000 [get_ports PLL_STATUS]
 set_input_delay -clock clk_usb 0.000 [get_ports target_nRST]

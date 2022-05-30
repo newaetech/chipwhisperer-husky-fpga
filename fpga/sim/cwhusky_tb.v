@@ -101,7 +101,7 @@ module cwhusky_tb();
    wire                 target_io1;
    wire                 target_hs1;
    wire                 target_hs2;
-   wire                 FPGA_TRIGOUT;
+   wire                 TRIG_GLITCHOUT;
    wire                 AUXIO;
    wire                 LED_ADC;
    wire                 LED_GLITCH;
@@ -644,7 +644,7 @@ module cwhusky_tb();
        glitch_errors = 0;
        glitch_compare = 0;
        glitches_done = 0;
-       wait (FPGA_TRIGOUT);
+       wait (TRIG_GLITCHOUT);
        glitch_compare = 1;
        repeat (10 + all_offs[0]) @(negedge glitch_clock);
        for (k = 1; k < pNUM_GLITCHES; k = k + 1) begin
@@ -771,7 +771,7 @@ cwhusky_top U_dut (
     .target_io1         (target_io1   ),
     .target_hs1         (target_hs1   ),
     .target_hs2         (target_hs2   ),
-    .FPGA_TRIGOUT       (FPGA_TRIGOUT ),
+    .TRIG_GLITCHOUT     (TRIG_GLITCHOUT),
     .AUXIO              (AUXIO        ),
     .ADC_OVR_SDOUT      (1'b0         ),
     .FPGA_CDOUT         (1'b0         ),
