@@ -46,8 +46,8 @@ module userio #(
 
    generate
       for (i = 0; i < pWIDTH; i = i + 1) begin
-         assign userio_d[i] = I_userio_fpga_debug? I_userio_debug_data[i] :
-                              I_userio_cwdriven[i]?  I_userio_drive_data[i] : 1'bz;
+         assign userio_d[i] = I_userio_fpga_debug?  I_userio_debug_data[i] :
+                              I_userio_cwdriven[i]? I_userio_drive_data[i] : 1'bz;
       end
    endgenerate
 

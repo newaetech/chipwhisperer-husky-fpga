@@ -36,6 +36,10 @@ set_case_analysis 1 [get_pins U_trace_top/U_fe_clock_mux2/S]
 
 set_case_analysis 1 [get_pins U_fifo_clk_mux/S]
 
+#set_clock_groups -logically_exclusive -group clk_usb -group TRACECLOCK -group target_hs1
+#set_clock_groups -logically_exclusive -group pll_fpga_clk -group glitchclk
+
+
 # These are needed to meet timing on USB_Data:
 set_max_delay 15 -through [get_pins USB_Data_IOBUF*inst/T]
 set_max_delay 15 -through [get_pins U_usb_reg_main/reg_address_reg*/Q]
@@ -333,7 +337,15 @@ set_false_path -to [get_ports VDBSPWM]
 
 
 set_input_delay -clock [get_clocks clk_usb] -add_delay 0.000 [get_ports {USERIO_CLK}]
+set_output_delay -clock [get_clocks clk_usb] -add_delay 0.000 [get_ports {USERIO_CLK}]
+set_false_path -to [get_ports {USERIO_CLK}]
 set_false_path -from [get_ports {USERIO_CLK}]
+
+set_input_delay -clock [get_clocks clk_usb] -add_delay 0.000 [get_ports {AUXIO}]
+set_output_delay -clock [get_clocks clk_usb] -add_delay 0.000 [get_ports {AUXIO}]
+set_false_path -to [get_ports {AUXIO}]
+set_false_path -from [get_ports {AUXIO}]
+
 
 #set_input_delay -clock [get_clocks TRACECLOCK] 0.0 [get_ports USERIO_D]
 set_input_delay -clock [get_clocks TRACECLOCK] 2.0 [get_ports USERIO_D]
@@ -373,17 +385,13 @@ set_false_path -to [get_ports TRIG_GLITCHOUT]
 set_input_delay -clock clk_usb 0.000 [get_ports PLL_STATUS]
 set_input_delay -clock clk_usb 0.000 [get_ports target_nRST]
 set_input_delay -clock clk_usb 0.000 [get_ports FPGA_CDOUT]
-#set_input_delay -clock clk_usb 0.000 [get_ports AUXIO]
 #set_input_delay -clock clk_usb 0.000 [get_ports target_hs1]
-set_input_delay -clock clk_usb 0.000 [get_ports target_hs2]
 set_input_delay -clock clk_usb 0.000 [get_ports ADC_clk_fbp]
 set_input_delay -clock clk_usb 0.000 [get_ports PLLFPGAP]
 set_false_path -from [get_ports PLL_STATUS]
 set_false_path -from [get_ports target_nRST]
 set_false_path -from [get_ports FPGA_CDOUT]
-#set_false_path -from [get_ports AUXIO]
 #set_false_path -from [get_ports target_hs1]
-set_false_path -from [get_ports target_hs2]
 set_false_path -from [get_ports ADC_clk_fbp]
 set_false_path -from [get_ports PLLFPGAP]
 
@@ -437,6 +445,7 @@ set_false_path -from [get_pins U_trace_top/*/*_cdc/src_req_reg/C] -to [get_pins 
 # read data is provided 1 cycle earlier from when it *appears* to be required, and so
 # we use negatives here to meet timing. Works in practice and meets timing.
 set_output_delay -clock clk_usb -max -2.000 [get_ports USB_Data]
+set_output_delay -clock clk_usb -min  5.000 [get_ports USB_Data]
 #set_output_delay -clock clk_usb -min -4.000 [get_ports USB_Data]
 
 set_property BITSTREAM.CONFIG.USR_ACCESS TIMESTAMP [current_design]

@@ -78,7 +78,7 @@ module cwhusky_top(
     input  wire         SAM_MOSI,
     output wire         SAM_MISO,
     input  wire         SAM_SPCK,
-    input  wire         SAM_CS, // TODO: why not using this?
+    input  wire         SAM_CS, // not used
 
     /* XMEGA Programming - not used, but need to ensure line is floating */
     inout  wire         target_PDID,
@@ -306,7 +306,7 @@ module cwhusky_top(
    // fast-flash red LEDs when some internal error has occurred:
    assign LED_ADC = error_flag? flash_pattern : ~PLL_STATUS;
    assign LED_GLITCH = error_flag? flash_pattern : led_glitch;
-   assign LED_CAP = cw_led_cap; // TODO: mux trace LEDs
+   assign LED_CAP = cw_led_cap;
    assign LED_ARMED = cw_led_armed;
 
 
@@ -463,7 +463,6 @@ module cwhusky_top(
                                                     5'b0         // USERIO_D4:D0 undriven (TDO input on USERIO_D3)
                                                    } : userio_drive_data_reg;
 
-   // TODO: not sure this is kosher, but it seems to work?
    assign USERIO_CLK = userio_target_debug? target_PDIC : 1'bz;
 
    userio #(
@@ -573,9 +572,7 @@ module cwhusky_top(
    wire target_highz = target_npower;
    assign target_poweron = ~target_npower;
 
-   assign target_PDID =/* (userio_target_debug & userio_target_debug_swd & USERIO_CLK)? target_PDID : // SWDIO: host-driven phase
-                        (userio_target_debug & userio_target_debug_swd & ~USERIO_CLK)? 1'bZ :       // SWDIO: target-driven phase
-                       */ (target_highz) ? 1'bZ :
+   assign target_PDID = (target_highz) ? 1'bZ :
                         (userio_target_debug & userio_target_debug_swd & ~USERIO_CLK) ? USERIO_D[6] :
                         (enable_output_pdid) ? output_pdid : 1'bZ;
 
@@ -618,7 +615,6 @@ module cwhusky_top(
       );
 
       OBUFDS #(
-         // TODO: are these the best settings?
          .IOSTANDARD       ("LVDS_25"),
          .SLEW             ("FAST")
       ) U_OBUFDS_adc_clk_out (
@@ -772,17 +768,6 @@ module cwhusky_top(
    `ifdef TRACE
 
        wire TRACECLOCK = USERIO_CLK;
-       /*
-       wire TRACECLOCK;
-      `ifndef __ICARUS__
-          IBUFG IBUFG_traceclock (
-             .O(TRACECLOCK),
-             .I(USERIO_CLK)
-          );
-      `else
-          assign TRACECLOCK = USERIO_CLK;
-      `endif
-       */
 
        wire [3:0] TRACEDATA  = USERIO_D[7:4];
        wire serial_in = decodeio_active? decode_uart_input : 
