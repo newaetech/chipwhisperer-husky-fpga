@@ -102,7 +102,7 @@ module cwhusky_tb();
    wire                 target_hs1;
    wire                 target_hs2;
    wire                 FPGA_TRIGOUT;
-   wire                 USBIOHS2;
+   wire                 AUXIO;
    wire                 LED_ADC;
    wire                 LED_GLITCH;
    wire                 LED_ARMED;
@@ -772,7 +772,7 @@ cwhusky_top U_dut (
     .target_hs1         (target_hs1   ),
     .target_hs2         (target_hs2   ),
     .FPGA_TRIGOUT       (FPGA_TRIGOUT ),
-    .USBIOHS2           (USBIOHS2     ),
+    .AUXIO              (AUXIO        ),
     .ADC_OVR_SDOUT      (1'b0         ),
     .FPGA_CDOUT         (1'b0         ),
     .USERIO_D           (             ),

@@ -37,7 +37,7 @@ module reg_chipwhisperer #(
    input  wire         reg_write,    // Write flag
 
    /* External Clock */
-   input  wire        usbiohs2,
+   inout  wire        auxio,
    input  wire        target_hs1,
    output wire        target_hs2,
    output wire        extclk_o,         // for frequency measurement and ADC_CLKP/N to PLL
@@ -113,7 +113,7 @@ CW_EXTCLK_ADDR, address 38 (0x26) - External Clock Connections (One Byte)
     [  X RO RO FA FA S  S  S ]
     
     [2:0]
-    S S S = 000: AUX MCX
+    S S S = 000: AUX I/O MCX
             011: HS1
     [4:3]
     FA = 00 Front Panel A: High-Z (REQUIRED if using as input)
@@ -216,6 +216,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
  */
 
+   reg registers_cwauxio; // TODO: tie to scope.io.aux_io property
    reg [7:0] registers_cwextclk;
    reg [7:0] registers_cwtrigsrc;
    reg [7:0] registers_cwtrigmod;
@@ -227,7 +228,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    wire targetio_highz;
 
    //Do to no assumed phase relationship we use regular old fabric for switching
-   assign extclk_o = (registers_cwextclk[2:0] == 3'b000) ? usbiohs2 :
+   assign extclk_o = (registers_cwextclk[2:0] == 3'b000) ? auxio :
                      (registers_cwextclk[2:0] == 3'b011) ? target_hs1 : 
                      1'b0;
 
@@ -255,6 +256,9 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    //about variations in synchronization of this clock to source clock, this
    //should be OK.
    assign target_hs2 = (registers_cwextclk[6] & (~targetio_highz)) ? rearclk : 1'bZ;
+
+
+   assign auxio = (registers_cwauxio)? rearclk : 1'bZ;
 
 
 `ifdef __ICARUS__
@@ -438,6 +442,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    always @(*) begin
       if (reg_read) begin
          case (reg_address)
+           `CW_AUX_IO:                  reg_datao_reg = {7'b0, registers_cwauxio};
            `CW_EXTCLK_ADDR:             reg_datao_reg = registers_cwextclk; 
            `CW_TRIGSRC_ADDR:            reg_datao_reg = registers_cwtrigsrc; 
            `CW_TRIGMOD_ADDR:            reg_datao_reg = registers_cwtrigmod; 
@@ -471,6 +476,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
          reg_external_clock <= 1'b0;
       end else if (reg_write) begin
          case (reg_address)
+           `CW_AUX_IO: registers_cwauxio <= reg_datai[0];
            `CW_EXTCLK_ADDR: registers_cwextclk <= reg_datai;
            `CW_TRIGSRC_ADDR: registers_cwtrigsrc <= reg_datai;
            `CW_TRIGMOD_ADDR: registers_cwtrigmod <= reg_datai;

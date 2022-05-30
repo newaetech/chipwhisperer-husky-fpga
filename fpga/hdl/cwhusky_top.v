@@ -96,7 +96,7 @@ module cwhusky_top(
     inout wire          target_io2, // Normally RXD
     inout wire          target_io1, // Normally TXD / SmartCard Reset
     input wire          target_hs1, // Clock from victim device
-    inout wire          target_hs2, // Clock to victim device
+    output wire         target_hs2, // Clock to victim device
 
     output wire         glitchout_highpwr, // high-speed glitch output
     output wire         glitchout_lowpwr, // high-speed glitch output 
@@ -104,7 +104,7 @@ module cwhusky_top(
     output wire         target_poweron,
 
     output wire         FPGA_TRIGOUT, //trigger out MCX
-    input  wire         USBIOHS2 //clock MCX
+    inout  wire         AUXIO //clock MCX
 );
 
     parameter pBYTECNT_SIZE = 7;
@@ -398,7 +398,7 @@ module cwhusky_top(
         .reg_read               (reg_read), 
         .reg_write              (reg_write), 
 
-        .usbiohs2               (USBIOHS2),
+        .auxio                  (AUXIO),
         .target_hs1             (target_hs1),
         .target_hs2             (target_hs2),
         .extclk_o               (extclk_mux),
@@ -536,7 +536,7 @@ module cwhusky_top(
         .io4                    (target_io4),
         .hs1                    (target_hs1),
         .hs2                    (target_hs2),
-        .aux_mcx                (USBIOHS2),
+        .aux_mcx                (AUXIO),
         .trig_mcx               (FPGA_TRIGOUT),
         .adc_sample_clk         (ADC_clk_fb),
         .userio0                (USERIO_D[0]),

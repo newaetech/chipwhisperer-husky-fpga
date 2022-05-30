@@ -7,7 +7,7 @@ create_clock -period 5.000 -name ADC_clk_fb -waveform {0.000 2.500} [get_nets AD
 create_clock -period 5.000 -name pll_fpga_clk -waveform {0.000 2.500} [get_nets pll_fpga_clk]
 
 create_clock -period 20.000 -name target_hs1 -waveform {0.000 10.000} [get_nets target_hs1]
-create_clock -period 20.000 -name USBIOHS2 -waveform {0.000 10.500} [get_nets USBIOHS2]
+create_clock -period 20.000 -name AUXIO -waveform {0.000 10.500} [get_nets AUXIO]
 
 create_clock -period 40.000 -name TRACECLOCK -waveform {0.000 20.000} [get_nets USERIO_CLK_IBUF]
 
@@ -48,19 +48,19 @@ set_clock_groups -asynchronous \
 
 set_clock_groups -asynchronous \
                  -group [get_clocks clk_usb ] \
-                 -group [get_clocks USBIOHS2]
+                 -group [get_clocks AUXIO]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks target_hs1 ] \
-                 -group [get_clocks USBIOHS2]
+                 -group [get_clocks AUXIO]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks {clk_usb target_hs1 USBIOHS2} ] \
+                 -group [get_clocks {clk_usb target_hs1 AUXIO} ] \
                  -group [get_clocks ADC_clk_fb]
 
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks {clk_usb target_hs1 USBIOHS2} ] \
+                 -group [get_clocks {clk_usb target_hs1 AUXIO} ] \
                  -group [get_clocks pll_fpga_clk]
 
 set_clock_groups -asynchronous \
@@ -68,16 +68,16 @@ set_clock_groups -asynchronous \
                  -group [get_clocks glitch_mmcm1_clk_out*]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks {clk_usb target_hs1 USBIOHS2} ] \
+                 -group [get_clocks {clk_usb target_hs1 AUXIO} ] \
                  -group [get_clocks glitch_mmcm1_clk_out*]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks {clk_usb target_hs1 USBIOHS2} ] \
+                 -group [get_clocks {clk_usb target_hs1 AUXIO} ] \
                  -group [get_clocks glitch_mmcm2_clk_out*]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks observer_clk*] \
-                 -group [get_clocks {clk_usb target_hs1 USBIOHS2} ]
+                 -group [get_clocks {clk_usb target_hs1 AUXIO} ]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks observer_clk*] \
@@ -97,7 +97,7 @@ set_clock_groups -asynchronous \
 
 set_clock_groups -asynchronous \
                  -group [get_clocks TRACECLOCK ] \
-                 -group [get_clocks {clk_usb USBIOHS2 observer_clk target_hs1 fe_clk}]
+                 -group [get_clocks {clk_usb AUXIO observer_clk target_hs1 fe_clk}]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks fe_clk ] \
@@ -107,11 +107,11 @@ set_clock_groups -asynchronous \
 # include below if FPGA_CLKGEN:
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks {clk_usb target_hs1 USBIOHS2} ] \
+                 -group [get_clocks {clk_usb target_hs1 AUXIO} ] \
                  -group [get_clocks ADC_clk_times4]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks {clk_usb target_hs1 USBIOHS2} ] \
+                 -group [get_clocks {clk_usb target_hs1 AUXIO} ] \
                  -group [get_clocks ADC_clk]
 
 set_clock_groups -asynchronous \
@@ -120,7 +120,7 @@ set_clock_groups -asynchronous \
 
 set_clock_groups -asynchronous \
                  -group [get_clocks clk_out1_MMCM_clkgen] \
-                 -group [get_clocks {clk_usb target_hs1 USBIOHS2} ]
+                 -group [get_clocks {clk_usb target_hs1 AUXIO} ]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks clk_out1_MMCM_clkgen] \
@@ -205,7 +205,7 @@ set_property -dict { PACKAGE_PIN N12 IOSTANDARD LVCMOS33 }  [get_ports USERIO_CL
 
 # MCX:
 set_property -dict { PACKAGE_PIN R15 IOSTANDARD LVCMOS33 }  [get_ports FPGA_TRIGOUT]
-set_property -dict { PACKAGE_PIN N14 IOSTANDARD LVCMOS33 }  [get_ports USBIOHS2]
+set_property -dict { PACKAGE_PIN N14 IOSTANDARD LVCMOS33 }  [get_ports AUXIO]
 
 # SAM3U - SPI
 set_property -dict { PACKAGE_PIN T7  IOSTANDARD LVCMOS33 }  [get_ports SAM_MOSI]
@@ -373,7 +373,7 @@ set_false_path -to [get_ports FPGA_TRIGOUT]
 set_input_delay -clock clk_usb 0.000 [get_ports PLL_STATUS]
 set_input_delay -clock clk_usb 0.000 [get_ports target_nRST]
 set_input_delay -clock clk_usb 0.000 [get_ports FPGA_CDOUT]
-#set_input_delay -clock clk_usb 0.000 [get_ports USBIOHS2]
+#set_input_delay -clock clk_usb 0.000 [get_ports AUXIO]
 #set_input_delay -clock clk_usb 0.000 [get_ports target_hs1]
 set_input_delay -clock clk_usb 0.000 [get_ports target_hs2]
 set_input_delay -clock clk_usb 0.000 [get_ports ADC_clk_fbp]
@@ -381,7 +381,7 @@ set_input_delay -clock clk_usb 0.000 [get_ports PLLFPGAP]
 set_false_path -from [get_ports PLL_STATUS]
 set_false_path -from [get_ports target_nRST]
 set_false_path -from [get_ports FPGA_CDOUT]
-#set_false_path -from [get_ports USBIOHS2]
+#set_false_path -from [get_ports AUXIO]
 #set_false_path -from [get_ports target_hs1]
 set_false_path -from [get_ports target_hs2]
 set_false_path -from [get_ports ADC_clk_fbp]

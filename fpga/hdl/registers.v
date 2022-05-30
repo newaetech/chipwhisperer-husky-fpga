@@ -267,6 +267,7 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define STREAM_SEGMENT_THRESHOLD 35
 `define FAST_FIFO_READ_MODE     36
 
+`define CW_AUX_IO               37
 `define CW_EXTCLK_ADDR          38
 `define CW_TRIGSRC_ADDR         39
 `define CW_TRIGMOD_ADDR         40
