@@ -355,13 +355,15 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    wire trigger_or;
    wire trigger_ext;
    
-   assign trigger_and = ((registers_cwtrigsrc[1] & trigger_nrst_i) | ~registers_cwtrigsrc[1]) &
+   assign trigger_and = ((registers_cwtrigsrc[0] & auxio)          | ~registers_cwtrigsrc[0]) &
+                        ((registers_cwtrigsrc[1] & trigger_nrst_i) | ~registers_cwtrigsrc[1]) &
                         ((registers_cwtrigsrc[2] & trigger_io1_i)  | ~registers_cwtrigsrc[2]) &
                         ((registers_cwtrigsrc[3] & trigger_io2_i)  | ~registers_cwtrigsrc[3]) &
                         ((registers_cwtrigsrc[4] & trigger_io3_i)  | ~registers_cwtrigsrc[4]) &
                         ((registers_cwtrigsrc[5] & trigger_io4_i)  | ~registers_cwtrigsrc[5]);
 
-   assign trigger_or  = (registers_cwtrigsrc[1] & trigger_nrst_i) |
+   assign trigger_or  = (registers_cwtrigsrc[0] & auxio)          |
+                        (registers_cwtrigsrc[1] & trigger_nrst_i) |
                         (registers_cwtrigsrc[2] & trigger_io1_i)  |
                         (registers_cwtrigsrc[3] & trigger_io2_i)  |
                         (registers_cwtrigsrc[4] & trigger_io3_i)  |
@@ -474,6 +476,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
          userio_target_debug_swd <= 1'b0;
          userio_drive_data <= 8'b0;
          reg_external_clock <= 1'b0;
+         registers_cwauxio <= 1'b0;
       end else if (reg_write) begin
          case (reg_address)
            `CW_AUX_IO: registers_cwauxio <= reg_datai[0];
