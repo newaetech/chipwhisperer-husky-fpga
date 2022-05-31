@@ -114,6 +114,7 @@ module fifo_top_husky(
     wire                arm_fifo_rst_usb;
     reg                 arming;
     reg                 capture_go_r;
+    reg                 capture_go_r2;
 
     reg [1:0]           fast_read_count;
     reg [2:0]           fast_write_count;
@@ -176,7 +177,11 @@ module fifo_top_husky(
           downsample_wr_en <= 1'b0;
        end 
        else begin
-          if (downsample_max) begin
+          // NOTE: capture_go_r* condition is to align downsample captures on
+          // the trigger event. If downsample+presample support gets added,
+          // this condition makes it possible to have two successive writes
+          // that are very close together.
+          if (downsample_max || (capture_go_r && ~capture_go_r2)) begin
              downsample_ctr <= 13'd0;
              downsample_wr_en <= 1'b1;
           end
@@ -462,9 +467,11 @@ module fifo_top_husky(
           arming <= 1'b0;
           armed_and_ready <= 1'b0;
           capture_go_r <= 1'b0;
+          capture_go_r2 <= 1'b0;
        end
        else begin
           capture_go_r <= capture_go;
+          capture_go_r2 <= capture_go_r;
           {reset_done_r2, reset_done_r, reset_done_pipe} <= {reset_done_r, reset_done_pipe, reset_done};
           {clear_fifo_errors_r2, clear_fifo_errors_r, clear_fifo_errors_pipe} <= {clear_fifo_errors_r, clear_fifo_errors_pipe, clear_fifo_errors};
           arm_r <= arm_i;

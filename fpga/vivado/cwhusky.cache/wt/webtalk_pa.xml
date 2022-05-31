@@ -3,10 +3,10 @@
 <!--The data in this file is primarily intended for consumption by Xilinx tools.
 The structure and the elements are likely to change over the next few releases.
 This means code written to parse this file will need to be revisited each subsequent release.-->
-<application name="pa" timeStamp="Mon May 30 16:20:38 2022">
+<application name="pa" timeStamp="Mon May 30 21:00:29 2022">
 <section name="Project Information" visible="false">
 <property name="ProjectID" value="708eb1ea8d374e82b03b665cf3a7bbcb" type="ProjectID"/>
-<property name="ProjectIteration" value="867" type="ProjectIteration"/>
+<property name="ProjectIteration" value="872" type="ProjectIteration"/>
 </section>
 <section name="PlanAhead Usage" visible="true">
 <item name="Project Data">
@@ -49,9 +49,9 @@ This means code written to parse this file will need to be revisited each subseq
 <property name="ReportTiming" value="1" type="JavaHandler"/>
 <property name="ReportTimingSummary" value="2" type="JavaHandler"/>
 <property name="ReportUtilization" value="2" type="JavaHandler"/>
-<property name="RunBitgen" value="678" type="JavaHandler"/>
+<property name="RunBitgen" value="679" type="JavaHandler"/>
 <property name="RunDesignAhead" value="6" type="JavaHandler"/>
-<property name="RunImplementation" value="202" type="JavaHandler"/>
+<property name="RunImplementation" value="206" type="JavaHandler"/>
 <property name="RunSchematic" value="42" type="JavaHandler"/>
 <property name="RunSynthesis" value="21" type="JavaHandler"/>
 <property name="RunTrigger" value="889" type="JavaHandler"/>
@@ -70,7 +70,7 @@ This means code written to parse this file will need to be revisited each subseq
 <property name="ToolsSettings" value="240" type="JavaHandler"/>
 <property name="UpdateRegId" value="3" type="JavaHandler"/>
 <property name="UpgradeIP" value="5" type="JavaHandler"/>
-<property name="ViewTaskImplementation" value="294" type="JavaHandler"/>
+<property name="ViewTaskImplementation" value="295" type="JavaHandler"/>
 <property name="ViewTaskProgramandDebug" value="1" type="JavaHandler"/>
 <property name="ViewTaskProjectManager" value="117" type="JavaHandler"/>
 <property name="ViewTaskSynthesis" value="3" type="JavaHandler"/>
@@ -97,7 +97,7 @@ This means code written to parse this file will need to be revisited each subseq
 <property name="BaseReportTab_RERUN" value="2" type="GuiHandlerData"/>
 <property name="CheckTimingResultTreeTablePanel_CHECK_TIMING_RESULT_TREE_TABLE" value="34" type="GuiHandlerData"/>
 <property name="ClockSummaryTreeTablePanel_CLOCK_SUMMARY_TREE_TABLE" value="79" type="GuiHandlerData"/>
-<property name="CmdMsgDialog_OK" value="256" type="GuiHandlerData"/>
+<property name="CmdMsgDialog_OK" value="258" type="GuiHandlerData"/>
 <property name="CommandLinePanel_COMMAND" value="2" type="GuiHandlerData"/>
 <property name="CommandsInput_TYPE_TCL_COMMAND_HERE" value="263" type="GuiHandlerData"/>
 <property name="CommonOptionsChooserPanel_SPECIFY_GENERICS_PARAMETERS" value="2" type="GuiHandlerData"/>
@@ -129,7 +129,7 @@ This means code written to parse this file will need to be revisited each subseq
 <property name="FloatingTopDialog_SELECT_TOP_MODULE_OF_YOUR_DESIGN" value="1" type="GuiHandlerData"/>
 <property name="FloatingTopDialog_SPECIFY_NEW_TOP_MODULE" value="1" type="GuiHandlerData"/>
 <property name="FloorplanEditor_METRIC" value="2" type="GuiHandlerData"/>
-<property name="FlowNavigatorTreePanel_FLOW_NAVIGATOR_TREE" value="2393" type="GuiHandlerData"/>
+<property name="FlowNavigatorTreePanel_FLOW_NAVIGATOR_TREE" value="2399" type="GuiHandlerData"/>
 <property name="FlowNavigatorTreePanel_OPEN" value="3" type="GuiHandlerData"/>
 <property name="GraphicalView_ZOOM_FIT" value="216" type="GuiHandlerData"/>
 <property name="GraphicalView_ZOOM_IN" value="820" type="GuiHandlerData"/>
@@ -195,7 +195,7 @@ This means code written to parse this file will need to be revisited each subseq
 <property name="MultiFileChooser_ADD_DIRECTORIES" value="2" type="GuiHandlerData"/>
 <property name="NameValuePanel_ADD_VALUE" value="120" type="GuiHandlerData"/>
 <property name="NameValuePanel_NAME" value="137" type="GuiHandlerData"/>
-<property name="NavigableTimingReportTab_TIMING_REPORT_NAVIGATION_TREE" value="2079" type="GuiHandlerData"/>
+<property name="NavigableTimingReportTab_TIMING_REPORT_NAVIGATION_TREE" value="2093" type="GuiHandlerData"/>
 <property name="NetPropPanels_NAME" value="2" type="GuiHandlerData"/>
 <property name="NetTablePanel_NET_TABLE" value="7" type="GuiHandlerData"/>
 <property name="NetlistSchMenuAndMouse_EXPAND_COLLAPSE" value="3" type="GuiHandlerData"/>
@@ -285,7 +285,7 @@ This means code written to parse this file will need to be revisited each subseq
 <property name="ProjectSummaryUtilizationPanel_PROJECT_SUMMARY_UTILIZATION_PANEL_TABBED" value="65" type="GuiHandlerData"/>
 <property name="ProjectSummaryUtilizationPanel_PROJECT_SUMMARY_UTILIZATION_TABLE" value="5" type="GuiHandlerData"/>
 <property name="ProjectTab_CLOSE_DESIGN" value="5" type="GuiHandlerData"/>
-<property name="ProjectTab_RELOAD" value="277" type="GuiHandlerData"/>
+<property name="ProjectTab_RELOAD" value="280" type="GuiHandlerData"/>
 <property name="RDICommands_CUSTOM_COMMANDS" value="4" type="GuiHandlerData"/>
 <property name="RDICommands_DELETE" value="24" type="GuiHandlerData"/>
 <property name="RDICommands_FIND" value="1" type="GuiHandlerData"/>
@@ -333,7 +333,7 @@ This means code written to parse this file will need to be revisited each subseq
 <property name="StaleRunDialog_YES" value="14" type="GuiHandlerData"/>
 <property name="StateMonitor_RESET_RUN" value="10" type="GuiHandlerData"/>
 <property name="StateMonitor_RESET_STEP" value="1" type="GuiHandlerData"/>
-<property name="SyntheticaGettingStartedView_RECENT_PROJECTS" value="65" type="GuiHandlerData"/>
+<property name="SyntheticaGettingStartedView_RECENT_PROJECTS" value="66" type="GuiHandlerData"/>
 <property name="SyntheticaStateMonitor_CANCEL" value="17" type="GuiHandlerData"/>
 <property name="SysMonLegendPanel_SELECTABLE_LIST" value="8" type="GuiHandlerData"/>
 <property name="SysMonPlotOptions_10M" value="7" type="GuiHandlerData"/>
@@ -350,7 +350,7 @@ This means code written to parse this file will need to be revisited each subseq
 <property name="TclFindDialog_SPECIFY_OF_OBJECTS_OPTION" value="3" type="GuiHandlerData"/>
 <property name="TclObjectTreeTable_TREETABLE" value="1" type="GuiHandlerData"/>
 <property name="TimingItemFlatTablePanel_FLOORPLANNING" value="17" type="GuiHandlerData"/>
-<property name="TimingItemFlatTablePanel_TABLE" value="689" type="GuiHandlerData"/>
+<property name="TimingItemFlatTablePanel_TABLE" value="697" type="GuiHandlerData"/>
 <property name="TimingItemTreeTablePanel_TIMING_ITEM_TREE_TABLE" value="6" type="GuiHandlerData"/>
 <property name="TimingSumResultsTab_REPORT_TIMING" value="1" type="GuiHandlerData"/>
 <property name="TouchpointSurveyDialog_NO" value="2" type="GuiHandlerData"/>
@@ -371,11 +371,6 @@ This means code written to parse this file will need to be revisited each subseq
 <property name="XPG_IPSymbol_SHOW_DISABLED_PORTS" value="2" type="GuiHandlerData"/>
 <property name="XPG_TabbedPane_TABBED_PANE" value="1" type="GuiHandlerData"/>
 <property name="XPowerSettingsDialog_CANCEL" value="1" type="GuiHandlerData"/>
-</item>
-<item name="Other">
-<property name="GuiMode" value="39" type="GuiMode"/>
-<property name="BatchMode" value="0" type="BatchMode"/>
-<property name="TclMode" value="23" type="TclMode"/>
 </item>
 </section>
 </application>
