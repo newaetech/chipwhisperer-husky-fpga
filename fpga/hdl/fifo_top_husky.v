@@ -68,13 +68,15 @@ module fifo_top_husky(
     input  wire         no_underflow_errors,  // disables flagging of *slow* FIFO underflow errors only
     output reg          capture_done,
     output reg          armed_and_ready,
+    output reg [2:0]    state,
 
     // for debug only:
     output wire         slow_fifo_wr,
     output wire         slow_fifo_rd,
     output reg  [31:0]  fifo_read_count,
     output reg  [31:0]  fifo_read_count_error_freeze,
-    output reg          fifo_rst 
+    output reg          fifo_rst,
+    output wire [7:0]   debug
 
 );
 
@@ -208,7 +210,6 @@ module fifo_top_husky(
     localparam pS_TRIGGERED = 3;
     localparam pS_SEGMENT_DONE = 4;
     localparam pS_DONE = 5;
-    reg [2:0] state;
     reg [2:0] state_r;
 
     // strictly for easier debugging:
@@ -892,6 +893,13 @@ module fifo_top_husky(
       .dst_clk       (clk_usb),
       .dst_pulse     (read_update_usb)
    );
+
+   assign debug = {adc_capture_stop,
+                   fifo_rst,
+                   armed_and_ready,
+                   arming,
+                   capture_go,
+                   state};
 
 
    `ifdef ILA_FIFO

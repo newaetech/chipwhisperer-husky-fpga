@@ -35,6 +35,7 @@ module reg_openadc_adcfifo #(
    input  wire         reg_write,    // Write flag
 
    /* ADC Fifo Interface */
+   input  wire [2:0]   fifo_state,
    input  wire         fifo_empty,
    output wire         fifo_rd_en,
    output reg          low_res,
@@ -74,6 +75,7 @@ module reg_openadc_adcfifo #(
       if (reg_read) begin
          case (reg_address)
             `FIFO_STAT:                 reg_datao_reg = fifo_stat[reg_bytecnt*8 +: 8];
+            `FIFO_STATE:                reg_datao_reg = {5'b0, fifo_state};
             `FIFO_FIRST_ERROR:          reg_datao_reg = fifo_first_error_stat[reg_bytecnt*8 +: 8];
             `FIFO_FIRST_ERROR_STATE:    reg_datao_reg = {5'b0, fifo_first_error_state};
             `DEBUG_FIFO_READS:          reg_datao_reg = fifo_read_count[reg_bytecnt*8 +: 8];

@@ -45,6 +45,7 @@ module trigger_unit(
     input wire               armed_and_ready,
 
     input wire               fifo_rst,             // for debug only
+    input wire               cmd_arm_usb,          // for debug only
     output wire [8:0]        la_debug              // for debug only
     );
 
@@ -170,15 +171,15 @@ module trigger_unit(
          trigger_length_o <= 0;
    end
 
-   assign la_debug = { capture_active_o, 
-                       trigger_now, 
-                       trigger, 
-                       arm_i, 
-                       armed, 
-                       int_reset_capture, 
-                       arm_i, 
-                       capture_go_o, 
-                       fifo_rst };
+   assign la_debug = { adc_capture_done,
+                       armed_and_ready,
+                       arm_o,  
+                       int_reset_capture,
+                       capture_done_i, 
+                       capture_active_o,
+                       armed,
+                       trigger,
+                       cmd_arm_usb };
 
 
    `ifdef ILA_TRIG

@@ -73,7 +73,8 @@ module openadc_interface #(
     // for debug only:
     output wire                         slow_fifo_wr,
     output wire                         slow_fifo_rd,
-    output wire [8:0]                   la_debug
+    output wire [8:0]                   la_debug,
+    output wire [7:0]                   fifo_debug
 
 );
 
@@ -105,6 +106,7 @@ module openadc_interface #(
     wire       clear_fifo_errors;
     wire       capture_done;
     wire       armed_and_ready;
+    wire [2:0] fifo_state;
     wire       fifo_rst;
 
     assign reset_o = reset;
@@ -277,6 +279,7 @@ module openadc_interface #(
       .armed_and_ready      (armed_and_ready),
 
       .fifo_rst             (fifo_rst),
+      .cmd_arm_usb          (cmd_arm_usb),
       .la_debug             (la_debug)
    );
    
@@ -457,6 +460,7 @@ module openadc_interface #(
       .reg_datai            (reg_datai), 
       .reg_read             (reg_read), 
       .reg_write            (reg_write), 
+      .fifo_state           (fifo_state),
       .fifo_empty           (fifo_empty),
       .fifo_rd_en           (fifo_rd_en),
       .low_res              (low_res),
@@ -574,12 +578,14 @@ module openadc_interface #(
       .no_underflow_errors      (no_underflow_errors),
       .capture_done             (capture_done),
       .armed_and_ready          (armed_and_ready),
+      .state                    (fifo_state),
 
       .slow_fifo_wr             (slow_fifo_wr),
       .slow_fifo_rd             (slow_fifo_rd),
       .fifo_read_count          (fifo_read_count),
       .fifo_read_count_error_freeze (fifo_read_count_error_freeze),
-      .fifo_rst                 (fifo_rst)
+      .fifo_rst                 (fifo_rst),
+      .debug                    (fifo_debug)
    );
 
 

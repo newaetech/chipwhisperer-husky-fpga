@@ -145,7 +145,7 @@ module reg_la #(
                                                (trigger_source_reg == 3'b001)? capture_active : 
                                                (trigger_source_reg == 3'b010)? glitch_trigger_sourceclock :
                                                (trigger_source_reg == 3'b011)? hs1 :
-                                               (trigger_source_reg == 3'b100)? tu_la_debug[0] : 1'b0 );
+                                               (trigger_source_reg == 3'b100)? tu_la_debug[0] : tu_la_debug[1] );
 
    `ifndef __ICARUS__
       wire observer_clkfb;

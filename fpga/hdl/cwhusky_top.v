@@ -179,12 +179,14 @@ module cwhusky_top(
    wire [7:0] fifo_dout;
 
    wire [8:0] tu_la_debug;
+   wire [7:0] fifo_debug;
 
    wire flash_pattern;
 
    wire userio_fpga_debug;
    wire userio_target_debug;
    wire userio_target_debug_swd;
+   wire [1:0] userio_fpga_debug_select;
    wire [pUSERIO_WIDTH-1:0] userio_cwdriven;
    wire [pUSERIO_WIDTH-1:0] userio_drive_data;
    wire [pUSERIO_WIDTH-1:0] userio_drive_data_reg;
@@ -279,14 +281,16 @@ module cwhusky_top(
          .O_slow        (slow_fifo_rd_slow)
       );
 
-      assign userio_debug_data[0] = stream_segment_available;
-      assign userio_debug_data[1] = slow_fifo_wr_slow;
-      assign userio_debug_data[2] = slow_fifo_rd_slow;
-      assign userio_debug_data[3] = reg_read_slow;
-      assign userio_debug_data[4] = fast_fifo_read;
-      assign userio_debug_data[5] = fifo_error_flag;
-      assign userio_debug_data[6] = glitchclk;
-      assign userio_debug_data[7] = glitch_enable;
+      assign userio_debug_data = (userio_fpga_debug_select == 2'b00)? {glitch_enable,
+                                                                       glitchclk,
+                                                                       fifo_error_flag,
+                                                                       fast_fifo_read,
+                                                                       reg_read_slow,
+                                                                       slow_fifo_rd_slow,
+                                                                       slow_fifo_wr_slow,
+                                                                       stream_segment_available} :
+                                 (userio_fpga_debug_select == 2'b01)? tu_la_debug[7:0] :
+                                 (userio_fpga_debug_select == 2'b10)? fifo_debug : 8'bz;
 
    `else
       assign userio_debug_data[7:0] = 8'bz;
@@ -352,7 +356,8 @@ module cwhusky_top(
 
         .slow_fifo_wr           (slow_fifo_wr),
         .slow_fifo_rd           (slow_fifo_rd),
-        .la_debug               (tu_la_debug)
+        .la_debug               (tu_la_debug),
+        .fifo_debug             (fifo_debug)
 
    );
 
@@ -447,6 +452,7 @@ module cwhusky_top(
         .userio_fpga_debug      (userio_fpga_debug),
         .userio_target_debug    (userio_target_debug),
         .userio_target_debug_swd(userio_target_debug_swd),
+        .userio_fpga_debug_select (userio_fpga_debug_select),
         .userio_d               (USERIO_D),
         .userio_clk             (USERIO_CLK),
 

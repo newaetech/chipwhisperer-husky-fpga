@@ -325,6 +325,7 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define USERIO_DEBUG_DRIVEN     87
 `define USERIO_DRIVE_DATA       88
 `define USERIO_READ             97
+`define USERIO_DEBUG_SELECT     109
 
 `define CAPTURE_DONE            89
 
@@ -348,6 +349,8 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define SAD_MULTIPLE_TRIGGERS   106
 `define SAD_DEBUG_TRIGGER_INDEX 107
 `define SAD_DEBUG_FIFO_RD       108
+
+`define FIFO_STATE              110
 
 `define REGISTER_VERSION 1
 
