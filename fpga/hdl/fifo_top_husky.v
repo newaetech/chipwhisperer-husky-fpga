@@ -427,7 +427,7 @@ module fifo_top_husky(
                 // serves two purposes:
                 // 1. wait for fast FIFO to empty;
                 // 2. wait state so that we don't get back out of idle right away
-                if (fast_fifo_empty && (done_wait_count == 0)) begin
+                if ((fast_fifo_empty && (done_wait_count == 0)) || arm_i) begin
                    fast_fifo_rd_en <= 1'b0;
                    state <= pS_IDLE;
                 end
