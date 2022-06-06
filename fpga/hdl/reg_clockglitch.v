@@ -49,7 +49,7 @@ module reg_clockglitch #(
 
    input  wire         mmcm_shutdown, // triggered by XADC error
 
-   input wire          target_hs1,
+   input wire          target_clk,    // HS1 or AUX
    input wire          clkgen,
    input wire          pll_fpga_clk,
 
@@ -177,14 +177,14 @@ module reg_clockglitch #(
 `ifdef __ICARUS__
    assign sourceclk = (clockglitch_settings_reg[57:56] == 2'b01) ? clkgen : 
                       (clockglitch_settings_reg[57:56] == 2'b10) ? pll_fpga_clk :
-                      (clockglitch_settings_reg[57:56] == 2'b00) ? target_hs1   : target_hs1;
+                      (clockglitch_settings_reg[57:56] == 2'b00) ? target_clk   : target_clk;
 `else
     wire mux1out;
     BUFGMUX #(
        .CLK_SEL_TYPE("ASYNC")
     ) sourceclk_mux1 (
        .O    (mux1out),
-       .I0   (target_hs1),
+       .I0   (target_clk),
        .I1   (pll_fpga_clk),
        .S    (clockglitch_settings_reg[57])
     );  

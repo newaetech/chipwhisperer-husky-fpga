@@ -496,7 +496,7 @@ module cwhusky_top(
         .reg_read       (reg_read), 
         .reg_write      (reg_write), 
         .mmcm_shutdown  (xadc_error_flag),
-        .target_hs1     (target_hs1),
+        .target_clk     (extclk_mux),
         .clkgen         (clkgen),
         .pll_fpga_clk   (pll_fpga_clk),
         .glitchclk      (glitchclk),
