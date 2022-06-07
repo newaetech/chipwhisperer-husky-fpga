@@ -445,7 +445,7 @@ set_false_path -from [get_pins U_trace_top/*/*_cdc/src_req_reg/C] -to [get_pins 
 # read data is provided 1 cycle earlier from when it *appears* to be required, and so
 # we use negatives here to meet timing. Works in practice and meets timing.
 set_output_delay -clock clk_usb -max -2.000 [get_ports USB_Data]
-set_output_delay -clock clk_usb -min  5.000 [get_ports USB_Data]
+set_output_delay -clock clk_usb -min  6.000 [get_ports USB_Data]
 #set_output_delay -clock clk_usb -min -4.000 [get_ports USB_Data]
 
 set_property BITSTREAM.CONFIG.USR_ACCESS TIMESTAMP [current_design]

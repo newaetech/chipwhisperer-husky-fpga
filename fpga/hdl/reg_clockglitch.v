@@ -61,7 +61,8 @@ module reg_clockglitch #(
    output wire         glitch_go,
    output reg          glitch_trigger,
 
-   output reg          led_glitch
+   output reg          led_glitch,
+   output wire [7:0]   debug
 );
 
 
@@ -71,6 +72,9 @@ module reg_clockglitch #(
    wire [15:0] phase_requested;
    wire phase1_done;
    wire phase2_done;
+
+   wire clockglitch_idle;
+   wire [pNUM_GLITCH_WIDTH-1:0] clockglitch_count;
 
    
    // @ Address 56, 8 bytes (+8 extra reserved for future...)
@@ -167,6 +171,7 @@ module reg_clockglitch #(
    wire multiple_glitches_supported;
    wire continuous_mode;
    wire ext_single_mode;
+   reg [7:0] powered_down = 8'h81;
 
    assign glitch_type = clockglitch_settings_reg[46:44];
    assign glitch_trigger_src = clockglitch_settings_reg[43:42];
@@ -287,12 +292,17 @@ module reg_clockglitch #(
             `CLOCKGLITCH_NUM_GLITCHES: reg_datao_reg = glitch_done_count;
             `CLOCKGLITCH_MULTIPLE_STATE: reg_datao_reg = trigger_resync_state;
             `CLOCKGLITCH_REPEATS: reg_datao_reg = max_glitches1toN_reg[reg_bytecnt*8 +: 8];
+            `CLOCKGLITCH_POWERED_DOWN: reg_datao_reg <= powered_down;
             default: reg_datao_reg = 0;
          endcase
       end
       else
          reg_datao_reg = 0;
    end
+
+   always @(posedge clk_usb) // for debug
+       if (mmcm_shutdown)
+           powered_down <= 8'hAA;
 
    // single-cycle pulses:
    assign phase1_load  = clockglitch_settings_reg[16];
@@ -384,7 +394,10 @@ module reg_clockglitch #(
     .reg_datao              (reg_datao_cg), 
     .reg_datai              (reg_datai), 
     .reg_read               (reg_read), 
-    .reg_write              (reg_write)
+    .reg_write              (reg_write),
+
+    .idle_debug             (clockglitch_idle),
+    .glitch_count_debug     (clockglitch_count)
 
 );
 
@@ -406,6 +419,14 @@ always @(posedge sourceclk) begin
          led_glitch <= 1'b0;
    end
 end
+
+assign debug = {clockglitch_count[1:0],
+                oneshot,
+                glitch_trigger,
+                trigger_resync_idle,
+                clockglitch_idle,
+                exttrigger_resync,
+                exttrigger};
 
 
 endmodule

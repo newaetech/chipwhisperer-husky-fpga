@@ -94,7 +94,7 @@ module reg_chipwhisperer #(
    output reg                      userio_fpga_debug,
    output reg                      userio_target_debug,
    output reg                      userio_target_debug_swd,
-   output reg [1:0]                userio_fpga_debug_select,
+   output reg [3:0]                userio_fpga_debug_select,
    input  wire [pUSERIO_WIDTH-1:0] userio_d,
    input  wire                     userio_clk,
 
@@ -218,7 +218,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
  */
 
-   reg [1:0] registers_cwauxio; // TODO: tie bit 0to scope.io.aux_io property, bit 1 to trig vs glitch out
+   reg [1:0] registers_cwauxio;
    reg [7:0] registers_cwextclk;
    reg [7:0] registers_cwtrigsrc;
    reg [7:0] registers_cwtrigmod;
@@ -455,7 +455,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
            `USERIO_CW_DRIVEN:           reg_datao_reg = userio_cwdriven[reg_bytecnt*8 +: 8];
            `USERIO_DEBUG_DRIVEN:        reg_datao_reg = {5'b0, userio_target_debug_swd, userio_target_debug, userio_fpga_debug};
-           `USERIO_DEBUG_SELECT:        reg_datao_reg = {6'b0, userio_fpga_debug_select};
+           `USERIO_DEBUG_SELECT:        reg_datao_reg = {4'b0, userio_fpga_debug_select};
            `USERIO_READ:                reg_datao_reg = userio_read[reg_bytecnt*8 +: 8];
 
            `EXTERNAL_CLOCK:             reg_datao_reg = reg_external_clock;
@@ -478,7 +478,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
          userio_target_debug <= 1'b0;
          userio_target_debug_swd <= 1'b0;
          userio_drive_data <= 8'b0;
-         userio_fpga_debug_select <= 2'b0;
+         userio_fpga_debug_select <= 4'b0;
          reg_external_clock <= 1'b0;
          registers_cwauxio <= 2'b0;
       end else if (reg_write) begin
@@ -491,7 +491,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
            `USERIO_CW_DRIVEN: reg_userio_cwdriven[reg_bytecnt*8 +: 8] <= reg_datai;
            `USERIO_DEBUG_DRIVEN: {userio_target_debug_swd, userio_target_debug, userio_fpga_debug} <= reg_datai[2:0];
-           `USERIO_DEBUG_SELECT: userio_fpga_debug_select <= reg_datai[1:0];
+           `USERIO_DEBUG_SELECT: userio_fpga_debug_select <= reg_datai[3:0];
            `USERIO_DRIVE_DATA: userio_drive_data[reg_bytecnt*8 +: 8] <= reg_datai;
 
            `EXTERNAL_CLOCK: reg_external_clock <= reg_datai[0];

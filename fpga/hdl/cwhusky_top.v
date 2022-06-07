@@ -180,13 +180,14 @@ module cwhusky_top(
 
    wire [8:0] tu_la_debug;
    wire [7:0] fifo_debug;
+   wire [7:0] clockglitch_debug;
 
    wire flash_pattern;
 
    wire userio_fpga_debug;
    wire userio_target_debug;
    wire userio_target_debug_swd;
-   wire [1:0] userio_fpga_debug_select;
+   wire [3:0] userio_fpga_debug_select;
    wire [pUSERIO_WIDTH-1:0] userio_cwdriven;
    wire [pUSERIO_WIDTH-1:0] userio_drive_data;
    wire [pUSERIO_WIDTH-1:0] userio_drive_data_reg;
@@ -281,16 +282,25 @@ module cwhusky_top(
          .O_slow        (slow_fifo_rd_slow)
       );
 
-      assign userio_debug_data = (userio_fpga_debug_select == 2'b00)? {glitch_enable,
-                                                                       glitchclk,
-                                                                       fifo_error_flag,
-                                                                       fast_fifo_read,
-                                                                       reg_read_slow,
-                                                                       slow_fifo_rd_slow,
-                                                                       slow_fifo_wr_slow,
-                                                                       stream_segment_available} :
-                                 (userio_fpga_debug_select == 2'b01)? tu_la_debug[7:0] :
-                                 (userio_fpga_debug_select == 2'b10)? fifo_debug : 8'bz;
+      assign userio_debug_data = (userio_fpga_debug_select == 4'b0000)? {glitch_enable,
+                                                                         glitchclk,
+                                                                         fifo_error_flag,
+                                                                         fast_fifo_read,
+                                                                         reg_read_slow,
+                                                                         slow_fifo_rd_slow,
+                                                                         slow_fifo_wr_slow,
+                                                                         stream_segment_available} :
+                                 (userio_fpga_debug_select == 4'b0001)? tu_la_debug[7:0] :
+                                 (userio_fpga_debug_select == 4'b0010)? fifo_debug : 
+                                 (userio_fpga_debug_select == 4'b0011)? {1'b0,
+                                                                         xadc_error_flag,
+                                                                         glitch_mmcm1_clk_out,
+                                                                         glitch_mmcm2_clk_out,
+                                                                         glitchclk,
+                                                                         glitch_enable,
+                                                                         ext_trigger,
+                                                                         cmd_arm_usb} :
+                                                                        clockglitch_debug;
 
    `else
       assign userio_debug_data[7:0] = 8'bz;
@@ -506,7 +516,8 @@ module cwhusky_top(
         .exttrigger     (ext_trigger),
         .glitch_go      (glitch_go),
         .glitch_trigger (glitch_trigger),
-        .led_glitch     (led_glitch)
+        .led_glitch     (led_glitch),
+        .debug          (clockglitch_debug)
    );
 
    `ifdef LOGIC_ANALYZER

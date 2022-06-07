@@ -87,7 +87,11 @@ module clockglitch_a7 #(
     input  wire [7:0]                   reg_datai,
     output wire [7:0]                   reg_datao,
     input  wire                         reg_read,
-    input  wire                         reg_write
+    input  wire                         reg_write,
+
+    // debug:
+    output wire                         idle_debug,
+    output wire [pNUM_GLITCH_WIDTH-1:0] glitch_count_debug
 
 );
 
@@ -134,6 +138,8 @@ module clockglitch_a7 #(
 
    (* ASYNC_REG = "TRUE" *) reg  [pSYNC_STAGES-1:0] idle_pipe;
    reg clockglitch_idle;
+   assign idle_debug = clockglitch_idle;
+   assign glitch_count_debug = glitch_count;
 
    // resetting glitch_count to 0 is the tricky bit here... another approach
    // would be a CDC'd pulse when *entering* idle, but this is a bit simpler
