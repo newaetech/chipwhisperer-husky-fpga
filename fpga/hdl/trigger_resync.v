@@ -42,6 +42,7 @@ module trigger_resync #(
    output reg [pNUM_GLITCH_WIDTH-1:0]   index,
    output reg [pNUM_GLITCH_WIDTH:0]     glitch_done_count,
    input  wire                          glitch_go, // caution: synchronous to negedge of MMCM1 clock
+   input  wire                          easy_done_exit,
    output wire                          idle,
    output wire [1:0]                    fsm_state
 );
@@ -147,7 +148,8 @@ module trigger_resync #(
                end
 
                pS_DONE: begin
-                   if ((~exttrig_r && (glitch_done_count == (num_glitches+1))) || fsm_reset) begin
+                   //if ((~exttrig_r && (glitch_done_count == (num_glitches+1))) || fsm_reset) begin
+                   if ((~exttrig_r && ((glitch_done_count == (num_glitches+1)) || (easy_done_exit && (num_glitches == 0)))) || fsm_reset) begin
                        state <= pS_IDLE;
                        done <= 1'b1;
                    end

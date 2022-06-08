@@ -159,6 +159,7 @@ module reg_clockglitch #(
    reg  [13*(pMAX_GLITCHES-1)-1:0] max_glitches1toN_reg;
    reg  [pNUM_GLITCH_WIDTH-1:0] num_glitches;
    reg  fsm_reset;
+   reg  easy_done_exit;
    wire [1:0] trigger_resync_state;
    wire [pNUM_GLITCH_WIDTH:0] glitch_done_count;
    wire trigger_resync_idle;
@@ -315,6 +316,7 @@ module reg_clockglitch #(
          clockglitch_powerdown <= 1;
          max_glitches1toN_reg <= 0;
          num_glitches <= 0;
+         easy_done_exit <= 1;
       end 
 
       else if (clockglitch_settings_reg[16])
@@ -331,6 +333,7 @@ module reg_clockglitch #(
             `CLOCKGLITCH_REPEATS: max_glitches1toN_reg[reg_bytecnt*8 +: 8] <= reg_datai;
             `CLOCKGLITCH_NUM_GLITCHES: num_glitches <= reg_datai;
             `CLOCKGLITCH_MULTIPLE_STATE: fsm_reset <= reg_datai[0];
+            `CLOCKGLITCH_POWERED_DOWN: easy_done_exit <= reg_datai[0]; // re-using this address for a different purpose - no glitch debugging
          default: ;
          endcase
       end
@@ -354,6 +357,7 @@ module reg_clockglitch #(
       .glitch_go            (glitch_go),
       .num_glitches         (num_glitches),
       .glitch_done_count    (glitch_done_count),
+      .easy_done_exit       (easy_done_exit),
       .idle                 (trigger_resync_idle),
       .fsm_state            (trigger_resync_state)
    );
@@ -371,6 +375,8 @@ module reg_clockglitch #(
     .all_max_glitches       (all_max_glitches),
     .trigger_resync_idle    (trigger_resync_idle),
     .multiple_glitches_supported (multiple_glitches_supported),
+    .easy_done_exit         (easy_done_exit),
+    .num_glitches           (num_glitches),
     .continuous_mode        (continuous_mode),
     .glitch_type            (glitch_type),
     .clk_usb                (clk_usb),

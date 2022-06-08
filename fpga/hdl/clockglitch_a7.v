@@ -49,6 +49,8 @@ module clockglitch_a7 #(
     input wire [13*pMAX_GLITCHES-1:0]   all_max_glitches,
     input wire                          trigger_resync_idle,
     input wire                          multiple_glitches_supported,
+    input wire                          easy_done_exit,
+    input  wire [pNUM_GLITCH_WIDTH-1:0] num_glitches,
     input wire                          continuous_mode,
     input wire [2:0]                    glitch_type,
      /*
@@ -147,7 +149,10 @@ module clockglitch_a7 #(
    always @(negedge glitch_mmcm1_clk_out_buf) begin
        {clockglitch_idle, idle_pipe} <= {idle_pipe, trigger_resync_idle};
        all_max_glitches_reg <= all_max_glitches;
-       max_glitches <= all_max_glitches_reg[glitch_count*13 +: 13];
+       if (easy_done_exit && num_glitches == 0)
+           max_glitches <= all_max_glitches_reg[0 +: 13];
+       else
+           max_glitches <= all_max_glitches_reg[glitch_count*13 +: 13];
    end
 
 
@@ -216,7 +221,7 @@ module clockglitch_a7 #(
       else if (continuous_mode_r)
           glitch_go <= 1'b1;
 
-      else if (clockglitch_idle && multiple_glitches_supported)
+      else if (clockglitch_idle && multiple_glitches_supported && ~(easy_done_exit && num_glitches == 0))
           glitch_count <= 0;
 
       else if (max_glitches > 0) begin
