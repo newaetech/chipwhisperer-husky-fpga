@@ -39,8 +39,8 @@ module trigger_resync #(
    input  wire [pNUM_GLITCH_WIDTH-1:0]  num_glitches,
    output reg                           exttrigger_resync,
    output reg                           done,
-   output reg [pNUM_GLITCH_WIDTH-1:0]   index,
-   output reg [pNUM_GLITCH_WIDTH:0]     glitch_done_count,
+   output reg  [pNUM_GLITCH_WIDTH-1:0]  index,
+   input  wire [pNUM_GLITCH_WIDTH:0]    glitch_done_count,
    input  wire                          glitch_go, // caution: synchronous to negedge of MMCM1 clock
    input  wire                          easy_done_exit,
    output wire                          idle,
@@ -52,9 +52,8 @@ module trigger_resync #(
    reg [31:0] offset_r;
    reg [31:0] glitch_delay_cnt;
 
-   (* ASYNC_REG = "TRUE" *) reg  [pSYNC_STAGES-1:0] glitch_go_pipe;
-   reg glitch_go_sync;
-   reg glitch_go_sync_r;
+   (* ASYNC_REG = "TRUE" *) reg [pNUM_GLITCH_WIDTH:0] glitch_done_pipe [pSYNC_STAGES-1:0];
+   reg [pNUM_GLITCH_WIDTH:0] glitch_done_sync;
 
    localparam pS_IDLE = 0;
    localparam pS_WAIT = 1;
@@ -91,13 +90,8 @@ module trigger_resync #(
    // glitch in DONE and exit too early. All this matters because we have to
    // maintain a valid index for clockglitch_a7 and we can't reset it too
    // soon.)
-   always @(posedge clk) begin
-       {glitch_go_sync_r, glitch_go_sync, glitch_go_pipe} <= {glitch_go_sync, glitch_go_pipe, glitch_go};
-       if (state == pS_IDLE)
-           glitch_done_count <= 0;
-       else if (glitch_go_sync_r & ~glitch_go_sync)
-           glitch_done_count <= glitch_done_count + 1;
-   end
+   always @(posedge clk)
+       {glitch_done_sync, glitch_done_pipe[1], glitch_done_pipe[0]} <= {glitch_done_pipe[1], glitch_done_pipe[0], glitch_done_count};
 
 
    always @(posedge clk) begin
@@ -148,8 +142,7 @@ module trigger_resync #(
                end
 
                pS_DONE: begin
-                   //if ((~exttrig_r && (glitch_done_count == (num_glitches+1))) || fsm_reset) begin
-                   if ((~exttrig_r && ((glitch_done_count == (num_glitches+1)) || (easy_done_exit && (num_glitches == 0)))) || fsm_reset) begin
+                   if ((~exttrig_r && ((glitch_done_sync == (num_glitches+1)) || (easy_done_exit && (num_glitches == 0)))) || fsm_reset) begin
                        state <= pS_IDLE;
                        done <= 1'b1;
                    end
@@ -168,7 +161,7 @@ module trigger_resync #(
        .probe2         (exttrig),              // input wire [0:0]  probe2 
        .probe3         (done),                 // input wire [0:0]  probe3 
        .probe4         (glitch_condition),     // input wire [0:0]  probe4 
-       .probe5         (glitch_done_count),    // input wire [4:0]  probe5 
+       .probe5         (glitch_done_sync),     // input wire [4:0]  probe5 
        .probe6         (exttrigger_resync),    // input wire [0:0]  probe6 
        .probe7         (glitch_delay_cnt),     // input wire [31:0] probe7 
        .probe8         (num_glitches),         // input wire [4:0]  probe8 

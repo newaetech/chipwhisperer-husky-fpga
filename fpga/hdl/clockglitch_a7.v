@@ -82,6 +82,7 @@ module clockglitch_a7 #(
     output wire                         glitch_mmcm2_clk_out_buf,
     output wire                         glitch_enable,
     output reg                          glitch_go,
+    output reg [pNUM_GLITCH_WIDTH:0]    glitch_done_count,
 
     // register interface (for DRP)
     input  wire [7:0]                   reg_address,
@@ -93,7 +94,8 @@ module clockglitch_a7 #(
 
     // debug:
     output wire                         idle_debug,
-    output wire [pNUM_GLITCH_WIDTH-1:0] glitch_count_debug
+    output wire [pNUM_GLITCH_WIDTH-1:0] glitch_count_debug,
+    output wire                         glitch_trigger_resync_debug
 
 );
 
@@ -142,6 +144,7 @@ module clockglitch_a7 #(
    reg clockglitch_idle;
    assign idle_debug = clockglitch_idle;
    assign glitch_count_debug = glitch_count;
+   assign glitch_trigger_resync_debug = glitch_trigger_resync;
 
    // resetting glitch_count to 0 is the tricky bit here... another approach
    // would be a CDC'd pulse when *entering* idle, but this is a bit simpler
@@ -247,6 +250,15 @@ module clockglitch_a7 #(
          glitch_len_cnt <= glitch_len_cnt + 13'd1;
       else
          glitch_len_cnt <= 0;
+   end
+
+   // Count glitches at the end of each glitch for trigger_resync. Doing this
+   // here to avoid CDC issues.
+   always @(negedge glitch_mmcm1_clk_out_buf) begin
+       if (clockglitch_idle)
+           glitch_done_count <= 0;
+       if (glitch_go_r  & ~glitch_go)
+           glitch_done_count <= glitch_done_count + 1;
    end
 
 

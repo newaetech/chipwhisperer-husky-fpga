@@ -62,7 +62,8 @@ module reg_clockglitch #(
    output reg          glitch_trigger,
 
    output reg          led_glitch,
-   output wire [7:0]   debug
+   output wire [7:0]   debug1,
+   output wire [7:0]   debug2
 );
 
 
@@ -75,6 +76,7 @@ module reg_clockglitch #(
 
    wire clockglitch_idle;
    wire [pNUM_GLITCH_WIDTH-1:0] clockglitch_count;
+   wire glitch_trigger_resync;
 
    
    // @ Address 56, 8 bytes (+8 extra reserved for future...)
@@ -290,7 +292,7 @@ module reg_clockglitch #(
             `CLOCKGLITCH_SETTINGS: reg_datao_reg = clockglitch_settings_read[reg_bytecnt*8 +: 8];
             `CLOCKGLITCH_OFFSET: reg_datao_reg = clockglitch_offset_reg[reg_bytecnt*8 +: 8];
             `CLOCKGLITCH_POWERDOWN: reg_datao_reg = {7'b0, clockglitch_powerdown};
-            `CLOCKGLITCH_NUM_GLITCHES: reg_datao_reg = glitch_done_count;
+            `CLOCKGLITCH_NUM_GLITCHES: reg_datao_reg = {2'b0, glitch_done_count};
             `CLOCKGLITCH_MULTIPLE_STATE: reg_datao_reg = trigger_resync_state;
             `CLOCKGLITCH_REPEATS: reg_datao_reg = max_glitches1toN_reg[reg_bytecnt*8 +: 8];
             `CLOCKGLITCH_POWERED_DOWN: reg_datao_reg <= powered_down;
@@ -394,6 +396,7 @@ module reg_clockglitch #(
     .glitch_mmcm2_clk_out_buf (glitch_mmcm2_clk_out),
     .glitch_enable          (glitch_enable),
     .glitch_go              (glitch_go),
+    .glitch_done_count      (glitch_done_count),
 
     .reg_address            (reg_address), 
     .reg_bytecnt            (reg_bytecnt), 
@@ -403,7 +406,8 @@ module reg_clockglitch #(
     .reg_write              (reg_write),
 
     .idle_debug             (clockglitch_idle),
-    .glitch_count_debug     (clockglitch_count)
+    .glitch_count_debug     (clockglitch_count),
+    .glitch_trigger_resync_debug (glitch_trigger_resync)
 
 );
 
@@ -426,14 +430,22 @@ always @(posedge sourceclk) begin
    end
 end
 
-assign debug = {clockglitch_count[1:0],
-                oneshot,
+assign debug1= {clockglitch_count[1:0],
+                glitch_done_count[0],
                 glitch_trigger,
                 trigger_resync_idle,
                 clockglitch_idle,
                 exttrigger_resync,
                 exttrigger};
 
+assign debug2= {glitch_done_count[1:0],
+                glitch_enable,
+                glitch_trigger,
+                glitch_trigger_resync,
+                glitch_mmcm1_clk_out,
+                sourceclk,
+                exttrigger
+               };
 
 endmodule
 `default_nettype wire

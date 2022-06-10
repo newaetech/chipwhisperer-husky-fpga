@@ -180,7 +180,8 @@ module cwhusky_top(
 
    wire [8:0] tu_la_debug;
    wire [7:0] fifo_debug;
-   wire [7:0] clockglitch_debug;
+   wire [7:0] clockglitch_debug1;
+   wire [7:0] clockglitch_debug2;
 
    wire flash_pattern;
 
@@ -300,7 +301,7 @@ module cwhusky_top(
                                                                          glitch_enable,
                                                                          ext_trigger,
                                                                          cmd_arm_usb} :
-                                                                        clockglitch_debug;
+                                 (userio_fpga_debug_select == 4'b0100)?  clockglitch_debug1 : clockglitch_debug2;
 
    `else
       assign userio_debug_data[7:0] = 8'bz;
@@ -517,7 +518,8 @@ module cwhusky_top(
         .glitch_go      (glitch_go),
         .glitch_trigger (glitch_trigger),
         .led_glitch     (led_glitch),
-        .debug          (clockglitch_debug)
+        .debug1         (clockglitch_debug1),
+        .debug2         (clockglitch_debug2)
    );
 
    `ifdef LOGIC_ANALYZER
