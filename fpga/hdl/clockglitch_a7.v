@@ -82,7 +82,6 @@ module clockglitch_a7 #(
     output wire                         glitch_mmcm2_clk_out_buf,
     output wire                         glitch_enable,
     output reg                          glitch_go,
-    output reg [pNUM_GLITCH_WIDTH:0]    glitch_done_count,
 
     // register interface (for DRP)
     input  wire [7:0]                   reg_address,
@@ -93,10 +92,7 @@ module clockglitch_a7 #(
     input  wire                         reg_write,
 
     // debug:
-    output wire                         idle_debug,
-    output wire [pNUM_GLITCH_WIDTH-1:0] glitch_count_debug,
-    output wire                         glitch_trigger_resync_debug
-
+    output wire [pNUM_GLITCH_WIDTH-1:0] glitch_count_debug
 );
 
     wire glitch_mmcm1_clk_out;
@@ -140,17 +136,12 @@ module clockglitch_a7 #(
    reg [12:0] max_glitches;
    reg [pNUM_GLITCH_WIDTH-1:0] glitch_count;
 
-   (* ASYNC_REG = "TRUE" *) reg  [pSYNC_STAGES-1:0] idle_pipe;
-   reg clockglitch_idle;
-   assign idle_debug = trigger_resync_idle;
    assign glitch_count_debug = glitch_count;
-   assign glitch_trigger_resync_debug = glitch_trigger_resync;
 
    // resetting glitch_count to 0 is the tricky bit here... another approach
    // would be a CDC'd pulse when *entering* idle, but this is a bit simpler
    // and should work:
    always @(negedge glitch_mmcm1_clk_out_buf) begin
-       {clockglitch_idle, idle_pipe} <= {idle_pipe, trigger_resync_idle};
        all_max_glitches_reg <= all_max_glitches;
        if (easy_done_exit && num_glitches == 0)
            max_glitches <= all_max_glitches_reg[0 +: 13];
@@ -186,27 +177,26 @@ module clockglitch_a7 #(
 
 
    reg [12:0] glitch_len_cnt;
-   (* ASYNC_REG = "TRUE" *) reg[2:0] glitch_trigger_pipe;
-   reg glitch_trigger_resync;
    (* ASYNC_REG = "TRUE" *) reg[2:0] continuous_mode_pipe;
    reg continuous_mode_r;
    reg continuous_mode_r2;
 
-   // We need to use negedge here to avoid extra glitches.
-   // The reason is that glitch_go will always lag the MMCM1 clock, and so
-   // it's clocked on posedge, the second rising edge of the clock can create
-   // an extra glitch. Perhaps the best way to understand is to switch to
-   // posedge and see what happens (using reg_la.v)
+   // Note: all the negedge's *could* be switched to posedge. Negedge was
+   // required for the old CW-lite design and the initial CW-Husky, which used
+   // source_clk in trigger_resync.v and as such required much clock domain
+   // crossing between that module and this one. But fixing
+   // https://github.com/newaetech/chipwhisperer-husky-fpga/issues/4
+   // involved moving all of the glitch generating logic to the mmcm1 clock
+   // domain, and so now all the negedges could be changed to posedges.
+   // However this would change the meaning of the glitch parameters that
+   // users have gotten used to.
    always @(negedge glitch_mmcm1_clk_out_buf) begin
        if (reset) begin
-           glitch_trigger_pipe <= 0;
-           glitch_trigger_resync <= 0;
            continuous_mode_r2 <= 0;
            continuous_mode_r <= 0;
            continuous_mode_pipe <= 0;
        end
        else begin
-           {glitch_trigger_resync, glitch_trigger_pipe} <= {glitch_trigger_pipe, glitch_trigger};
            {continuous_mode_r2, continuous_mode_r, continuous_mode_pipe} <= {continuous_mode_r, continuous_mode_pipe, continuous_mode};
        end
 
@@ -215,7 +205,7 @@ module clockglitch_a7 #(
    reg glitch_go_r;
    always @(negedge glitch_mmcm1_clk_out_buf) begin
       glitch_go_r <= glitch_go;
-      // Careful because it's possible for glitch_trigger_resync to be > 1 cycle.
+      // Careful because it's possible for glitch_trigger to be > 1 cycle.
       // Also note that max_glitches = <number of cycles to glitch> - 1
 
       // In continuous mode, we need an explicit way to turn it off. Order is important here!
@@ -250,15 +240,6 @@ module clockglitch_a7 #(
          glitch_len_cnt <= glitch_len_cnt + 13'd1;
       else
          glitch_len_cnt <= 0;
-   end
-
-   // Count glitches at the end of each glitch for trigger_resync. Doing this
-   // here to avoid CDC issues.
-   always @(negedge glitch_mmcm1_clk_out_buf) begin
-       if (trigger_resync_idle)
-           glitch_done_count <= 0;
-       if (glitch_go_r  & ~glitch_go)
-           glitch_done_count <= glitch_done_count + 1;
    end
 
 
@@ -459,11 +440,11 @@ module clockglitch_a7 #(
     ila_clockglitch_a7 U_ila_clockglitch_a7 (
        .clk            (clk_usb),              // input wire clk
        .probe0         (glitch_trigger),       // input wire [0:0]  probe0 
-       .probe1         (glitch_trigger_resync),// input wire [0:0]  probe1 
+       .probe1         (1'b0),                 // input wire [0:0]  probe1 
        .probe2         (glitch_go),            // input wire [0:0]  probe2 
        .probe3         (max_glitches),         // input wire [12:0] probe3 
        .probe4         (glitch_len_cnt),       // input wire [12:0] probe4 
-       .probe5         (clockglitch_idle),     // input wire [0:0]  probe5 
+       .probe5         (trigger_resync_idle),  // input wire [0:0]  probe5 
        .probe6         (glitch_count),         // input wire [4:0]  probe6 
        .probe7         (continuous_mode_r2)    // input wire [0:0]  probe7 
     );

@@ -74,10 +74,7 @@ module reg_clockglitch #(
    wire phase1_done;
    wire phase2_done;
 
-   wire clockglitch_idle;
    wire [pNUM_GLITCH_WIDTH-1:0] clockglitch_count;
-   wire glitch_trigger_resync;
-
    
    // @ Address 56, 8 bytes (+8 extra reserved for future...)
    //
@@ -226,6 +223,7 @@ module reg_clockglitch #(
 
    reg oneshot = 1'b0;
 
+   // See note in clockglitch_a7.v explaining why negedges are used.
    always @(negedge glitch_mmcm1_clk_out) begin
       if (clockglitch_powerdown)
          glitch_trigger <= 1'b0;
@@ -253,15 +251,6 @@ module reg_clockglitch #(
          oneshot <= 1'b0;
    end
 
-   reg glitch_go_local;
-   always @(posedge sourceclk) begin // TODO!
-      if (glitch_trigger)
-         glitch_go_local <= 'b1;
-      else 
-         glitch_go_local <= 'b0;
-   end
-
-
    assign clockglitch_settings_read[17:0] = clockglitch_settings_reg[17:0];
    assign clockglitch_settings_read[36:18] = 0;
    assign clockglitch_settings_read[37] = phase1_done_reg;
@@ -281,10 +270,7 @@ module reg_clockglitch #(
          phase2_done_reg <= 'b0;
       else if (phase2_done)
          phase2_done_reg <= 'b1;
-
-
    end
-
 
    always @(*) begin
       if (reg_read) begin
@@ -295,7 +281,7 @@ module reg_clockglitch #(
             `CLOCKGLITCH_NUM_GLITCHES: reg_datao_reg = {2'b0, glitch_done_count};
             `CLOCKGLITCH_MULTIPLE_STATE: reg_datao_reg = trigger_resync_state;
             `CLOCKGLITCH_REPEATS: reg_datao_reg = max_glitches1toN_reg[reg_bytecnt*8 +: 8];
-            `CLOCKGLITCH_POWERED_DOWN: reg_datao_reg <= powered_down;
+            `CLOCKGLITCH_POWERED_DOWN: reg_datao_reg = powered_down;
             default: reg_datao_reg = 0;
          endcase
       end
@@ -347,8 +333,8 @@ module reg_clockglitch #(
    ) resync(
       .reset                (reset),
       .fsm_reset            (fsm_reset),
-      .clk                  (sourceclk),
       .clk_usb              (clk_usb),
+      .source_clk           (sourceclk),
       .glitch_mmcm1_clk_out (glitch_mmcm1_clk_out),
       .ext_single_mode      (ext_single_mode),
       .oneshot              (oneshot),
@@ -397,7 +383,6 @@ module reg_clockglitch #(
     .glitch_mmcm2_clk_out_buf (glitch_mmcm2_clk_out),
     .glitch_enable          (glitch_enable),
     .glitch_go              (glitch_go),
-    .glitch_done_count      (glitch_done_count),
 
     .reg_address            (reg_address), 
     .reg_bytecnt            (reg_bytecnt), 
@@ -406,20 +391,17 @@ module reg_clockglitch #(
     .reg_read               (reg_read), 
     .reg_write              (reg_write),
 
-    .idle_debug             (clockglitch_idle),
-    .glitch_count_debug     (clockglitch_count),
-    .glitch_trigger_resync_debug (glitch_trigger_resync)
-
+    .glitch_count_debug     (clockglitch_count)
 );
 
 /* LED lighty up thing */
 reg [18:0] led_extend;
-always @(posedge sourceclk) begin // TODO!
+always @(negedge glitch_mmcm1_clk_out) begin
    if (clockglitch_powerdown || mmcm_shutdown) begin
       led_extend <= 0;   
       led_glitch <= 1'b0;
    end
-   else if (glitch_go_local) begin
+   else if (glitch_trigger) begin
       led_extend <= 0;   
       led_glitch <= 1'b1;
    end 
@@ -432,15 +414,13 @@ always @(posedge sourceclk) begin // TODO!
 end
 
 assign debug1= {clockglitch_count[1:0],
-                glitch_done_count[0],
+                glitch_done_count[1:0],
                 glitch_trigger,
                 trigger_resync_idle,
-                clockglitch_idle,
                 exttrigger_resync,
                 exttrigger};
 
-assign debug2= {glitch_done_count[1:0],
-                glitch_trigger_resync,
+assign debug2= {glitch_done_count[2:0],
                 glitch_enable,
                 glitch_trigger,
                 glitch_mmcm1_clk_out,

@@ -30,8 +30,8 @@ module trigger_resync #(
 )(
    input  wire                          reset,
    input  wire                          fsm_reset,
-   input  wire                          clk,    // clkgen or HS1
    input  wire                          clk_usb, // for debug only
+   input  wire                          source_clk,
    input  wire                          glitch_mmcm1_clk_out,
    input  wire                          ext_single_mode,
    input  wire                          oneshot,
@@ -41,7 +41,7 @@ module trigger_resync #(
    output reg                           exttrigger_resync,
    output reg                           done,
    output reg  [pNUM_GLITCH_WIDTH-1:0]  index,
-   input  wire [pNUM_GLITCH_WIDTH:0]    glitch_done_count,
+   output reg  [pNUM_GLITCH_WIDTH:0]    glitch_done_count,
    input  wire                          glitch_go, // caution: synchronous to negedge of MMCM1 clock
    input  wire                          easy_done_exit,
    output wire                          idle,
@@ -52,9 +52,7 @@ module trigger_resync #(
    reg exttrig_r;
    reg [31:0] offset_r;
    reg [31:0] glitch_delay_cnt;
-
-   (* ASYNC_REG = "TRUE" *) reg [pNUM_GLITCH_WIDTH:0] glitch_done_pipe [pSYNC_STAGES-1:0];
-   reg [pNUM_GLITCH_WIDTH:0] glitch_done_sync;
+   reg glitch_go_r;
 
    localparam pS_IDLE = 0;
    localparam pS_WAIT = 1;
@@ -67,14 +65,14 @@ module trigger_resync #(
 
    assign idle = (state == pS_IDLE);
 
+   // See note in clockglitch_a7.v explaining why negedges are used!
+
    `ifdef ASYNC_TRIGGER
        // This must be coded just so, otherwise Vivado will throw a "Synth 8-91
        // ambiguous clock" error. Or maybe we could get rid of the posedge exttrig
        // argument...
+       // NOTE: ASYNC_TRIGGER option is untested!
        always @(negedge glitch_mmcm1_clk_out or posedge exttrig) begin
-   `else
-       always @(negedge glitch_mmcm1_clk_out) begin
-   `endif
           exttrig_r <= exttrig;
           offset_r <= offset;
           // important: don't start FSM if glitches aren't going to be generated (otherwise it'll get stuck in DONE)
@@ -84,6 +82,24 @@ module trigger_resync #(
              async_trigger <= 1'b0;
        end
 
+   `else
+       // if incoming trigger is a single cycle, depending on scope.glitch.offset we could miss it, so let's try to prevent that:
+       reg exttrig_r_sourceclk;
+       wire exttrig_extended = exttrig_r_sourceclk || exttrig;
+
+       always @(posedge source_clk)
+          exttrig_r_sourceclk <= exttrig;
+
+       always @(negedge glitch_mmcm1_clk_out) begin
+          exttrig_r <= exttrig_extended;
+          offset_r <= offset;
+          // important: don't start FSM if glitches aren't going to be generated (otherwise it'll get stuck in DONE)
+          if ((exttrig_extended == 1'b1) && (ext_single_mode? oneshot : 1'b1))
+             async_trigger <= 1'b1;
+          else if (done)
+             async_trigger <= 1'b0;
+       end
+   `endif
 
    // Count glitch_go's, to know when we're done:
    // (Waiting to see a glitch_go when in DONE state doesn't work, because if
@@ -91,8 +107,14 @@ module trigger_resync #(
    // glitch in DONE and exit too early. All this matters because we have to
    // maintain a valid index for clockglitch_a7 and we can't reset it too
    // soon.)
-   always @(negedge glitch_mmcm1_clk_out)
-       {glitch_done_sync, glitch_done_pipe[1], glitch_done_pipe[0]} <= {glitch_done_pipe[1], glitch_done_pipe[0], glitch_done_count};
+   always @(negedge glitch_mmcm1_clk_out) begin
+       glitch_go_r <= glitch_go;
+       if (idle)
+           glitch_done_count <= 0;
+       else if (glitch_go_r  & ~glitch_go)
+           glitch_done_count <= glitch_done_count + 1;
+   end
+
 
 
    always @(negedge glitch_mmcm1_clk_out) begin
@@ -143,7 +165,7 @@ module trigger_resync #(
                end
 
                pS_DONE: begin
-                   if ((~exttrig_r && ((glitch_done_sync == (num_glitches+1)) || (easy_done_exit && (num_glitches == 0)))) || fsm_reset) begin
+                   if ((~exttrig_r && ((glitch_done_count == (num_glitches+1)) || (easy_done_exit && (num_glitches == 0)))) || fsm_reset) begin
                        state <= pS_IDLE;
                        done <= 1'b1;
                    end
@@ -162,7 +184,7 @@ module trigger_resync #(
        .probe2         (exttrig),              // input wire [0:0]  probe2 
        .probe3         (done),                 // input wire [0:0]  probe3 
        .probe4         (glitch_condition),     // input wire [0:0]  probe4 
-       .probe5         (glitch_done_sync),     // input wire [4:0]  probe5 
+       .probe5         (glitch_done),          // input wire [4:0]  probe5 
        .probe6         (exttrigger_resync),    // input wire [0:0]  probe6 
        .probe7         (glitch_delay_cnt),     // input wire [31:0] probe7 
        .probe8         (num_glitches),         // input wire [4:0]  probe8 
