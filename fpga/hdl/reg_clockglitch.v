@@ -215,7 +215,7 @@ module reg_clockglitch #(
 
    (*ASYNC_REG = "True" *) reg manual_rs1, manual_rs2;
    reg manual_dly;
-   always @(posedge sourceclk) begin
+   always @(negedge glitch_mmcm1_clk_out) begin
       //Resync with double-FF
       manual_rs1 <= manual;
       manual_rs2 <= manual_rs1;
@@ -226,7 +226,7 @@ module reg_clockglitch #(
 
    reg oneshot = 1'b0;
 
-   always @(posedge sourceclk) begin
+   always @(negedge glitch_mmcm1_clk_out) begin
       if (clockglitch_powerdown)
          glitch_trigger <= 1'b0;
       else if (glitch_trigger_src == 2'b10)
@@ -244,7 +244,7 @@ module reg_clockglitch #(
    assign continuous_mode = (glitch_trigger_src == 2'b10);
    assign ext_single_mode = (glitch_trigger_src == 2'b11);
 
-   always @(posedge sourceclk) begin
+   always @(negedge glitch_mmcm1_clk_out) begin
       if (reset)
          oneshot <= 1'b0;
       else if (manual_rs2 & manual_dly)
@@ -254,7 +254,7 @@ module reg_clockglitch #(
    end
 
    reg glitch_go_local;
-   always @(posedge sourceclk) begin
+   always @(posedge sourceclk) begin // TODO!
       if (glitch_trigger)
          glitch_go_local <= 'b1;
       else 
@@ -349,6 +349,7 @@ module reg_clockglitch #(
       .fsm_reset            (fsm_reset),
       .clk                  (sourceclk),
       .clk_usb              (clk_usb),
+      .glitch_mmcm1_clk_out (glitch_mmcm1_clk_out),
       .ext_single_mode      (ext_single_mode),
       .oneshot              (oneshot),
       .exttrig              (exttrigger),
@@ -413,7 +414,7 @@ module reg_clockglitch #(
 
 /* LED lighty up thing */
 reg [18:0] led_extend;
-always @(posedge sourceclk) begin
+always @(posedge sourceclk) begin // TODO!
    if (clockglitch_powerdown || mmcm_shutdown) begin
       led_extend <= 0;   
       led_glitch <= 1'b0;
@@ -439,9 +440,9 @@ assign debug1= {clockglitch_count[1:0],
                 exttrigger};
 
 assign debug2= {glitch_done_count[1:0],
+                glitch_trigger_resync,
                 glitch_enable,
                 glitch_trigger,
-                glitch_trigger_resync,
                 glitch_mmcm1_clk_out,
                 sourceclk,
                 exttrigger

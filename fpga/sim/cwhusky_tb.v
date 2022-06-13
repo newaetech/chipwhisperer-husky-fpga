@@ -646,7 +646,7 @@ module cwhusky_tb();
        glitches_done = 0;
        wait (TRIG_GLITCHOUT);
        glitch_compare = 1;
-       repeat (10 + all_offs[0]) @(negedge glitch_clock);
+       repeat (6 + all_offs[0]) @(negedge glitch_clock);
        for (k = 1; k < pNUM_GLITCHES; k = k + 1) begin
            expected_glitch = 1'b1;
            repeat(all_reps[k-1]+1) @(negedge glitch_clock);

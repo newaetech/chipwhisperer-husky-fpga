@@ -107,6 +107,11 @@ set_clock_groups -asynchronous \
                  -group [get_clocks fe_clk ] \
                  -group [get_clocks {clk_usb observer_clk ADC_clk_fb pll_fpga_clk}]
 
+set_clock_groups -asynchronous \
+                 -group [get_clocks {fe_clk ADC_clk_fb} ] \
+                 -group [get_clocks glitch_mmcm1_clk_out]
+
+
 
 # include below if FPGA_CLKGEN:
 

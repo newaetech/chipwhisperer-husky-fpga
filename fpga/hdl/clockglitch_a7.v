@@ -142,7 +142,7 @@ module clockglitch_a7 #(
 
    (* ASYNC_REG = "TRUE" *) reg  [pSYNC_STAGES-1:0] idle_pipe;
    reg clockglitch_idle;
-   assign idle_debug = clockglitch_idle;
+   assign idle_debug = trigger_resync_idle;
    assign glitch_count_debug = glitch_count;
    assign glitch_trigger_resync_debug = glitch_trigger_resync;
 
@@ -224,11 +224,11 @@ module clockglitch_a7 #(
       else if (continuous_mode_r)
           glitch_go <= 1'b1;
 
-      else if (clockglitch_idle && multiple_glitches_supported && ~(easy_done_exit && num_glitches == 0))
+      else if (trigger_resync_idle && multiple_glitches_supported && ~(easy_done_exit && num_glitches == 0))
           glitch_count <= 0;
 
       else if (max_glitches > 0) begin
-          if (glitch_trigger_resync)
+          if (glitch_trigger)
              glitch_go <= 'b1;
           else if (glitch_len_cnt == max_glitches) begin
              glitch_go <= 'b0;
@@ -242,7 +242,7 @@ module clockglitch_a7 #(
               if (multiple_glitches_supported)
                   glitch_count <= glitch_count + 1;
           end
-          else if (glitch_trigger_resync)
+          else if (glitch_trigger)
               glitch_go <= 1'b1;
       end
 
@@ -255,7 +255,7 @@ module clockglitch_a7 #(
    // Count glitches at the end of each glitch for trigger_resync. Doing this
    // here to avoid CDC issues.
    always @(negedge glitch_mmcm1_clk_out_buf) begin
-       if (clockglitch_idle)
+       if (trigger_resync_idle)
            glitch_done_count <= 0;
        if (glitch_go_r  & ~glitch_go)
            glitch_done_count <= glitch_done_count + 1;

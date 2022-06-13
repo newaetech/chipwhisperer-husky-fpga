@@ -32,6 +32,7 @@ module trigger_resync #(
    input  wire                          fsm_reset,
    input  wire                          clk,    // clkgen or HS1
    input  wire                          clk_usb, // for debug only
+   input  wire                          glitch_mmcm1_clk_out,
    input  wire                          ext_single_mode,
    input  wire                          oneshot,
    input  wire                          exttrig,
@@ -70,9 +71,9 @@ module trigger_resync #(
        // This must be coded just so, otherwise Vivado will throw a "Synth 8-91
        // ambiguous clock" error. Or maybe we could get rid of the posedge exttrig
        // argument...
-       always @(posedge clk or posedge exttrig) begin
+       always @(negedge glitch_mmcm1_clk_out or posedge exttrig) begin
    `else
-       always @(posedge clk) begin
+       always @(negedge glitch_mmcm1_clk_out) begin
    `endif
           exttrig_r <= exttrig;
           offset_r <= offset;
@@ -90,11 +91,11 @@ module trigger_resync #(
    // glitch in DONE and exit too early. All this matters because we have to
    // maintain a valid index for clockglitch_a7 and we can't reset it too
    // soon.)
-   always @(posedge clk)
+   always @(negedge glitch_mmcm1_clk_out)
        {glitch_done_sync, glitch_done_pipe[1], glitch_done_pipe[0]} <= {glitch_done_pipe[1], glitch_done_pipe[0], glitch_done_count};
 
 
-   always @(posedge clk) begin
+   always @(negedge glitch_mmcm1_clk_out) begin
        if (state == pS_WAIT)
            glitch_delay_cnt <= glitch_delay_cnt + 1;
        else
@@ -107,7 +108,7 @@ module trigger_resync #(
    end
 
 
-   always @(posedge clk) begin
+   always @(negedge glitch_mmcm1_clk_out) begin
        if (reset) begin
            state <= pS_IDLE;
            done <= 1'b0;
