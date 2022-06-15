@@ -60,6 +60,7 @@ module reg_clockglitch #(
    input wire          exttrigger,
    output wire         glitch_go,
    output reg          glitch_trigger,
+   output reg          glitch_trigger_sourceclock,
 
    output reg          led_glitch,
    output wire [7:0]   debug1,
@@ -236,6 +237,24 @@ module reg_clockglitch #(
       else if (glitch_trigger_src == 2'b11)
          glitch_trigger <= exttrigger_resync & oneshot;
    end 
+
+   // generate a signal with identical conditions to glitch_trigger, but
+   // clocked in sourceclk domain, for easier visualization in
+   // husky_glitch.ipynb. This signal only goes to scope.LA to trigger the
+   // capture.
+   always @(posedge sourceclk) begin
+      if (clockglitch_powerdown)
+         glitch_trigger_sourceclock <= 1'b0;
+      else if (glitch_trigger_src == 2'b10)
+         glitch_trigger_sourceclock <= 1'b1;
+      else if (glitch_trigger_src == 2'b00)
+         glitch_trigger_sourceclock <= manual_rs2 & manual_dly;
+      else if (glitch_trigger_src == 2'b01)
+         glitch_trigger_sourceclock <= exttrigger_resync;
+      else if (glitch_trigger_src == 2'b11)
+         glitch_trigger_sourceclock <= exttrigger_resync & oneshot;
+   end 
+
 
    assign multiple_glitches_supported = (glitch_trigger_src == 2'b01) ||
                                         (glitch_trigger_src == 2'b11);
@@ -420,8 +439,9 @@ assign debug1= {clockglitch_count[1:0],
                 exttrigger_resync,
                 exttrigger};
 
-assign debug2= {glitch_done_count[2:0],
+assign debug2= {glitch_done_count[1:0],
                 glitch_enable,
+                glitchclk,
                 glitch_trigger,
                 glitch_mmcm1_clk_out,
                 sourceclk,

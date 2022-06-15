@@ -164,6 +164,7 @@ module cwhusky_top(
    wire glitch_enable;
    wire glitch_go;
    wire glitch_trigger;
+   wire glitch_trigger_sourceclock;
    wire capture_active;
    wire enable_avrprog;
    wire [11:0] ADC_data;
@@ -517,6 +518,7 @@ module cwhusky_top(
         .exttrigger     (ext_trigger),
         .glitch_go      (glitch_go),
         .glitch_trigger (glitch_trigger),
+        .glitch_trigger_sourceclock (glitch_trigger_sourceclock),
         .led_glitch     (led_glitch),
         .debug1         (clockglitch_debug1),
         .debug2         (clockglitch_debug2)
@@ -573,7 +575,7 @@ module cwhusky_top(
         .trace_fe_clk           (fe_clk),
 
         .glitch_go              (glitch_go),
-        .glitch_trigger_sourceclock (glitch_trigger),
+        .glitch_trigger_sourceclock (glitch_trigger_sourceclock),
         .capture_active         (capture_active),
 
         .fifo_wr                (la_fifo_wr),
