@@ -72,7 +72,8 @@ module reg_la #(
    input  wire         trace_fe_clk,
 
    input  wire         glitch_go,
-   input  wire         glitch_trigger_sourceclock,
+   input  wire         glitch_trigger_manual_sourceclock,
+   input  wire         glitch_trigger,
    input  wire         capture_active,
 
    output reg          fifo_wr,
@@ -143,9 +144,10 @@ module reg_la #(
 
     wire capture_go_async = manual_capture | ( (trigger_source_reg == 3'b000)? glitch_go : 
                                                (trigger_source_reg == 3'b001)? capture_active : 
-                                               (trigger_source_reg == 3'b010)? glitch_trigger_sourceclock :
+                                               (trigger_source_reg == 3'b010)? glitch_trigger_manual_sourceclock :
                                                (trigger_source_reg == 3'b011)? hs1 :
-                                               (trigger_source_reg == 3'b100)? tu_la_debug[0] : tu_la_debug[1] );
+                                               (trigger_source_reg == 3'b100)? glitch_trigger :
+                                               (trigger_source_reg == 3'b101)? tu_la_debug[0] : tu_la_debug[1] );
 
    `ifndef __ICARUS__
       wire observer_clkfb;
@@ -308,8 +310,8 @@ module reg_la #(
                capture4_source <= glitch_go;
                capture5_source <= capture_active;
                capture6_source <= glitch_enable;
-               capture7_source <= glitch_trigger_sourceclock;
-               capture8_source <= 1'b0;
+               capture7_source <= glitch_trigger_manual_sourceclock;
+               capture8_source <= glitch_trigger;
            end
 
            1: begin

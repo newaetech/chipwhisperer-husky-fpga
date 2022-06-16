@@ -60,7 +60,7 @@ module reg_clockglitch #(
    input wire          exttrigger,
    output wire         glitch_go,
    output reg          glitch_trigger,
-   output reg          glitch_trigger_sourceclock,
+   output wire         glitch_trigger_manual_sourceclock,
 
    output reg          led_glitch,
    output wire [7:0]   debug1,
@@ -211,16 +211,31 @@ module reg_clockglitch #(
    always @(posedge clk_usb)
       manual <= clockglitch_settings_reg[47];
 
+   // Manual triggering is a bit convoluted. It originates in the USB clock
+   // domain. We first generate a pulse from this in the sourceclock domain;
+   // this is used only for the purpose of triggering a scope.LA capture with
+   // sourceclock-based time reference (husky_glitch.ipynb needs this). This
+   // pulse is then CDC's to the MMCM1 clock domain, and that's actually used
+   // for glitch generation.
    (*ASYNC_REG = "True" *) reg manual_rs1, manual_rs2;
    reg manual_dly;
-   always @(negedge glitch_mmcm1_clk_out) begin
+   always @(posedge sourceclk) begin
       //Resync with double-FF
       manual_rs1 <= manual;
       manual_rs2 <= manual_rs1;
-      
-      //Use delay to convert to single pulse in sourceclk domain
       manual_dly <= ~manual_rs2;
    end
+   wire manual_pulse_sourceclock = manual_rs2 & manual_dly;
+   wire manual_pulse_mmcm1clock;
+
+   cdc_pulse U_glitch_trigger_sourceclock_pulse (
+      .reset_i       (reset),
+      .src_clk       (sourceclk),
+      .src_pulse     (manual_pulse_sourceclock),
+      .dst_clk       (~glitch_mmcm1_clk_out),
+      .dst_pulse     (manual_pulse_mmcm1clock)
+   );
+   assign glitch_trigger_manual_sourceclock = manual_pulse_sourceclock && (glitch_trigger_src == 2'b00);
 
    reg oneshot = 1'b0;
 
@@ -231,28 +246,11 @@ module reg_clockglitch #(
       else if (glitch_trigger_src == 2'b10)
          glitch_trigger <= 1'b1;
       else if (glitch_trigger_src == 2'b00)
-         glitch_trigger <= manual_rs2 & manual_dly;
+         glitch_trigger <= manual_pulse_mmcm1clock;
       else if (glitch_trigger_src == 2'b01)
          glitch_trigger <= exttrigger_resync;
       else if (glitch_trigger_src == 2'b11)
          glitch_trigger <= exttrigger_resync & oneshot;
-   end 
-
-   // generate a signal with identical conditions to glitch_trigger, but
-   // clocked in sourceclk domain, for easier visualization in
-   // husky_glitch.ipynb. This signal only goes to scope.LA to trigger the
-   // capture.
-   always @(posedge sourceclk) begin
-      if (clockglitch_powerdown)
-         glitch_trigger_sourceclock <= 1'b0;
-      else if (glitch_trigger_src == 2'b10)
-         glitch_trigger_sourceclock <= 1'b1;
-      else if (glitch_trigger_src == 2'b00)
-         glitch_trigger_sourceclock <= manual_rs2 & manual_dly;
-      else if (glitch_trigger_src == 2'b01)
-         glitch_trigger_sourceclock <= exttrigger_resync;
-      else if (glitch_trigger_src == 2'b11)
-         glitch_trigger_sourceclock <= exttrigger_resync & oneshot;
    end 
 
 
