@@ -259,6 +259,23 @@ module cwhusky_top(
       .reg_write        (reg_write) 
    );
 
+   wire [7:0] usb_debug1 = { USB_RDn,           // D7
+                             USB_WRn,           // D6
+                             USB_CEn,           // D5
+                             clk_usb_buf,       // D4
+                             USB_Data[3:0]      // D3:0
+                           };
+
+   wire [7:0] usb_debug2 = { USB_RDn,           // D7
+                             USB_WRn,           // D6
+                             USB_CEn,           // D5
+                             clk_usb_buf,       // D4
+                             reg_read,          // D3
+                             reg_write,         // D2
+                             USB_Addr[1:0]      // D1:0
+                           };
+
+
    `ifdef USERIO_DEBUG
       // synthesize slower debug signals, so that slower logic analyzers can catch them:
       wire reg_read_slow;
@@ -301,7 +318,9 @@ module cwhusky_top(
                                                                          glitch_enable,
                                                                          ext_trigger,
                                                                          cmd_arm_usb} :
-                                 (userio_fpga_debug_select == 4'b0100)?  clockglitch_debug1 : clockglitch_debug2;
+                                 (userio_fpga_debug_select == 4'b0100)?  clockglitch_debug1 : 
+                                 (userio_fpga_debug_select == 4'b0101)?  clockglitch_debug2 :
+                                 (userio_fpga_debug_select == 4'b0110)?  usb_debug1 : usb_debug2;
 
    `else
       assign userio_debug_data[7:0] = 8'bz;
