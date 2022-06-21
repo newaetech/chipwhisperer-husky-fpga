@@ -58,10 +58,6 @@ module reg_openadc #(
    output wire         extclk_measure_src,
    input  wire [31:0]  adcclk_frequency,
 
-   /* Interface to phase shift module */
-   output wire [15:0]  phase_o,
-   output wire         phase_ld_o,
-
    /* Interface to fifo/capture module */
    output reg  [15:0] num_segments,
    output reg  [19:0] segment_cycles,
@@ -69,10 +65,6 @@ module reg_openadc #(
 
    /* Additional ADC control lines */
    output reg         data_source_select,
-   output wire [2:0]  adc_clk_src_o,
-   output wire        clkgen_src_o,
-   output wire        clkblock_dcm_reset_o,
-   output wire        clkblock_gen_reset_o,
    input  wire        clkblock_dcm_locked_i,
    input  wire        clkblock_gen_locked_i,
    output wire [14:0] presamples_o,
@@ -87,11 +79,7 @@ module reg_openadc #(
 
    input  wire        extclk_change,
    output reg         extclk_monitor_disabled,
-   output reg [31:0]  extclk_limit,
-
-   output reg         adc_clkgen_power_down,
-   output reg         clkgen_power_down 
-
+   output reg [31:0]  extclk_limit
 );
 
    wire reset;
@@ -132,8 +120,6 @@ module reg_openadc #(
    reg [31:0] registers_samples;
    reg [14:0] registers_presamples;
    reg [31:0] registers_offset;
-   reg [15:0] phase_out;
-   reg        phase_loadout;
    wire [47:0] version_data;
    wire [31:0] system_frequency = 32'd`SYSTEM_CLK;
    wire [31:0] buildtime;
@@ -146,9 +132,6 @@ module reg_openadc #(
    assign version_data[3:0] = 4'd`REGISTER_VERSION;
 
    assign trigger_offset = registers_offset;
-
-   assign phase_o = phase_out;
-   assign phase_ld_o = phase_loadout;
 
    assign reset_fromreg = registers_settings[0] || new_reset;
    //assign reset_fromreg = new_reset;
@@ -164,10 +147,6 @@ module reg_openadc #(
    assign registers_advclocksettings_read[7] = 1'b1;
    assign registers_advclocksettings_read[31:26] = registers_advclocksettings[31:26];
    assign registers_advclocksettings_read[24:8] = registers_advclocksettings[24:8];
-   assign adc_clk_src_o[2:0] = registers_advclocksettings[2:0];
-   assign clkgen_src_o = registers_advclocksettings[3];
-   assign clkblock_dcm_reset_o = registers_advclocksettings[4];
-   assign clkblock_gen_reset_o = registers_advclocksettings[26];
    assign extclk_measure_src = registers_advclocksettings[27];
 
    assign downsample_o = registers_downsample[12:0];
@@ -193,7 +172,6 @@ module reg_openadc #(
                 `ECHO_ADDR: reg_datao_reg = registers_echo[reg_bytecnt*8 +: 8];
                 `EXTFREQ_ADDR: reg_datao_reg = registers_extclk_frequency[reg_bytecnt*8 +: 8]; 
                 `ADCFREQ_ADDR: reg_datao_reg = registers_adcclk_frequency[reg_bytecnt*8 +: 8]; 
-                `PHASE_ADDR: reg_datao_reg = phase_out[reg_bytecnt*8 +: 8]; 
                 `VERSION_ADDR: reg_datao_reg = version_data[reg_bytecnt*8 +: 8];
                 `DECIMATE_ADDR: reg_datao_reg = registers_downsample[reg_bytecnt*8 +: 8];
                 `SAMPLES_ADDR: reg_datao_reg = registers_samples[reg_bytecnt*8 +: 8];
@@ -212,7 +190,6 @@ module reg_openadc #(
                 `LED_SELECT: reg_datao_reg = led_select;
                 `NO_CLIP_ERRORS: reg_datao_reg = {6'b0, no_gain_errors, no_clip_errors};
                 `CLIP_TEST: reg_datao_reg = clip_test;
-                `CLKGEN_POWERDOWN: reg_datao_reg = {6'b0, adc_clkgen_power_down, clkgen_power_down};
                 `EXTCLK_MONITOR_DISABLED: reg_datao_reg = extclk_monitor_disabled;
                 `EXTCLK_MONITOR_STAT: reg_datao_reg = extclk_change;
                 `EXTCLK_CHANGE_LIMIT: reg_datao_reg = extclk_limit[reg_bytecnt*8 +: 8];
@@ -243,10 +220,6 @@ module reg_openadc #(
          no_clip_errors <= 0;
          no_gain_errors <= 0;
          clip_test <= 0;
-         // CLKGEN MMCMs are powered down by default, because we can get too hot if all MMCMs are kept on:
-         adc_clkgen_power_down <= 1;
-         clkgen_power_down <= 1;
-         phase_out <= 0;
          extclk_monitor_disabled <= 1;
          extclk_limit <= 32'd9; // corresponds to ~100 kHz tolerance
          trigger_adclevel <= 12'd0;
@@ -267,8 +240,6 @@ module reg_openadc #(
             `LED_SELECT: led_select <= reg_datai[1:0];
             `NO_CLIP_ERRORS: {no_gain_errors, no_clip_errors} <= reg_datai[1:0];
             `CLIP_TEST: clip_test <= reg_datai[0];
-            `CLKGEN_POWERDOWN: {adc_clkgen_power_down, clkgen_power_down} <= reg_datai[1:0];
-            `PHASE_ADDR: phase_out[reg_bytecnt*8 +: 8] <= reg_datai;
             `EXTCLK_MONITOR_DISABLED: extclk_monitor_disabled <= reg_datai[0];
             `EXTCLK_CHANGE_LIMIT: extclk_limit[reg_bytecnt*8 +: 8] <= reg_datai;
             `ADC_TRIGGER_LEVEL: trigger_adclevel[reg_bytecnt*8 +: 8] <= reg_datai;
@@ -281,15 +252,6 @@ module reg_openadc #(
    always @(posedge clk_usb) begin
       if (reg_write && (reg_address == `RESET))
          new_reset <= reg_datai[0];
-   end
-
-   always @(posedge clk_usb) begin
-      if (reset)
-         phase_loadout <= 1'b0;
-      else if ( reg_write && (reg_address == `PHASE_ADDR) && (reg_bytecnt == 1) )
-         phase_loadout <= 1'b1;
-      else
-         phase_loadout <= 1'b0;
    end
 
 

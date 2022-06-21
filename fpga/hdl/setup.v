@@ -5,6 +5,5 @@
 `define SYSTEM_CLK 96000000
 `define XADC_EN
 `define LOGIC_ANALYZER
-`define FPGA_CLKGEN
 `define USERIO_DEBUG
 `define TRACE

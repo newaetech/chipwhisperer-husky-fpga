@@ -420,8 +420,6 @@ module reg_la #(
             else
                fifo_wr <= 1'b0;
 
-           // TODO: need to make sure that not resetting capture_count here
-           // doesn't break anything
             capture_count <= capture_count + 1;
             if (capture_count == capture_depth-1)
                capturing <= 1'b0;

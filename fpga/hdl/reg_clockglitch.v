@@ -430,20 +430,20 @@ always @(negedge glitch_mmcm1_clk_out) begin
    end
 end
 
-assign debug1= {clockglitch_count[1:0],
-                glitch_done_count[1:0],
-                glitch_trigger,
-                trigger_resync_idle,
-                exttrigger_resync,
-                exttrigger};
+assign debug1= {clockglitch_count[1:0], // 7:6
+                glitch_done_count[1:0], // 5:4
+                glitch_trigger,         // 3
+                trigger_resync_idle,    // 2
+                exttrigger_resync,      // 1
+                exttrigger};            // 0
 
-assign debug2= {glitch_done_count[1:0],
-                glitch_enable,
-                glitchclk,
-                glitch_trigger,
-                glitch_mmcm1_clk_out,
-                sourceclk,
-                exttrigger
+assign debug2= {glitch_done_count[1:0], // 7:6
+                glitch_enable,          // 5
+                glitchclk,              // 4
+                glitch_trigger,         // 3
+                glitch_mmcm1_clk_out,   // 2
+                sourceclk,              // 1
+                exttrigger              // 0
                };
 
 endmodule

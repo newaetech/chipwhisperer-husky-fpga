@@ -112,7 +112,6 @@ module cwhusky_top(
     parameter pTRACE_BUFFER_SIZE = 64;
     parameter pTRACE_MATCH_RULES = 8;
 
-   wire         ADC_clk_out;
    wire         target_npower;
    wire         stream_segment_available;
 
@@ -158,7 +157,7 @@ module cwhusky_top(
    wire ext_trigger;
    wire extclk_mux;
    wire target_clk;
-   wire clkgen, glitchclk;
+   wire glitchclk;
    wire glitch_mmcm1_clk_out;
    wire glitch_mmcm2_clk_out;
    wire glitch_enable;
@@ -331,12 +330,10 @@ module cwhusky_top(
    ) oadc (
         .clk_usb                (clk_usb_buf),
         .reset_o                (reg_rst),
-        .mmcm_shutdown          (xadc_error_flag),
 
         .LED_capture            (cw_led_cap),
         .LED_armed              (cw_led_armed),
         .ADC_data               (ADC_data),
-        .ADC_clk_out            (ADC_clk_out),
         .ADC_clk_feedback       (ADC_clk_fb),
         .pll_fpga_clk           (pll_fpga_clk),
         .PLL_STATUS             (PLL_STATUS),
@@ -348,7 +345,6 @@ module cwhusky_top(
         .sad_active             (sad_active),
         .amp_gain               (VDBSPWM),
         .fifo_dout              (fifo_dout),
-        .clkgen                 (clkgen),
         .cmd_arm_usb            (cmd_arm_usb),
 
         .reg_address            (reg_address),
@@ -509,7 +505,7 @@ module cwhusky_top(
         .reg_write      (reg_write), 
         .mmcm_shutdown  (xadc_error_flag),
         .target_clk     (extclk_mux),
-        .clkgen         (clkgen),
+        .clkgen         (clk_usb_buf),
         .pll_fpga_clk   (pll_fpga_clk),
         .glitchclk      (glitchclk),
         .glitch_mmcm1_clk_out (glitch_mmcm1_clk_out),
@@ -541,7 +537,7 @@ module cwhusky_top(
         .reg_read               (reg_read), 
         .reg_write              (reg_write), 
         .target_hs1             (target_hs1),
-        .clkgen                 (clkgen),
+        .clkgen                 (clk_usb_buf),
         .pll_fpga_clk           (pll_fpga_clk),
         .observer_clk           (observer_clk),
         .observer_locked        (observer_locked),
@@ -617,8 +613,8 @@ module cwhusky_top(
 
    // generate ADC output differential clock
    `ifdef __ICARUS__
-      assign ADC_CLKP = ADC_clk_out;
-      assign ADC_CLKN = ADC_clk_out;
+      assign ADC_CLKP = extclk_mux;
+      assign ADC_CLKN = extclk_mux;
 
    `else
       wire adc_clk_out_oddr;
@@ -628,7 +624,7 @@ module cwhusky_top(
          .SRTYPE           ("SYNC")
       ) U_ODDR_adc_clk_out (
          .Q                (adc_clk_out_oddr),
-         .C                (ADC_clk_out),
+         .C                (extclk_mux),
          .CE               (1'b1),
          .D1               (1'b1),
          .D2               (1'b0),
@@ -849,7 +845,9 @@ module cwhusky_top(
                                                   
           .USB_nCS                      (USB_CEn  ),
 
-          // TODO-maybe later: for CW610-style faster FIFO reading:
+          // for CW610-style faster FIFO reading: not needed here since we
+          // don't need streaming, and if we did it would make more sense to
+          // do it as it's done for the ADC samples:
           .O_data_available             (),
           .I_fast_fifo_rdn              (1'b0),
           .usb_drive_data               (),

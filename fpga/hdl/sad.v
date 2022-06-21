@@ -180,7 +180,7 @@ module sad #(
     reg use_ref_samples_r [0:pREF_SAMPLES-1];
     reg use_ref_samples_r2 [0:pREF_SAMPLES-1];
     reg individual_trigger [0:pREF_SAMPLES-1];
-    // TODO: these need to be wider than pBITS_PER_SAMPLE since we're adding many pBITS_PER_SAMPLE-wide numbers... hard-coded here for pBITS_PER_SAMPLE=8, pREF_SAMPLES=32
+    // Note: these need to be wider than pBITS_PER_SAMPLE since we're adding many pBITS_PER_SAMPLE-wide numbers... hard-coded here for pBITS_PER_SAMPLE=8, pREF_SAMPLES=32
     reg [12:0] sad_counter [0:pREF_SAMPLES-1];
     reg [pBITS_PER_SAMPLE-1:0] counter_incr [0:pREF_SAMPLES-1]; // pBITS_PER_SAMPLE=8, pREF_SAMPLES=32
     reg [pBITS_PER_SAMPLE-1:0] fifo_out_r [0:pREF_SAMPLES-1];

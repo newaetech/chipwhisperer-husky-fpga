@@ -11,12 +11,6 @@ create_clock -period 20.000 -name AUXIO -waveform {0.000 10.500} [get_nets AUXIO
 
 create_clock -period 40.000 -name TRACECLOCK -waveform {0.000 20.000} [get_nets USERIO_CLK_IBUF]
 
-# avoid multiple_clock analysis problems: 
-# (these are critical to avoiding HUGE increase in implementation runtime; 5 minutes becomes 24 hours!)
-set_case_analysis 0 [get_pins oadc/genclocks/clkdcm_mux/S]
-set_case_analysis 0 [get_pins oadc/genclocks/clkgenfx_mux/S]
-set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets oadc/genclocks/U_clkgen/inst/clk_out1]
-
 set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets {USERIO_CLK_IBUF}]
 set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets {U_trace_top/VCC_2}]
 set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets U_trace_top/fe_clk_pre]
@@ -110,38 +104,6 @@ set_clock_groups -asynchronous \
 set_clock_groups -asynchronous \
                  -group [get_clocks {fe_clk ADC_clk_fb} ] \
                  -group [get_clocks glitch_mmcm1_clk_out]
-
-
-
-# include below if FPGA_CLKGEN:
-
-set_clock_groups -asynchronous \
-                 -group [get_clocks {clk_usb target_hs1 AUXIO} ] \
-                 -group [get_clocks ADC_clk_times4]
-
-set_clock_groups -asynchronous \
-                 -group [get_clocks {clk_usb target_hs1 AUXIO} ] \
-                 -group [get_clocks ADC_clk]
-
-set_clock_groups -asynchronous \
-                 -group [get_clocks ADC_clk] \
-                 -group [get_clocks ADC_clk_times4]
-
-set_clock_groups -asynchronous \
-                 -group [get_clocks clk_out1_MMCM_clkgen] \
-                 -group [get_clocks {clk_usb target_hs1 AUXIO} ]
-
-set_clock_groups -asynchronous \
-                 -group [get_clocks clk_out1_MMCM_clkgen] \
-                 -group [get_clocks pll_fpga_clk]
-
-set_clock_groups -asynchronous \
-                 -group [get_clocks observer_clk] \
-                 -group [get_clocks clk_out1_MMCM_clkgen]
-
-set_clock_groups -asynchronous \
-                 -group [get_clocks glitch_mmcm1_clk_out*] \
-                 -group [get_clocks clk_out1_MMCM_clkgen]
 
 
 # *****************************************************************************

@@ -31,11 +31,8 @@ module openadc_interface #(
     output reg                          LED_armed, // Armed LED
     output reg                          LED_capture, // Capture in Progress LED (only illuminate during capture, very quick)
 
-    input  wire                         mmcm_shutdown,
-
     // OpenADC Interface Pins
     input  wire [11:0]                  ADC_data,
-    output wire                         ADC_clk_out,
     input  wire                         ADC_clk_feedback, // Feedback path for ADC Clock. If unused connect to ADC_clk_out
     input  wire                         pll_fpga_clk,
     input  wire                         PLL_STATUS,
@@ -47,9 +44,6 @@ module openadc_interface #(
     output wire                         trigger_sad,
     output wire                         amp_gain,
     output wire [7:0]                   fifo_dout,
-
-    // Generated Clock for other uses
-    output wire                         clkgen,
 
     // register interface
     input  wire [7:0]                   reg_address,
@@ -78,19 +72,13 @@ module openadc_interface #(
 
 );
 
-    wire        dcm_locked;
     wire        ADC_clk_sample;
     wire        armed;
-
-    wire [15:0] phase_requested;
-    wire       phase_load;
-    wire       phase_done;
 
     wire       capture_go;
     wire       adc_capture_done;
     wire       reset;
 
-    wire       dcm_gen_locked;
     wire       fifo_stream;
     wire [15:0] num_segments;
     wire [19:0] segment_cycles;
@@ -138,13 +126,13 @@ module openadc_interface #(
 
 
    reg [24:0] clkgen_heartbeat;
-   always @(posedge clkgen) clkgen_heartbeat <= clkgen_heartbeat +  25'd1;
+   always @(posedge clk_usb) clkgen_heartbeat <= clkgen_heartbeat +  25'd1;
 
    reg [24:0] adc_fb_heartbeat;
    always @(posedge ADC_clk_feedback) adc_fb_heartbeat <= adc_fb_heartbeat +  25'd1;
 
    reg [24:0] adc_out_heartbeat;
-   always @(posedge ADC_clk_out) adc_out_heartbeat <= adc_out_heartbeat +  25'd1;
+   always @(posedge DUT_CLK_i) adc_out_heartbeat <= adc_out_heartbeat +  25'd1;
 
    reg [24:0] pll_fpga_clk_heartbeat;
    always @(posedge pll_fpga_clk) pll_fpga_clk_heartbeat <= pll_fpga_clk_heartbeat +  25'd1;
@@ -200,7 +188,7 @@ module openadc_interface #(
 
    wire extmeasure_clk;
    wire extmeasure_src;
-   assign extmeasure_clk = (extmeasure_src) ? clkgen : DUT_CLK_i;
+   assign extmeasure_clk = (extmeasure_src) ? clk_usb : DUT_CLK_i;
 
    reg [31:0] extclk_frequency_int;
    reg [31:0] adcclk_frequency_int;
@@ -323,16 +311,13 @@ module openadc_interface #(
    assign reg_status[0] = armed;
    assign reg_status[1] = ~capture_active;
    assign reg_status[2] = DUT_trigger_i;
-   assign reg_status[3] = dcm_locked;
+   assign reg_status[3] = 1'b0;
    assign reg_status[4] = PLL_STATUS;
    assign reg_status[5] = 1'b0;
    assign reg_status[6] = 1'b0;
    assign reg_status[7] = fifo_overflow;
 
    wire [7:0] PWM_incr;
-
-   wire [2:0] ADC_clk_selection; //0=internal, 1=external
-   wire clkgen_selection;
 
    wire fifo_empty;
    wire fifo_rd_en;
@@ -344,28 +329,20 @@ module openadc_interface #(
    wire [31:0] maxsamples_limit;
    wire [31:0] maxsamples;
 
-   wire clockreset;
-
-   wire clkgen_reset;
 
    wire [12:0] downsample;
    wire [7:0] reg_datao_oadc;
    wire [7:0] reg_datao_fifo;
-   wire [7:0] reg_datao_mmcm_drp;
    wire [7:0] reg_datao_sad;
 
    wire [31:0] fifo_read_count;
    wire [31:0] fifo_read_count_error_freeze;
 
-   wire adc_clkgen_power_down;
-   wire clkgen_power_down;
-
    wire [7:0] underflow_count;
    wire no_underflow_errors;
 
-   assign reg_datao = reg_datao_oadc | reg_datao_fifo | reg_datao_mmcm_drp | reg_datao_sad;
+   assign reg_datao = reg_datao_oadc | reg_datao_fifo | reg_datao_sad;
 
-   // TODO-temp to explore timing closure
    sad #(
        .pBYTECNT_SIZE           (pBYTECNT_SIZE),
        .pREF_SAMPLES            (32),
@@ -387,10 +364,6 @@ module openadc_interface #(
        .io4                     (trigger_io4_i),
        .trigger                 (trigger_sad  )
    );
-   /*
-  assign trigger_sad = 1'b0;
-  assign reg_datao_sad = 0;
-   */
 
    reg_openadc #(
       .pBYTECNT_SIZE    (pBYTECNT_SIZE)
@@ -419,19 +392,13 @@ module openadc_interface #(
       .extclk_frequency             (extclk_frequency),
       .extclk_measure_src           (extmeasure_src),
       .adcclk_frequency             (adcclk_frequency),
-      .phase_o                      (phase_requested),
-      .phase_ld_o                   (phase_load),
       .presamples_o                 (presamples),
       .maxsamples_i                 (maxsamples_limit),
       .maxsamples_o                 (maxsamples),
       .downsample_o                 (downsample),
       .data_source_select           (data_source_select),
-      .adc_clk_src_o                (ADC_clk_selection),
-      .clkgen_src_o                 (clkgen_selection),
-      .clkblock_dcm_reset_o         (clockreset),
-      .clkblock_gen_reset_o         (clkgen_reset),
-      .clkblock_dcm_locked_i        (dcm_locked),
-      .clkblock_gen_locked_i        (dcm_gen_locked),
+      .clkblock_dcm_locked_i        (1'b0),
+      .clkblock_gen_locked_i        (1'b0),
       .fifo_stream                  (fifo_stream),
       .num_segments                 (num_segments),
       .segment_cycles               (segment_cycles),
@@ -443,10 +410,7 @@ module openadc_interface #(
 
       .extclk_change                (extclk_change),
       .extclk_monitor_disabled      (extclk_monitor_disabled),
-      .extclk_limit                 (extclk_limit),
-
-      .adc_clkgen_power_down        (adc_clkgen_power_down),
-      .clkgen_power_down            (clkgen_power_down    )
+      .extclk_limit                 (extclk_limit)
    );
 
    reg_openadc_adcfifo #(
@@ -479,50 +443,10 @@ module openadc_interface #(
    );
 
 
-`ifdef FPGA_CLKGEN
    clock_managment_advanced genclocks(
-      .reset                (reset | clockreset),
-      .clk_usb              (clk_usb),
-      .clk_ext              (DUT_CLK_i),   
-      .adc_clk_out          (ADC_clk_out),
-      .adc_clk_feedback     (ADC_clk_feedback),
-      .clkgen               (clkgen),
-      .clkadc_source        (ADC_clk_selection),
-      .clkgen_source        (clkgen_selection),
-      .systemsample_clk     (ADC_clk_sample),
-      .phase_requested      (phase_requested),
-      .phase_load           (phase_load),
-      .phase_done           (phase_done),
-      .clkgen_reset         (reset | clkgen_reset),
-      .dcm_adc_locked       (dcm_locked),
-      .dcm_gen_locked       (dcm_gen_locked),
-
-      .reg_address          (reg_address),
-      .reg_bytecnt          (reg_bytecnt), 
-      .reg_datao            (reg_datao_mmcm_drp), 
-      .reg_datai            (reg_datai), 
-      .reg_read             (reg_read), 
-      .reg_write            (reg_write), 
-
-      .adc_clkgen_power_down(adc_clkgen_power_down),
-      .clkgen_power_down    (clkgen_power_down),
-      .mmcm_shutdown        (mmcm_shutdown)
+      .ADC_clk_feedback     (ADC_clk_feedback),
+      .ADC_clk_sample       (ADC_clk_sample)
     );
-`else
-    // TODO-IMPORTANT NOTE! for some unknown reason, simulations fail without
-    // FPGA_CLKGEN. There seems to be some problem with the fast FIFO in
-    // fifo_top_husky: all its inputs appear to be correctly driven, but its
-    // "empty" flag always remains set.
-    assign ADC_clk_out = clk_usb;
-    assign ADC_clk_sample = ADC_clk_feedback;
-    assign clkgen = clk_usb;
-    assign phase_done = 1'b0;
-    assign dcm_locked = 1'b0;
-    assign dcm_gen_locked = 1'b0;
-    assign reg_datao_mmcm_drp = 8'b0;
-
-`endif
-
 
    reg [8:0] PWM_accumulator;
    always @(posedge clk_usb) begin
