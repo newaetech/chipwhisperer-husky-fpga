@@ -192,6 +192,8 @@ module sad #(
     * We use some pre-registering of signals to make timing as easy as
     * possible; meets 200 MHz with ease for Husky. But it's BIG! We can fit
     * pREF_SAMPLES=32 with pBITS_PER_SAMPLE=12, but not pREF_SAMPLES=64.
+    * However, if more BRAM were available (e.g. different part), then it
+    * would be trivial to increase pREF_SAMPLES.
     */
     genvar i;
     generate 
@@ -201,8 +203,8 @@ module sad #(
                //for clean iverilog compilation
             `else
                // Here we instantiate one small FIFO for each SAD counter. We
-               // could just as easily instantiate a single large FIFO instead
-               // but this may make timing closure easier?
+               // could easily instantiate a single large FIFO instead, but
+               // BRAM FIFOs have a width limitation, so that wouldn't actually help :-(
                sad_fifo U_fifo(
                   .clk          (adc_sampleclk),
                   .rst          (reset),
