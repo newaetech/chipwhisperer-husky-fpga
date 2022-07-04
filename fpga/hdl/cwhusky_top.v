@@ -275,6 +275,11 @@ module cwhusky_top(
                              USB_Addr[1:0]      // D1:0
                            };
 
+   wire [7:0] usb_debug3 = { reg_write,         // D7
+                             USB_Data[6:0]      // D6:0
+                           };
+
+
 
    `ifdef USERIO_DEBUG
       // synthesize slower debug signals, so that slower logic analyzers can catch them:
@@ -320,7 +325,8 @@ module cwhusky_top(
                                                                          cmd_arm_usb} :
                                  (userio_fpga_debug_select == 4'b0100)?  clockglitch_debug1 : 
                                  (userio_fpga_debug_select == 4'b0101)?  clockglitch_debug2 :
-                                 (userio_fpga_debug_select == 4'b0110)?  usb_debug1 : usb_debug2;
+                                 (userio_fpga_debug_select == 4'b0110)?  usb_debug1 :
+                                 (userio_fpga_debug_select == 4'b0111)?  usb_debug2 : usb_debug3;
 
    `else
       assign userio_debug_data[7:0] = 8'bz;
@@ -587,6 +593,7 @@ module cwhusky_top(
 
         .tu_la_debug            (tu_la_debug),
         .trace_data             (trace_data_sdr),
+        .trace_debug            (trace_debug),
         .trace_fe_clk           (fe_clk),
 
         .glitch_go              (glitch_go),
@@ -800,6 +807,7 @@ module cwhusky_top(
    `endif
 
    wire [7:0] trace_data_sdr;
+   wire [8:0] trace_debug;
    wire fe_clk;
 
    `ifdef TRACE
@@ -905,6 +913,7 @@ module cwhusky_top(
           .fifo_empty                   (fifo_empty),
           .fifo_error_flag              (trace_fifo_error_flag),
 
+          .trace_debug                  (trace_debug),
           .trace_data_sdr               (trace_data_sdr),
           .synchronized                 (synchronized)
        );
