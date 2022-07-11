@@ -15,6 +15,10 @@ set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets {USERIO_CLK_IBUF}]
 set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets {U_trace_top/VCC_2}]
 set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets U_trace_top/fe_clk_pre]
 
+set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets {U_trace_top/U_trace_clock_drp/SR[0]}]
+set_property CLOCK_DEDICATED_ROUTE BACKBONE [get_nets reg_clockglitch/U_clockglitch/glitch_mmcm1_clk_out]
+set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets U_trace_top/trace_clk_selected]
+
 # TODO - needed if putting IDELAY on TRACECLOCK:
 #set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets reg_clockglitch/mux1out]
 #set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets reg_la/mux1out]
@@ -26,6 +30,9 @@ set_case_analysis 1 [get_pins reg_la/sourceclk_mux1/S]
 set_case_analysis 0 [get_pins reg_la/sourceclk_mux2/S]
 
 create_generated_clock -name fe_clk -source [get_pins U_trace_top/U_fe_clock_mux2/I1] -combinational [get_pins U_trace_top/U_fe_clock_mux2/O]
+create_generated_clock -name trace_clk_selected -source [get_pins U_trace_top/U_traceclk_sel/I0] -combinational [get_pins U_trace_top/U_traceclk_sel/O]
+create_generated_clock -name trace_clk_shifted [get_pins U_trace_top/U_trace_clock_mmcm/CLKOUT0]
+#set_case_analysis 0 [get_pins U_trace_top/U_fe_clock_mux1/S]
 set_case_analysis 1 [get_pins U_trace_top/U_fe_clock_mux2/S]
 
 set_case_analysis 1 [get_pins U_fifo_clk_mux/S]
@@ -104,6 +111,10 @@ set_clock_groups -asynchronous \
 set_clock_groups -asynchronous \
                  -group [get_clocks {fe_clk ADC_clk_fb} ] \
                  -group [get_clocks glitch_mmcm1_clk_out]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks {trace_clk_selected trace_clk_shifted}] \
+                 -group [get_clocks {clk_usb fe_clk observer_clk}]
 
 
 # *****************************************************************************

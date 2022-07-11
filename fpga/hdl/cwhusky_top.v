@@ -843,6 +843,7 @@ module cwhusky_top(
           .O_trace_en                   (trace_en),
           .O_trace_capture_on           (trace_capture_on),
           .O_trace_userio_dir           (trace_userio_dir),
+          .mmcm_shutdown                (xadc_error_flag),
 
           .trace_data                   (TRACEDATA),
           .swo                          (serial_in),
