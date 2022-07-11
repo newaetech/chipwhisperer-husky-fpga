@@ -271,9 +271,9 @@ module fifo_top_husky(
                 gain_too_low <= 1'b0;
             else if (capture_go)
                 gain_too_low <= 1'b1;
-            else if (slow_fifo_wr && ( (slow_fifo_din[11]? slow_fifo_din[10:9]  != 2'b00 : slow_fifo_din[10:4]  == 7'b0) ||
-                                       (slow_fifo_din[23]? slow_fifo_din[22:21] != 2'b00 : slow_fifo_din[22:16] == 7'b0) ||
-                                       (slow_fifo_din[35]? slow_fifo_din[34:33] != 2'b00 : slow_fifo_din[34:28] == 7'b0) ) )
+            else if (slow_fifo_wr && ( (slow_fifo_din[11]? slow_fifo_din[10:9]  != 2'b00 : slow_fifo_din[10:8]  != 3'b111) ||
+                                       (slow_fifo_din[23]? slow_fifo_din[22:21] != 2'b00 : slow_fifo_din[22:20] != 3'b111) ||
+                                       (slow_fifo_din[35]? slow_fifo_din[34:33] != 2'b00 : slow_fifo_din[34:32] != 3'b111) ) )
                 gain_too_low <= 1'b0;
 
             if (no_gain_errors || clear_fifo_errors_adc)
