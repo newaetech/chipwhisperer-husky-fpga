@@ -12,7 +12,34 @@ usual culprits are:
   samples and segments, or writing data from the fast FIFO to the slow FIFO.
 * `oberver_clk` clock: logic in the TraceWhisperer UART receiver, or in
   `reg_la.v`.
+* `clk_usb` clock
 * setup and/or hold violations on the `ADC_DP` inputs.
+
+Violations on these clocks came and went during development. Since Vivado is
+deterministic (e.g. if you re-run implementation without any changes, you'll
+get the same violations), the best way to get rid of timing violations is to
+change the synthesis and/or implementation strategies and try again.
+
+There should be no violations on inter-clock paths. Husky's [implementation
+constraints](fpga/vivado/cwhusky.xdc) makes liberal use of `set_clock_groups
+-asynchronous` exceptions, and so great care must be taken when dealing with
+logic which uses multiple clocks (of which there are *many!*).
+
+Occasionally, a bitfile can be obtained where  FPGA register reads/writes
+are unreliable (i.e. [`test_husky.py`'s](#on-target-testing) `test_reg_rw()`
+test will fail), which makes the bitfile useless. Again, the solution is to
+re-compile with a different synthesis or implementation strategy. If this
+occurs, connecting to the scope object usually returns this error message:
+"Failed to update the MMCM secondary divider(...)". This message is a
+symptom, not a cause -- it occurs because read/writes are not working
+correctly.  (The root cause of this issue is likely incorrect constraints on
+the SAM3U/FPGA interface; this is hard to correct because Husky uses the
+SAM3U SMC interface out-of-spec to squeeze as much throughput out of it as
+possible in streaming mode.)
+
+The only critical warnings in the implementation log file should relate to
+inconsequential missing IP modules (e.g. ILAs) and the the last three
+`dbg_hub` commands.
 
 # Testing
 
@@ -49,6 +76,13 @@ Use `--tests` to regress a subset of the regression suite. For example,
 `regress.py --tests glitches --runs 10` will run only the testcases which
 contain "glitches" in their name.
 
+For simulations, all of the Vivado IP (MMCMs, XADC, clock and I/O
+primitives) is bypassed with the exception of the FIFOs. This is done with
+`` `ifndef __ICARUS__`` in the Verilog source. This means that simulations
+can't fully cover all scenarios, especially with regards to different clock
+rates and their interactions. Different clock rates are covered extensively
+by [on-target testing](#on-target-testing).
+
 ### TraceWhisperer
 Husky's Verilog testbench does not cover trace. For this, run the
 TraceWhisperer testbench in its
@@ -74,7 +108,8 @@ Among the things covered by `test_husky.py`:
 * whether data from the ADC is sampled correctly by the FPGA;
 * whether the advertised streaming rates can be achieved;
 * whether the generated glitches have the expected shape;
-* whether triggering from trace works correctly.
+* whether triggering from trace works correctly;
+* whether different clock rates works correctly.
 
 # Debugging
 
@@ -84,9 +119,11 @@ reality.
 
 To hunt down bugs on the FPGA, you can either:
 * route signals of interest to the front 20-pin header and use an external
-  logic analyzer;
-* use the internal `scope.LA` logic analyzer;
-* use ILAs.
+  logic analyzer (`scope.userio` already has a few options for this, and can
+  be extended to add additional signals);
+* use the internal `scope.LA` logic analyzer (again, several groups of
+  internal signals are already routed to it, and more can be added);
+* use Xilinx ILAs.
 
 ILAs require BRAM, and Husky uses 48 of the 50 available BRAMs for storage
 of ADC samples, trace samples, and `scope.LA` samples. To free up more, you
