@@ -36,7 +36,6 @@ module reg_la #(
    input  wire         reg_write,    // Write flag
 
    input  wire         target_hs1,
-   input  wire         clkgen,
    input  wire         pll_fpga_clk,
    output wire         observer_clk,
    output wire         observer_locked,
@@ -118,7 +117,7 @@ module reg_la #(
     assign fifo_clear_read_flags = reg_arm;
 
 `ifdef __ICARUS__
-   assign source_clk = (clock_source_reg == 2'b01) ? clkgen : 
+   assign source_clk = (clock_source_reg == 2'b01) ? clk_usb : 
                        (clock_source_reg == 2'b10) ? pll_fpga_clk :
                        (clock_source_reg == 2'b00) ? target_hs1   : target_hs1;
 `else
@@ -137,7 +136,7 @@ module reg_la #(
     ) sourceclk_mux2 (
        .O    (source_clk),
        .I0   (mux1out),
-       .I1   (clkgen),
+       .I1   (clk_usb),
        .S    (clock_source_reg[0])
     ); 
 `endif

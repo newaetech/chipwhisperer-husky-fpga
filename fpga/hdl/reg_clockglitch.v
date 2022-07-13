@@ -50,7 +50,6 @@ module reg_clockglitch #(
    input  wire         mmcm_shutdown, // triggered by XADC error
 
    input wire          target_clk,    // HS1 or AUX
-   input wire          clkgen,
    input wire          pll_fpga_clk,
 
    output wire         glitchclk,
@@ -145,7 +144,7 @@ module reg_clockglitch #(
 
     [57..56] (Byte 7, Bits [1..0]) = Glitch Clock Source
           00 = Source 0 (HS1)
-          01 = Source 1 (clkgen)
+          01 = Source 1 (clk_usb)
           10 = Source 2 (pll_fpga_clk)
 
     [62..58] (Byte 7, Bits [6..2]) = Cycles to glitch (top 5 bits)
@@ -181,7 +180,7 @@ module reg_clockglitch #(
    wire [13*pMAX_GLITCHES-1:0] all_max_glitches = {max_glitches1toN_reg, max_glitches0};
 
 `ifdef __ICARUS__
-   assign sourceclk = (clockglitch_settings_reg[57:56] == 2'b01) ? clkgen : 
+   assign sourceclk = (clockglitch_settings_reg[57:56] == 2'b01) ? clk_usb : 
                       (clockglitch_settings_reg[57:56] == 2'b10) ? pll_fpga_clk :
                       (clockglitch_settings_reg[57:56] == 2'b00) ? target_clk   : target_clk;
 `else
@@ -200,7 +199,7 @@ module reg_clockglitch #(
     ) sourceclk_mux2 (
        .O    (sourceclk),
        .I0   (mux1out),
-       .I1   (clkgen),
+       .I1   (clk_usb),
        .S    (clockglitch_settings_reg[56])
     ); 
 `endif
