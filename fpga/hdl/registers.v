@@ -310,6 +310,7 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define LA_DOWNSAMPLE           78
 `define LA_ARM                  98
 `define LA_ENABLED              99
+`define LA_SOURCE_FREQ          112
 
 `define CG1_DRP_RESET           79
 `define CG2_DRP_RESET           80

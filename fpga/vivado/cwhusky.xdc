@@ -19,15 +19,12 @@ set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets {U_trace_top/U_trace_clock_dr
 set_property CLOCK_DEDICATED_ROUTE BACKBONE [get_nets reg_clockglitch/U_clockglitch/glitch_mmcm1_clk_out]
 set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets U_trace_top/trace_clk_selected]
 
-# TODO - needed if putting IDELAY on TRACECLOCK:
-#set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets reg_clockglitch/mux1out]
-#set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets reg_la/mux1out]
-
 set_case_analysis 1 [get_pins reg_clockglitch/sourceclk_mux1/S]
 set_case_analysis 0 [get_pins reg_clockglitch/sourceclk_mux2/S]
 
 set_case_analysis 1 [get_pins reg_la/sourceclk_mux1/S]
 set_case_analysis 0 [get_pins reg_la/sourceclk_mux2/S]
+set_case_analysis 1 [get_pins reg_la/sourceclk_mux3/S]
 
 create_generated_clock -name fe_clk -source [get_pins U_trace_top/U_fe_clock_mux2/I1] -combinational [get_pins U_trace_top/U_fe_clock_mux2/O]
 create_generated_clock -name trace_clk_selected -source [get_pins U_trace_top/U_traceclk_sel/I0] -combinational [get_pins U_trace_top/U_traceclk_sel/O]
@@ -102,11 +99,11 @@ set_clock_groups -asynchronous \
 
 set_clock_groups -asynchronous \
                  -group [get_clocks TRACECLOCK ] \
-                 -group [get_clocks {clk_usb AUXIO observer_clk target_hs1 fe_clk}]
+                 -group [get_clocks {clk_usb AUXIO observer_clk* target_hs1 fe_clk}]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks fe_clk ] \
-                 -group [get_clocks {clk_usb observer_clk ADC_clk_fb pll_fpga_clk}]
+                 -group [get_clocks {clk_usb observer_clk* ADC_clk_fb pll_fpga_clk}]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks {fe_clk ADC_clk_fb} ] \
@@ -114,7 +111,7 @@ set_clock_groups -asynchronous \
 
 set_clock_groups -asynchronous \
                  -group [get_clocks {trace_clk_selected trace_clk_shifted}] \
-                 -group [get_clocks {clk_usb fe_clk observer_clk}]
+                 -group [get_clocks {clk_usb fe_clk observer_clk*}]
 
 
 # *****************************************************************************

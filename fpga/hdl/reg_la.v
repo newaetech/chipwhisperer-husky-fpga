@@ -35,10 +35,12 @@ module reg_la #(
    input  wire         reg_read,     // Read flag
    input  wire         reg_write,    // Write flag
 
+   input  wire         I_trace_en,
    input  wire         target_hs1,
    input  wire         pll_fpga_clk,
    output wire         observer_clk,
    output wire         observer_locked,
+   input  wire         freq_measure,
 
    input  wire         mmcm_shutdown, // triggered by XADC error
 
@@ -117,11 +119,13 @@ module reg_la #(
     assign fifo_clear_read_flags = reg_arm;
 
 `ifdef __ICARUS__
-   assign source_clk = (clock_source_reg == 2'b01) ? clk_usb : 
+   assign source_clk = (I_trace_en) ?                trace_fe_clk :
+                       (clock_source_reg == 2'b01) ? clk_usb : 
                        (clock_source_reg == 2'b10) ? pll_fpga_clk :
                        (clock_source_reg == 2'b00) ? target_hs1   : target_hs1;
 `else
     wire mux1out;
+    wire la_source_clk;
     BUFGMUX #(
        .CLK_SEL_TYPE("ASYNC")
     ) sourceclk_mux1 (
@@ -134,12 +138,45 @@ module reg_la #(
     BUFGMUX #(
        .CLK_SEL_TYPE("ASYNC")
     ) sourceclk_mux2 (
-       .O    (source_clk),
+       .O    (la_source_clk),
        .I0   (mux1out),
        .I1   (clk_usb),
        .S    (clock_source_reg[0])
     ); 
+
+    BUFGMUX #(
+       .CLK_SEL_TYPE("ASYNC")
+    ) sourceclk_mux3 (
+       .O    (source_clk),
+       .I0   (la_source_clk),
+       .I1   (trace_fe_clk),
+       .S    (I_trace_en)
+    ); 
 `endif
+
+   wire freq_measure_source_clk;
+   reg [31:0] frequency_int;
+   reg [31:0] frequency;
+
+   cdc_pulse U_freq_measure (
+      .reset_i       (reset),
+      .src_clk       (clk_usb),
+      .src_pulse     (freq_measure),
+      .dst_clk       (source_clk),
+      .dst_pulse     (freq_measure_source_clk)
+   );
+
+   always @(posedge source_clk) begin
+      if (freq_measure_source_clk) begin
+         frequency_int <= 32'd1;
+         frequency <= frequency_int;
+      end 
+      else begin
+         frequency_int <= frequency_int + 32'd1;
+      end
+   end
+
+
 
 
     wire capture_go_async = manual_capture | ( (trigger_source_reg == 5'b00000)? glitch_go : 
@@ -499,6 +536,7 @@ module reg_la #(
              `LA_DOWNSAMPLE:    reg_datao_reg = downsample[reg_bytecnt*8 +: 8];
              `LA_ARM:           reg_datao_reg = reg_arm;
              `LA_ENABLED:       reg_datao_reg = reg_enabled;
+             `LA_SOURCE_FREQ:   reg_datao_reg = frequency[reg_bytecnt*8 +: 8];
              default:           reg_datao_reg = 0;
          endcase
       end

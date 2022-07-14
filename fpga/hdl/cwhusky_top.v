@@ -342,6 +342,7 @@ module cwhusky_top(
    wire trace_en;
    wire trace_capture_on;
    wire [7:0] trace_userio_dir;
+   wire freq_measure;
 
    // fast-flash red LEDs when some internal error has occurred:
    assign LED_ADC = error_flag? flash_pattern : ~PLL_STATUS;
@@ -371,6 +372,7 @@ module cwhusky_top(
         .amp_gain               (VDBSPWM),
         .fifo_dout              (fifo_dout),
         .cmd_arm_usb            (cmd_arm_usb),
+        .freq_measure           (freq_measure),
 
         .reg_address            (reg_address),
         .reg_bytecnt            (reg_bytecnt), 
@@ -565,6 +567,8 @@ module cwhusky_top(
         .observer_clk           (observer_clk),
         .observer_locked        (observer_locked),
         .mmcm_shutdown          (xadc_error_flag),
+        .I_trace_en             (trace_en),
+        .freq_measure           (freq_measure),
 
         .glitchclk              (glitchclk),
         .glitch_mmcm1_clk_out   (glitch_mmcm1_clk_out),

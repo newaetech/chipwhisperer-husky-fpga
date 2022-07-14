@@ -30,6 +30,7 @@ module openadc_interface #(
 
     output reg                          LED_armed, // Armed LED
     output reg                          LED_capture, // Capture in Progress LED (only illuminate during capture, very quick)
+    output reg                          freq_measure,
 
     // OpenADC Interface Pins
     input  wire [11:0]                  ADC_data,
@@ -107,7 +108,6 @@ module openadc_interface #(
    //Divide clock by 2^24 for heartbeat LED
    //Divide clock by 2^23 for frequency measurement
    reg [25:0] timer_heartbeat;
-   reg freq_measure;
    reg timer_heartbeat22r;
    always @(posedge clk_usb)
       if (reset) begin
