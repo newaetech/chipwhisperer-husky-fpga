@@ -101,6 +101,7 @@ module openadc_interface #(
     assign reset_o = reset;
 
    reg extclk_change;
+   reg extclk_change_usb;
    wire extclk_monitor_disabled;
    wire [31:0] extclk_limit;
 
@@ -144,7 +145,7 @@ module openadc_interface #(
 
 
    always @(*) begin
-      if (extclk_change) begin
+      if (extclk_change_usb) begin
          LED_armed = flash_pattern;
          LED_capture = flash_pattern;
       end
@@ -158,7 +159,7 @@ module openadc_interface #(
       end
       else if (led_select == 2'b11) begin
          LED_armed = pll_fpga_clk_heartbeat[24];
-         LED_capture = extclk_change;
+         LED_capture = extclk_change_usb;
       end
       else begin
          LED_armed = armed;
@@ -168,6 +169,7 @@ module openadc_interface #(
 
    wire freq_measure_adc;
    wire freq_measure_ext;
+   wire freq_measure_back;
    cdc_pulse U_freq_measure_adc (
       .reset_i       (reset),
       .src_clk       (clk_usb),
@@ -180,22 +182,26 @@ module openadc_interface #(
       .reset_i       (reset),
       .src_clk       (clk_usb),
       .src_pulse     (freq_measure),
-      .dst_clk       (extmeasure_clk),
+      .dst_clk       (DUT_CLK_i),
       .dst_pulse     (freq_measure_ext)
    );
 
+   // by going back to USB clock we'll know if DUT_CLK_i is alive
+   cdc_pulse U_freq_measure_ext_back (
+      .reset_i       (reset),
+      .src_clk       (DUT_CLK_i),
+      .src_pulse     (freq_measure_ext),
+      .dst_clk       (clk_usb),
+      .dst_pulse     (freq_measure_back)
+   );
 
-
-   wire extmeasure_clk;
-   wire extmeasure_src;
-   assign extmeasure_clk = (extmeasure_src) ? clk_usb : DUT_CLK_i;
 
    reg [31:0] extclk_frequency_int;
    reg [31:0] adcclk_frequency_int;
    reg [31:0] extclk_frequency;
    reg [31:0] adcclk_frequency;
 
-   always @(posedge extmeasure_clk) begin
+   always @(posedge DUT_CLK_i) begin
       if (freq_measure_ext) begin
          extclk_frequency_int <= 32'd1;
          extclk_frequency <= extclk_frequency_int;
@@ -211,6 +217,14 @@ module openadc_interface #(
                                                              ((extclk_frequency_int - extclk_frequency) > extclk_limit) )
               )
          extclk_change <= 1'b1;
+   end
+
+   // replicate some of the logic above in clk_usb domain so that clearing the error works when DUT_CLK_i goes away:
+   always @(posedge clk_usb) begin
+       if (extclk_monitor_disabled)
+           extclk_change_usb <= 1'b0;
+       else if (freq_measure_back)
+           extclk_change_usb <= extclk_change;
    end
 
    always @(posedge ADC_clk_sample) begin
@@ -390,7 +404,6 @@ module openadc_interface #(
       .trigger_offset               (trigger_offset),
       .trigger_length               (trigger_length),
       .extclk_frequency             (extclk_frequency),
-      .extclk_measure_src           (extmeasure_src),
       .adcclk_frequency             (adcclk_frequency),
       .presamples_o                 (presamples),
       .maxsamples_i                 (maxsamples_limit),
@@ -408,7 +421,7 @@ module openadc_interface #(
       .no_gain_errors               (no_gain_errors),
       .clip_test                    (clip_test),
 
-      .extclk_change                (extclk_change),
+      .extclk_change                (extclk_change_usb),
       .extclk_monitor_disabled      (extclk_monitor_disabled),
       .extclk_limit                 (extclk_limit)
    );

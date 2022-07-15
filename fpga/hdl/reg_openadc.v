@@ -55,7 +55,6 @@ module reg_openadc #(
 
    /* Measurement of external clock frequency */
    input  wire [31:0]  extclk_frequency,
-   output wire         extclk_measure_src,
    input  wire [31:0]  adcclk_frequency,
 
    /* Interface to fifo/capture module */
@@ -147,7 +146,6 @@ module reg_openadc #(
    assign registers_advclocksettings_read[7] = 1'b1;
    assign registers_advclocksettings_read[31:26] = registers_advclocksettings[31:26];
    assign registers_advclocksettings_read[24:8] = registers_advclocksettings[24:8];
-   assign extclk_measure_src = registers_advclocksettings[27];
 
    assign downsample_o = registers_downsample[12:0];
 
