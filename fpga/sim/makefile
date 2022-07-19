@@ -33,6 +33,7 @@ LINEAR_RAMP=1
 INPUTS_FROM_FILE=0
 REF_SAMPLES=8
 BITS_PER_SAMPLE=12
+EDGES=0
 TRIGGERS=1
 FLUSH=0
 THRESHOLD=0
@@ -40,6 +41,7 @@ VERBOSE=0
 
 all: compile run
 all_sad: compile_sad run
+all_edge: compile_edge run
 
 compile_sad:
 	iverilog \
@@ -85,6 +87,26 @@ sad_nofifo:
 	-P sad_tb.pDUMP=$(DUMP) \
 	-P sad_tb.pSEED=$(SEED) \
 	-o $(EXEFILE) \
+
+compile_edge:
+	iverilog \
+	../hdl/edge_trigger.v \
+	../hdl/edge_wrapper.v \
+	../hdl/usb_reg_main.v \
+	../hdl/cdc_pulse.v \
+	edge_tb.v \
+	-y/tools/Xilinx/Vivado/2020.2/ids_lite/ISE/verilog/src/unisims/ \
+	-g2005-sv \
+	-I../hdl \
+	-Wportbind \
+	-Wselect-range \
+	-P edge_tb.pEDGES=$(EDGES) \
+	-P edge_tb.pDUMP=$(DUMP) \
+	-P edge_tb.pSEED=$(SEED) \
+	-P edge_tb.pVERBOSE=$(VERBOSE) \
+	-P edge_tb.pTIMEOUT_CYCLES=$(TIMEOUT_CYCLES) \
+	-o $(EXEFILE) \
+
 
 compile:
 	iverilog -ccmdfile \

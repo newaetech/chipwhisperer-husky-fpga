@@ -353,6 +353,7 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 
 `define FIFO_STATE              110
 `define CLOCKGLITCH_POWERED_DOWN 111
+`define EDGE_TRIGGER_COUNT      113
 
 `define REGISTER_VERSION 1
 

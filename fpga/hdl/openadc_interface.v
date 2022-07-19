@@ -41,8 +41,10 @@ module openadc_interface #(
     input  wire                         DUT_trigger_i,
     input  wire                         trigger_io4_i, // debug only
     input  wire                         sad_active,
+    input  wire                         edge_trigger_active,
     output reg                          trigger_adc,
     output wire                         trigger_sad,
+    output wire                         trigger_edge_counter,
     output wire                         amp_gain,
     output wire [7:0]                   fifo_dout,
 
@@ -59,6 +61,7 @@ module openadc_interface #(
     output wire                         stream_segment_available,
 
     output wire                         capture_active,
+    input  wire                         trigger_in,
 
     output reg                          flash_pattern,
 
@@ -348,6 +351,7 @@ module openadc_interface #(
    wire [7:0] reg_datao_oadc;
    wire [7:0] reg_datao_fifo;
    wire [7:0] reg_datao_sad;
+   wire [7:0] reg_datao_edge;
 
    wire [31:0] fifo_read_count;
    wire [31:0] fifo_read_count_error_freeze;
@@ -355,7 +359,7 @@ module openadc_interface #(
    wire [7:0] underflow_count;
    wire no_underflow_errors;
 
-   assign reg_datao = reg_datao_oadc | reg_datao_fifo | reg_datao_sad;
+   assign reg_datao = reg_datao_oadc | reg_datao_fifo | reg_datao_sad | reg_datao_edge;
 
    sad #(
        .pBYTECNT_SIZE           (pBYTECNT_SIZE),
@@ -377,6 +381,24 @@ module openadc_interface #(
        .ext_trigger             (DUT_trigger_i),
        .io4                     (trigger_io4_i),
        .trigger                 (trigger_sad  )
+   );
+
+   edge_trigger #(
+       .pBYTECNT_SIZE           (pBYTECNT_SIZE)
+   ) U_edge_trigger (
+       .reset                   (reset        ),
+       .trigger_in              (trigger_in   ),
+       .adc_sampleclk           (ADC_clk_sample),
+       .armed_and_ready         (armed_and_ready),
+       .active                  (edge_trigger_active),
+       .clk_usb                 (clk_usb      ),
+       .reg_address             (reg_address  ),
+       .reg_bytecnt             (reg_bytecnt  ),
+       .reg_datai               (reg_datai    ),
+       .reg_datao               (reg_datao_edge),
+       .reg_read                (reg_read     ),
+       .reg_write               (reg_write    ),
+       .trigger                 (trigger_edge_counter )
    );
 
    reg_openadc #(

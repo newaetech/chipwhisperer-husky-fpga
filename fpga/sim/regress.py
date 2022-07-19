@@ -244,6 +244,14 @@ tests.append(dict(name  = 'sad',
              TOP = 'sad_tb.v',
              description = 'SAD block-level test.'))
 
+tests.append(dict(name  = 'edge',
+             frequency = 2,
+             EDGES = [1, 32],
+             TIMEOUT_CYCLES = 10000,
+             TOP = 'edge_tb.v',
+             description = 'edge trigger block-level test.'))
+
+
 tests.append(dict(name  = 'glitches_short',
              frequency = 3,
              FIFO_SAMPLES = 30,
@@ -344,7 +352,7 @@ test_regex = re.compile(args.tests)
 
 # Check once that compile passes:
 outfile = open('regress.out', 'w')
-for compile_target in ['compile', 'sad_nofifo']:
+for compile_target in ['compile', 'sad_nofifo', 'compile_edge']:
     makeargs = ['make', compile_target]
     result = subprocess.run(makeargs, stdout=outfile, stderr=outfile)
     if result.returncode:
@@ -391,6 +399,8 @@ for test in tests:
                run_test = False
          elif key == 'TOP' and test[key] == 'sad_tb.v':
              makeargs[1] = 'all_sad'
+         elif key == 'TOP' and test[key] == 'edge_tb.v':
+             makeargs[1] = 'all_edge'
          else:
             if type(test[key]) == list:
                value = random.randint(test[key][0], test[key][1])

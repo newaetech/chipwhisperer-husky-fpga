@@ -22,6 +22,7 @@
 ../hdl/reg_la.v
 ../hdl/userio.v
 ../hdl/sad.v
+../hdl/edge_trigger.v
 ../tracewhisperer/hdl/trace_top.v
 ../tracewhisperer/hdl/reg_trace.v
 ../tracewhisperer/hdl/fe_capture_trace.v

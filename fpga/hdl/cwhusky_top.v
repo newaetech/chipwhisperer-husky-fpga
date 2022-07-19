@@ -197,9 +197,11 @@ module cwhusky_top(
    wire decode_uart_input;
    wire decodeio_active;
    wire sad_active;
+   wire edge_trigger_active;
    wire trace_trig_out;
    wire trigger_adc;
    wire trigger_sad;
+   wire trigger_edge_counter;
    wire trace_trig_out_adc;
 
    wire la_exists;
@@ -368,7 +370,9 @@ module cwhusky_top(
         .trigger_io4_i          (target_io4),
         .trigger_adc            (trigger_adc),
         .trigger_sad            (trigger_sad),
+        .trigger_edge_counter   (trigger_edge_counter),
         .sad_active             (sad_active),
+        .edge_trigger_active    (edge_trigger_active),
         .amp_gain               (VDBSPWM),
         .fifo_dout              (fifo_dout),
         .cmd_arm_usb            (cmd_arm_usb),
@@ -386,6 +390,7 @@ module cwhusky_top(
         .stream_segment_available (stream_segment_available),
 
         .capture_active         (capture_active),
+        .trigger_in             (decode_uart_input),
 
         .flash_pattern          (flash_pattern),
 
@@ -451,11 +456,13 @@ module cwhusky_top(
         .trigger_ext_o          (decode_uart_input),
         .decodeio_active        (decodeio_active),
         .sad_active             (sad_active),
+        .edge_trigger_active    (edge_trigger_active),
         .trigger_advio_i        (1'b0),
         .trigger_decodedio_i    (trace_trig_out),
         .trigger_trace_i        (trace_trig_out),
         .trigger_adc_i          (trigger_adc),
         .trigger_sad_i          (trigger_sad),
+        .trigger_edge_i         (trigger_edge_counter),
         .pll_fpga_clk           (pll_fpga_clk),
         .glitchclk              (glitchclk),
 
