@@ -51,7 +51,7 @@ reg  [7:0] rdata_r;
 reg clk_usb;
 reg clk_adc;
 reg reset;
-reg arm;
+reg armed_and_ready;
 wire trigger;
 reg [11:0] adc_datain;
 
@@ -113,7 +113,7 @@ initial begin
     clk_usb = 1'b0;
     clk_adc = 1'b0;
     reset = 1'b0;
-    arm = 1'b0;
+    armed_and_ready = 1'b0;
     usb_addr = 0;
     usb_rdn = 1;
     usb_wrn = 1;
@@ -177,7 +177,7 @@ initial begin
     trigger_expected = 0;
     expect_fail = 0;
     #1;
-    while (arm == 1'b0)
+    while (armed_and_ready == 1'b0)
         @(posedge clk_adc) adc_datain = $urandom_range(0, 2**pBITS_PER_SAMPLE-1);
     repeat($urandom_range(1,4*pREF_SAMPLES))
         @(posedge clk_adc) adc_datain = $urandom_range(0, 2**pBITS_PER_SAMPLE-1);
@@ -265,7 +265,7 @@ initial begin
             $display("Total delta: %d", total_delta);
             $display("Threshold:   %d", threshold);
         end
-        repeat($urandom_range(2*pREF_SAMPLES, 4*pREF_SAMPLES))
+        repeat($urandom_range(3*pREF_SAMPLES, 5*pREF_SAMPLES))
             @(posedge clk_adc) adc_datain = $urandom_range(0, 2**pBITS_PER_SAMPLE-1);
     end
 
@@ -290,12 +290,12 @@ end
 reg [4:0] trigger_expected_pipe;
 always @(posedge clk_adc)
     trigger_expected_pipe <= {trigger_expected_pipe[3:0], trigger_expected};
-assign trigger_expected_delayed = trigger_expected_pipe[3];
+assign trigger_expected_delayed = trigger_expected_pipe[4];
 
 // trigger check thread:
 initial begin
     wait (setup_done);
-    @(posedge clk_usb) arm = 1'b1;
+    @(posedge clk_usb) armed_and_ready = 1'b1;
     for (itrig = 0; itrig < pTRIGGERS; itrig += 1) begin
         wait (trigger || trigger_expected_delayed);
         #1;
@@ -317,12 +317,16 @@ initial begin
                 $display("ERROR: got trigger #%0d %d cycles late at time %t", itrig, delta, $time);
             end
         end
-        wait (~(trigger || trigger_expected_delayed));
-        @(posedge clk_usb) arm = 1'b0;
 
         #(pCLK_ADC_PERIOD);
-        if (pFLUSH)
-            @(posedge clk_usb) arm = 1'b1;
+        if (pFLUSH) begin
+            repeat(pREF_SAMPLES) @(posedge clk_adc);
+            armed_and_ready = 1'b0;
+            repeat(pREF_SAMPLES) @(posedge clk_adc);
+            armed_and_ready = 1'b1;
+        end
+
+        wait (~(trigger || trigger_expected_delayed));
     end
 
     repeat(pREF_SAMPLES*2) #(pCLK_ADC_PERIOD);
@@ -409,7 +413,7 @@ sad_wrapper #(
     .clk_usb            (clk_usb),
     .clk_adc            (clk_adc),
     .adc_datain         (adc_datain_out),
-    .arm_i              (arm),
+    .armed_and_ready    (armed_and_ready),
     .USB_Data           (usb_data     ),
     .USB_Addr           (usb_addr_out ),
     .USB_RDn            (usb_rdn_out  ),

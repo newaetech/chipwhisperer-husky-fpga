@@ -39,7 +39,7 @@ module sad_wrapper #(
     input wire          USB_ALEn,
 
     input wire [11:0]   adc_datain,
-    input wire          arm_i,
+    input wire          armed_and_ready,
     output wire         trigger
 );
 
@@ -95,7 +95,7 @@ sad #(
     .reset              (reset),
     .adc_datain         (adc_datain_r[pBITS_PER_SAMPLE-1:0]),
     .adc_sampleclk      (clk_adc),
-    .arm_i              (arm_i),
+    .armed_and_ready    (armed_and_ready),
     .active             (1'b1),
     .clk_usb            (clk_usb),
     .reg_address        (reg_address),
@@ -104,7 +104,8 @@ sad #(
     .reg_datao          (read_data_sad),
     .reg_read           (reg_read),
     .reg_write          (reg_write),
-    .ext_trigger        (1'b0),
+    .ext_trigger        (1'b0), // debug only
+    .io4                (1'b0), // debug only
     .trigger            (trigger)
 );
 
