@@ -98,7 +98,7 @@ module reg_la #(
     wire source_clk;
 
     reg [1:0] clock_source_reg;
-    reg [4:0] trigger_source_reg;
+    reg [5:0] trigger_source_reg;
     reg [2:0] capture_group_reg;
     reg observer_powerdown;
     reg manual_capture;
@@ -176,24 +176,25 @@ module reg_la #(
       end
    end
 
-
-
-
-    wire capture_go_async = manual_capture | ( (trigger_source_reg == 5'b00000)? glitch_go : 
-                                               (trigger_source_reg == 5'b00001)? capture_active : 
-                                               (trigger_source_reg == 5'b00010)? glitch_trigger_manual_sourceclock :
-                                               (trigger_source_reg == 5'b00011)? hs1 :
-                                               (trigger_source_reg == 5'b00100)? glitch_trigger :
-                                               (trigger_source_reg == 5'b00101)? tu_la_debug[0] : 
-                                               (trigger_source_reg == 5'b00110)? tu_la_debug[1] :
-                                               (trigger_source_reg[3:0] == 4'b1000)? userio0 ^ trigger_source_reg[4] :
-                                               (trigger_source_reg[3:0] == 4'b1001)? userio1 ^ trigger_source_reg[4] :
-                                               (trigger_source_reg[3:0] == 4'b1010)? userio2 ^ trigger_source_reg[4] :
-                                               (trigger_source_reg[3:0] == 4'b1011)? userio3 ^ trigger_source_reg[4] :
-                                               (trigger_source_reg[3:0] == 4'b1100)? userio4 ^ trigger_source_reg[4] :
-                                               (trigger_source_reg[3:0] == 4'b1101)? userio5 ^ trigger_source_reg[4] :
-                                               (trigger_source_reg[3:0] == 4'b1110)? userio6 ^ trigger_source_reg[4] :
-                                               (trigger_source_reg[3:0] == 4'b1111)? userio7 ^ trigger_source_reg[4] : 1'b0);
+    wire capture_go_async = manual_capture | ( (trigger_source_reg == 6'b000_000)? glitch_go : 
+                                               (trigger_source_reg == 6'b000_001)? capture_active : 
+                                               (trigger_source_reg == 6'b000_010)? glitch_trigger_manual_sourceclock :
+                                               (trigger_source_reg == 6'b000_011)? hs1 :
+                                               (trigger_source_reg == 6'b000_100)? glitch_trigger :
+                                               (trigger_source_reg == 6'b000_101)? tu_la_debug[0] : 
+                                               (trigger_source_reg == 6'b000_110)? tu_la_debug[1] :
+                                               (trigger_source_reg[5] && (trigger_source_reg[1:0] == 2'b00))? io1 ^ trigger_source_reg[3] :
+                                               (trigger_source_reg[5] && (trigger_source_reg[1:0] == 2'b01))? io2 ^ trigger_source_reg[3] :
+                                               (trigger_source_reg[5] && (trigger_source_reg[1:0] == 2'b10))? io3 ^ trigger_source_reg[3] :
+                                               (trigger_source_reg[5] && (trigger_source_reg[1:0] == 2'b11))? io4 ^ trigger_source_reg[3] :
+                                               (trigger_source_reg[4:0] == 4'b1_000)? userio0 ^ trigger_source_reg[4] :
+                                               (trigger_source_reg[4:0] == 4'b1_001)? userio1 ^ trigger_source_reg[4] :
+                                               (trigger_source_reg[4:0] == 4'b1_010)? userio2 ^ trigger_source_reg[4] :
+                                               (trigger_source_reg[4:0] == 4'b1_011)? userio3 ^ trigger_source_reg[4] :
+                                               (trigger_source_reg[4:0] == 4'b1_100)? userio4 ^ trigger_source_reg[4] :
+                                               (trigger_source_reg[4:0] == 4'b1_101)? userio5 ^ trigger_source_reg[4] :
+                                               (trigger_source_reg[4:0] == 4'b1_110)? userio6 ^ trigger_source_reg[4] :
+                                               (trigger_source_reg[4:0] == 4'b1_111)? userio7 ^ trigger_source_reg[4] : 1'b0);
 
    `ifndef __ICARUS__
       wire observer_clkfb;
@@ -343,7 +344,6 @@ module reg_la #(
    reg capture8_source;
 
    reg ticktock;
-
 
    //always @(*) begin
    always @(posedge observer_clk) begin
@@ -530,7 +530,7 @@ module reg_la #(
              `LA_CAPTURE_GROUP: reg_datao_reg = {5'b0, capture_group_reg};
              `LA_STATUS:        reg_datao_reg = {6'b0, capturing, observer_locked};
              `LA_CLOCK_SOURCE:  reg_datao_reg = {6'b0, clock_source_reg};
-             `LA_TRIGGER_SOURCE:reg_datao_reg = {3'b0, trigger_source_reg};
+             `LA_TRIGGER_SOURCE:reg_datao_reg = {2'b0, trigger_source_reg};
              `LA_POWERDOWN:     reg_datao_reg = {7'b0, observer_powerdown};
              `LA_CAPTURE_DEPTH: reg_datao_reg = capture_depth[reg_bytecnt*8 +: 8];
              `LA_DOWNSAMPLE:    reg_datao_reg = downsample[reg_bytecnt*8 +: 8];
@@ -547,7 +547,7 @@ module reg_la #(
    always @(posedge clk_usb) begin
       if (reset) begin
          clock_source_reg <= 2'b10; // default to PLL
-         trigger_source_reg <= 5'b000; // default to glitch
+         trigger_source_reg <= 6'b0; // default to glitch
          capture_group_reg <= 0;
          observer_powerdown <= 1;
          manual_capture <= 0;
@@ -559,7 +559,7 @@ module reg_la #(
       else if (reg_write) begin
          case (reg_address)
              `LA_CLOCK_SOURCE:  clock_source_reg <= reg_datai[1:0];
-             `LA_TRIGGER_SOURCE:trigger_source_reg <= reg_datai[4:0];
+             `LA_TRIGGER_SOURCE:trigger_source_reg <= reg_datai[5:0];
              `LA_CAPTURE_GROUP: capture_group_reg <= reg_datai[2:0];
              `LA_POWERDOWN:     observer_powerdown <= reg_datai[0];
              `LA_ENABLED:       reg_enabled <= reg_datai[0];
