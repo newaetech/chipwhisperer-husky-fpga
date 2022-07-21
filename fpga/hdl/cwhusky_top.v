@@ -839,7 +839,8 @@ module cwhusky_top(
           .pMAIN_REG_SELECT             (`TW_MAIN_REG_SELECT),
           .pTRACE_REG_SELECT            (`TW_TRACE_REG_SELECT),
           .pREGISTERED_READ             (0),
-          .pNUM_TRIGGER_WIDTH           (16)
+          .pNUM_TRIGGER_WIDTH           (16),
+          .pHUSKY                       (1)
        ) U_trace_top (
           .trace_clk_in                 (TRACECLOCK),
           .fe_clk                       (fe_clk),

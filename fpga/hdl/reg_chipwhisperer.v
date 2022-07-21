@@ -222,7 +222,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
    reg [1:0] registers_cwauxio;
    reg [7:0] registers_cwextclk;
-   reg [7:0] registers_cwtrigsrc;
+   reg [15:0] registers_cwtrigsrc; // note: for CW-Lite/Pro, this is an 8-bit register
    reg [7:0] registers_cwtrigmod;
    reg [63:0] registers_iorouting;
    reg [3:0] registers_ioread;
@@ -359,19 +359,35 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    wire trigger_or;
    wire trigger_ext;
    
-   assign trigger_and = ((registers_cwtrigsrc[0] & auxio)          | ~registers_cwtrigsrc[0]) &
-                        ((registers_cwtrigsrc[1] & trigger_nrst_i) | ~registers_cwtrigsrc[1]) &
-                        ((registers_cwtrigsrc[2] & trigger_io1_i)  | ~registers_cwtrigsrc[2]) &
-                        ((registers_cwtrigsrc[3] & trigger_io2_i)  | ~registers_cwtrigsrc[3]) &
-                        ((registers_cwtrigsrc[4] & trigger_io3_i)  | ~registers_cwtrigsrc[4]) &
-                        ((registers_cwtrigsrc[5] & trigger_io4_i)  | ~registers_cwtrigsrc[5]);
+   assign trigger_and = ((registers_cwtrigsrc[0]  & auxio)          | ~registers_cwtrigsrc[0]) &
+                        ((registers_cwtrigsrc[1]  & trigger_nrst_i) | ~registers_cwtrigsrc[1]) &
+                        ((registers_cwtrigsrc[2]  & trigger_io1_i)  | ~registers_cwtrigsrc[2]) &
+                        ((registers_cwtrigsrc[3]  & trigger_io2_i)  | ~registers_cwtrigsrc[3]) &
+                        ((registers_cwtrigsrc[4]  & trigger_io3_i)  | ~registers_cwtrigsrc[4]) &
+                        ((registers_cwtrigsrc[5]  & trigger_io4_i)  | ~registers_cwtrigsrc[5]) &
+                        ((registers_cwtrigsrc[8]  & userio_d[0])    | ~registers_cwtrigsrc[8]) &
+                        ((registers_cwtrigsrc[9]  & userio_d[1])    | ~registers_cwtrigsrc[9]) &
+                        ((registers_cwtrigsrc[10] & userio_d[2])    | ~registers_cwtrigsrc[10]) &
+                        ((registers_cwtrigsrc[11] & userio_d[3])    | ~registers_cwtrigsrc[11]) &
+                        ((registers_cwtrigsrc[12] & userio_d[4])    | ~registers_cwtrigsrc[12]) &
+                        ((registers_cwtrigsrc[13] & userio_d[5])    | ~registers_cwtrigsrc[13]) &
+                        ((registers_cwtrigsrc[14] & userio_d[6])    | ~registers_cwtrigsrc[14]) &
+                        ((registers_cwtrigsrc[15] & userio_d[7])    | ~registers_cwtrigsrc[15]);
 
-   assign trigger_or  = (registers_cwtrigsrc[0] & auxio)          |
-                        (registers_cwtrigsrc[1] & trigger_nrst_i) |
-                        (registers_cwtrigsrc[2] & trigger_io1_i)  |
-                        (registers_cwtrigsrc[3] & trigger_io2_i)  |
-                        (registers_cwtrigsrc[4] & trigger_io3_i)  |
-                        (registers_cwtrigsrc[5] & trigger_io4_i);
+   assign trigger_or  = (registers_cwtrigsrc[0]  & auxio)          |
+                        (registers_cwtrigsrc[1]  & trigger_nrst_i) |
+                        (registers_cwtrigsrc[2]  & trigger_io1_i)  |
+                        (registers_cwtrigsrc[3]  & trigger_io2_i)  |
+                        (registers_cwtrigsrc[4]  & trigger_io3_i)  |
+                        (registers_cwtrigsrc[5]  & trigger_io4_i)  |
+                        (registers_cwtrigsrc[8]  & userio_d[0])    |
+                        (registers_cwtrigsrc[9]  & userio_d[1])    |
+                        (registers_cwtrigsrc[10] & userio_d[2])    |
+                        (registers_cwtrigsrc[11] & userio_d[3])    |
+                        (registers_cwtrigsrc[12] & userio_d[4])    |
+                        (registers_cwtrigsrc[13] & userio_d[5])    |
+                        (registers_cwtrigsrc[14] & userio_d[6])    |
+                        (registers_cwtrigsrc[15] & userio_d[7]);
 
    assign trigger_ext =  (registers_cwtrigsrc[7:6] == 2'b00) ? trigger_or :
                          (registers_cwtrigsrc[7:6] == 2'b01) ? trigger_and : 
@@ -452,7 +468,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
          case (reg_address)
            `CW_AUX_IO:                  reg_datao_reg = {6'b0, registers_cwauxio};
            `CW_EXTCLK_ADDR:             reg_datao_reg = registers_cwextclk; 
-           `CW_TRIGSRC_ADDR:            reg_datao_reg = registers_cwtrigsrc; 
+           `CW_TRIGSRC_ADDR:            reg_datao_reg = registers_cwtrigsrc[reg_bytecnt*8 +: 8]; 
            `CW_TRIGMOD_ADDR:            reg_datao_reg = registers_cwtrigmod; 
            `CW_IOROUTE_ADDR:            reg_datao_reg = registers_iorouting[reg_bytecnt*8 +: 8];
            `CW_IOREAD_ADDR:             reg_datao_reg = {4'b0000, registers_ioread};
@@ -474,7 +490,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    always @(posedge clk_usb) begin
       if (reset) begin
          registers_cwextclk <= 8'b00000011;
-         registers_cwtrigsrc <= 8'b00100000;
+         registers_cwtrigsrc <= 16'b00100000;
          registers_cwtrigmod <= 0;
          registers_iorouting <= 64'b00000010_00000001;
          reg_userio_cwdriven <= 8'b0;
@@ -489,7 +505,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
          case (reg_address)
            `CW_AUX_IO: registers_cwauxio <= reg_datai[1:0];
            `CW_EXTCLK_ADDR: registers_cwextclk <= reg_datai;
-           `CW_TRIGSRC_ADDR: registers_cwtrigsrc <= reg_datai;
+           `CW_TRIGSRC_ADDR: registers_cwtrigsrc[reg_bytecnt*8 +: 8] <= reg_datai;
            `CW_TRIGMOD_ADDR: registers_cwtrigmod <= reg_datai;
            `CW_IOROUTE_ADDR: registers_iorouting[reg_bytecnt*8 +: 8] <= reg_datai;
 
