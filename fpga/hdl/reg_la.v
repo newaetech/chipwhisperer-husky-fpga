@@ -187,14 +187,14 @@ module reg_la #(
                                                (trigger_source_reg[5] && (trigger_source_reg[1:0] == 2'b01))? io2 ^ trigger_source_reg[3] :
                                                (trigger_source_reg[5] && (trigger_source_reg[1:0] == 2'b10))? io3 ^ trigger_source_reg[3] :
                                                (trigger_source_reg[5] && (trigger_source_reg[1:0] == 2'b11))? io4 ^ trigger_source_reg[3] :
-                                               (trigger_source_reg[4:0] == 4'b1_000)? userio0 ^ trigger_source_reg[4] :
-                                               (trigger_source_reg[4:0] == 4'b1_001)? userio1 ^ trigger_source_reg[4] :
-                                               (trigger_source_reg[4:0] == 4'b1_010)? userio2 ^ trigger_source_reg[4] :
-                                               (trigger_source_reg[4:0] == 4'b1_011)? userio3 ^ trigger_source_reg[4] :
-                                               (trigger_source_reg[4:0] == 4'b1_100)? userio4 ^ trigger_source_reg[4] :
-                                               (trigger_source_reg[4:0] == 4'b1_101)? userio5 ^ trigger_source_reg[4] :
-                                               (trigger_source_reg[4:0] == 4'b1_110)? userio6 ^ trigger_source_reg[4] :
-                                               (trigger_source_reg[4:0] == 4'b1_111)? userio7 ^ trigger_source_reg[4] : 1'b0);
+                                              (~trigger_source_reg[5] && (trigger_source_reg[3:0] == 4'b1_000))? userio0 ^ trigger_source_reg[4] :
+                                              (~trigger_source_reg[5] && (trigger_source_reg[3:0] == 4'b1_001))? userio1 ^ trigger_source_reg[4] :
+                                              (~trigger_source_reg[5] && (trigger_source_reg[3:0] == 4'b1_010))? userio2 ^ trigger_source_reg[4] :
+                                              (~trigger_source_reg[5] && (trigger_source_reg[3:0] == 4'b1_011))? userio3 ^ trigger_source_reg[4] :
+                                              (~trigger_source_reg[5] && (trigger_source_reg[3:0] == 4'b1_100))? userio4 ^ trigger_source_reg[4] :
+                                              (~trigger_source_reg[5] && (trigger_source_reg[3:0] == 4'b1_101))? userio5 ^ trigger_source_reg[4] :
+                                              (~trigger_source_reg[5] && (trigger_source_reg[3:0] == 4'b1_110))? userio6 ^ trigger_source_reg[4] :
+                                              (~trigger_source_reg[5] && (trigger_source_reg[3:0] == 4'b1_111))? userio7 ^ trigger_source_reg[4] : 1'b0);
 
    `ifndef __ICARUS__
       wire observer_clkfb;
