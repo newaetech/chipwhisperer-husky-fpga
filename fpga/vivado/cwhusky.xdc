@@ -111,7 +111,12 @@ set_clock_groups -asynchronous \
 
 set_clock_groups -asynchronous \
                  -group [get_clocks {trace_clk_selected trace_clk_shifted}] \
-                 -group [get_clocks {clk_usb fe_clk observer_clk*}]
+                 -group [get_clocks {clk_usb observer_clk*}]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks trace_clk_shifted] \
+                 -group [get_clocks fe_clk]
+
 
 
 # *****************************************************************************
