@@ -22,7 +22,8 @@ Author: Jean-Pierre Thibault <jpthibault@newae.com>
 *************************************************************************/
 
 module usb_reg_main #(
-   parameter pBYTECNT_SIZE = 7
+   parameter pBYTECNT_SIZE = 7,
+   parameter pUSE_ALE = 1
 )(
    input  wire         clk_usb,
    input  wire         reset,
@@ -103,7 +104,7 @@ module usb_reg_main #(
    always @(posedge clk_usb) begin
       if (reset)
          reg_bytecnt <= 0;
-      else if (~cwusb_alen_r) begin
+      else if (pUSE_ALE? ~cwusb_alen_r : (reg_address != cwusb_addr)) begin
          reg_bytecnt <= 0;
       end else if ((isoutregdly & !isoutreg) || (reg_write_dly) ) begin
          //roll-over is allowed (only access to use it is FIFO read, where we
