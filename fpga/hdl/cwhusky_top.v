@@ -569,7 +569,7 @@ module cwhusky_top(
         .reg_datai              (write_data), 
         .reg_read               (reg_read), 
         .reg_write              (reg_write), 
-        .target_hs1             (target_hs1),
+        .target_clk             (extclk_mux),
         .pll_fpga_clk           (pll_fpga_clk),
         .observer_clk           (observer_clk),
         .observer_locked        (observer_locked),
