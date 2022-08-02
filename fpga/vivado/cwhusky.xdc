@@ -24,7 +24,7 @@ set_case_analysis 0 [get_pins reg_clockglitch/sourceclk_mux2/S]
 
 set_case_analysis 1 [get_pins reg_la/sourceclk_mux1/S]
 set_case_analysis 0 [get_pins reg_la/sourceclk_mux2/S]
-set_case_analysis 1 [get_pins reg_la/sourceclk_mux3/S]
+set_case_analysis 0 [get_pins reg_la/sourceclk_mux3/S]
 
 create_generated_clock -name fe_clk -source [get_pins U_trace_top/U_fe_clock_mux2/I1] -combinational [get_pins U_trace_top/U_fe_clock_mux2/O]
 create_generated_clock -name trace_clk_selected -source [get_pins U_trace_top/U_traceclk_sel/I0] -combinational [get_pins U_trace_top/U_traceclk_sel/O]
