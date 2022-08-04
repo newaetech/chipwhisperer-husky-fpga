@@ -60,7 +60,8 @@ module reg_openadc_adcfifo #(
    assign reset = reset_i;
 
    reg fifo_rd_en_reg;
-   reg reg_read_r;
+   reg [5:0] reg_read_pipe;
+   wire reg_read_r = reg_read_pipe[0];
 
    // in fast FIFO read mode, need to shave off a clock cycle:
    assign fifo_rd_en = fast_fifo_read_mode? reg_read & ~reg_read_r : fifo_rd_en_reg;
@@ -129,9 +130,16 @@ module reg_openadc_adcfifo #(
       end
    end
 
+   wire fifo_rd_en_condition;
+   `ifdef CW310
+       // accomodate slower read times on CW310:
+       assign fifo_rd_en_condition = reg_read_pipe[4] && ~reg_read_pipe[5];
+   `else
+       assign fifo_rd_en_condition = reg_read && ~reg_read_r;
+   `endif
    always @(posedge clk_usb) begin
-      reg_read_r <= reg_read;
-      if (reg_read && ~reg_read_r && (reg_address == `ADCREAD_ADDR)) begin
+      reg_read_pipe <= {reg_read_pipe[4:0], reg_read};
+      if (fifo_rd_en_condition && (reg_address == `ADCREAD_ADDR)) begin
          fifo_rd_en_reg <= 1;
       end else begin
          fifo_rd_en_reg <= 0;
