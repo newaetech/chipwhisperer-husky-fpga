@@ -34,6 +34,10 @@ module cwhusky_cw310_top(
     output wire        LED_GLITCHOUT_HIGHPWR,   // CW310 new
     output wire        LED_GLITCHOUT_LOWPWR,    // CW310 new
 
+    output wire        xo_en,
+    output wire        vddr_enable,
+    input  wire        vddr_pgood,
+
     /* FPGA - USB Interface */
     inout wire [7:0]    USB_Data,
     input wire [7:0]    USB_Addr,
@@ -209,7 +213,8 @@ module cwhusky_cw310_top(
    wire [7:0] read_data_xadc;
    wire [7:0] read_data_la;
    wire [7:0] read_data_trace;
-   always @(posedge clk_usb_buf) read_data_reg <= read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc | read_data_la | read_data_trace;
+   wire [7:0] read_data_cw310;
+   always @(posedge clk_usb_buf) read_data_reg <= read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc | read_data_la | read_data_trace | read_data_cw310;
    //always @(*) read_data_reg = read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc | read_data_la;
    assign read_data = (reg_address == `ADCREAD_ADDR)? fifo_dout : read_data_reg;
 
@@ -614,6 +619,23 @@ module cwhusky_cw310_top(
         .debug1         (clockglitch_debug1),
         .debug2         (clockglitch_debug2)
    );
+
+   reg_cw310 #(
+        .pBYTECNT_SIZE  (pBYTECNT_SIZE)
+   ) reg_cw310 (
+        .reset          (reg_rst),
+        .clk_usb        (clk_usb_buf),
+        .reg_address    (reg_address),
+        .reg_bytecnt    (reg_bytecnt), 
+        .reg_datao      (read_data_cw310), 
+        .reg_datai      (write_data), 
+        .reg_read       (reg_read), 
+        .reg_write      (reg_write), 
+        .O_xo_en        (xo_en),
+        .O_vddr_enabled (vddr_enable),
+        .I_vddr_pgood   (vddr_pgood)
+   );
+
 
    `ifdef LOGIC_ANALYZER
    // NOTE: while this block is ifdef'd, building without LOGIC_ANALYZER

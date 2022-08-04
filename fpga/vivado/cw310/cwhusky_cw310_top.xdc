@@ -145,6 +145,10 @@ set_property -dict { PACKAGE_PIN L24 DRIVE 8  IOSTANDARD LVCMOS33 } [get_ports L
 #set_property -dict { PACKAGE_PIN  L24  IOSTANDARD   LVCMOS33 } [get_ports { USRLED[6] }]; #IO_L8N_T1_13
 #set_property -dict { PACKAGE_PIN  K25  IOSTANDARD   LVCMOS33 } [get_ports { USRLED[7] }]; #IO_L1P_T0_13
 
+set_property -dict { PACKAGE_PIN  AB7  IOSTANDARD   LVCMOS18 } [get_ports { xo_en }]; #IO_L10P_T1_33
+set_property -dict { PACKAGE_PIN  N24  IOSTANDARD   LVCMOS33 } [get_ports { vddr_enable }]; #IO_L10P_T1_33
+set_property -dict { PACKAGE_PIN  R18  IOSTANDARD   LVCMOS33 } [get_ports { vddr_pgood }]; #IO_L10P_T1_33
+
 
 # USB: DONE
 set_property -dict { PACKAGE_PIN  Y23 IOSTANDARD LVCMOS33 } [get_ports clk_usb]

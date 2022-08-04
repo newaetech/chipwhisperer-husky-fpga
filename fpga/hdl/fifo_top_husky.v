@@ -902,7 +902,7 @@ module fifo_top_husky(
                    state};
 
 
-   `ifdef ILA_FIFO
+   `ifdef ILA_HUSKY_FIFO
        `ifdef ILA_DEBUG_FAST_FIFO
            ila_fast_fifo U_ila_fast_fifo (
               .clk            (adc_sampleclk),        // input wire clk

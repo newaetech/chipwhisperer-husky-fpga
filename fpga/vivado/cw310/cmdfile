@@ -1,4 +1,5 @@
 cwhusky_cw310_top.v
+reg_cw310.v
 ../../hdl/clockglitch_a7.v
 ../../hdl/mmcm_phaseshift_interface.v
 ../../hdl/includes.v
