@@ -5,11 +5,12 @@ set_property CONFIG_VOLTAGE 3.3 [current_design]
 create_clock -period 10.400 -name clk_usb -waveform {0.000 5.200} [get_nets clk_usb]
 #create_clock -period 3.300 -name ADC_clk_fb -waveform {0.000 1.650} [get_nets ADC_clk_fb]
 #create_clock -period 3.300 -name pll_fpga_clk -waveform {0.000 1.650} [get_nets pll_fpga_clk]
-create_clock -period 4.000 -name ADC_clk_fb -waveform {0.000 2.000} [get_nets ADC_clk_fb]
-create_clock -period 4.000 -name pll_fpga_clk -waveform {0.000 2.000} [get_nets pll_fpga_clk]
+#create_clock -period 4.000 -name ADC_clk_fb -waveform {0.000 2.000} [get_nets ADC_clk_fb]
+#create_clock -period 4.000 -name pll_fpga_clk -waveform {0.000 2.000} [get_nets pll_fpga_clk]
+create_clock -period 4.000 -name ADC_clk_fb -waveform {0.000 2.000} [get_nets PLL_CLK1]
 
 create_clock -period 20.000 -name target_hs1 -waveform {0.000 10.000} [get_nets target_hs1]
-create_clock -period 20.000 -name AUXIO -waveform {0.000 10.500} [get_nets AUXIO]
+#create_clock -period 20.000 -name AUXIO -waveform {0.000 10.500} [get_nets AUXIO]
 
 create_clock -period 40.000 -name TRACECLOCK -waveform {0.000 20.000} [get_nets USERIO_CLK_IBUF]
 
@@ -17,9 +18,18 @@ set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets {USERIO_CLK_IBUF}]
 set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets {U_trace_top/VCC_2}]
 set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets U_trace_top/fe_clk_pre]
 
-set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets {U_trace_top/U_trace_clock_drp/SR[0]}]
+#set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets {U_trace_top/U_trace_clock_drp/SR[0]}]
 set_property CLOCK_DEDICATED_ROUTE BACKBONE [get_nets reg_clockglitch/U_clockglitch/glitch_mmcm1_clk_out]
 set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets U_trace_top/trace_clk_selected]
+
+#set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets pll_fpga_clk]
+set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets reg_clockglitch/mux1out]
+#set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets reg_la/mux1out]
+#set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets reg_la/observer_clk_prebuf]
+
+#set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets ADC_clk_fb]
+#set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets U_trace_top/fe_clk]
+#set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets reg_la/observer_clk_prebuf]
 
 set_case_analysis 1 [get_pins reg_clockglitch/sourceclk_mux1/S]
 set_case_analysis 0 [get_pins reg_clockglitch/sourceclk_mux2/S]
@@ -39,7 +49,6 @@ set_case_analysis 1 [get_pins U_fifo_clk_mux/S]
 #set_clock_groups -logically_exclusive -group clk_usb -group TRACECLOCK -group target_hs1
 #set_clock_groups -logically_exclusive -group pll_fpga_clk -group glitchclk
 
-
 # These are needed to meet timing on USB_Data:
 set_max_delay 15 -through [get_pins USB_Data_IOBUF*inst/T]
 set_max_delay 15 -through [get_pins U_usb_reg_main/reg_address_reg*/Q]
@@ -52,44 +61,36 @@ set_clock_groups -asynchronous \
 
 set_clock_groups -asynchronous \
                  -group [get_clocks clk_usb ] \
-                 -group [get_clocks AUXIO]
+                 -group [get_clocks clk_pll_i]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks {target_hs1 fe_clk} ] \
-                 -group [get_clocks AUXIO]
-
-set_clock_groups -asynchronous \
-                 -group [get_clocks {clk_usb target_hs1 AUXIO} ] \
+                 -group [get_clocks {clk_usb target_hs1} ] \
                  -group [get_clocks ADC_clk_fb]
 
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks {clk_usb target_hs1 AUXIO} ] \
-                 -group [get_clocks pll_fpga_clk]
+                 -group [get_clocks {clk_usb target_hs1} ] \
+                 -group [get_clocks ADC_clk_fb]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks pll_fpga_clk] \
+                 -group [get_clocks ADC_clk_fb] \
                  -group [get_clocks glitch_mmcm1_clk_out*]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks {clk_usb target_hs1 AUXIO} ] \
+                 -group [get_clocks {clk_usb target_hs1} ] \
                  -group [get_clocks glitch_mmcm1_clk_out*]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks {clk_usb target_hs1 AUXIO} ] \
+                 -group [get_clocks {clk_usb target_hs1} ] \
                  -group [get_clocks glitch_mmcm2_clk_out*]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks observer_clk*] \
-                 -group [get_clocks {clk_usb target_hs1 AUXIO} ]
+                 -group [get_clocks {clk_usb target_hs1} ]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks observer_clk*] \
-                 -group [get_clocks pll_fpga_clk]
-
-set_clock_groups -asynchronous \
-                 -group [get_clocks ADC_clk_fb] \
-                 -group [get_clocks pll_fpga_clk]
+                 -group [get_clocks ADC_clk_fb]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks observer_clk*] \
@@ -105,11 +106,11 @@ set_clock_groups -asynchronous \
 
 set_clock_groups -asynchronous \
                  -group [get_clocks TRACECLOCK ] \
-                 -group [get_clocks {clk_usb AUXIO observer_clk* target_hs1 fe_clk}]
+                 -group [get_clocks {clk_usb observer_clk* target_hs1 fe_clk}]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks fe_clk ] \
-                 -group [get_clocks {clk_usb observer_clk* ADC_clk_fb pll_fpga_clk}]
+                 -group [get_clocks {clk_usb observer_clk* ADC_clk_fb}]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks {fe_clk ADC_clk_fb} ] \
@@ -149,6 +150,7 @@ set_property -dict { PACKAGE_PIN  AB7  IOSTANDARD   LVCMOS18 } [get_ports { xo_e
 set_property -dict { PACKAGE_PIN  N24  IOSTANDARD   LVCMOS33 } [get_ports { vddr_enable }]; #IO_L10P_T1_33
 set_property -dict { PACKAGE_PIN  R18  IOSTANDARD   LVCMOS33 } [get_ports { vddr_pgood }]; #IO_L10P_T1_33
 
+set_property -dict { PACKAGE_PIN  R22  IOSTANDARD   LVCMOS33 } [get_ports { PLL_CLK1 }]; #IO_L14P_T2_SRCC_13
 
 # USB: DONE
 set_property -dict { PACKAGE_PIN  Y23 IOSTANDARD LVCMOS33 } [get_ports clk_usb]
@@ -242,7 +244,7 @@ set_property -dict { PACKAGE_PIN M22 IOSTANDARD LVCMOS33 }  [get_ports USERIO_CL
 
 # MCX:
 #set_property -dict { PACKAGE_PIN R15 IOSTANDARD LVCMOS33 }  [get_ports TRIG_GLITCHOUT]
-#set_property -dict { PACKAGE_PIN N14 IOSTANDARD LVCMOS33 }  [get_ports AUXIO]
+set_property -dict { PACKAGE_PIN M21 IOSTANDARD LVCMOS33 }  [get_ports AUXIO]
 
 # SAM3U - SPI
 #set_property -dict { PACKAGE_PIN T7  IOSTANDARD LVCMOS33 }  [get_ports SAM_MOSI]

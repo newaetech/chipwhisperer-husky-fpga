@@ -394,6 +394,31 @@ module cwhusky_top(
 
         .flash_pattern          (flash_pattern),
 
+     // TODO-later: use `ifdef PRO for these
+        .O_xo_en                (),
+        .O_vddr_enable          (),
+        .I_vddr_pgood           (1'b0),
+        .temp_out               (12'b0),
+
+        .ddr3_addr              (),
+        .ddr3_ba                (),
+        .ddr3_cas_n             (),
+        .ddr3_ck_n              (),
+        .ddr3_ck_p              (),
+        .ddr3_cke               (),
+        .ddr3_ras_n             (),
+        .ddr3_reset_n           (),
+        .ddr3_we_n              (),
+        .ddr3_dq                (),
+        .ddr3_dqs_n             (),
+        .ddr3_dqs_p             (),
+        .ddr3_dm                (),
+        .ddr3_cs_n              (),
+        .ddr3_odt               (),
+        // CW310-specific:
+        .ADC_clk_fbp            (1'b0),
+        .ADC_clk_fbn            (1'b0),
+
         .slow_fifo_wr           (slow_fifo_wr),
         .slow_fifo_rd           (slow_fifo_rd),
         .la_debug               (tu_la_debug),

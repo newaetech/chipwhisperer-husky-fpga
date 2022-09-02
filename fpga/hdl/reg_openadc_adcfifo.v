@@ -51,6 +51,24 @@ module reg_openadc_adcfifo #(
    output reg          no_underflow_errors,
    input  wire         capture_done,
 
+   // DDR3 (Pro) stuff:
+   output reg          O_ddr3_en,
+   output reg          O_ddr3_clear_fail,
+   output reg          O_xo_en,
+   output reg          O_vddr_enable,
+   input  wire         I_vddr_pgood,
+   input  wire         I_ddr3_pass,
+   input  wire         I_ddr3_fail,
+   input  wire [6:0]   I_ddr3_stat,
+   input  wire [15:0]  I_ddr3_iteration,
+   input  wire [7:0]   I_ddr3_errors,
+   input  wire [31:0]  I_ddr3_read_read,
+   input  wire [31:0]  I_ddr3_read_idle,
+   input  wire [31:0]  I_ddr3_write_write,
+   input  wire [31:0]  I_ddr3_write_idle,
+   input  wire [15:0]  I_ddr3_max_read_stall_count,
+   input  wire [15:0]  I_ddr3_max_write_stall_count,
+
    // for debug only:
    input  wire [31:0]  fifo_read_count,
    input  wire [31:0]  fifo_read_count_error_freeze
@@ -71,6 +89,12 @@ module reg_openadc_adcfifo #(
 
    wire [9:0] fifo_stat = {fifo_empty, fifo_error_stat};
 
+   wire [159:0] ddr3_rw_stats = {I_ddr3_read_read,              // 159:128
+                                 I_ddr3_read_idle,              // 127:96
+                                 I_ddr3_write_write,            // 95:64
+                                 I_ddr3_write_idle,             // 63:32
+                                 I_ddr3_max_read_stall_count,   // 31:16
+                                 I_ddr3_max_write_stall_count}; // 15:0
 
    always @(*) begin
       if (reg_read) begin
@@ -86,6 +110,14 @@ module reg_openadc_adcfifo #(
             `FIFO_UNDERFLOW_COUNT:      reg_datao_reg = underflow_count;
             `FIFO_NO_UNDERFLOW_ERROR:   reg_datao_reg = {7'b0, no_underflow_errors};
             `CAPTURE_DONE:              reg_datao_reg = {7'b0, capture_done};
+
+            // DDR stuff for Pro:
+            `REG_DDR3_STAT:             reg_datao_reg = {1'b0, I_ddr3_stat};
+            `REG_DDR3_TEST_EN_STAT:     reg_datao_reg = {6'b0, I_ddr3_fail, I_ddr3_pass};
+            `REG_DDR3_TEST_LOOPS:       reg_datao_reg = I_ddr3_iteration[reg_bytecnt*8 +: 8];
+            `REG_DDR3_TEST_ERRORS:      reg_datao_reg = I_ddr3_errors;
+            `REG_XO_EN:                 reg_datao_reg = {5'b0, I_vddr_pgood, O_vddr_enable, O_xo_en};
+            `REG_DDR3_RW_STATS:         reg_datao_reg = ddr3_rw_stats[reg_bytecnt*8 +: 8];
             default:                    reg_datao_reg = 0;
          endcase
       end
@@ -100,19 +132,19 @@ module reg_openadc_adcfifo #(
          clear_fifo_errors <= 1'b0;
          stream_segment_threshold <= 65536;
          no_underflow_errors <= 1'b0;   // disables flagging of *slow* FIFO underflow errors only
+         O_ddr3_en <= 1'b0;
+         O_ddr3_clear_fail <= 1'b0;
+         O_vddr_enable <= 1'b0;
+         O_xo_en <= 1'b0;
       end 
       else if (reg_write) begin
          case (reg_address)
-            `ADC_LOW_RES: begin
-               low_res <= reg_datai[0];
-               low_res_lsb <= reg_datai[1];
-            end
-            `STREAM_SEGMENT_THRESHOLD:
-               stream_segment_threshold[reg_bytecnt*8 +: 8] <= reg_datai; 
-            `FIFO_STAT:
-               clear_fifo_errors <= reg_datai[0];
-            `FIFO_NO_UNDERFLOW_ERROR:
-               no_underflow_errors <= reg_datai[0];
+            `ADC_LOW_RES:               {low_res_lsb, low_res} <= reg_datai[1:0];
+            `STREAM_SEGMENT_THRESHOLD:  stream_segment_threshold[reg_bytecnt*8 +: 8] <= reg_datai; 
+            `FIFO_STAT:                 clear_fifo_errors <= reg_datai[0];
+            `FIFO_NO_UNDERFLOW_ERROR:   no_underflow_errors <= reg_datai[0];
+            `REG_DDR3_TEST_EN_STAT:     {O_ddr3_clear_fail, O_ddr3_en} <= reg_datai[1:0];
+            `REG_XO_EN:                 {O_vddr_enable, O_xo_en} <= reg_datai[1:0];
             default: ;
          endcase
       end

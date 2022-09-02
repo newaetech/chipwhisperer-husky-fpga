@@ -68,6 +68,32 @@ module openadc_interface #(
     // for UART triggering:
     output wire                         cmd_arm_usb,
 
+    // DDR3 (Pro) stuff:
+    output wire                         O_xo_en,
+    output wire                         O_vddr_enable,
+    input  wire                         I_vddr_pgood,
+
+    output wire [15:0]                  ddr3_addr,
+    output wire [2:0]                   ddr3_ba,
+    output wire                         ddr3_cas_n,
+    output wire                         ddr3_ck_n,
+    output wire                         ddr3_ck_p,
+    output wire                         ddr3_cke,
+    output wire                         ddr3_ras_n,
+    output wire                         ddr3_reset_n,
+    output wire                         ddr3_we_n,
+    inout  wire [7:0]                   ddr3_dq,
+    inout  wire                         ddr3_dqs_n,
+    inout  wire                         ddr3_dqs_p,
+    output wire                         ddr3_dm,
+    output wire                         ddr3_cs_n,
+    output wire                         ddr3_odt,
+    input  wire [11:0]                  temp_out,
+
+    // CW310-specific:
+    input wire                          ADC_clk_fbp,
+    input wire                          ADC_clk_fbn,
+
     // for debug only:
     output wire                         slow_fifo_wr,
     output wire                         slow_fifo_rd,
@@ -100,6 +126,12 @@ module openadc_interface #(
     wire       armed_and_ready;
     wire [2:0] fifo_state;
     wire       fifo_rst;
+
+    wire [6:0] ddr3_stat;
+    wire       ddr3_pass;
+    wire       ddr3_fail;
+    wire       ddr3_clear_fail;
+    wire       ddr3_rwtest_en;
 
     assign reset_o = reset;
 
@@ -359,6 +391,15 @@ module openadc_interface #(
    wire [7:0] underflow_count;
    wire no_underflow_errors;
 
+   wire [15:0]  ddr3_iteration;
+   wire [7:0]   ddr3_errors;
+   wire [31:0]  ddr3_read_read;
+   wire [31:0]  ddr3_read_idle;
+   wire [31:0]  ddr3_write_write;
+   wire [31:0]  ddr3_write_idle;
+   wire [15:0]  ddr3_max_read_stall_count;
+   wire [15:0]  ddr3_max_write_stall_count;
+
    assign reg_datao = reg_datao_oadc | reg_datao_fifo | reg_datao_sad | reg_datao_edge;
 
    sad #(
@@ -451,30 +492,48 @@ module openadc_interface #(
    reg_openadc_adcfifo #(
       .pBYTECNT_SIZE    (pBYTECNT_SIZE)
    ) U_reg_openadc_adcfifo (
-      .reset_i              (reset),
-      .clk_usb              (clk_usb),
-      .reg_address          (reg_address), 
-      .reg_bytecnt          (reg_bytecnt), 
-      .reg_datao            (reg_datao_fifo), 
-      .reg_datai            (reg_datai), 
-      .reg_read             (reg_read), 
-      .reg_write            (reg_write), 
-      .fifo_state           (fifo_state),
-      .fifo_empty           (fifo_empty),
-      .fifo_rd_en           (fifo_rd_en),
-      .low_res              (low_res),
-      .low_res_lsb          (low_res_lsb),
-      .fast_fifo_read_mode  (fast_fifo_read),
-      .stream_segment_threshold (stream_segment_threshold),
-      .fifo_error_stat      (fifo_error_stat),
-      .fifo_first_error_stat(fifo_first_error_stat),
-      .fifo_first_error_state (fifo_first_error_state),
-      .fifo_read_count      (fifo_read_count),
-      .fifo_read_count_error_freeze (fifo_read_count_error_freeze),
-      .underflow_count      (underflow_count),
-      .no_underflow_errors  (no_underflow_errors),
-      .clear_fifo_errors    (clear_fifo_errors),
-      .capture_done         (capture_done)
+      .reset_i                          (reset),
+      .clk_usb                          (clk_usb),
+      .reg_address                      (reg_address), 
+      .reg_bytecnt                      (reg_bytecnt), 
+      .reg_datao                        (reg_datao_fifo), 
+      .reg_datai                        (reg_datai), 
+      .reg_read                         (reg_read), 
+      .reg_write                        (reg_write), 
+      .fifo_state                       (fifo_state),
+      .fifo_empty                       (fifo_empty),
+      .fifo_rd_en                       (fifo_rd_en),
+      .low_res                          (low_res),
+      .low_res_lsb                      (low_res_lsb),
+      .fast_fifo_read_mode              (fast_fifo_read),
+      .stream_segment_threshold         (stream_segment_threshold),
+      .fifo_error_stat                  (fifo_error_stat),
+      .fifo_first_error_stat            (fifo_first_error_stat),
+      .fifo_first_error_state           (fifo_first_error_state),
+      .fifo_read_count                  (fifo_read_count),
+      .fifo_read_count_error_freeze     (fifo_read_count_error_freeze),
+      .underflow_count                  (underflow_count),
+      .no_underflow_errors              (no_underflow_errors),
+      .clear_fifo_errors                (clear_fifo_errors),
+      .capture_done                     (capture_done),
+
+      .O_ddr3_en                        (ddr3_rwtest_en             ),
+      .O_xo_en                          (O_xo_en                    ),
+      .O_vddr_enable                    (O_vddr_enable              ),
+      .I_vddr_pgood                     (I_vddr_pgood               ),
+      .I_ddr3_pass                      (ddr3_pass                  ),
+      .I_ddr3_fail                      (ddr3_fail                  ),
+      .O_ddr3_clear_fail                (ddr3_clear_fail            ),
+      .I_ddr3_stat                      (ddr3_stat                  ),
+      .I_ddr3_iteration                 (ddr3_iteration             ),
+      .I_ddr3_errors                    (ddr3_errors                ),
+      .I_ddr3_read_read                 (ddr3_read_read             ),
+      .I_ddr3_read_idle                 (ddr3_read_idle             ),
+      .I_ddr3_write_write               (ddr3_write_write           ),
+      .I_ddr3_write_idle                (ddr3_write_idle            ),
+      .I_ddr3_max_read_stall_count      (ddr3_max_read_stall_count  ),
+      .I_ddr3_max_write_stall_count     (ddr3_max_write_stall_count )
+
    );
 
 
@@ -494,58 +553,148 @@ module openadc_interface #(
    assign amp_gain = PWM_accumulator[8];
 
 
-   fifo_top_husky U_fifo(
-      .reset                    (reset),
+   `ifdef PRO
+       fifo_top_husky_pro U_fifo (
+          .reset                    (reset),
 
-      .adc_datain               (ADC_data_tofifo),
-      .adc_sampleclk            (ADC_clk_sample),
-      .capture_active           (capture_active),
-      .capture_go               (capture_go),
-      .adc_capture_stop         (adc_capture_done),
-      .arm_i                    (armed),
-      .arm_usb                  (cmd_arm_usb),
-      .num_segments             (num_segments),
-      .segment_cycles           (segment_cycles),
-      .segment_cycle_counter_en (segment_cycle_counter_en),
+          .adc_datain               (ADC_data_tofifo),
+          .adc_sampleclk            (ADC_clk_sample),
+          .capture_active           (capture_active),
+          .capture_go               (capture_go),
+          .adc_capture_stop         (adc_capture_done),
+          .arm_i                    (armed),
+          .arm_usb                  (cmd_arm_usb),
+          .num_segments             (num_segments),
+          .segment_cycles           (segment_cycles),
+          .segment_cycle_counter_en (segment_cycle_counter_en),
 
-      .clk_usb                  (clk_usb),
-      .fifo_read_fifoen         (fifo_rd_en),
-      .fifo_read_fifoempty      (fifo_empty),
-      .fifo_read_data           (fifo_dout),
-      .low_res                  (low_res),
-      .low_res_lsb              (low_res_lsb),
-      .fast_fifo_read_mode      (fast_fifo_read),
-      .stream_segment_threshold (stream_segment_threshold),
+          .clk_usb                  (clk_usb),
+          .fifo_read_fifoen         (fifo_rd_en),
+          .fifo_read_fifoempty      (fifo_empty),
+          .fifo_read_data           (fifo_dout),
+          .low_res                  (low_res),
+          .low_res_lsb              (low_res_lsb),
+          .fast_fifo_read_mode      (fast_fifo_read),
+          .stream_segment_threshold (stream_segment_threshold),
 
-      .presample_i              (presamples),
-      .max_samples_i            (maxsamples),
-      .max_samples_o            (maxsamples_limit),
-      .downsample_i             (downsample),
+          .presample_i              (presamples),
+          .max_samples_i            (maxsamples),
+          .max_samples_o            (maxsamples_limit),
+          .downsample_i             (downsample),
 
-      .fifo_overflow            (fifo_overflow),
-      .stream_mode              (fifo_stream),
-      .error_flag               (fifo_error_flag),
-      .error_stat               (fifo_error_stat),
-      .first_error_stat         (fifo_first_error_stat),
-      .first_error_state        (fifo_first_error_state),
-      .clear_fifo_errors        (clear_fifo_errors),
-      .stream_segment_available (stream_segment_available),
-      .no_clip_errors           (no_clip_errors),
-      .no_gain_errors           (no_gain_errors),
-      .clip_test                (clip_test),
-      .underflow_count          (underflow_count),
-      .no_underflow_errors      (no_underflow_errors),
-      .capture_done             (capture_done),
-      .armed_and_ready          (armed_and_ready),
-      .state                    (fifo_state),
+          .fifo_overflow            (fifo_overflow),
+          .stream_mode              (fifo_stream),
+          .error_flag               (fifo_error_flag),
+          .error_stat               (fifo_error_stat),
+          .first_error_stat         (fifo_first_error_stat),
+          .first_error_state        (fifo_first_error_state),
+          .clear_fifo_errors        (clear_fifo_errors),
+          .stream_segment_available (stream_segment_available),
+          .no_clip_errors           (no_clip_errors),
+          .no_gain_errors           (no_gain_errors),
+          .clip_test                (clip_test),
+          .underflow_count          (underflow_count),
+          .no_underflow_errors      (no_underflow_errors),
+          .capture_done             (capture_done),
+          .armed_and_ready          (armed_and_ready),
+          .state                    (fifo_state),
 
-      .slow_fifo_wr             (slow_fifo_wr),
-      .slow_fifo_rd             (slow_fifo_rd),
-      .fifo_read_count          (fifo_read_count),
-      .fifo_read_count_error_freeze (fifo_read_count_error_freeze),
-      .fifo_rst                 (fifo_rst),
-      .debug                    (fifo_debug)
-   );
+          .ddr3_addr                (ddr3_addr    ),
+          .ddr3_ba                  (ddr3_ba      ),
+          .ddr3_cas_n               (ddr3_cas_n   ),
+          .ddr3_ck_n                (ddr3_ck_n    ),
+          .ddr3_ck_p                (ddr3_ck_p    ),
+          .ddr3_cke                 (ddr3_cke     ),
+          .ddr3_ras_n               (ddr3_ras_n   ),
+          .ddr3_reset_n             (ddr3_reset_n ),
+          .ddr3_we_n                (ddr3_we_n    ),
+          .ddr3_dq                  (ddr3_dq      ),
+          .ddr3_dqs_n               (ddr3_dqs_n   ),
+          .ddr3_dqs_p               (ddr3_dqs_p   ),
+          .ddr3_dm                  (ddr3_dm      ),
+          .ddr3_cs_n                (ddr3_cs_n    ),
+          .ddr3_odt                 (ddr3_odt     ),
+          .ddr3_stat                (ddr3_stat    ),
+          .ddr3_pass                (ddr3_pass    ),
+          .ddr3_fail                (ddr3_fail    ),
+          .ddr3_clear_fail          (ddr3_clear_fail),
+          .ddr3_rwtest_en           (ddr3_rwtest_en),
+
+          .ddr3_iteration           (ddr3_iteration             ),
+          .ddr3_errors              (ddr3_errors                ),
+          .ddr3_read_read           (ddr3_read_read             ),
+          .ddr3_read_idle           (ddr3_read_idle             ),
+          .ddr3_write_write         (ddr3_write_write           ),
+          .ddr3_write_idle          (ddr3_write_idle            ),
+          .ddr3_max_read_stall_count (ddr3_max_read_stall_count  ),
+          .ddr3_max_write_stall_count(ddr3_max_write_stall_count ),
+
+          .temp_out                 (temp_out),
+          .ADC_clk_fbp              (ADC_clk_fbp ),
+          .ADC_clk_fbn              (ADC_clk_fbn ),
+
+          .slow_fifo_wr             (slow_fifo_wr),
+          .slow_fifo_rd             (slow_fifo_rd),
+          .fifo_read_count          (fifo_read_count),
+          .fifo_read_count_error_freeze (fifo_read_count_error_freeze),
+          .fifo_rst                 (fifo_rst),
+          .debug                    (fifo_debug)
+       );
+
+   `else
+       fifo_top_husky U_fifo(
+          .reset                    (reset),
+
+          .adc_datain               (ADC_data_tofifo),
+          .adc_sampleclk            (ADC_clk_sample),
+          .capture_active           (capture_active),
+          .capture_go               (capture_go),
+          .adc_capture_stop         (adc_capture_done),
+          .arm_i                    (armed),
+          .arm_usb                  (cmd_arm_usb),
+          .num_segments             (num_segments),
+          .segment_cycles           (segment_cycles),
+          .segment_cycle_counter_en (segment_cycle_counter_en),
+
+          .clk_usb                  (clk_usb),
+          .fifo_read_fifoen         (fifo_rd_en),
+          .fifo_read_fifoempty      (fifo_empty),
+          .fifo_read_data           (fifo_dout),
+          .low_res                  (low_res),
+          .low_res_lsb              (low_res_lsb),
+          .fast_fifo_read_mode      (fast_fifo_read),
+          .stream_segment_threshold (stream_segment_threshold),
+
+          .presample_i              (presamples),
+          .max_samples_i            (maxsamples),
+          .max_samples_o            (maxsamples_limit),
+          .downsample_i             (downsample),
+
+          .fifo_overflow            (fifo_overflow),
+          .stream_mode              (fifo_stream),
+          .error_flag               (fifo_error_flag),
+          .error_stat               (fifo_error_stat),
+          .first_error_stat         (fifo_first_error_stat),
+          .first_error_state        (fifo_first_error_state),
+          .clear_fifo_errors        (clear_fifo_errors),
+          .stream_segment_available (stream_segment_available),
+          .no_clip_errors           (no_clip_errors),
+          .no_gain_errors           (no_gain_errors),
+          .clip_test                (clip_test),
+          .underflow_count          (underflow_count),
+          .no_underflow_errors      (no_underflow_errors),
+          .capture_done             (capture_done),
+          .armed_and_ready          (armed_and_ready),
+          .state                    (fifo_state),
+
+          .slow_fifo_wr             (slow_fifo_wr),
+          .slow_fifo_rd             (slow_fifo_rd),
+          .fifo_read_count          (fifo_read_count),
+          .fifo_read_count_error_freeze (fifo_read_count_error_freeze),
+          .fifo_rst                 (fifo_rst),
+          .debug                    (fifo_debug)
+       );
+   `endif
 
 
 endmodule

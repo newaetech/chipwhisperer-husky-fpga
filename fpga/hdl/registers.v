@@ -355,6 +355,13 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define CLOCKGLITCH_POWERED_DOWN 111
 `define EDGE_TRIGGER_COUNT      113
 
+`define REG_DDR3_STAT           114
+`define REG_DDR3_TEST_LOOPS     115
+`define REG_DDR3_TEST_ERRORS    116
+`define REG_XO_EN               117
+`define REG_DDR3_RW_STATS       118
+`define REG_DDR3_TEST_EN_STAT   119
+
 `define REGISTER_VERSION 1
 
 `define TW_MAIN_REG_SELECT      2'b10

@@ -50,6 +50,7 @@ compile:
 	-Wselect-range \
 	-DNOMIG \
 	-DCW310 \
+	-DPRO \
 	-DNOFIFO \
 	-DTRACE \
 
@@ -77,9 +78,10 @@ lint:
 	-D__ICARUS__ \
 	-DNOMIG \
 	-DCW310 \
+	-DPRO \
 	-DNOFIFO \
 	-DTRACE \
-	--top-module cw310_wrapper \
+	--top-module cwhusky_cw310_top \
 	2>&1 | tee lint.out \
 
 clean:

@@ -35,7 +35,8 @@ module xadc #(
    input  wire         reg_read,     // Read flag
    input  wire         reg_write,    // Write flag
 
-   output wire         xadc_error
+   output wire         xadc_error,
+   output wire [11:0]  O_xadc_temp_out
 
 ); 
 
@@ -170,8 +171,9 @@ module xadc #(
           .dwe_in               (drp_dwe),              // input wire dwe_in
           .drdy_out             (drp_drdy),             // output wire drdy_out
           .do_out               (drp_dout),             // output wire [15 : 0] do_out
-          .dclk_in              (clk_usb),              // input wire dclk_in
-          .reset_in             (reset_i),              // input wire reset_in
+          // re-add these if AXI interface is disabled:
+          //.dclk_in              (clk_usb),              // input wire dclk_in
+          //.reset_in             (reset_i),              // input wire reset_in
           .vp_in                (1'b0),                 // input wire vp_in
           .vn_in                (1'b0),                 // input wire vn_in
           .user_temp_alarm_out  (user_temp_alarm_out),  // output wire user_temp_alarm_out
@@ -183,7 +185,20 @@ module xadc #(
           .vbram_alarm_out      (vbram_alarm_out),      // output wire vbram_alarm_out
           .alarm_out            (),                     // output wire alarm_out
           .eos_out              (),                     // output wire eos_out
-          .busy_out             ()                      // output wire busy_out
+          .busy_out             (),                     // output wire busy_out
+          .temp_out             (O_xadc_temp_out),      // output wire [11:0] temp_out
+          // AXI4-stream interface is enabled because it is required for the temp_out output 
+          // (which is required if MIG IP is instantiated); if not using IP which requires temp_out,
+          // you can disable this: (don't forget to uncomment the dclk_in clock input)
+          //.dclk_in              (clk_usb),            // required if AXI4-stream interface is disabled
+          .m_axis_tvalid        (),                     // output wire m_axis_tvalid
+          .m_axis_tready        (1'b0),                 // input wire m_axis_tready
+          .m_axis_tdata         (),                     // output wire [15 : 0] m_axis_tdata
+          .m_axis_tid           (),                     // output wire [4 : 0] m_axis_tid
+          .m_axis_aclk          (clk_usb),              // input wire m_axis_aclk
+          .s_axis_aclk          (clk_usb),              // input wire s_axis_aclk
+          .m_axis_resetn        (~reset_i)              // input wire m_axis_resetn
+
         );
 
    `endif

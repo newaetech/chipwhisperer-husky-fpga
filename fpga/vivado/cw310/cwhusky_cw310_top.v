@@ -34,9 +34,25 @@ module cwhusky_cw310_top(
     output wire        LED_GLITCHOUT_HIGHPWR,   // CW310 new
     output wire        LED_GLITCHOUT_LOWPWR,    // CW310 new
 
+    // DDR3 (Pro) stuff:
     output wire        xo_en,
     output wire        vddr_enable,
     input  wire        vddr_pgood,
+    output wire [15:0] ddr3_addr,
+    output wire [2:0]  ddr3_ba,
+    output wire        ddr3_cas_n,
+    output wire        ddr3_ck_n,
+    output wire        ddr3_ck_p,
+    output wire        ddr3_cke,
+    output wire        ddr3_ras_n,
+    output wire        ddr3_reset_n,
+    output wire        ddr3_we_n,
+    inout  wire [7:0]  ddr3_dq,
+    inout  wire        ddr3_dqs_n,
+    inout  wire        ddr3_dqs_p,
+    output wire        ddr3_dm,
+    output wire        ddr3_cs_n,
+    output wire        ddr3_odt,
 
     /* FPGA - USB Interface */
     inout wire [7:0]    USB_Data,
@@ -55,8 +71,9 @@ module cwhusky_cw310_top(
     //input wire          FPGA_BONUS4,
 
     // ADC
-    input wire          ADC_clk_fbp,
+    input wire          ADC_clk_fbp, // CW310: these are actually used for the MIG reference clock input
     input wire          ADC_clk_fbn,
+    input wire          PLL_CLK1,    // CW310 PLL is used as the ADC clock
     //output wire         ADC_CLKP,
     //output wire         ADC_CLKN,
     //output wire         ADC_SCLK,     // CW310 new
@@ -105,7 +122,7 @@ module cwhusky_cw310_top(
     inout wire          target_io2, // Normally RXD
     inout wire          target_io1, // Normally TXD / SmartCard Reset
     input wire          target_hs1, // Clock from victim device
-    output wire         target_hs2  // Clock to victim device
+    output wire         target_hs2, // Clock to victim device
 
     //output wire         glitchout_highpwr, // high-speed glitch output
     //output wire         glitchout_lowpwr, // high-speed glitch output 
@@ -113,7 +130,7 @@ module cwhusky_cw310_top(
     //output wire         target_poweron,
 
     //output wire         TRIG_GLITCHOUT, //trigger/glitch out MCX
-    //inout  wire         AUXIO // AUX I/O MCX
+    inout  wire         AUXIO // AUX I/O MCX
 );
 
     parameter pBYTECNT_SIZE = 7;
@@ -136,7 +153,7 @@ module cwhusky_cw310_top(
    wire          SAM_MOSI;
    wire          SAM_SPCK;
    wire          SAM_CS;
-   wire          AUXIO;
+   //wire          AUXIO = target_hs1;
    wire          USB_SPARE0;
    wire          USB_ALEn = 1'b1;
 
@@ -213,8 +230,7 @@ module cwhusky_cw310_top(
    wire [7:0] read_data_xadc;
    wire [7:0] read_data_la;
    wire [7:0] read_data_trace;
-   wire [7:0] read_data_cw310;
-   always @(posedge clk_usb_buf) read_data_reg <= read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc | read_data_la | read_data_trace | read_data_cw310;
+   always @(posedge clk_usb_buf) read_data_reg <= read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc | read_data_la | read_data_trace;
    //always @(*) read_data_reg = read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc | read_data_la;
    assign read_data = (reg_address == `ADCREAD_ADDR)? fifo_dout : read_data_reg;
 
@@ -237,6 +253,7 @@ module cwhusky_cw310_top(
    wire trace_error_flag;
    wire error_flag = fifo_error_flag | xadc_error_flag | trace_error_flag;
    wire fast_fifo_read;
+   wire [11:0] xadc_temp_out;
 
    wire slow_fifo_wr;
    wire slow_fifo_rd;
@@ -319,7 +336,7 @@ module cwhusky_cw310_top(
       .cwusb_isout      (cmdfifo_isout), 
       .fast_fifo_read   (fast_fifo_read),
       .reg_address      (reg_address), 
-      .reg_bytecnt      (),  // on CW310 we use the LSB of the USB address instead
+      .reg_bytecnt      (),  // on CW310 we use the LSBits of the USB address instead
       .reg_datao        (write_data), 
       .reg_datai        (read_data),
       .reg_read         (reg_read), 
@@ -460,6 +477,31 @@ module cwhusky_cw310_top(
         .trigger_in             (decode_uart_input),
 
         .flash_pattern          (flash_pattern),
+
+        .O_xo_en                (xo_en       ),
+        .O_vddr_enable          (vddr_enable ),
+        .I_vddr_pgood           (vddr_pgood  ),
+        .temp_out               (xadc_temp_out),
+
+        .ddr3_addr              (ddr3_addr     ),
+        .ddr3_ba                (ddr3_ba       ),
+        .ddr3_cas_n             (ddr3_cas_n    ),
+        .ddr3_ck_n              (ddr3_ck_n     ),
+        .ddr3_ck_p              (ddr3_ck_p     ),
+        .ddr3_cke               (ddr3_cke      ),
+        .ddr3_ras_n             (ddr3_ras_n    ),
+        .ddr3_reset_n           (ddr3_reset_n  ),
+        .ddr3_we_n              (ddr3_we_n     ),
+        .ddr3_dq                (ddr3_dq       ),
+        .ddr3_dqs_n             (ddr3_dqs_n    ),
+        .ddr3_dqs_p             (ddr3_dqs_p    ),
+        .ddr3_dm                (ddr3_dm       ),
+        .ddr3_cs_n              (ddr3_cs_n     ),
+        .ddr3_odt               (ddr3_odt      ),
+
+        // CW310-specific:
+        .ADC_clk_fbp            (ADC_clk_fbp ),
+        .ADC_clk_fbn            (ADC_clk_fbn ),
 
         .slow_fifo_wr           (slow_fifo_wr),
         .slow_fifo_rd           (slow_fifo_rd),
@@ -620,22 +662,6 @@ module cwhusky_cw310_top(
         .debug2         (clockglitch_debug2)
    );
 
-   reg_cw310 #(
-        .pBYTECNT_SIZE  (pBYTECNT_SIZE)
-   ) reg_cw310 (
-        .reset          (reg_rst),
-        .clk_usb        (clk_usb_buf),
-        .reg_address    (reg_address),
-        .reg_bytecnt    (reg_bytecnt), 
-        .reg_datao      (read_data_cw310), 
-        .reg_datai      (write_data), 
-        .reg_read       (reg_read), 
-        .reg_write      (reg_write), 
-        .O_xo_en        (xo_en),
-        .O_vddr_enabled (vddr_enable),
-        .I_vddr_pgood   (vddr_pgood)
-   );
-
 
    `ifdef LOGIC_ANALYZER
    // NOTE: while this block is ifdef'd, building without LOGIC_ANALYZER
@@ -730,92 +756,20 @@ module cwhusky_cw310_top(
                      (enable_avrprog) ? target_MISO : 1'bZ;
 
 
-   /* generate ADC output differential clock
-   `ifdef __ICARUS__
-      assign ADC_CLKP = extclk_mux;
-      assign ADC_CLKN = extclk_mux;
+   // NOTE: this is very CW310-specific:
 
-   `else
-      wire adc_clk_out_oddr;
-      ODDR  #(
-         .DDR_CLK_EDGE     ("OPPOSITE_EDGE"),
-         .INIT             (1'b0),
-         .SRTYPE           ("SYNC")
-      ) U_ODDR_adc_clk_out (
-         .Q                (adc_clk_out_oddr),
-         .C                (extclk_mux),
-         .CE               (1'b1),
-         .D1               (1'b1),
-         .D2               (1'b0),
-         .R                (1'b0),
-         .S                (1'b0)
-      );
+`ifdef __ICARUS__
+    assign ADC_clk_fb = PLL_CLK1;
+    assign pll_fpga_clk = PLL_CLK1;
 
-      OBUFDS #(
-         .IOSTANDARD       ("LVDS_25"),
-         .SLEW             ("FAST")
-      ) U_OBUFDS_adc_clk_out (
-         .O                (ADC_CLKP),
-         .OB               (ADC_CLKN),
-         .I                (adc_clk_out_oddr)
-      );
-   `endif
-   */
+`else
+    BUFG BUFG_ADC_clk_fb (
+       .O(ADC_clk_fb),
+       .I(PLL_CLK1)
+    );
 
-
-   // take in ADC input differential clock
-   `ifdef __ICARUS__
-      assign ADC_clk_fb = ADC_clk_fbp;
-      assign pll_fpga_clk = ADC_clk_fb;
-
-   `else
-      wire ADC_clk_fb_prebuf;
-      IBUFDS #(
-         .DIFF_TERM        ("FALSE"),
-         .IBUF_LOW_PWR     ("FALSE"),
-         .IOSTANDARD       ("LVDS_25")
-      ) U_IBUFDS_adc_clk_fb (
-         .I                (ADC_clk_fbp),
-         .IB               (ADC_clk_fbn),
-         //.O                (ADC_clk_fb_prebuf)
-         .O                (ADC_clk_fb)
-      );
-
-      /*
-      BUFG BUFG_adc_clk (
-         .O(ADC_clk_fb),
-         .I(ADC_clk_fb_prebuf)
-      );
-      */
-      BUFR BUFG_pll_fpga_clk (
-         .O(pll_fpga_clk),
-         .I(ADC_clk_fb)
-      );
-
-   `endif
-
-
-   /*
-   // take in PLL input differential clock
-   `ifdef __ICARUS__
-      assign pll_fpga_clk = PLLFPGAP;
-
-   `else
-      `ifdef CW310
-         assign pll_fpga_clk = ADC_clk_fb;
-      `else
-      IBUFDS #(
-         .DIFF_TERM        ("FALSE"),
-         .IBUF_LOW_PWR     ("FALSE"),
-         .IOSTANDARD       ("LVDS_25")
-      ) U_IBUFDS_pll_fpga_clk (
-         .I                (PLLFPGAP),
-         .IB               (PLLFPGAN),
-         .O                (pll_fpga_clk)
-      );
-      `endif
-   `endif
-   */
+    assign pll_fpga_clk = ADC_clk_fb;
+`endif
 
 
    assign ADC_data = 0;
@@ -909,7 +863,8 @@ module cwhusky_cw310_top(
           .reg_datai        (write_data), 
           .reg_read         (reg_read), 
           .reg_write        (reg_write), 
-          .xadc_error       (xadc_error_flag)
+          .xadc_error       (xadc_error_flag),
+          .O_xadc_temp_out  (xadc_temp_out)
        ); 
 
    `else
