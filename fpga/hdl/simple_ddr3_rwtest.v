@@ -72,7 +72,15 @@ module simple_ddr3_rwtest #(
    input  wire                          app_rd_data_end,
    input  wire                          app_rd_data_valid,
    input  wire                          app_rdy,
-   input  wire                          app_wdf_rdy
+   input  wire                          app_wdf_rdy,
+
+   // debug only:
+   output reg  [3:0]                    state,
+   output reg                           comp_error,
+   output reg                           comp_good,
+   output wire [31:0]                   expected_payload,
+   output reg  [pADDR_WIDTH-1:0]        verify_addr,
+   output reg  [31:0]                   lfsr
 );
 
 localparam pS_WRITE0          = 4'd0;
@@ -84,7 +92,7 @@ localparam pS_READ2           = 4'd5;
 localparam pS_WAIT_READS_DONE = 4'd6;
 localparam pS_IDLE            = 4'd7;
 localparam pS_LOAD_LFSR       = 4'd8;
-reg [3:0] state, next_state;
+reg [3:0] next_state;
 
 localparam CMD_WRITE = 3'b000;
 localparam CMD_READ = 3'b001;
@@ -94,15 +102,10 @@ assign app_ref_req = 0;
 assign app_zq_req = 0;
 assign app_wdf_mask = 0;
 
-reg comp_error;
-reg comp_good;
-
 reg reset_address;
 reg incr_address;
 reg incr_iteration;
 reg load_lfsr;
-reg  [pADDR_WIDTH-1:0] verify_addr;
-reg [31:0] lfsr;
 wire read_valid;
 reg write_valid;
 
@@ -110,7 +113,7 @@ reg [15:0] read_stall_count;
 reg [15:0] write_stall_count;
 
 assign app_wdf_data = lfsr ^ app_addr;
-wire [31:0] expected_payload = lfsr ^ verify_addr;
+assign expected_payload = lfsr ^ verify_addr;
 
 wire writing = (state == pS_WRITE0) ||
                (state == pS_WRITE1) ||
@@ -407,40 +410,6 @@ always @ (posedge clk) begin
     end
 end
 
-
-`ifdef ILA_DDR3
-ila_simple_ddr3 U_ila_ddr3 (
-	.clk            (clk                ),      // input wire clk
-	.probe0         (active             ),      // input wire [0:0]  probe0  
-	.probe1         (init_calib_complete),      // input wire [0:0]  probe1 
-	.probe2         (pass               ),      // input wire [0:0]  probe2 
-	.probe3         (fail               ),      // input wire [0:0]  probe3 
-	.probe4         (app_addr           ),      // input wire [29:0] probe4 
-	.probe5         (app_cmd            ),      // input wire [2:0]  probe5 
-	.probe6         (app_en             ),      // input wire [0:0]  probe6 
-	.probe7         (app_wdf_data       ),      // input wire [31:0] probe7 
-	.probe8         (app_wdf_end        ),      // input wire [0:0]  probe8 
-	.probe9         (app_wdf_wren       ),      // input wire [0:0]  probe9 
-	.probe10        (app_ref_ack        ),      // input wire [0:0]  probe10 
-	.probe11        (app_rd_data        ),      // input wire [31:0] probe11 
-	.probe12        (app_rd_data_end    ),      // input wire [0:0]  probe12 
-	.probe13        (app_rd_data_valid  ),      // input wire [0:0]  probe13 
-	.probe14        (app_rdy            ),      // input wire [0:0]  probe14 
-	.probe15        (app_wdf_rdy        ),      // input wire [0:0]  probe15
-	.probe16        (state              ),      // input wire [3:0]  probe16
-	.probe17        (load_lfsr          ),      // input wire [0:0]  probe17
-	.probe18        (iteration          ),      // input wire [15:0] probe18
-	.probe19        (comp_error         ),      // input wire [0:0]  probe19
-	.probe20        (comp_good          ),      // input wire [0:0]  probe20
-	.probe21        (writing            ),      // input wire [0:0]  probe21
-	.probe22        (reading            ),      // input wire [0:0]  probe22
-	.probe23        (expected_payload   ),      // input wire [31:0] probe23
-	.probe24        (verify_addr        ),      // input wire [29:0] probe24 
-	.probe25        (lfsr               ),      // input wire [31:0] probe25 
-	.probe26        (write_valid        ),      // input wire [0:0]  probe26 
-	.probe27        (read_valid         )       // input wire [0:0]  probe27 
-);
-`endif
 
 endmodule
 

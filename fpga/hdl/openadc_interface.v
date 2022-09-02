@@ -128,9 +128,9 @@ module openadc_interface #(
     wire       fifo_rst;
 
     wire [6:0] ddr3_stat;
-    wire       ddr3_pass;
-    wire       ddr3_fail;
-    wire       ddr3_clear_fail;
+    wire       ddr3_test_pass;
+    wire       ddr3_test_fail;
+    wire       ddr3_test_clear_fail;
     wire       ddr3_rwtest_en;
 
     assign reset_o = reset;
@@ -391,8 +391,8 @@ module openadc_interface #(
    wire [7:0] underflow_count;
    wire no_underflow_errors;
 
-   wire [15:0]  ddr3_iteration;
-   wire [7:0]   ddr3_errors;
+   wire [15:0]  ddr3_test_iteration;
+   wire [7:0]   ddr3_test_errors;
    wire [31:0]  ddr3_read_read;
    wire [31:0]  ddr3_read_idle;
    wire [31:0]  ddr3_write_write;
@@ -521,12 +521,12 @@ module openadc_interface #(
       .O_xo_en                          (O_xo_en                    ),
       .O_vddr_enable                    (O_vddr_enable              ),
       .I_vddr_pgood                     (I_vddr_pgood               ),
-      .I_ddr3_pass                      (ddr3_pass                  ),
-      .I_ddr3_fail                      (ddr3_fail                  ),
-      .O_ddr3_clear_fail                (ddr3_clear_fail            ),
+      .I_ddr3_pass                      (ddr3_test_pass             ),
+      .I_ddr3_fail                      (ddr3_test_fail             ),
+      .O_ddr3_clear_fail                (ddr3_test_clear_fail       ),
       .I_ddr3_stat                      (ddr3_stat                  ),
-      .I_ddr3_iteration                 (ddr3_iteration             ),
-      .I_ddr3_errors                    (ddr3_errors                ),
+      .I_ddr3_iteration                 (ddr3_test_iteration        ),
+      .I_ddr3_errors                    (ddr3_test_errors           ),
       .I_ddr3_read_read                 (ddr3_read_read             ),
       .I_ddr3_read_idle                 (ddr3_read_idle             ),
       .I_ddr3_write_write               (ddr3_write_write           ),
@@ -615,13 +615,13 @@ module openadc_interface #(
           .ddr3_cs_n                (ddr3_cs_n    ),
           .ddr3_odt                 (ddr3_odt     ),
           .ddr3_stat                (ddr3_stat    ),
-          .ddr3_pass                (ddr3_pass    ),
-          .ddr3_fail                (ddr3_fail    ),
-          .ddr3_clear_fail          (ddr3_clear_fail),
+          .ddr3_test_pass           (ddr3_test_pass    ),
+          .ddr3_test_fail           (ddr3_test_fail    ),
+          .ddr3_test_clear_fail     (ddr3_test_clear_fail),
           .ddr3_rwtest_en           (ddr3_rwtest_en),
 
-          .ddr3_iteration           (ddr3_iteration             ),
-          .ddr3_errors              (ddr3_errors                ),
+          .ddr3_test_iteration      (ddr3_test_iteration        ),
+          .ddr3_test_errors         (ddr3_test_errors           ),
           .ddr3_read_read           (ddr3_read_read             ),
           .ddr3_read_idle           (ddr3_read_idle             ),
           .ddr3_write_write         (ddr3_write_write           ),

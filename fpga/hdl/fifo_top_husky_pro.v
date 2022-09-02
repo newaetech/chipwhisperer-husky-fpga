@@ -87,12 +87,12 @@ module fifo_top_husky_pro (
     output wire         ddr3_cs_n,
     output wire         ddr3_odt,
     output wire [6:0]   ddr3_stat,
-    output wire         ddr3_pass,
-    output wire         ddr3_fail,
-    input  wire         ddr3_clear_fail,
+    output wire         ddr3_test_pass,
+    output wire         ddr3_test_fail,
+    input  wire         ddr3_test_clear_fail,
     input  wire         ddr3_rwtest_en,
-    output wire [15:0]  ddr3_iteration,
-    output wire [7:0]   ddr3_errors,
+    output wire [15:0]  ddr3_test_iteration,
+    output wire [7:0]   ddr3_test_errors,
     output wire [31:0]  ddr3_read_read,
     output wire [31:0]  ddr3_read_idle,
     output wire [31:0]  ddr3_write_write,
@@ -206,6 +206,13 @@ module fifo_top_husky_pro (
     wire [1:0] dbg_rdlvl_err;
     wire  dbg_wrcal_err;
     wire  init_calib_complete;
+
+    wire [3:0] ddr3_test_state;
+    wire ddr3_test_comp_error;
+    wire ddr3_test_comp_good;
+    wire [31:0] ddr3_test_expected_data;
+    wire [29:0] ddr3_test_verify_addr;
+    wire [31:0] ddr3_test_lfsr;
 
     assign dbg_pi_phaselock_err = ddr3_ila_basic_w[6];
     assign dbg_pi_dqsfound_err  = ddr3_ila_basic_w[9];
@@ -1015,12 +1022,12 @@ module fifo_top_husky_pro (
       .reset                               (reset               ),
       .active_usb                          (ddr3_rwtest_en      ),
       .init_calib_complete                 (init_calib_complete ),
-      .pass                                (ddr3_pass           ),
-      .fail                                (ddr3_fail           ),
-      .clear_fail                          (ddr3_clear_fail     ),
+      .pass                                (ddr3_test_pass      ),
+      .fail                                (ddr3_test_fail      ),
+      .clear_fail                          (ddr3_test_clear_fail),
 
-      .iteration                           (ddr3_iteration      ),
-      .errors                              (ddr3_errors         ),
+      .iteration                           (ddr3_test_iteration ),
+      .errors                              (ddr3_test_errors    ),
       .error_addr                          (                    ),
       .ddrtest_incr                        (8'd8                ),
       .ddrtest_stop                        (32'h1FFF_FFF8       ),
@@ -1050,7 +1057,15 @@ module fifo_top_husky_pro (
       .app_rd_data_end                     (app_rd_data_end     ),
       .app_rd_data_valid                   (app_rd_data_valid   ),
       .app_rdy                             (app_rdy             ),
-      .app_wdf_rdy                         (app_wdf_rdy         )
+      .app_wdf_rdy                         (app_wdf_rdy         ),
+
+      // debug only:
+      .state                               (ddr3_test_state         ),
+      .comp_error                          (ddr3_test_comp_error    ),
+      .comp_good                           (ddr3_test_comp_good     ),
+      .expected_payload                    (ddr3_test_expected_data ),
+      .verify_addr                         (ddr3_test_verify_addr   ),
+      .lfsr                                (ddr3_test_lfsr          )
    );
 
 
@@ -1125,6 +1140,36 @@ module fifo_top_husky_pro (
                    arming,
                    capture_go,
                    state};
+
+`ifdef ILA_DDR3
+ila_ddr3 U_ila_ddr3 (
+    .clk            (ui_clk             ),      // input wire clk
+    .probe0         (ddr3_rwtest_en     ),      // input wire [0:0]  probe0  
+    .probe1         (init_calib_complete),      // input wire [0:0]  probe1 
+    .probe2         (ddr3_test_pass     ),      // input wire [0:0]  probe2 
+    .probe3         (ddr3_test_fail     ),      // input wire [0:0]  probe3 
+    .probe4         (app_addr           ),      // input wire [29:0] probe4 
+    .probe5         (app_cmd            ),      // input wire [2:0]  probe5 
+    .probe6         (app_en             ),      // input wire [0:0]  probe6 
+    .probe7         (app_wdf_data       ),      // input wire [31:0] probe7 
+    .probe8         (app_wdf_end        ),      // input wire [0:0]  probe8 
+    .probe9         (app_wdf_wren       ),      // input wire [0:0]  probe9 
+    .probe10        (app_ref_ack        ),      // input wire [0:0]  probe10 
+    .probe11        (app_rd_data        ),      // input wire [31:0] probe11 
+    .probe12        (app_rd_data_end    ),      // input wire [0:0]  probe12 
+    .probe13        (app_rd_data_valid  ),      // input wire [0:0]  probe13 
+    .probe14        (app_rdy            ),      // input wire [0:0]  probe14 
+    .probe15        (app_wdf_rdy        ),      // input wire [0:0]  probe15
+    .probe16        (ddr3_test_state    ),      // input wire [3:0]  probe16
+    .probe17        (ddr3_test_iteration),      // input wire [15:0] probe17
+    .probe18        (ddr3_test_comp_error ),    // input wire [0:0]  probe18
+    .probe19        (ddr3_test_comp_good  ),    // input wire [0:0]  probe19
+    .probe20        (ddr3_test_expected_data),  // input wire [31:0] probe20
+    .probe21        (ddr3_test_verify_addr),    // input wire [29:0] probe21 
+    .probe22        (ddr3_test_lfsr     )       // input wire [31:0] probe22 
+);
+`endif
+
 
 endmodule
 `default_nettype wire
