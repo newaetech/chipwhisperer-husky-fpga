@@ -41,7 +41,7 @@ VERBOSE=0
 
 all: compile
 
-compile:
+nofifo:
 	iverilog -ccmdfile \
 	-g2005-sv \
 	-I../../hdl \
@@ -54,9 +54,8 @@ compile:
 	-DNOFIFO \
 	-DTRACE \
 
-
-compile_old:
-	iverilog -ccmdfile_old \
+compile:
+	iverilog -ccmdfile_fifo \
 	-g2005-sv \
 	-I../../hdl \
 	-I../../tracewhisperer/hdl/ \
@@ -64,7 +63,7 @@ compile_old:
 	-Wselect-range \
 	-DNOMIG \
 	-DCW310 \
-	-DNOFIFO \
+	-DPRO \
 	-DTRACE \
 
 lint:

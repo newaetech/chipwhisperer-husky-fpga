@@ -107,8 +107,8 @@ module fifo_top_husky_pro (
 
 
     // for debug only:
-    output wire         slow_fifo_wr,
-    output wire         slow_fifo_rd,
+    output wire         slow_fifo_wr, // TODO
+    output wire         slow_fifo_rd, // TODO
     output reg  [31:0]  fifo_read_count,
     output reg  [31:0]  fifo_read_count_error_freeze,
     output reg          fifo_rst,
@@ -129,6 +129,7 @@ module fifo_top_husky_pro (
     wire                fast_fifo_overflow;
     wire                fast_fifo_underflow;
 
+    // TODO: remove all!
     reg  [35:0]         slow_fifo_din;
     reg                 slow_fifo_prewr = 1'b0;
     reg                 slow_fifo_rd_slow;
@@ -139,6 +140,34 @@ module fifo_top_husky_pro (
     wire                slow_fifo_empty;
     wire                slow_fifo_overflow;
     wire                slow_fifo_underflow;
+    //
+
+    reg  [11:0]         preddr_fifo_din;
+    reg                 preddr_fifo_prewr = 1'b0;
+    reg                 preddr_fifo_rd_slow;
+    wire                preddr_fifo_rd_fast;
+    wire [11:0]         preddr_fifo_dout;
+    wire                preddr_fifo_full;
+    wire                preddr_fifo_empty;
+    wire                preddr_fifo_overflow;
+    wire                preddr_fifo_underflow;
+
+    reg  [31:0]         postddr_fifo_din;
+    reg                 postddr_fifo_prewr = 1'b0;
+    reg                 postddr_fifo_rd_slow;
+    wire                postddr_fifo_rd_fast;
+    wire [31:0]         postddr_fifo_dout;
+    wire                postddr_fifo_full;
+    wire                postddr_fifo_empty;
+    wire                postddr_fifo_overflow;
+    wire                postddr_fifo_underflow;
+
+    // TODO:
+    wire preddr_fifo_wr = 1'b0;
+    wire preddr_fifo_rd = 1'b0;
+    wire postddr_fifo_wr = 1'b0;
+    wire postddr_fifo_rd = 1'b0;
+
 
     reg                 fast_fifo_overflow_reg;
     reg                 slow_fifo_overflow_reg;
@@ -857,7 +886,7 @@ module fifo_top_husky_pro (
        //for clean iverilog compilation
 
     `elsif TINYFIFO
-       //for faster corner case simulation- TODO: update for CW310 case
+       //for faster corner case simulation- TODO: update for Pro
        tiny_adc_fast_fifo U_adc_fast_fifo(
           .clk          (adc_sampleclk),
           .rst          (fifo_rst),
@@ -888,12 +917,7 @@ module fifo_top_husky_pro (
 
     `else
        //normal case
-       // TODO: change to 3 FIFOs:
-       //adc_fast_fifo_pro U_adc_fast_fifo
-       //pre_ddr_slow_fifo U_pre_ddr_slow_fifo
-       //post_ddr_slow_fifo U_post_ddr_slow_fifo
-
-       adc_fast_fifo U_adc_fast_fifo(
+       adc_fast_fifo U_adc_fast_fifo (
           .clk          (adc_sampleclk),
           .rst          (fifo_rst),
           .din          (adc_datain),
@@ -906,7 +930,24 @@ module fifo_top_husky_pro (
           .underflow    (fast_fifo_underflow)
        );
 
-       usb_slow_fifo U_usb_slow_fifo(
+       pre_ddr_slow_fifo U_pre_ddr_slow_fifo (
+          .rst          (fifo_rst),
+          //.wr_rst       (fifo_rst),
+          //.rd_rst       (fifo_rst),
+          .wr_clk       (adc_sampleclk),
+          .rd_clk       (ui_clk),
+          .din          (preddr_fifo_din),
+          .wr_en        (preddr_fifo_wr),
+          .rd_en        (preddr_fifo_rd),
+          .dout         (preddr_fifo_dout),
+          .full         (preddr_fifo_full),
+          .empty        (preddr_fifo_empty),
+          .overflow     (preddr_fifo_overflow),
+          .underflow    (preddr_fifo_underflow)
+       );
+
+       /* for reference of old signal names
+       usb_slow_fifo U_pre_ddr_slow_fifo (
           .rst          (fifo_rst),
           .wr_clk       (adc_sampleclk),
           .rd_clk       (clk_usb),
@@ -918,6 +959,22 @@ module fifo_top_husky_pro (
           .empty        (slow_fifo_empty),
           .overflow     (slow_fifo_overflow),
           .underflow    (slow_fifo_underflow)
+       );
+       */
+
+
+       post_ddr_slow_fifo U_post_ddr_slow_fifo (
+          .rst          (fifo_rst),
+          .wr_clk       (ui_clk),
+          .rd_clk       (clk_usb),
+          .din          (postddr_fifo_din),
+          .wr_en        (postddr_fifo_wr),
+          .rd_en        (postddr_fifo_rd),
+          .dout         (postddr_fifo_dout),
+          .full         (postddr_fifo_full),
+          .empty        (postddr_fifo_empty),
+          .overflow     (postddr_fifo_overflow),
+          .underflow    (postddr_fifo_underflow)
        );
 
     `endif
