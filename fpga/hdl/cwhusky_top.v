@@ -39,8 +39,8 @@ module cwhusky_top(
     input wire          USB_ALEn,                   // USB_SPARE1
     inout wire          USB_SPARE0,
 
-    // currently unused:
     input wire          FPGA_BONUS1,
+    // currently unused:
     input wire          FPGA_BONUS2,
     input wire          FPGA_BONUS3,
     input wire          FPGA_BONUS4,
@@ -511,7 +511,7 @@ module cwhusky_top(
                                                     5'b0         // USERIO_D4:D0 undriven (TDO input on USERIO_D3)
                                                    } : userio_drive_data_reg;
 
-   assign USERIO_CLK = userio_target_debug? target_PDIC : 1'bz;
+   assign USERIO_CLK = userio_target_debug? FPGA_BONUS1 : 1'bz;
 
    userio #(
       .pWIDTH                   (pUSERIO_WIDTH)
