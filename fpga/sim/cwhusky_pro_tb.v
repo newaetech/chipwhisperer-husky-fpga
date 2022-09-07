@@ -62,6 +62,8 @@ module cwhusky_tb();
    parameter pERRORS_OK = 0;
    parameter pPRESAMP_ERROR = 0;
    parameter pDOWNSAMPLE = 0;
+   parameter pDDR_TEST = 0;
+   parameter pDDR_TEST_LOOPS = 1;
 
    `include "tb_reg_tasks.v"
 
@@ -111,6 +113,7 @@ module cwhusky_tb();
 
    reg  [7:0] rdata;
    reg  [7:0] rdata_r;
+   reg  [7:0] ddr_loops;
    reg  [11:0] sample;
    reg  [11:0] last_sample;
    reg  [11:0] expected;
@@ -458,6 +461,8 @@ module cwhusky_tb();
       #(pCLK_USB_PERIOD * 200);
       */
 
+      if (pDDR_TEST)
+          write_1byte(`REG_DDR3_TEST_EN_STAT, 1);
       setup_done = 1;
 
    end
@@ -680,6 +685,36 @@ module cwhusky_tb();
            glitch_errors += 1;
    end
 
+   // DDR test thread:
+   initial begin
+       if (pDDR_TEST) begin
+           wait (setup_done);
+           force U_dut.oadc.U_fifo.U_simple_ddr3_rwtest.ddrtest_stop = 32'h0000_3ff8;
+           ddr_loops = 0;
+           while (ddr_loops < pDDR_TEST_LOOPS) begin
+               read_1byte(`REG_DDR3_TEST_LOOPS, ddr_loops);
+               repeat(1000) @(posedge clk_usb);
+           end
+           // check for errors:
+           read_1byte(`REG_DDR3_TEST_ERRORS, ddr_loops);
+           if (ddr_loops > 0) begin
+               errors += 1;
+               $display("ERROR: %d DDR errors", ddr_loops);
+           end
+           read_1byte(`REG_DDR3_TEST_EN_STAT, ddr_loops);
+           if (ddr_loops != 1) begin
+               errors += 1;
+               $display("ERROR: DDR stat = %d", ddr_loops);
+           end
+
+           if (errors)
+              $display("SIMULATION FAILED (%0d errors)", errors);
+           else
+              $display("Simulation passed (%0d warnings)", warnings);
+           $finish;
+       end
+   end
+
    // timeout thread:
    initial begin
       #(pCLK_USB_PERIOD*pTIMEOUT_CYCLES);
@@ -733,14 +768,14 @@ assign clk_adc = pSLOW_ADC? clk_adc_slow :
                  pNOM_ADC? clk_adc_nom :
                  adc_clocks[chosen_clock];
 
-cwhusky_top U_dut (  
+cwhusky_cw310_top U_dut (  
     .clk_usb            (clk_usb      ),
     .ADC_clk_fbp        (clk_adc      ),
     .ADC_clk_fbn        (1'b0         ),
-    .ADC_DP             (6'b0         ),
-    .ADC_DN             (6'b0         ),
-    .ADC_CLKP           (             ),
-    .ADC_CLKN           (             ),
+    //.ADC_DP             (6'b0         ),
+    //.ADC_DN             (6'b0         ),
+    //.ADC_CLKP           (             ),
+    //.ADC_CLKN           (             ),
     .LED_ADC            (LED_ADC      ),
     .LED_GLITCH         (LED_GLITCH   ),
     .LED_ARMED          (LED_ARMED    ),
@@ -750,16 +785,17 @@ cwhusky_top U_dut (
     .USB_RDn            (usb_rdn_out  ),
     .USB_WRn            (usb_wrn_out  ),
     .USB_CEn            (usb_cen_out  ),
-    .USB_ALEn           (usb_alen_out ),
-    .USB_SPARE0         (stream_segment_available),
-    .FPGA_BONUS1        (FPGA_BONUS1  ),
-    .FPGA_BONUS2        (FPGA_BONUS2  ),
-    .FPGA_BONUS3        (FPGA_BONUS3  ),
-    .FPGA_BONUS4        (FPGA_BONUS4  ),
-    .SAM_MOSI           (SAM_MOSI     ),
-    .SAM_MISO           (SAM_MISO     ),
-    .SAM_SPCK           (SAM_SPCK     ),
-    .SAM_CS             (SAM_CS       ),
+    .USB_Addr_Bytecount (usb_bytecount),
+    //.USB_ALEn           (usb_alen_out ),
+    //.USB_SPARE0         (stream_segment_available),
+    //.FPGA_BONUS1        (FPGA_BONUS1  ),
+    //.FPGA_BONUS2        (FPGA_BONUS2  ),
+    //.FPGA_BONUS3        (FPGA_BONUS3  ),
+    //.FPGA_BONUS4        (FPGA_BONUS4  ),
+    //.SAM_MOSI           (SAM_MOSI     ),
+    //.SAM_MISO           (SAM_MISO     ),
+    //.SAM_SPCK           (SAM_SPCK     ),
+    //.SAM_CS             (SAM_CS       ),
     .target_PDID        (target_PDID  ),
     .target_PDIC        (target_PDIC  ),
     .target_nRST        (target_nRST  ),
@@ -772,15 +808,15 @@ cwhusky_top U_dut (
     .target_io1         (target_io1   ),
     .target_hs1         (target_hs1   ),
     .target_hs2         (target_hs2   ),
-    .TRIG_GLITCHOUT     (TRIG_GLITCHOUT),
+    //.TRIG_GLITCHOUT     (TRIG_GLITCHOUT),
     .AUXIO              (AUXIO        ),
-    .ADC_OVR_SDOUT      (1'b0         ),
-    .FPGA_CDOUT         (1'b0         ),
+    //.ADC_OVR_SDOUT      (1'b0         ),
+    //.FPGA_CDOUT         (1'b0         ),
     .USERIO_D           (             ),
-    .USERIO_CLK         (             ),
-    .PLL_STATUS         (1'b0         ),
-    .PLLFPGAP           (clk_adc      ),
-    .PLLFPGAN           (1'b0         )
+    .USERIO_CLK         (             )
+    //.PLL_STATUS         (1'b0         ),
+    //.PLLFPGAP           (clk_adc      ),
+    //.PLLFPGAN           (1'b0         )
 );
 
 

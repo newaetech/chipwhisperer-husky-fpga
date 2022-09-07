@@ -38,11 +38,14 @@ TRIGGERS=1
 FLUSH=0
 THRESHOLD=0
 VERBOSE=0
+DDR_TEST=0
+DDR_TEST_LOOPS=2
 
-all: compile
+all: compile run
 
 nofifo:
 	iverilog -ccmdfile \
+	../../beh/ddr3_app_model.v \
 	-g2005-sv \
 	-I../../hdl \
 	-I../../tracewhisperer/hdl/ \
@@ -56,8 +59,11 @@ nofifo:
 
 compile:
 	iverilog -ccmdfile_fifo \
+	../../sim/cwhusky_pro_tb.v \
+	../../beh/ddr3_app_model.v \
 	-g2005-sv \
 	-I../../hdl \
+	-I../../sim \
 	-I../../tracewhisperer/hdl/ \
 	-Wportbind \
 	-Wselect-range \
@@ -65,6 +71,11 @@ compile:
 	-DCW310 \
 	-DPRO \
 	-DTRACE \
+	-P cwhusky_tb.pDUMP=$(DUMP) \
+	-P cwhusky_tb.pSEED=$(SEED) \
+	-P cwhusky_tb.pDDR_TEST=$(DDR_TEST) \
+	-P cwhusky_tb.pDDR_TEST_LOOPS=$(DDR_TEST_LOOPS) \
+	-o $(EXEFILE) \
 
 lint:
 	verilator --lint-only -Wall \
@@ -82,6 +93,9 @@ lint:
 	-DTRACE \
 	--top-module cwhusky_cw310_top \
 	2>&1 | tee lint.out \
+
+run:
+	vvp -l$(LOGFILE) $(EXEFILE) -$(WAVEFORMAT)
 
 clean:
 	rm -f a.out results/*.vvp

@@ -1068,6 +1068,42 @@ module fifo_top_husky_pro (
        .sys_rst                        (~reset)
        );
 
+`else
+    // basic behavioural model for simulation testing
+   assign ui_clk = clk_usb;
+   ddr3_app_model #(
+      .pDATA_WIDTH                         (32),
+      .pADDR_WIDTH                         (30),
+      .pMASK_WIDTH                         (4),
+      .pMODEL_DEPTH                        (65536)
+   ) U_ddr3_model (
+      .clk                                 (clk_usb             ),
+      .reset                               (reset               ),
+      .init_calib_complete                 (init_calib_complete ),
+
+      .app_addr                            (app_addr            ),
+      .app_cmd                             (app_cmd             ),
+      .app_en                              (app_en              ),
+      .app_wdf_data                        (app_wdf_data        ),
+      .app_wdf_end                         (app_wdf_end         ),
+      .app_wdf_wren                        (app_wdf_wren        ),
+
+      //.app_sr_req                          (app_sr_req          ),
+      //.app_ref_req                         (app_ref_req         ),
+      //.app_zq_req                          (app_zq_req          ),
+      //.app_wdf_mask                        (app_wdf_mask        ),
+      //.app_sr_active                       (app_sr_active       ),
+      //.app_ref_ack                         (app_ref_ack         ),
+      //.app_zq_ack                          (app_zq_ack          ),
+
+      .app_rd_data                         (app_rd_data         ),
+      .app_rd_data_end                     (app_rd_data_end     ),
+      .app_rd_data_valid                   (app_rd_data_valid   ),
+      .app_rdy                             (app_rdy             ),
+      .app_wdf_rdy                         (app_wdf_rdy         )
+   );
+
+
 `endif
 
    simple_ddr3_rwtest #(
