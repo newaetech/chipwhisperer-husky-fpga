@@ -46,21 +46,15 @@ module ddr3_app_model #(
    input  wire                          app_wdf_end,
    input  wire                          app_wdf_wren,
 
-   // unused & unsupported:
-   //input  wire                          app_sr_req,
-   //input  wire                          app_ref_req,
-   //input  wire                          app_zq_req,
-   //input  wire [pMASK_WIDTH-1:0]        app_wdf_mask,
-   //output reg                           app_sr_active,
-   //output reg                           app_ref_ack,
-   //output reg                           app_zq_ack,
-
    output wire [pDATA_WIDTH-1:0]        app_rd_data,
    output reg                           app_rd_data_end,
    output reg                           app_rd_data_valid,
    output wire                          app_rdy,
    output wire                          app_wdf_rdy
 );
+
+    localparam CMD_WRITE = 3'b000;
+    localparam CMD_READ = 3'b001;
 
     assign init_calib_complete = 1'b1;
     assign app_wdf_rdy = 1'b1;
@@ -96,7 +90,7 @@ module ddr3_app_model #(
         app_rdy_wr = 1'b1;
         while (1) begin
             // write part 1:
-            wait (app_en && app_wdf_wren && app_cmd == 0);
+            wait (app_en && app_wdf_wren && app_cmd == CMD_WRITE);
             app_wdf_data_r = app_wdf_data;
             @(posedge clk);
             // write part 2:
@@ -119,7 +113,7 @@ module ddr3_app_model #(
             dropped_read_request <= 1'b0;
         end
         else begin
-            if (app_rdy && app_en && (app_cmd == 1)) begin
+            if (app_rdy && app_en && (app_cmd == CMD_READ)) begin
                 if (fifo_full) begin
                     fifo_wr <= 1'b0;
                     dropped_read_request <= 1'b1;

@@ -532,7 +532,8 @@ module cwhusky_tb();
 
 
    // read thread:
-   initial begin
+initial begin
+  if (pDDR_TEST == 0) begin
       good_reads = 0;
       bad_reads = 0;
       i12BitReadCount = 0;
@@ -637,6 +638,7 @@ module cwhusky_tb();
          $display("Simulation passed (%0d warnings)", warnings);
       $finish;
    end
+end
 
 
    // check glitch output thread:
@@ -690,6 +692,7 @@ module cwhusky_tb();
        if (pDDR_TEST) begin
            wait (setup_done);
            force U_dut.oadc.U_fifo.U_simple_ddr3_rwtest.ddrtest_stop = 32'h0000_3ff8;
+           repeat(100) @(posedge clk_usb);
            ddr_loops = 0;
            while (ddr_loops < pDDR_TEST_LOOPS) begin
                read_1byte(`REG_DDR3_TEST_LOOPS, ddr_loops);
@@ -772,6 +775,7 @@ cwhusky_cw310_top U_dut (
     .clk_usb            (clk_usb      ),
     .ADC_clk_fbp        (clk_adc      ),
     .ADC_clk_fbn        (1'b0         ),
+    .PLL_CLK1           (clk_adc      ),
     //.ADC_DP             (6'b0         ),
     //.ADC_DN             (6'b0         ),
     //.ADC_CLKP           (             ),

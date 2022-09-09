@@ -633,8 +633,8 @@ module openadc_interface #(
           .ADC_clk_fbp              (ADC_clk_fbp ),
           .ADC_clk_fbn              (ADC_clk_fbn ),
 
-          .slow_fifo_wr             (slow_fifo_wr),
-          .slow_fifo_rd             (slow_fifo_rd),
+          .preddr_fifo_wr           (slow_fifo_wr),
+          .postddr_fifo_rd          (slow_fifo_rd),
           .fifo_read_count          (fifo_read_count),
           .fifo_read_count_error_freeze (fifo_read_count_error_freeze),
           .fifo_rst                 (fifo_rst),

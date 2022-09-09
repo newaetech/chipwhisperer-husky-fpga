@@ -94,7 +94,6 @@ task read_next_byte;
    output [7:0] data;
    usb_rdn = 0;
    usb_cen = 0;
-   usb_bytecount = usb_bytecount + 1;
    @(posedge usb_clk);
    usb_cen = 1;
    if (pSTREAM) begin
@@ -111,6 +110,7 @@ task read_next_byte;
       if (pSLOW_READS)
          repeat($urandom_range(2, 20)) @(posedge usb_clk);
    end
+   usb_bytecount = usb_bytecount + 1;
 endtask
 
 task read_next_sample;
@@ -142,12 +142,15 @@ task write_next_byte;
    input [7:0] data;
    usb_wdata = data;
    usb_wrn = 0;
-   usb_bytecount = usb_bytecount + 1;
    @(posedge usb_clk);
    usb_wrn = 1;
    usb_cen = 0;
    @(posedge usb_clk);
    usb_cen = 1;
    @(posedge usb_clk);
+   `ifdef CW310 // extra cycle to accomodate CW310
+       @(posedge usb_clk);
+   `endif
+   usb_bytecount = usb_bytecount + 1;
 endtask
 

@@ -107,8 +107,8 @@ module fifo_top_husky_pro (
 
 
     // for debug only:
-    output wire         slow_fifo_wr, // TODO
-    output wire         slow_fifo_rd, // TODO
+    output reg          preddr_fifo_wr,
+    output wire         postddr_fifo_rd,
     output reg  [31:0]  fifo_read_count,
     output reg  [31:0]  fifo_read_count_error_freeze,
     output reg          fifo_rst,
@@ -118,6 +118,11 @@ module fifo_top_husky_pro (
 
     parameter pFIFO_FULL_SIZE = `MAX_SAMPLES;
     parameter pMAX_UNDERFLOWS = 3;
+    parameter pDDR_INC_ADDR = 8'd8;
+    parameter pDDR_MAX_ADDR = 30'h1FFF_FFF8;
+
+    localparam CMD_WRITE = 3'b000;
+    localparam CMD_READ = 3'b001;
 
     wire                fast_fifo_wr;
     reg                 fast_fifo_presample_drain = 1'b0;
@@ -130,8 +135,7 @@ module fifo_top_husky_pro (
     wire                fast_fifo_underflow;
 
     // TODO: remove all!
-    reg  [35:0]         slow_fifo_din;
-    reg                 slow_fifo_prewr = 1'b0;
+    //reg                 slow_fifo_prewr = 1'b0;
     reg                 slow_fifo_rd_slow;
     wire                slow_fifo_rd_fast;
     wire [35:0]         slow_fifo_dout;
@@ -142,11 +146,11 @@ module fifo_top_husky_pro (
     wire                slow_fifo_underflow;
     //
 
-    reg  [11:0]         preddr_fifo_din;
     reg                 preddr_fifo_prewr = 1'b0;
     reg                 preddr_fifo_rd_slow;
     wire                preddr_fifo_rd_fast;
-    wire [11:0]         preddr_fifo_dout;
+    reg  [63:0]         preddr_fifo_din;
+    wire [63:0]         preddr_fifo_dout;
     wire                preddr_fifo_full;
     wire                preddr_fifo_empty;
     wire                preddr_fifo_overflow;
@@ -162,12 +166,8 @@ module fifo_top_husky_pro (
     wire                postddr_fifo_overflow;
     wire                postddr_fifo_underflow;
 
-    // TODO:
-    wire preddr_fifo_wr = 1'b0;
-    wire preddr_fifo_rd = 1'b0;
-    wire postddr_fifo_wr = 1'b0;
-    wire postddr_fifo_rd = 1'b0;
-
+    reg                 preddr_fifo_rd;
+    reg                 postddr_fifo_wr = 1'b0;
 
     reg                 fast_fifo_overflow_reg;
     reg                 slow_fifo_overflow_reg;
@@ -183,7 +183,6 @@ module fifo_top_husky_pro (
     reg                 capture_go_r;
     reg                 capture_go_r2;
 
-    reg [1:0]           fast_read_count;
     reg [2:0]           fast_write_count;
     reg [2:0]           fast_write_count_init;
     reg                 filling_out_to_done;
@@ -212,13 +211,21 @@ module fifo_top_husky_pro (
     wire [31:0]         app_wdf_data;
     wire                app_wdf_end;
     wire                app_wdf_wren;
-    wire                app_sr_req;
-    wire                app_ref_req;
-    wire                app_zq_req;
-    wire [3:0]          app_wdf_mask;
-    wire                app_sr_active;
-    wire                app_ref_ack;
-    wire                app_zq_ack;
+
+    wire [29:0]         rwtest_app_addr;
+    wire [2:0]          rwtest_app_cmd;
+    wire                rwtest_app_en;
+    wire [31:0]         rwtest_app_wdf_data;
+    wire                rwtest_app_wdf_end;
+    wire                rwtest_app_wdf_wren;
+
+    reg  [29:0]         adc_app_addr;
+    wire [2:0]          adc_app_cmd;
+    reg                 adc_app_en;
+    wire [31:0]         adc_app_wdf_data;
+    reg                 adc_app_wdf_end;
+    reg                 adc_app_wdf_wren;
+
     wire                ui_clk;
     wire                ui_clk_sync_rst;
     wire [31:0]         app_rd_data;
@@ -377,9 +384,8 @@ module fifo_top_husky_pro (
         else begin
             if (no_clip_errors || clear_fifo_errors_adc)
                 clip_error <= 1'b0;
-            else if (slow_fifo_wr && ( (slow_fifo_din[11:0]  == {12{1'b1}} || slow_fifo_din[11:0]  == {12{1'b0}}) ||
-                                       (slow_fifo_din[23:12] == {12{1'b1}} || slow_fifo_din[23:12] == {12{1'b0}}) ||
-                                       (slow_fifo_din[35:24] == {12{1'b1}} || slow_fifo_din[35:24] == {12{1'b0}}) ) )
+            //  TODO: just condition on "ADC fifo out when triggered" sort of thing
+            else if (preddr_fifo_wr && (fast_fifo_dout[11:0]  == {12{1'b1}} || fast_fifo_dout[11:0]  == {12{1'b0}}) )
                 clip_error <= 1'b1;
             else if (clip_test)
                 clip_error <= adc_datain == {12{1'b1}} || adc_datain == {12{1'b0}};
@@ -388,9 +394,7 @@ module fifo_top_husky_pro (
                 gain_too_low <= 1'b0;
             else if (capture_go)
                 gain_too_low <= 1'b1;
-            else if (slow_fifo_wr && ( (slow_fifo_din[11]? slow_fifo_din[10:9]  != 2'b00 : slow_fifo_din[10:8]  != 3'b111) ||
-                                       (slow_fifo_din[23]? slow_fifo_din[22:21] != 2'b00 : slow_fifo_din[22:20] != 3'b111) ||
-                                       (slow_fifo_din[35]? slow_fifo_din[34:33] != 2'b00 : slow_fifo_din[34:32] != 3'b111) ) )
+            else if (preddr_fifo_wr && (fast_fifo_dout[11]? fast_fifo_dout[10:9]  != 2'b00 : fast_fifo_dout[10:8]  != 3'b111) )
                 gain_too_low <= 1'b0;
 
             if (no_gain_errors || clear_fifo_errors_adc)
@@ -544,6 +548,7 @@ module fifo_top_husky_pro (
                 // serves two purposes:
                 // 1. wait for fast FIFO to empty;
                 // 2. wait state so that we don't get back out of idle right away
+                // TODO: need extra conditions for DDR?
                 if ((fast_fifo_empty && (done_wait_count == 0)) || arm_i) begin
                    fast_fifo_rd_en <= 1'b0;
                    state <= pS_IDLE;
@@ -608,7 +613,7 @@ module fifo_top_husky_pro (
     end
 
     assign fast_fifo_wr = downsample_wr_en & fsm_fast_wr_en & reset_done & !fifo_rst_pre;
-    assign slow_fifo_wr = slow_fifo_prewr & reset_done & !fifo_rst_pre;
+    //wire slow_fifo_wr = slow_fifo_prewr & reset_done & !fifo_rst_pre;
 
     // Xilinx FIFO is very particular about its reset: it must be wide enough
     // and the FIFO shouldn't be accessed for some time after reset has been
@@ -737,6 +742,7 @@ module fifo_top_husky_pro (
 
 
     // Track fast FIFO writes to ensure they're a multiple of 3 by the end of the capture:
+    // TODO: do we still need this?
     always @(posedge adc_sampleclk) begin
        if (reset) begin
           fast_write_count <= 0;
@@ -753,50 +759,266 @@ module fifo_top_husky_pro (
        end
     end
 
-
-    // Write slow FIFO:
+    // Assemble 64-bit words from 12-bit samples to feed DDR.
+    // Ideally we'd handle this with an asymetric+asynchronous FIFO, but Xilinx's simulation
+    // model for such FIFOs doesn't simulate with iVerilog :-(
+    // So this is the width conversion stage, which is followed by an asynchronous FIFO.
+    // *must* be able to push one sample per cycle, to keep up.
+    // But if decimation is used, then data will come in slower; must accomodate that too.
+    // Word 1: 6 sample reads; 5x12, 4
+    // Word 2: 5 sample reads; 8, 4x12, 8
+    // Word 3: 5 sample reads; 4, 5x12
+    // then start over...
+    reg [1:0] wide_word_count;
+    reg wide_word_valid;
+    reg wide_word_valid_pre;
+    reg [71:0] wide_word_shifter;
+    reg [3:0] adc_sample_counter;
     always @(posedge adc_sampleclk) begin
-       if (reset) begin
-          fast_read_count <= 0;
-          slow_fifo_prewr <= 1'b0;
-       end
-
-       else begin
-          if (fifo_rst_pre || ~reset_done || ((state == pS_SEGMENT_DONE) && fast_fifo_empty)) begin
-             slow_fifo_prewr <= 0;
-             if (fifo_rst_pre || ~reset_done)
-                fast_read_count <= 0;
-          end
-
-          else if ((state == pS_TRIGGERED) || (state == pS_DONE) || (state == pS_SEGMENT_DONE)) begin
-             if (!fast_fifo_empty && !slow_fifo_full) begin
-                if (fast_read_count < 2) begin
-                   fast_read_count <= fast_read_count + 1;
-                   slow_fifo_prewr <= 1'b0;
+        if (reset) begin
+            wide_word_count <= 0;
+            wide_word_valid <= 0;
+            wide_word_shifter <= 0;
+            adc_sample_counter <= 0;
+            preddr_fifo_din <= 0;
+            preddr_fifo_wr <= 0;
+        end
+        else begin
+            preddr_fifo_wr <= wide_word_valid;
+            if (state == pS_IDLE) begin
+                wide_word_count <= 0;
+                wide_word_valid <= 0;
+                wide_word_shifter <= 0;
+                adc_sample_counter <= 0;
+            end
+            else if (fast_fifo_rd && ((state == pS_TRIGGERED) || (state == pS_DONE) || (state == pS_SEGMENT_DONE))) begin
+                wide_word_shifter <= {fast_fifo_dout, wide_word_shifter[71:12]};
+                if ( ((wide_word_count == 0) && (adc_sample_counter == 5)) ||
+                     ((wide_word_count == 1) && (adc_sample_counter == 4)) ||
+                     ((wide_word_count == 2) && (adc_sample_counter == 4)) ) begin
+                    wide_word_valid <= 1'b1;
+                    adc_sample_counter <= 0;
+                    if (wide_word_count < 2)
+                        wide_word_count <= wide_word_count + 1;
+                    else
+                        wide_word_count <= 0;
                 end
                 else begin
-                   fast_read_count <= 0;
-                   slow_fifo_prewr <= 1'b1;
+                    wide_word_valid <= 0;
+                    adc_sample_counter <= adc_sample_counter + 1;
                 end
+            end
 
-             end
-             else begin
-                slow_fifo_prewr <= 1'b0;
-             end
-          end
-
-          else
-             slow_fifo_prewr <= 1'b0;
-
-          if (fast_fifo_rd)
-             slow_fifo_din <= {slow_fifo_din[23:0], fast_fifo_dout};
-
-       end
+            if (wide_word_valid)
+                preddr_fifo_din <= (wide_word_count == 1)? wide_word_shifter[63:0] :
+                                   (wide_word_count == 2)? wide_word_shifter[67:4] :
+                                                           wide_word_shifter[71:8] ;
+        end
     end
 
-    reg [3:0] slow_read_count;
+    // Write pre-DDR FIFO:
+    /*
+    always @(posedge adc_sampleclk) begin
+       if (reset)
+          preddr_fifo_wr <= 1'b0;
+       else begin
+          if (fifo_rst_pre || ~reset_done || fifo_rst_pre || ((state == pS_SEGMENT_DONE) && fast_fifo_empty))
+             preddr_fifo_wr <= 0;
+          else if ( (!fast_fifo_empty && !preddr_fifo_full) && 
+                    ((state == pS_TRIGGERED) || (state == pS_DONE) || (state == pS_SEGMENT_DONE)) )
+             preddr_fifo_wr <= 1'b1;
+          else
+             preddr_fifo_wr <= 1'b0;
+       end
+    end
+    */
 
-    // Read slow FIFO:
+    // Read pre-DDR FIFO:
+    /* TODO: add logic for forming 32-bit words to DDR
+    reg ddr_needs_data;
+    always @(posedge ui_clk) begin
+        if (reset)
+            preddr_fifo_rd <= 1'b0;
+        else if (ddr_needs_data && ~preddr_fifo_empty)
+            preddr_fifo_rd <= 1'b1;
+        else
+            preddr_fifo_rd <= 1'b0;
+    end
+    */
+
+    assign app_addr     = (ddr3_rwtest_en)? rwtest_app_addr     : adc_app_addr;
+    assign app_cmd      = (ddr3_rwtest_en)? rwtest_app_cmd      : adc_app_cmd;
+    assign app_en       = (ddr3_rwtest_en)? rwtest_app_en       : adc_app_en;
+    assign app_wdf_data = (ddr3_rwtest_en)? rwtest_app_wdf_data : adc_app_wdf_data;
+    assign app_wdf_end  = (ddr3_rwtest_en)? rwtest_app_wdf_end  : adc_app_wdf_end;
+    assign app_wdf_wren = (ddr3_rwtest_en)? rwtest_app_wdf_wren : adc_app_wdf_wren;
+
+    // Read/Write DDR: derived from the simple_ddr3_rwtest FSM
+    reg ddr_full_error;
+
+    localparam pS_DDR_IDLE            = 3'd0;
+    localparam pS_DDR_WRITE1          = 3'd1;
+    localparam pS_DDR_WRITE2          = 3'd2;
+    localparam pS_DDR_WAIT_READ       = 3'd3;
+    localparam pS_DDR_READ1           = 3'd4;
+    localparam pS_DDR_READ2           = 3'd5;
+    localparam pS_DDR_WAIT_WRITE      = 3'd6;
+    reg [2:0] ddr_state, next_ddr_state;
+
+    //reg ddr_write_data_ready; // TODO: needs to be generated by the 12-to-32 logic
+    wire ddr_write_data_done = (state == pS_DONE); // TODO: not sure if that'll do? think of edge cases, including errors; segments?
+    wire ddr_read_data_done = (adc_top_app_addr == adc_app_addr);
+    reg incr_app_address;
+    reg write_valid;
+
+    reg reset_app_address;
+    reg [29:0] adc_top_app_addr;
+
+    wire ddr_writing = (ddr_state == pS_DDR_WAIT_WRITE) ||
+                       (ddr_state == pS_DDR_WRITE1) ||
+                       (ddr_state == pS_DDR_WRITE2);
+    wire ddr_reading = (ddr_state == pS_DDR_WAIT_READ) ||
+                       (ddr_state == pS_DDR_READ1) ||
+                       (ddr_state == pS_DDR_READ2);
+
+    assign adc_app_cmd = ddr_writing? CMD_WRITE : CMD_READ;
+
+    assign adc_app_wdf_data = (ddr_state == pS_DDR_WRITE1)? preddr_fifo_dout[31:0] : 
+                              (ddr_state == pS_DDR_WRITE2)? preddr_fifo_dout[63:32] : 32'b0;
+
+    always @(*) begin
+        // defaults:
+        adc_app_en = 1'b0;
+        adc_app_wdf_wren = 1'b0;
+        adc_app_wdf_end = 1'b0;
+        incr_app_address = 1'b0;
+        reset_app_address = 1'b0;
+        preddr_fifo_rd = 1'b0;
+
+        case (ddr_state)
+            pS_DDR_IDLE: begin
+                if (init_calib_complete) begin
+                    reset_app_address = 1'b1;
+                    next_ddr_state = pS_DDR_WAIT_WRITE;
+                end
+                else
+                    next_ddr_state = pS_DDR_IDLE;
+            end
+
+            pS_DDR_WAIT_WRITE: begin
+                if (ddr_write_data_done) begin
+                    reset_app_address = 1'b1;
+                    next_ddr_state = pS_DDR_WAIT_READ;
+                end
+                else if (app_rdy && app_wdf_rdy && ~preddr_fifo_empty) begin
+                    preddr_fifo_rd = 1'b1;
+                    next_ddr_state = pS_DDR_WRITE1;
+                end
+                else
+                    next_ddr_state = pS_DDR_WAIT_WRITE;
+            end
+
+            pS_DDR_WRITE1: begin
+                adc_app_en = 1'b1;
+                adc_app_wdf_wren = 1'b1;
+                adc_app_wdf_end = 1'b0;
+                if (app_rdy && app_wdf_rdy)
+                    next_ddr_state = pS_DDR_WRITE2;
+                else
+                    next_ddr_state = pS_DDR_WRITE1;
+            end
+
+            pS_DDR_WRITE2: begin
+                adc_app_en = 1'b0;
+                adc_app_wdf_wren = 1'b1;
+                adc_app_wdf_end = 1'b1;
+                if (app_wdf_rdy) begin
+                    write_valid = 1'b1;
+                    // TODO: I don't think this can ever happen here?
+                    if (ddr_write_data_done) begin
+                        reset_app_address = 1'b1;
+                        next_ddr_state = pS_DDR_WAIT_READ;
+                    end
+                    else begin
+                        incr_app_address = 1'b1;
+                        if (app_rdy && ~preddr_fifo_empty) begin
+                            preddr_fifo_rd = 1'b1;
+                            next_ddr_state = pS_DDR_WRITE1;
+                        end
+                        else
+                            next_ddr_state = pS_DDR_WAIT_WRITE;
+                    end
+                end
+                else
+                    next_ddr_state = pS_DDR_WRITE2;
+            end
+
+            pS_DDR_WAIT_READ: begin
+                adc_app_en = 1'b0;
+                if (app_rdy && ~postddr_fifo_full)
+                    next_ddr_state = pS_DDR_READ1;
+                else
+                    next_ddr_state = pS_DDR_WAIT_READ;
+            end
+
+            pS_DDR_READ1: begin
+                adc_app_en = 1'b1;
+                if (app_rdy && ~postddr_fifo_full)
+                    next_ddr_state = pS_DDR_READ2;
+                else
+                    next_ddr_state = pS_DDR_READ1;
+            end
+
+            pS_DDR_READ2: begin
+                adc_app_en = 1'b0;
+                if (ddr_read_data_done)
+                    next_ddr_state = pS_DDR_IDLE;
+                else if (app_rdy) begin
+                    incr_app_address = 1'b1;
+                    next_ddr_state = pS_DDR_READ1;
+                end
+                else
+                    next_ddr_state = pS_DDR_WAIT_READ;
+            end
+
+            default: begin
+                next_ddr_state = pS_DDR_IDLE;
+            end
+
+        endcase
+    end
+
+    // DDR FSM sequential control logic:
+    always @(posedge ui_clk) begin
+        if (reset) begin
+            ddr_state <= pS_DDR_IDLE;
+            adc_app_addr <= 0;
+            ddr_full_error <= 0;
+        end
+
+        else begin
+            ddr_state <= next_ddr_state;
+
+            // TODO (later): clear mechanism for ddr_full_error
+
+            if (reset_app_address) begin
+                adc_app_addr <= 0;
+                if (ddr_state == pS_DDR_WRITE2)
+                    adc_top_app_addr <= adc_app_addr;
+            end
+            else if (incr_app_address) begin
+                if (adc_app_addr == pDDR_MAX_ADDR)
+                    ddr_full_error <= 1'b1;
+                else
+                    adc_app_addr <= adc_app_addr + pDDR_INC_ADDR;
+            end
+
+        end
+    end
+
+
+    // Read slow FIFO: TODO!
+    reg [3:0] slow_read_count;
     always @(posedge clk_usb) begin
        if (reset || ~reset_done) begin
           slow_read_count <= 0;
@@ -835,7 +1057,7 @@ module fifo_top_husky_pro (
     end
 
     assign slow_fifo_rd_fast = fifo_read_fifoen && (low_res? (slow_read_count == 2) : ((slow_read_count == 3) || (slow_read_count == 8)));
-    assign slow_fifo_rd = fast_fifo_read_mode? slow_fifo_rd_fast : slow_fifo_rd_slow;
+    wire slow_fifo_rd = fast_fifo_read_mode? slow_fifo_rd_fast : slow_fifo_rd_slow;
 
     reg [7:0] fifo_read_data_pre;
     always @(*) begin
@@ -880,7 +1102,7 @@ module fifo_top_husky_pro (
 
     end
 
-    assign fast_fifo_rd = fast_fifo_presample_drain || (fast_fifo_rd_en && !slow_fifo_full && !fast_fifo_empty);
+    assign fast_fifo_rd = fast_fifo_presample_drain || (fast_fifo_rd_en && !preddr_fifo_full && !fast_fifo_empty);
 
     `ifdef NOFIFO
        //for clean iverilog compilation
@@ -1015,12 +1237,12 @@ module fifo_top_husky_pro (
        .app_sr_req                     (1'b0),
        .app_ref_req                    (1'b0),
        .app_zq_req                     (1'b0),
-       .app_sr_active                  (app_sr_active),
-       .app_ref_ack                    (app_ref_ack),
-       .app_zq_ack                     (app_zq_ack),
+       .app_sr_active                  (),                      // unused
+       .app_ref_ack                    (),                      // unused
+       .app_zq_ack                     (),                      // unused
        .ui_clk                         (ui_clk),
        .ui_clk_sync_rst                (ui_clk_sync_rst),
-       .app_wdf_mask                   (app_wdf_mask),
+       .app_wdf_mask                   (4'b0),
 // Debug Ports
 // these can be omitted if you wish -- regenerate the MIG with debug disabled
        .ddr3_ila_basic                 (ddr3_ila_basic_w[119:0]),
@@ -1088,14 +1310,6 @@ module fifo_top_husky_pro (
       .app_wdf_end                         (app_wdf_end         ),
       .app_wdf_wren                        (app_wdf_wren        ),
 
-      //.app_sr_req                          (app_sr_req          ),
-      //.app_ref_req                         (app_ref_req         ),
-      //.app_zq_req                          (app_zq_req          ),
-      //.app_wdf_mask                        (app_wdf_mask        ),
-      //.app_sr_active                       (app_sr_active       ),
-      //.app_ref_ack                         (app_ref_ack         ),
-      //.app_zq_ack                          (app_zq_ack          ),
-
       .app_rd_data                         (app_rd_data         ),
       .app_rd_data_end                     (app_rd_data_end     ),
       .app_rd_data_valid                   (app_rd_data_valid   ),
@@ -1122,8 +1336,8 @@ module fifo_top_husky_pro (
       .iteration                           (ddr3_test_iteration ),
       .errors                              (ddr3_test_errors    ),
       .error_addr                          (                    ),
-      .ddrtest_incr                        (8'd8                ),
-      .ddrtest_stop                        (32'h1FFF_FFF8       ),
+      .ddrtest_incr                        (pDDR_INC_ADDR       ),
+      .ddrtest_stop                        (pDDR_MAX_ADDR       ),
 
       .ddr_read_read                       (ddr3_read_read       ),
       .ddr_read_idle                       (ddr3_read_idle       ),
@@ -1132,20 +1346,13 @@ module fifo_top_husky_pro (
       .ddr_max_read_stall_count            (ddr3_max_read_stall_count ),
       .ddr_max_write_stall_count           (ddr3_max_write_stall_count),
 
-      .app_addr                            (app_addr            ),
-      .app_cmd                             (app_cmd             ),
-      .app_en                              (app_en              ),
-      .app_wdf_data                        (app_wdf_data        ),
-      .app_wdf_end                         (app_wdf_end         ),
-      .app_wdf_wren                        (app_wdf_wren        ),
-      .app_sr_req                          (app_sr_req          ),
-      .app_ref_req                         (app_ref_req         ),
-      .app_zq_req                          (app_zq_req          ),
-      .app_wdf_mask                        (app_wdf_mask        ),
+      .app_addr                            (rwtest_app_addr     ),
+      .app_cmd                             (rwtest_app_cmd      ),
+      .app_en                              (rwtest_app_en       ),
+      .app_wdf_data                        (rwtest_app_wdf_data ),
+      .app_wdf_end                         (rwtest_app_wdf_end  ),
+      .app_wdf_wren                        (rwtest_app_wdf_wren ),
 
-      .app_sr_active                       (app_sr_active       ),
-      .app_ref_ack                         (app_ref_ack         ),
-      .app_zq_ack                          (app_zq_ack          ),
       .app_rd_data                         (app_rd_data         ),
       .app_rd_data_end                     (app_rd_data_end     ),
       .app_rd_data_valid                   (app_rd_data_valid   ),
@@ -1177,7 +1384,7 @@ module fifo_top_husky_pro (
       end
       else begin
          write_cycle_count <= write_cycle_count + 1;
-         if (slow_fifo_wr)
+         if (postddr_fifo_wr)
             write_count <= write_count + 3;
          if (write_cycle_count == 0) begin
             read_update <= 1'b1;
@@ -1194,7 +1401,7 @@ module fifo_top_husky_pro (
          stream_segment_available <= 1'b0;
       end
       else begin
-         if (slow_fifo_rd)
+         if (postddr_fifo_rd)
             read_count <= read_count + 3;
          if (read_update_usb) begin
             if (write_count_to_usb > read_count)
@@ -1211,7 +1418,7 @@ module fifo_top_husky_pro (
          fifo_read_count <= 0;
          fifo_read_count_error_freeze <= 0;
       end
-      else if (slow_fifo_rd) begin
+      else if (postddr_fifo_rd) begin
          fifo_read_count <= fifo_read_count + 1;
          if (!error_flag)
             fifo_read_count_error_freeze <= fifo_read_count_error_freeze + 1;
@@ -1247,7 +1454,7 @@ ila_ddr3 U_ila_ddr3 (
     .probe7         (app_wdf_data       ),      // input wire [31:0] probe7 
     .probe8         (app_wdf_end        ),      // input wire [0:0]  probe8 
     .probe9         (app_wdf_wren       ),      // input wire [0:0]  probe9 
-    .probe10        (app_ref_ack        ),      // input wire [0:0]  probe10 
+    .probe10        (1'b0               ),      // input wire [0:0]  probe10 
     .probe11        (app_rd_data        ),      // input wire [31:0] probe11 
     .probe12        (app_rd_data_end    ),      // input wire [0:0]  probe12 
     .probe13        (app_rd_data_valid  ),      // input wire [0:0]  probe13 

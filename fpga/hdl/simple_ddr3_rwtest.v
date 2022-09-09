@@ -46,7 +46,7 @@ module simple_ddr3_rwtest #(
    output reg  [7:0]                    errors,
    output reg  [pADDR_WIDTH-1:0]        error_addr,
    input  wire [7:0]                    ddrtest_incr,
-   input  wire [31:0]                   ddrtest_stop,
+   input  wire [pADDR_WIDTH-1:0]        ddrtest_stop,
    output reg  [31:0]                   ddr_read_read,
    output reg  [31:0]                   ddr_read_idle,
    output reg  [31:0]                   ddr_write_write,
@@ -60,14 +60,7 @@ module simple_ddr3_rwtest #(
    output wire [pDATA_WIDTH-1:0]        app_wdf_data,
    output reg                           app_wdf_end,
    output reg                           app_wdf_wren,
-   output wire                          app_sr_req,
-   output wire                          app_ref_req,
-   output wire                          app_zq_req,
-   output wire [pMASK_WIDTH-1:0]        app_wdf_mask,
 
-   input  wire                          app_sr_active,
-   input  wire                          app_ref_ack,
-   input  wire                          app_zq_ack,
    input  wire [pDATA_WIDTH-1:0]        app_rd_data,
    input  wire                          app_rd_data_end,
    input  wire                          app_rd_data_valid,
@@ -96,11 +89,6 @@ reg [3:0] next_state;
 
 localparam CMD_WRITE = 3'b000;
 localparam CMD_READ = 3'b001;
-
-assign app_sr_req = 0;
-assign app_ref_req = 0;
-assign app_zq_req = 0;
-assign app_wdf_mask = 0;
 
 reg reset_address;
 reg incr_address;
