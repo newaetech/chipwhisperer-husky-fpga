@@ -633,7 +633,7 @@ module cwhusky_top(
                         (enable_output_pdic) ? output_pdic : 1'bZ;
 
    assign target_nRST = (target_highz) ? 1'bZ :
-                        (enable_avrprog) ? USB_SPARE0 :
+                        (enable_avrprog) ? ( (USB_SPARE0)? 1'bz : 1'b0 )  :
                         (enable_output_nrst) ? output_nrst : 1'bZ;
 
    assign target_MOSI = (target_highz) ? 1'bZ :
