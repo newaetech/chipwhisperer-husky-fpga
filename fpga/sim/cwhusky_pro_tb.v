@@ -540,7 +540,8 @@ initial begin
 
       // Figure out the total number of samples to read.
       // It's the total number of samples, accounting for segments, rounded up to a multiple of 3.
-      samples_to_read = $ceil(prFIFO_SAMPLES*pNUM_SEGMENTS/3)*3;
+      //samples_to_read = $ceil(prFIFO_SAMPLES*pNUM_SEGMENTS/3)*3;
+      samples_to_read = prFIFO_SAMPLES*pNUM_SEGMENTS;
 
       if (pSTREAM) begin
          wait (setup_done);
@@ -579,7 +580,7 @@ initial begin
             expected = (last_sample + (pDOWNSAMPLE+1)) % (pADC_LOW_RES? 2**8:2**12);
             if (sample == expected) begin
                good_reads += 1;
-               //$display("good read %d: %2h", i, sample);
+               $display("good read %d: %2h", i, sample);
             end
             else begin
                bad_reads += 1;
@@ -653,7 +654,8 @@ end
        expected_glitch = 1'b0;
        glitch_errors = 0;
        glitch_compare = 0;
-       glitches_done = 0;
+       //glitches_done = 0;
+       glitches_done = 1; // TODO- temporary: no TRIG_GLITCHOUT on CW310 build
        wait (TRIG_GLITCHOUT);
        glitch_compare = 1;
        repeat (6 + all_offs[0]) @(negedge glitch_clock);
