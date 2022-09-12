@@ -577,8 +577,10 @@ initial begin
 
          else begin
             expected = (last_sample + (pDOWNSAMPLE+1)) % (pADC_LOW_RES? 2**8:2**12);
-            if (sample == expected)
+            if (sample == expected) begin
                good_reads += 1;
+               //$display("good read %d: %2h", i, sample);
+            end
             else begin
                bad_reads += 1;
                if (!pERRORS_OK) errors += 1;

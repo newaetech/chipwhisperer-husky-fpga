@@ -111,6 +111,9 @@ task read_next_byte;
          repeat($urandom_range(2, 20)) @(posedge usb_clk);
    end
    usb_bytecount = usb_bytecount + 1;
+   `ifdef CW310 // extra cycles to accomodate CW310
+       repeat(4) @(posedge usb_clk);
+   `endif
 endtask
 
 task read_next_sample;

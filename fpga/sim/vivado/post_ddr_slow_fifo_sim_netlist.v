@@ -1,7 +1,7 @@
 // Copyright 1986-2019 Xilinx, Inc. All Rights Reserved.
 // --------------------------------------------------------------------------------
 // Tool Version: Vivado v.2019.2 (lin64) Build 2708876 Wed Nov  6 21:39:14 MST 2019
-// Date        : Tue Sep  6 12:17:03 2022
+// Date        : Sat Sep 10 17:43:34 2022
 // Host        : red running 64-bit Ubuntu 18.04.6 LTS
 // Command     : write_verilog -force -mode funcsim
 //               /home/jpnewae/git/xilinx_simulation_fifos/xilinx_simulation_fifos.srcs/sources_1/ip/post_ddr_slow_fifo/post_ddr_slow_fifo_sim_netlist.v
@@ -29,17 +29,17 @@ module post_ddr_slow_fifo
   input rst;
   (* x_interface_info = "xilinx.com:signal:clock:1.0 write_clk CLK" *) (* x_interface_parameter = "XIL_INTERFACENAME write_clk, FREQ_HZ 200000000, PHASE 0.000, INSERT_VIP 0" *) input wr_clk;
   (* x_interface_info = "xilinx.com:signal:clock:1.0 read_clk CLK" *) (* x_interface_parameter = "XIL_INTERFACENAME read_clk, FREQ_HZ 96000000, PHASE 0.000, INSERT_VIP 0" *) input rd_clk;
-  (* x_interface_info = "xilinx.com:interface:fifo_write:1.0 FIFO_WRITE WR_DATA" *) input [31:0]din;
+  (* x_interface_info = "xilinx.com:interface:fifo_write:1.0 FIFO_WRITE WR_DATA" *) input [63:0]din;
   (* x_interface_info = "xilinx.com:interface:fifo_write:1.0 FIFO_WRITE WR_EN" *) input wr_en;
   (* x_interface_info = "xilinx.com:interface:fifo_read:1.0 FIFO_READ RD_EN" *) input rd_en;
-  (* x_interface_info = "xilinx.com:interface:fifo_read:1.0 FIFO_READ RD_DATA" *) output [31:0]dout;
+  (* x_interface_info = "xilinx.com:interface:fifo_read:1.0 FIFO_READ RD_DATA" *) output [63:0]dout;
   (* x_interface_info = "xilinx.com:interface:fifo_write:1.0 FIFO_WRITE FULL" *) output full;
   output overflow;
   (* x_interface_info = "xilinx.com:interface:fifo_read:1.0 FIFO_READ EMPTY" *) output empty;
   output underflow;
 
-  wire [31:0]din;
-  wire [31:0]dout;
+  wire [63:0]din;
+  wire [63:0]dout;
   wire empty;
   wire full;
   wire overflow;
@@ -128,7 +128,7 @@ module post_ddr_slow_fifo
   wire [10:0]NLW_U0_axis_data_count_UNCONNECTED;
   wire [10:0]NLW_U0_axis_rd_data_count_UNCONNECTED;
   wire [10:0]NLW_U0_axis_wr_data_count_UNCONNECTED;
-  wire [13:0]NLW_U0_data_count_UNCONNECTED;
+  wire [12:0]NLW_U0_data_count_UNCONNECTED;
   wire [31:0]NLW_U0_m_axi_araddr_UNCONNECTED;
   wire [1:0]NLW_U0_m_axi_arburst_UNCONNECTED;
   wire [3:0]NLW_U0_m_axi_arcache_UNCONNECTED;
@@ -161,7 +161,7 @@ module post_ddr_slow_fifo
   wire [0:0]NLW_U0_m_axis_tkeep_UNCONNECTED;
   wire [0:0]NLW_U0_m_axis_tstrb_UNCONNECTED;
   wire [3:0]NLW_U0_m_axis_tuser_UNCONNECTED;
-  wire [13:0]NLW_U0_rd_data_count_UNCONNECTED;
+  wire [12:0]NLW_U0_rd_data_count_UNCONNECTED;
   wire [0:0]NLW_U0_s_axi_bid_UNCONNECTED;
   wire [1:0]NLW_U0_s_axi_bresp_UNCONNECTED;
   wire [0:0]NLW_U0_s_axi_buser_UNCONNECTED;
@@ -169,7 +169,7 @@ module post_ddr_slow_fifo
   wire [0:0]NLW_U0_s_axi_rid_UNCONNECTED;
   wire [1:0]NLW_U0_s_axi_rresp_UNCONNECTED;
   wire [0:0]NLW_U0_s_axi_ruser_UNCONNECTED;
-  wire [13:0]NLW_U0_wr_data_count_UNCONNECTED;
+  wire [12:0]NLW_U0_wr_data_count_UNCONNECTED;
 
   (* C_ADD_NGC_CONSTRAINT = "0" *) 
   (* C_APPLICATION_TYPE_AXIS = "0" *) 
@@ -198,9 +198,9 @@ module post_ddr_slow_fifo
   (* C_AXI_WUSER_WIDTH = "1" *) 
   (* C_COMMON_CLOCK = "0" *) 
   (* C_COUNT_TYPE = "0" *) 
-  (* C_DATA_COUNT_WIDTH = "14" *) 
+  (* C_DATA_COUNT_WIDTH = "13" *) 
   (* C_DEFAULT_VALUE = "BlankString" *) 
-  (* C_DIN_WIDTH = "32" *) 
+  (* C_DIN_WIDTH = "64" *) 
   (* C_DIN_WIDTH_AXIS = "1" *) 
   (* C_DIN_WIDTH_RACH = "32" *) 
   (* C_DIN_WIDTH_RDCH = "64" *) 
@@ -208,7 +208,7 @@ module post_ddr_slow_fifo
   (* C_DIN_WIDTH_WDCH = "64" *) 
   (* C_DIN_WIDTH_WRCH = "2" *) 
   (* C_DOUT_RST_VAL = "0" *) 
-  (* C_DOUT_WIDTH = "32" *) 
+  (* C_DOUT_WIDTH = "64" *) 
   (* C_ENABLE_RLOCS = "0" *) 
   (* C_ENABLE_RST_SYNC = "1" *) 
   (* C_EN_SAFETY_CKT = "0" *) 
@@ -306,14 +306,14 @@ module post_ddr_slow_fifo
   (* C_PROG_EMPTY_TYPE_WACH = "0" *) 
   (* C_PROG_EMPTY_TYPE_WDCH = "0" *) 
   (* C_PROG_EMPTY_TYPE_WRCH = "0" *) 
-  (* C_PROG_FULL_THRESH_ASSERT_VAL = "16371" *) 
+  (* C_PROG_FULL_THRESH_ASSERT_VAL = "8178" *) 
   (* C_PROG_FULL_THRESH_ASSERT_VAL_AXIS = "1023" *) 
   (* C_PROG_FULL_THRESH_ASSERT_VAL_RACH = "1023" *) 
   (* C_PROG_FULL_THRESH_ASSERT_VAL_RDCH = "1023" *) 
   (* C_PROG_FULL_THRESH_ASSERT_VAL_WACH = "1023" *) 
   (* C_PROG_FULL_THRESH_ASSERT_VAL_WDCH = "1023" *) 
   (* C_PROG_FULL_THRESH_ASSERT_VAL_WRCH = "1023" *) 
-  (* C_PROG_FULL_THRESH_NEGATE_VAL = "16370" *) 
+  (* C_PROG_FULL_THRESH_NEGATE_VAL = "8177" *) 
   (* C_PROG_FULL_TYPE = "0" *) 
   (* C_PROG_FULL_TYPE_AXIS = "0" *) 
   (* C_PROG_FULL_TYPE_RACH = "0" *) 
@@ -323,10 +323,10 @@ module post_ddr_slow_fifo
   (* C_PROG_FULL_TYPE_WRCH = "0" *) 
   (* C_RACH_TYPE = "0" *) 
   (* C_RDCH_TYPE = "0" *) 
-  (* C_RD_DATA_COUNT_WIDTH = "14" *) 
-  (* C_RD_DEPTH = "16384" *) 
+  (* C_RD_DATA_COUNT_WIDTH = "13" *) 
+  (* C_RD_DEPTH = "8192" *) 
   (* C_RD_FREQ = "96" *) 
-  (* C_RD_PNTR_WIDTH = "14" *) 
+  (* C_RD_PNTR_WIDTH = "13" *) 
   (* C_REG_SLICE_MODE_AXIS = "0" *) 
   (* C_REG_SLICE_MODE_RACH = "0" *) 
   (* C_REG_SLICE_MODE_RDCH = "0" *) 
@@ -356,8 +356,8 @@ module post_ddr_slow_fifo
   (* C_WDCH_TYPE = "0" *) 
   (* C_WRCH_TYPE = "0" *) 
   (* C_WR_ACK_LOW = "0" *) 
-  (* C_WR_DATA_COUNT_WIDTH = "14" *) 
-  (* C_WR_DEPTH = "16384" *) 
+  (* C_WR_DATA_COUNT_WIDTH = "13" *) 
+  (* C_WR_DEPTH = "8192" *) 
   (* C_WR_DEPTH_AXIS = "1024" *) 
   (* C_WR_DEPTH_RACH = "16" *) 
   (* C_WR_DEPTH_RDCH = "1024" *) 
@@ -365,7 +365,7 @@ module post_ddr_slow_fifo
   (* C_WR_DEPTH_WDCH = "1024" *) 
   (* C_WR_DEPTH_WRCH = "16" *) 
   (* C_WR_FREQ = "200" *) 
-  (* C_WR_PNTR_WIDTH = "14" *) 
+  (* C_WR_PNTR_WIDTH = "13" *) 
   (* C_WR_PNTR_WIDTH_AXIS = "10" *) 
   (* C_WR_PNTR_WIDTH_RACH = "4" *) 
   (* C_WR_PNTR_WIDTH_RDCH = "10" *) 
@@ -457,7 +457,7 @@ module post_ddr_slow_fifo
         .backup(1'b0),
         .backup_marker(1'b0),
         .clk(1'b0),
-        .data_count(NLW_U0_data_count_UNCONNECTED[13:0]),
+        .data_count(NLW_U0_data_count_UNCONNECTED[12:0]),
         .dbiterr(NLW_U0_dbiterr_UNCONNECTED),
         .din(din),
         .dout(dout),
@@ -524,15 +524,15 @@ module post_ddr_slow_fifo
         .m_axis_tvalid(NLW_U0_m_axis_tvalid_UNCONNECTED),
         .overflow(overflow),
         .prog_empty(NLW_U0_prog_empty_UNCONNECTED),
-        .prog_empty_thresh({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
-        .prog_empty_thresh_assert({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
-        .prog_empty_thresh_negate({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
+        .prog_empty_thresh({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
+        .prog_empty_thresh_assert({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
+        .prog_empty_thresh_negate({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
         .prog_full(NLW_U0_prog_full_UNCONNECTED),
-        .prog_full_thresh({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
-        .prog_full_thresh_assert({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
-        .prog_full_thresh_negate({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
+        .prog_full_thresh({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
+        .prog_full_thresh_assert({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
+        .prog_full_thresh_negate({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
         .rd_clk(rd_clk),
-        .rd_data_count(NLW_U0_rd_data_count_UNCONNECTED[13:0]),
+        .rd_data_count(NLW_U0_rd_data_count_UNCONNECTED[12:0]),
         .rd_en(rd_en),
         .rd_rst(1'b0),
         .rd_rst_busy(NLW_U0_rd_rst_busy_UNCONNECTED),
@@ -601,7 +601,7 @@ module post_ddr_slow_fifo
         .valid(NLW_U0_valid_UNCONNECTED),
         .wr_ack(NLW_U0_wr_ack_UNCONNECTED),
         .wr_clk(wr_clk),
-        .wr_data_count(NLW_U0_wr_data_count_UNCONNECTED[13:0]),
+        .wr_data_count(NLW_U0_wr_data_count_UNCONNECTED[12:0]),
         .wr_en(wr_en),
         .wr_rst(1'b0),
         .wr_rst_busy(NLW_U0_wr_rst_busy_UNCONNECTED));
@@ -609,62 +609,97 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_extdepth_v6" *) 
 module post_ddr_slow_fifo_builtin_extdepth_v6
-   (ful,
-    emp,
+   (RD_EN,
+    rd_clk_0,
+    overflow_i_ic,
+    rd_clk_1,
+    WR_EN,
+    underflow_i_ic,
     dout,
-    wr_clk,
-    rd_rst_i,
-    wr_tmp,
-    din,
+    rd_en,
+    \gunf.gunf2.UNDERFLOW_reg ,
+    \gunf.gunf2.UNDERFLOW_reg_0 ,
+    \gunf.gunf2.UNDERFLOW_reg_1 ,
+    \govw.govw2.OVERFLOW_reg ,
+    \govw.govw2.OVERFLOW_reg_0 ,
+    \govw.govw2.OVERFLOW_reg_1 ,
+    wr_en,
+    \govw.govw2.OVERFLOW_reg_2 ,
+    \gunf.gunf2.UNDERFLOW_reg_2 ,
     rd_clk,
-    dout_3_sp_1);
-  output [0:0]ful;
-  output [0:0]emp;
+    RST,
+    wr_clk,
+    din);
+  output RD_EN;
+  output rd_clk_0;
+  output overflow_i_ic;
+  output rd_clk_1;
+  output WR_EN;
+  output underflow_i_ic;
   output [3:0]dout;
-  input wr_clk;
-  input rd_rst_i;
-  input wr_tmp;
-  input [3:0]din;
+  input rd_en;
+  input \gunf.gunf2.UNDERFLOW_reg ;
+  input \gunf.gunf2.UNDERFLOW_reg_0 ;
+  input \gunf.gunf2.UNDERFLOW_reg_1 ;
+  input \govw.govw2.OVERFLOW_reg ;
+  input \govw.govw2.OVERFLOW_reg_0 ;
+  input \govw.govw2.OVERFLOW_reg_1 ;
+  input wr_en;
+  input [2:0]\govw.govw2.OVERFLOW_reg_2 ;
+  input [2:0]\gunf.gunf2.UNDERFLOW_reg_2 ;
   input rd_clk;
-  input dout_3_sp_1;
+  input RST;
+  input wr_clk;
+  input [3:0]din;
 
-  wire [3:0]\d[1]_0 ;
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
   (* async_reg = "true" *) (* msgon = "true" *) wire dbr_as_reg;
   (* async_reg = "true" *) (* msgon = "true" *) wire dbr_d1;
   wire [3:0]din;
   wire [3:0]dout;
-  wire dout_3_sn_1;
-  wire e_1;
-  wire [0:0]emp;
-  wire [0:0]ful;
-  wire ful_0;
+  wire \govw.govw2.OVERFLOW_reg ;
+  wire \govw.govw2.OVERFLOW_reg_0 ;
+  wire \govw.govw2.OVERFLOW_reg_1 ;
+  wire [2:0]\govw.govw2.OVERFLOW_reg_2 ;
+  wire \gunf.gunf2.UNDERFLOW_reg ;
+  wire \gunf.gunf2.UNDERFLOW_reg_0 ;
+  wire \gunf.gunf2.UNDERFLOW_reg_1 ;
+  wire [2:0]\gunf.gunf2.UNDERFLOW_reg_2 ;
+  wire overflow_i_ic;
   wire rd_clk;
-  wire rd_rst_i;
+  wire rd_clk_0;
+  wire rd_clk_1;
+  wire rd_en;
   (* async_reg = "true" *) (* msgon = "true" *) wire sbr_as_reg;
   (* async_reg = "true" *) (* msgon = "true" *) wire sbr_d1;
+  wire underflow_i_ic;
   wire wr_clk;
-  wire wr_tmp;
+  wire wr_en;
 
-  assign dout_3_sn_1 = dout_3_sp_1;
-  post_ddr_slow_fifo_builtin_prim_v6_19 \gchain.gp1[1].gbldc.inst_prim 
-       (.DO(\d[1]_0 ),
+  post_ddr_slow_fifo_builtin_prim_v6_29 \gonep.inst_prim 
+       (.RD_EN(RD_EN),
+        .RST(RST),
+        .WR_EN(WR_EN),
         .din(din),
-        .e_1(e_1),
-        .ful(ful),
-        .ful_0(ful_0),
-        .rd_rst_i(rd_rst_i),
-        .wr_clk(wr_clk),
-        .wr_tmp(wr_tmp));
-  post_ddr_slow_fifo_builtin_prim_v6__parameterized0_20 \gchain.gp1[2].gbldl.inst_prim 
-       (.DO(\d[1]_0 ),
         .dout(dout),
-        .dout_3_sp_1(dout_3_sn_1),
-        .e_1(e_1),
-        .emp(emp),
-        .ful_0(ful_0),
+        .\govw.govw2.OVERFLOW_reg (\govw.govw2.OVERFLOW_reg ),
+        .\govw.govw2.OVERFLOW_reg_0 (\govw.govw2.OVERFLOW_reg_0 ),
+        .\govw.govw2.OVERFLOW_reg_1 (\govw.govw2.OVERFLOW_reg_1 ),
+        .\govw.govw2.OVERFLOW_reg_2 (\govw.govw2.OVERFLOW_reg_2 ),
+        .\gunf.gunf2.UNDERFLOW_reg (\gunf.gunf2.UNDERFLOW_reg ),
+        .\gunf.gunf2.UNDERFLOW_reg_0 (\gunf.gunf2.UNDERFLOW_reg_0 ),
+        .\gunf.gunf2.UNDERFLOW_reg_1 (\gunf.gunf2.UNDERFLOW_reg_1 ),
+        .\gunf.gunf2.UNDERFLOW_reg_2 (\gunf.gunf2.UNDERFLOW_reg_2 ),
+        .overflow_i_ic(overflow_i_ic),
         .rd_clk(rd_clk),
-        .rd_rst_i(rd_rst_i),
-        .wr_clk(wr_clk));
+        .rd_clk_0(rd_clk_0),
+        .rd_clk_1(rd_clk_1),
+        .rd_en(rd_en),
+        .underflow_i_ic(underflow_i_ic),
+        .wr_clk(wr_clk),
+        .wr_en(wr_en));
   LUT1 #(
     .INIT(2'h2)) 
     i_0
@@ -689,163 +724,289 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_extdepth_v6" *) 
 module post_ddr_slow_fifo_builtin_extdepth_v6_0
-   (ful,
-    emp,
+   (EMPTY,
+    FULL,
     dout,
-    wr_clk,
-    rd_rst_i,
-    wr_tmp,
-    din,
     rd_clk,
-    \dout[7] );
-  output [0:0]ful;
-  output [0:0]emp;
+    RD_EN,
+    RST,
+    wr_clk,
+    WR_EN,
+    din);
+  output EMPTY;
+  output FULL;
   output [3:0]dout;
-  input wr_clk;
-  input rd_rst_i;
-  input wr_tmp;
-  input [3:0]din;
   input rd_clk;
-  input \dout[7] ;
+  input RD_EN;
+  input RST;
+  input wr_clk;
+  input WR_EN;
+  input [3:0]din;
 
-  wire [3:0]\d[1]_1 ;
+  wire EMPTY;
+  wire FULL;
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
   (* async_reg = "true" *) (* msgon = "true" *) wire dbr_as_reg;
   (* async_reg = "true" *) (* msgon = "true" *) wire dbr_d1;
   wire [3:0]din;
   wire [3:0]dout;
-  wire \dout[7] ;
-  wire e_1;
-  wire [0:0]emp;
-  wire [0:0]ful;
-  wire ful_0;
   wire rd_clk;
-  wire rd_rst_i;
   (* async_reg = "true" *) (* msgon = "true" *) wire sbr_as_reg;
   (* async_reg = "true" *) (* msgon = "true" *) wire sbr_d1;
   wire wr_clk;
-  wire wr_tmp;
 
-  post_ddr_slow_fifo_builtin_prim_v6_17 \gchain.gp1[1].gbldc.inst_prim 
-       (.DO(\d[1]_1 ),
-        .din(din),
-        .e_1(e_1),
-        .ful(ful),
-        .ful_0(ful_0),
-        .rd_rst_i(rd_rst_i),
-        .wr_clk(wr_clk),
-        .wr_tmp(wr_tmp));
-  post_ddr_slow_fifo_builtin_prim_v6__parameterized0_18 \gchain.gp1[2].gbldl.inst_prim 
-       (.DO(\d[1]_1 ),
-        .dout(dout),
-        .\dout[7] (\dout[7] ),
-        .e_1(e_1),
-        .emp(emp),
-        .ful_0(ful_0),
-        .rd_clk(rd_clk),
-        .rd_rst_i(rd_rst_i),
-        .wr_clk(wr_clk));
   LUT1 #(
     .INIT(2'h2)) 
-    i_0
+    \gextw[11].gnll_fifo.inst_extdi_0 
        (.I0(1'b0),
         .O(sbr_d1));
   LUT1 #(
     .INIT(2'h2)) 
-    i_1
+    \gextw[11].gnll_fifo.inst_extdi_1 
        (.I0(1'b0),
         .O(dbr_d1));
   LUT1 #(
     .INIT(2'h2)) 
-    i_2
+    \gextw[11].gnll_fifo.inst_extdi_2 
        (.I0(1'b0),
         .O(sbr_as_reg));
   LUT1 #(
     .INIT(2'h2)) 
-    i_3
+    \gextw[11].gnll_fifo.inst_extdi_3 
        (.I0(1'b0),
         .O(dbr_as_reg));
+  post_ddr_slow_fifo_builtin_prim_v6_28 \gonep.inst_prim 
+       (.EMPTY(EMPTY),
+        .FULL(FULL),
+        .RD_EN(RD_EN),
+        .RST(RST),
+        .WR_EN(WR_EN),
+        .din(din),
+        .dout(dout),
+        .rd_clk(rd_clk),
+        .wr_clk(wr_clk));
 endmodule
 
 (* ORIG_REF_NAME = "builtin_extdepth_v6" *) 
 module post_ddr_slow_fifo_builtin_extdepth_v6_1
-   (ful,
-    emp,
+   (EMPTY,
+    FULL,
     dout,
-    full,
-    empty,
-    wr_clk,
-    rd_rst_i,
-    wr_tmp,
-    din,
     rd_clk,
-    \dout[11] ,
-    full_0,
-    full_1,
-    empty_0,
-    empty_1);
-  output [0:0]ful;
-  output [0:0]emp;
+    RD_EN,
+    RST,
+    wr_clk,
+    WR_EN,
+    din);
+  output EMPTY;
+  output FULL;
   output [3:0]dout;
-  output full;
-  output empty;
-  input wr_clk;
-  input rd_rst_i;
-  input wr_tmp;
-  input [3:0]din;
   input rd_clk;
-  input \dout[11] ;
-  input [2:0]full_0;
-  input full_1;
-  input [2:0]empty_0;
-  input empty_1;
+  input RD_EN;
+  input RST;
+  input wr_clk;
+  input WR_EN;
+  input [3:0]din;
 
-  wire [3:0]\d[1]_2 ;
+  wire EMPTY;
+  wire FULL;
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
   (* async_reg = "true" *) (* msgon = "true" *) wire dbr_as_reg;
   (* async_reg = "true" *) (* msgon = "true" *) wire dbr_d1;
   wire [3:0]din;
   wire [3:0]dout;
-  wire \dout[11] ;
-  wire e_1;
-  wire [0:0]emp;
-  wire empty;
-  wire [2:0]empty_0;
-  wire empty_1;
-  wire [0:0]ful;
-  wire ful_0;
-  wire full;
-  wire [2:0]full_0;
-  wire full_1;
   wire rd_clk;
-  wire rd_rst_i;
   (* async_reg = "true" *) (* msgon = "true" *) wire sbr_as_reg;
   (* async_reg = "true" *) (* msgon = "true" *) wire sbr_d1;
   wire wr_clk;
-  wire wr_tmp;
 
-  post_ddr_slow_fifo_builtin_prim_v6_15 \gchain.gp1[1].gbldc.inst_prim 
-       (.DO(\d[1]_2 ),
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[12].gnll_fifo.inst_extdi_0 
+       (.I0(1'b0),
+        .O(sbr_d1));
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[12].gnll_fifo.inst_extdi_1 
+       (.I0(1'b0),
+        .O(dbr_d1));
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[12].gnll_fifo.inst_extdi_2 
+       (.I0(1'b0),
+        .O(sbr_as_reg));
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[12].gnll_fifo.inst_extdi_3 
+       (.I0(1'b0),
+        .O(dbr_as_reg));
+  post_ddr_slow_fifo_builtin_prim_v6_27 \gonep.inst_prim 
+       (.EMPTY(EMPTY),
+        .FULL(FULL),
+        .RD_EN(RD_EN),
+        .RST(RST),
+        .WR_EN(WR_EN),
         .din(din),
-        .e_1(e_1),
-        .ful(ful),
-        .ful_0(ful_0),
-        .full(full),
-        .full_0(full_0),
-        .full_1(full_1),
-        .rd_rst_i(rd_rst_i),
-        .wr_clk(wr_clk),
-        .wr_tmp(wr_tmp));
-  post_ddr_slow_fifo_builtin_prim_v6__parameterized0_16 \gchain.gp1[2].gbldl.inst_prim 
-       (.DO(\d[1]_2 ),
         .dout(dout),
-        .\dout[11] (\dout[11] ),
-        .e_1(e_1),
-        .emp(emp),
+        .rd_clk(rd_clk),
+        .wr_clk(wr_clk));
+endmodule
+
+(* ORIG_REF_NAME = "builtin_extdepth_v6" *) 
+module post_ddr_slow_fifo_builtin_extdepth_v6_10
+   (EMPTY,
+    FULL,
+    dout,
+    rd_clk,
+    RD_EN,
+    RST,
+    wr_clk,
+    WR_EN,
+    din);
+  output EMPTY;
+  output FULL;
+  output [3:0]dout;
+  input rd_clk;
+  input RD_EN;
+  input RST;
+  input wr_clk;
+  input WR_EN;
+  input [3:0]din;
+
+  wire EMPTY;
+  wire FULL;
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
+  (* async_reg = "true" *) (* msgon = "true" *) wire dbr_as_reg;
+  (* async_reg = "true" *) (* msgon = "true" *) wire dbr_d1;
+  wire [3:0]din;
+  wire [3:0]dout;
+  wire rd_clk;
+  (* async_reg = "true" *) (* msgon = "true" *) wire sbr_as_reg;
+  (* async_reg = "true" *) (* msgon = "true" *) wire sbr_d1;
+  wire wr_clk;
+
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[5].gnll_fifo.inst_extdi_0 
+       (.I0(1'b0),
+        .O(sbr_d1));
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[5].gnll_fifo.inst_extdi_1 
+       (.I0(1'b0),
+        .O(dbr_d1));
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[5].gnll_fifo.inst_extdi_2 
+       (.I0(1'b0),
+        .O(sbr_as_reg));
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[5].gnll_fifo.inst_extdi_3 
+       (.I0(1'b0),
+        .O(dbr_as_reg));
+  post_ddr_slow_fifo_builtin_prim_v6_18 \gonep.inst_prim 
+       (.EMPTY(EMPTY),
+        .FULL(FULL),
+        .RD_EN(RD_EN),
+        .RST(RST),
+        .WR_EN(WR_EN),
+        .din(din),
+        .dout(dout),
+        .rd_clk(rd_clk),
+        .wr_clk(wr_clk));
+endmodule
+
+(* ORIG_REF_NAME = "builtin_extdepth_v6" *) 
+module post_ddr_slow_fifo_builtin_extdepth_v6_11
+   (full,
+    rd_clk_0,
+    empty,
+    rd_clk_1,
+    dout,
+    full_0,
+    full_1,
+    full_2,
+    full_3,
+    empty_0,
+    empty_1,
+    empty_2,
+    empty_3,
+    rd_clk,
+    RD_EN,
+    RST,
+    wr_clk,
+    WR_EN,
+    din);
+  output full;
+  output rd_clk_0;
+  output empty;
+  output rd_clk_1;
+  output [3:0]dout;
+  input full_0;
+  input full_1;
+  input full_2;
+  input [2:0]full_3;
+  input empty_0;
+  input empty_1;
+  input empty_2;
+  input [2:0]empty_3;
+  input rd_clk;
+  input RD_EN;
+  input RST;
+  input wr_clk;
+  input WR_EN;
+  input [3:0]din;
+
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
+  (* async_reg = "true" *) (* msgon = "true" *) wire dbr_as_reg;
+  (* async_reg = "true" *) (* msgon = "true" *) wire dbr_d1;
+  wire [3:0]din;
+  wire [3:0]dout;
+  wire empty;
+  wire empty_0;
+  wire empty_1;
+  wire empty_2;
+  wire [2:0]empty_3;
+  wire full;
+  wire full_0;
+  wire full_1;
+  wire full_2;
+  wire [2:0]full_3;
+  wire rd_clk;
+  wire rd_clk_0;
+  wire rd_clk_1;
+  (* async_reg = "true" *) (* msgon = "true" *) wire sbr_as_reg;
+  (* async_reg = "true" *) (* msgon = "true" *) wire sbr_d1;
+  wire wr_clk;
+
+  post_ddr_slow_fifo_builtin_prim_v6_17 \gonep.inst_prim 
+       (.RD_EN(RD_EN),
+        .RST(RST),
+        .WR_EN(WR_EN),
+        .din(din),
+        .dout(dout),
         .empty(empty),
         .empty_0(empty_0),
         .empty_1(empty_1),
-        .ful_0(ful_0),
+        .empty_2(empty_2),
+        .empty_3(empty_3),
+        .full(full),
+        .full_0(full_0),
+        .full_1(full_1),
+        .full_2(full_2),
+        .full_3(full_3),
         .rd_clk(rd_clk),
-        .rd_rst_i(rd_rst_i),
+        .rd_clk_0(rd_clk_0),
+        .rd_clk_1(rd_clk_1),
         .wr_clk(wr_clk));
   LUT1 #(
     .INIT(2'h2)) 
@@ -867,143 +1028,328 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_1
     i_3
        (.I0(1'b0),
         .O(dbr_as_reg));
+endmodule
+
+(* ORIG_REF_NAME = "builtin_extdepth_v6" *) 
+module post_ddr_slow_fifo_builtin_extdepth_v6_12
+   (EMPTY,
+    FULL,
+    dout,
+    rd_clk,
+    RD_EN,
+    RST,
+    wr_clk,
+    WR_EN,
+    din);
+  output EMPTY;
+  output FULL;
+  output [3:0]dout;
+  input rd_clk;
+  input RD_EN;
+  input RST;
+  input wr_clk;
+  input WR_EN;
+  input [3:0]din;
+
+  wire EMPTY;
+  wire FULL;
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
+  (* async_reg = "true" *) (* msgon = "true" *) wire dbr_as_reg;
+  (* async_reg = "true" *) (* msgon = "true" *) wire dbr_d1;
+  wire [3:0]din;
+  wire [3:0]dout;
+  wire rd_clk;
+  (* async_reg = "true" *) (* msgon = "true" *) wire sbr_as_reg;
+  (* async_reg = "true" *) (* msgon = "true" *) wire sbr_d1;
+  wire wr_clk;
+
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[7].gnll_fifo.inst_extdi_0 
+       (.I0(1'b0),
+        .O(sbr_d1));
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[7].gnll_fifo.inst_extdi_1 
+       (.I0(1'b0),
+        .O(dbr_d1));
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[7].gnll_fifo.inst_extdi_2 
+       (.I0(1'b0),
+        .O(sbr_as_reg));
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[7].gnll_fifo.inst_extdi_3 
+       (.I0(1'b0),
+        .O(dbr_as_reg));
+  post_ddr_slow_fifo_builtin_prim_v6_16 \gonep.inst_prim 
+       (.EMPTY(EMPTY),
+        .FULL(FULL),
+        .RD_EN(RD_EN),
+        .RST(RST),
+        .WR_EN(WR_EN),
+        .din(din),
+        .dout(dout),
+        .rd_clk(rd_clk),
+        .wr_clk(wr_clk));
+endmodule
+
+(* ORIG_REF_NAME = "builtin_extdepth_v6" *) 
+module post_ddr_slow_fifo_builtin_extdepth_v6_13
+   (EMPTY,
+    FULL,
+    dout,
+    rd_clk,
+    RD_EN,
+    RST,
+    wr_clk,
+    WR_EN,
+    din);
+  output EMPTY;
+  output FULL;
+  output [3:0]dout;
+  input rd_clk;
+  input RD_EN;
+  input RST;
+  input wr_clk;
+  input WR_EN;
+  input [3:0]din;
+
+  wire EMPTY;
+  wire FULL;
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
+  (* async_reg = "true" *) (* msgon = "true" *) wire dbr_as_reg;
+  (* async_reg = "true" *) (* msgon = "true" *) wire dbr_d1;
+  wire [3:0]din;
+  wire [3:0]dout;
+  wire rd_clk;
+  (* async_reg = "true" *) (* msgon = "true" *) wire sbr_as_reg;
+  (* async_reg = "true" *) (* msgon = "true" *) wire sbr_d1;
+  wire wr_clk;
+
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[8].gnll_fifo.inst_extdi_0 
+       (.I0(1'b0),
+        .O(sbr_d1));
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[8].gnll_fifo.inst_extdi_1 
+       (.I0(1'b0),
+        .O(dbr_d1));
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[8].gnll_fifo.inst_extdi_2 
+       (.I0(1'b0),
+        .O(sbr_as_reg));
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[8].gnll_fifo.inst_extdi_3 
+       (.I0(1'b0),
+        .O(dbr_as_reg));
+  post_ddr_slow_fifo_builtin_prim_v6_15 \gonep.inst_prim 
+       (.EMPTY(EMPTY),
+        .FULL(FULL),
+        .RD_EN(RD_EN),
+        .RST(RST),
+        .WR_EN(WR_EN),
+        .din(din),
+        .dout(dout),
+        .rd_clk(rd_clk),
+        .wr_clk(wr_clk));
+endmodule
+
+(* ORIG_REF_NAME = "builtin_extdepth_v6" *) 
+module post_ddr_slow_fifo_builtin_extdepth_v6_14
+   (EMPTY,
+    FULL,
+    dout,
+    rd_clk,
+    RD_EN,
+    RST,
+    wr_clk,
+    WR_EN,
+    din);
+  output EMPTY;
+  output FULL;
+  output [3:0]dout;
+  input rd_clk;
+  input RD_EN;
+  input RST;
+  input wr_clk;
+  input WR_EN;
+  input [3:0]din;
+
+  wire EMPTY;
+  wire FULL;
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
+  (* async_reg = "true" *) (* msgon = "true" *) wire dbr_as_reg;
+  (* async_reg = "true" *) (* msgon = "true" *) wire dbr_d1;
+  wire [3:0]din;
+  wire [3:0]dout;
+  wire rd_clk;
+  (* async_reg = "true" *) (* msgon = "true" *) wire sbr_as_reg;
+  (* async_reg = "true" *) (* msgon = "true" *) wire sbr_d1;
+  wire wr_clk;
+
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[9].gnll_fifo.inst_extdi_0 
+       (.I0(1'b0),
+        .O(sbr_d1));
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[9].gnll_fifo.inst_extdi_1 
+       (.I0(1'b0),
+        .O(dbr_d1));
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[9].gnll_fifo.inst_extdi_2 
+       (.I0(1'b0),
+        .O(sbr_as_reg));
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[9].gnll_fifo.inst_extdi_3 
+       (.I0(1'b0),
+        .O(dbr_as_reg));
+  post_ddr_slow_fifo_builtin_prim_v6 \gonep.inst_prim 
+       (.EMPTY(EMPTY),
+        .FULL(FULL),
+        .RD_EN(RD_EN),
+        .RST(RST),
+        .WR_EN(WR_EN),
+        .din(din),
+        .dout(dout),
+        .rd_clk(rd_clk),
+        .wr_clk(wr_clk));
 endmodule
 
 (* ORIG_REF_NAME = "builtin_extdepth_v6" *) 
 module post_ddr_slow_fifo_builtin_extdepth_v6_2
-   (wr_clk_0,
-    rd_clk_0,
+   (EMPTY,
+    FULL,
     dout,
-    wr_clk,
-    rd_rst_i,
-    wr_tmp,
-    din,
     rd_clk,
-    \dout[15] );
-  output [0:0]wr_clk_0;
-  output [0:0]rd_clk_0;
+    RD_EN,
+    RST,
+    wr_clk,
+    WR_EN,
+    din);
+  output EMPTY;
+  output FULL;
   output [3:0]dout;
-  input wr_clk;
-  input rd_rst_i;
-  input wr_tmp;
-  input [3:0]din;
   input rd_clk;
-  input \dout[15] ;
+  input RD_EN;
+  input RST;
+  input wr_clk;
+  input WR_EN;
+  input [3:0]din;
 
-  wire [3:0]\d[1]_3 ;
+  wire EMPTY;
+  wire FULL;
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
   (* async_reg = "true" *) (* msgon = "true" *) wire dbr_as_reg;
   (* async_reg = "true" *) (* msgon = "true" *) wire dbr_d1;
   wire [3:0]din;
   wire [3:0]dout;
-  wire \dout[15] ;
-  wire e_1;
-  wire ful_0;
   wire rd_clk;
-  wire [0:0]rd_clk_0;
-  wire rd_rst_i;
   (* async_reg = "true" *) (* msgon = "true" *) wire sbr_as_reg;
   (* async_reg = "true" *) (* msgon = "true" *) wire sbr_d1;
   wire wr_clk;
-  wire [0:0]wr_clk_0;
-  wire wr_tmp;
 
-  post_ddr_slow_fifo_builtin_prim_v6_13 \gchain.gp1[1].gbldc.inst_prim 
-       (.DO(\d[1]_3 ),
-        .din(din),
-        .e_1(e_1),
-        .ful_0(ful_0),
-        .rd_rst_i(rd_rst_i),
-        .wr_clk(wr_clk),
-        .wr_clk_0(wr_clk_0),
-        .wr_tmp(wr_tmp));
-  post_ddr_slow_fifo_builtin_prim_v6__parameterized0_14 \gchain.gp1[2].gbldl.inst_prim 
-       (.DO(\d[1]_3 ),
-        .dout(dout),
-        .\dout[15] (\dout[15] ),
-        .e_1(e_1),
-        .ful_0(ful_0),
-        .rd_clk(rd_clk),
-        .rd_clk_0(rd_clk_0),
-        .rd_rst_i(rd_rst_i),
-        .wr_clk(wr_clk));
   LUT1 #(
     .INIT(2'h2)) 
-    i_0
+    \gextw[13].gnll_fifo.inst_extdi_0 
        (.I0(1'b0),
         .O(sbr_d1));
   LUT1 #(
     .INIT(2'h2)) 
-    i_1
+    \gextw[13].gnll_fifo.inst_extdi_1 
        (.I0(1'b0),
         .O(dbr_d1));
   LUT1 #(
     .INIT(2'h2)) 
-    i_2
+    \gextw[13].gnll_fifo.inst_extdi_2 
        (.I0(1'b0),
         .O(sbr_as_reg));
   LUT1 #(
     .INIT(2'h2)) 
-    i_3
+    \gextw[13].gnll_fifo.inst_extdi_3 
        (.I0(1'b0),
         .O(dbr_as_reg));
+  post_ddr_slow_fifo_builtin_prim_v6_26 \gonep.inst_prim 
+       (.EMPTY(EMPTY),
+        .FULL(FULL),
+        .RD_EN(RD_EN),
+        .RST(RST),
+        .WR_EN(WR_EN),
+        .din(din),
+        .dout(dout),
+        .rd_clk(rd_clk),
+        .wr_clk(wr_clk));
 endmodule
 
 (* ORIG_REF_NAME = "builtin_extdepth_v6" *) 
 module post_ddr_slow_fifo_builtin_extdepth_v6_3
-   (ful,
-    emp,
+   (rd_clk_0,
+    rd_clk_1,
     dout,
-    wr_clk,
-    rd_rst_i,
-    wr_tmp,
-    din,
+    full,
+    empty,
     rd_clk,
-    \dout[19] );
-  output [0:0]ful;
-  output [0:0]emp;
+    RD_EN,
+    RST,
+    wr_clk,
+    WR_EN,
+    din);
+  output rd_clk_0;
+  output rd_clk_1;
   output [3:0]dout;
-  input wr_clk;
-  input rd_rst_i;
-  input wr_tmp;
-  input [3:0]din;
+  input [2:0]full;
+  input [2:0]empty;
   input rd_clk;
-  input \dout[19] ;
+  input RD_EN;
+  input RST;
+  input wr_clk;
+  input WR_EN;
+  input [3:0]din;
 
-  wire [3:0]\d[1]_4 ;
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
   (* async_reg = "true" *) (* msgon = "true" *) wire dbr_as_reg;
   (* async_reg = "true" *) (* msgon = "true" *) wire dbr_d1;
   wire [3:0]din;
   wire [3:0]dout;
-  wire \dout[19] ;
-  wire e_1;
-  wire [0:0]emp;
-  wire [0:0]ful;
-  wire ful_0;
+  wire [2:0]empty;
+  wire [2:0]full;
   wire rd_clk;
-  wire rd_rst_i;
+  wire rd_clk_0;
+  wire rd_clk_1;
   (* async_reg = "true" *) (* msgon = "true" *) wire sbr_as_reg;
   (* async_reg = "true" *) (* msgon = "true" *) wire sbr_d1;
   wire wr_clk;
-  wire wr_tmp;
 
-  post_ddr_slow_fifo_builtin_prim_v6_11 \gchain.gp1[1].gbldc.inst_prim 
-       (.DO(\d[1]_4 ),
+  post_ddr_slow_fifo_builtin_prim_v6_25 \gonep.inst_prim 
+       (.RD_EN(RD_EN),
+        .RST(RST),
+        .WR_EN(WR_EN),
         .din(din),
-        .e_1(e_1),
-        .ful(ful),
-        .ful_0(ful_0),
-        .rd_rst_i(rd_rst_i),
-        .wr_clk(wr_clk),
-        .wr_tmp(wr_tmp));
-  post_ddr_slow_fifo_builtin_prim_v6__parameterized0_12 \gchain.gp1[2].gbldl.inst_prim 
-       (.DO(\d[1]_4 ),
         .dout(dout),
-        .\dout[19] (\dout[19] ),
-        .e_1(e_1),
-        .emp(emp),
-        .ful_0(ful_0),
+        .empty(empty),
+        .full(full),
         .rd_clk(rd_clk),
-        .rd_rst_i(rd_rst_i),
+        .rd_clk_0(rd_clk_0),
+        .rd_clk_1(rd_clk_1),
         .wr_clk(wr_clk));
   LUT1 #(
     .INIT(2'h2)) 
@@ -1029,163 +1375,257 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_extdepth_v6" *) 
 module post_ddr_slow_fifo_builtin_extdepth_v6_4
-   (wr_tmp,
+   (EMPTY,
+    FULL,
     dout,
-    rd_en_0,
-    rd_clk_0,
-    overflow_int,
-    wr_clk_0,
-    underflow_int,
-    \govw.govw2.OVERFLOW_reg ,
-    wr_clk,
-    rd_rst_i,
-    din,
-    \gunf.gunf2.UNDERFLOW_reg ,
     rd_clk,
-    rd_en,
-    wr_en);
-  output wr_tmp;
+    RD_EN,
+    RST,
+    wr_clk,
+    WR_EN,
+    din);
+  output EMPTY;
+  output FULL;
   output [3:0]dout;
-  output rd_en_0;
-  output rd_clk_0;
-  output overflow_int;
-  output wr_clk_0;
-  output underflow_int;
-  input [6:0]\govw.govw2.OVERFLOW_reg ;
-  input wr_clk;
-  input rd_rst_i;
-  input [3:0]din;
-  input [6:0]\gunf.gunf2.UNDERFLOW_reg ;
   input rd_clk;
-  input rd_en;
-  input wr_en;
+  input RD_EN;
+  input RST;
+  input wr_clk;
+  input WR_EN;
+  input [3:0]din;
 
-  wire [3:0]\d[1]_5 ;
+  wire EMPTY;
+  wire FULL;
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
   (* async_reg = "true" *) (* msgon = "true" *) wire dbr_as_reg;
   (* async_reg = "true" *) (* msgon = "true" *) wire dbr_d1;
   wire [3:0]din;
   wire [3:0]dout;
-  wire e_1;
-  wire ful_0;
-  wire [6:0]\govw.govw2.OVERFLOW_reg ;
-  wire [6:0]\gunf.gunf2.UNDERFLOW_reg ;
-  wire overflow_int;
   wire rd_clk;
-  wire rd_clk_0;
-  wire rd_en;
-  wire rd_en_0;
-  wire rd_rst_i;
   (* async_reg = "true" *) (* msgon = "true" *) wire sbr_as_reg;
   (* async_reg = "true" *) (* msgon = "true" *) wire sbr_d1;
-  wire underflow_int;
   wire wr_clk;
-  wire wr_clk_0;
-  wire wr_en;
-  wire wr_tmp;
 
-  post_ddr_slow_fifo_builtin_prim_v6_9 \gchain.gp1[1].gbldc.inst_prim 
-       (.DO(\d[1]_5 ),
-        .din(din),
-        .e_1(e_1),
-        .ful_0(ful_0),
-        .\govw.govw2.OVERFLOW_reg (\govw.govw2.OVERFLOW_reg ),
-        .overflow_int(overflow_int),
-        .rd_rst_i(rd_rst_i),
-        .wr_clk(wr_clk),
-        .wr_clk_0(wr_clk_0),
-        .wr_en(wr_en),
-        .wr_tmp(wr_tmp));
-  post_ddr_slow_fifo_builtin_prim_v6__parameterized0_10 \gchain.gp1[2].gbldl.inst_prim 
-       (.DO(\d[1]_5 ),
-        .dout(dout),
-        .e_1(e_1),
-        .ful_0(ful_0),
-        .\gunf.gunf2.UNDERFLOW_reg (\gunf.gunf2.UNDERFLOW_reg ),
-        .rd_clk(rd_clk),
-        .rd_clk_0(rd_clk_0),
-        .rd_en(rd_en),
-        .rd_en_0(rd_en_0),
-        .rd_rst_i(rd_rst_i),
-        .underflow_int(underflow_int),
-        .wr_clk(wr_clk));
   LUT1 #(
     .INIT(2'h2)) 
-    i_0
+    \gextw[15].gnll_fifo.inst_extdi_0 
        (.I0(1'b0),
         .O(sbr_d1));
   LUT1 #(
     .INIT(2'h2)) 
-    i_1
+    \gextw[15].gnll_fifo.inst_extdi_1 
        (.I0(1'b0),
         .O(dbr_d1));
   LUT1 #(
     .INIT(2'h2)) 
-    i_2
+    \gextw[15].gnll_fifo.inst_extdi_2 
        (.I0(1'b0),
         .O(sbr_as_reg));
   LUT1 #(
     .INIT(2'h2)) 
-    i_3
+    \gextw[15].gnll_fifo.inst_extdi_3 
        (.I0(1'b0),
         .O(dbr_as_reg));
+  post_ddr_slow_fifo_builtin_prim_v6_24 \gonep.inst_prim 
+       (.EMPTY(EMPTY),
+        .FULL(FULL),
+        .RD_EN(RD_EN),
+        .RST(RST),
+        .WR_EN(WR_EN),
+        .din(din),
+        .dout(dout),
+        .rd_clk(rd_clk),
+        .wr_clk(wr_clk));
 endmodule
 
 (* ORIG_REF_NAME = "builtin_extdepth_v6" *) 
 module post_ddr_slow_fifo_builtin_extdepth_v6_5
-   (wr_clk_0,
-    rd_clk_0,
+   (EMPTY,
+    FULL,
     dout,
-    wr_clk,
-    rd_rst_i,
-    wr_tmp,
-    din,
     rd_clk,
-    \dout[27] );
-  output [0:0]wr_clk_0;
-  output [0:0]rd_clk_0;
+    RD_EN,
+    RST,
+    wr_clk,
+    WR_EN,
+    din);
+  output EMPTY;
+  output FULL;
   output [3:0]dout;
-  input wr_clk;
-  input rd_rst_i;
-  input wr_tmp;
-  input [3:0]din;
   input rd_clk;
-  input \dout[27] ;
+  input RD_EN;
+  input RST;
+  input wr_clk;
+  input WR_EN;
+  input [3:0]din;
 
-  wire [3:0]\d[1]_6 ;
+  wire EMPTY;
+  wire FULL;
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
   (* async_reg = "true" *) (* msgon = "true" *) wire dbr_as_reg;
   (* async_reg = "true" *) (* msgon = "true" *) wire dbr_d1;
   wire [3:0]din;
   wire [3:0]dout;
-  wire \dout[27] ;
-  wire e_1;
-  wire ful_0;
   wire rd_clk;
-  wire [0:0]rd_clk_0;
-  wire rd_rst_i;
   (* async_reg = "true" *) (* msgon = "true" *) wire sbr_as_reg;
   (* async_reg = "true" *) (* msgon = "true" *) wire sbr_d1;
   wire wr_clk;
-  wire [0:0]wr_clk_0;
-  wire wr_tmp;
 
-  post_ddr_slow_fifo_builtin_prim_v6_7 \gchain.gp1[1].gbldc.inst_prim 
-       (.DO(\d[1]_6 ),
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[16].gnll_fifo.inst_extdi_0 
+       (.I0(1'b0),
+        .O(sbr_d1));
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[16].gnll_fifo.inst_extdi_1 
+       (.I0(1'b0),
+        .O(dbr_d1));
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[16].gnll_fifo.inst_extdi_2 
+       (.I0(1'b0),
+        .O(sbr_as_reg));
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[16].gnll_fifo.inst_extdi_3 
+       (.I0(1'b0),
+        .O(dbr_as_reg));
+  post_ddr_slow_fifo_builtin_prim_v6_23 \gonep.inst_prim 
+       (.EMPTY(EMPTY),
+        .FULL(FULL),
+        .RD_EN(RD_EN),
+        .RST(RST),
+        .WR_EN(WR_EN),
         .din(din),
-        .e_1(e_1),
-        .ful_0(ful_0),
-        .rd_rst_i(rd_rst_i),
-        .wr_clk(wr_clk),
-        .wr_clk_0(wr_clk_0),
-        .wr_tmp(wr_tmp));
-  post_ddr_slow_fifo_builtin_prim_v6__parameterized0_8 \gchain.gp1[2].gbldl.inst_prim 
-       (.DO(\d[1]_6 ),
         .dout(dout),
-        .\dout[27] (\dout[27] ),
-        .e_1(e_1),
-        .ful_0(ful_0),
+        .rd_clk(rd_clk),
+        .wr_clk(wr_clk));
+endmodule
+
+(* ORIG_REF_NAME = "builtin_extdepth_v6" *) 
+module post_ddr_slow_fifo_builtin_extdepth_v6_6
+   (EMPTY,
+    FULL,
+    dout,
+    rd_clk,
+    RD_EN,
+    RST,
+    wr_clk,
+    WR_EN,
+    din);
+  output EMPTY;
+  output FULL;
+  output [3:0]dout;
+  input rd_clk;
+  input RD_EN;
+  input RST;
+  input wr_clk;
+  input WR_EN;
+  input [3:0]din;
+
+  wire EMPTY;
+  wire FULL;
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
+  (* async_reg = "true" *) (* msgon = "true" *) wire dbr_as_reg;
+  (* async_reg = "true" *) (* msgon = "true" *) wire dbr_d1;
+  wire [3:0]din;
+  wire [3:0]dout;
+  wire rd_clk;
+  (* async_reg = "true" *) (* msgon = "true" *) wire sbr_as_reg;
+  (* async_reg = "true" *) (* msgon = "true" *) wire sbr_d1;
+  wire wr_clk;
+
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[1].gnll_fifo.inst_extdi_0 
+       (.I0(1'b0),
+        .O(sbr_d1));
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[1].gnll_fifo.inst_extdi_1 
+       (.I0(1'b0),
+        .O(dbr_d1));
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[1].gnll_fifo.inst_extdi_2 
+       (.I0(1'b0),
+        .O(sbr_as_reg));
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[1].gnll_fifo.inst_extdi_3 
+       (.I0(1'b0),
+        .O(dbr_as_reg));
+  post_ddr_slow_fifo_builtin_prim_v6_22 \gonep.inst_prim 
+       (.EMPTY(EMPTY),
+        .FULL(FULL),
+        .RD_EN(RD_EN),
+        .RST(RST),
+        .WR_EN(WR_EN),
+        .din(din),
+        .dout(dout),
+        .rd_clk(rd_clk),
+        .wr_clk(wr_clk));
+endmodule
+
+(* ORIG_REF_NAME = "builtin_extdepth_v6" *) 
+module post_ddr_slow_fifo_builtin_extdepth_v6_7
+   (rd_clk_0,
+    rd_clk_1,
+    dout,
+    full,
+    empty,
+    rd_clk,
+    RD_EN,
+    RST,
+    wr_clk,
+    WR_EN,
+    din);
+  output rd_clk_0;
+  output rd_clk_1;
+  output [3:0]dout;
+  input [2:0]full;
+  input [2:0]empty;
+  input rd_clk;
+  input RD_EN;
+  input RST;
+  input wr_clk;
+  input WR_EN;
+  input [3:0]din;
+
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
+  (* async_reg = "true" *) (* msgon = "true" *) wire dbr_as_reg;
+  (* async_reg = "true" *) (* msgon = "true" *) wire dbr_d1;
+  wire [3:0]din;
+  wire [3:0]dout;
+  wire [2:0]empty;
+  wire [2:0]full;
+  wire rd_clk;
+  wire rd_clk_0;
+  wire rd_clk_1;
+  (* async_reg = "true" *) (* msgon = "true" *) wire sbr_as_reg;
+  (* async_reg = "true" *) (* msgon = "true" *) wire sbr_d1;
+  wire wr_clk;
+
+  post_ddr_slow_fifo_builtin_prim_v6_21 \gonep.inst_prim 
+       (.RD_EN(RD_EN),
+        .RST(RST),
+        .WR_EN(WR_EN),
+        .din(din),
+        .dout(dout),
+        .empty(empty),
+        .full(full),
         .rd_clk(rd_clk),
         .rd_clk_0(rd_clk_0),
-        .rd_rst_i(rd_rst_i),
+        .rd_clk_1(rd_clk_1),
         .wr_clk(wr_clk));
   LUT1 #(
     .INIT(2'h2)) 
@@ -1210,110 +1650,169 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_5
 endmodule
 
 (* ORIG_REF_NAME = "builtin_extdepth_v6" *) 
-module post_ddr_slow_fifo_builtin_extdepth_v6_6
-   (wr_clk_0,
-    rd_clk_0,
+module post_ddr_slow_fifo_builtin_extdepth_v6_8
+   (EMPTY,
+    FULL,
     dout,
-    wr_clk,
-    rd_rst_i,
-    wr_tmp,
-    din,
     rd_clk,
-    \dout[31] );
-  output [0:0]wr_clk_0;
-  output [0:0]rd_clk_0;
+    RD_EN,
+    RST,
+    wr_clk,
+    WR_EN,
+    din);
+  output EMPTY;
+  output FULL;
   output [3:0]dout;
-  input wr_clk;
-  input rd_rst_i;
-  input wr_tmp;
-  input [3:0]din;
   input rd_clk;
-  input \dout[31] ;
+  input RD_EN;
+  input RST;
+  input wr_clk;
+  input WR_EN;
+  input [3:0]din;
 
-  wire [3:0]\d[1]_7 ;
+  wire EMPTY;
+  wire FULL;
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
   (* async_reg = "true" *) (* msgon = "true" *) wire dbr_as_reg;
   (* async_reg = "true" *) (* msgon = "true" *) wire dbr_d1;
   wire [3:0]din;
   wire [3:0]dout;
-  wire \dout[31] ;
-  wire e_1;
-  wire ful_0;
   wire rd_clk;
-  wire [0:0]rd_clk_0;
-  wire rd_rst_i;
   (* async_reg = "true" *) (* msgon = "true" *) wire sbr_as_reg;
   (* async_reg = "true" *) (* msgon = "true" *) wire sbr_d1;
   wire wr_clk;
-  wire [0:0]wr_clk_0;
-  wire wr_tmp;
 
-  post_ddr_slow_fifo_builtin_prim_v6 \gchain.gp1[1].gbldc.inst_prim 
-       (.DO(\d[1]_7 ),
-        .din(din),
-        .e_1(e_1),
-        .ful_0(ful_0),
-        .rd_rst_i(rd_rst_i),
-        .wr_clk(wr_clk),
-        .wr_clk_0(wr_clk_0),
-        .wr_tmp(wr_tmp));
-  post_ddr_slow_fifo_builtin_prim_v6__parameterized0 \gchain.gp1[2].gbldl.inst_prim 
-       (.DO(\d[1]_7 ),
-        .dout(dout),
-        .\dout[31] (\dout[31] ),
-        .e_1(e_1),
-        .ful_0(ful_0),
-        .rd_clk(rd_clk),
-        .rd_clk_0(rd_clk_0),
-        .rd_rst_i(rd_rst_i),
-        .wr_clk(wr_clk));
   LUT1 #(
     .INIT(2'h2)) 
-    i_0
+    \gextw[3].gnll_fifo.inst_extdi_0 
        (.I0(1'b0),
         .O(sbr_d1));
   LUT1 #(
     .INIT(2'h2)) 
-    i_1
+    \gextw[3].gnll_fifo.inst_extdi_1 
        (.I0(1'b0),
         .O(dbr_d1));
   LUT1 #(
     .INIT(2'h2)) 
-    i_2
+    \gextw[3].gnll_fifo.inst_extdi_2 
        (.I0(1'b0),
         .O(sbr_as_reg));
   LUT1 #(
     .INIT(2'h2)) 
-    i_3
+    \gextw[3].gnll_fifo.inst_extdi_3 
        (.I0(1'b0),
         .O(dbr_as_reg));
+  post_ddr_slow_fifo_builtin_prim_v6_20 \gonep.inst_prim 
+       (.EMPTY(EMPTY),
+        .FULL(FULL),
+        .RD_EN(RD_EN),
+        .RST(RST),
+        .WR_EN(WR_EN),
+        .din(din),
+        .dout(dout),
+        .rd_clk(rd_clk),
+        .wr_clk(wr_clk));
+endmodule
+
+(* ORIG_REF_NAME = "builtin_extdepth_v6" *) 
+module post_ddr_slow_fifo_builtin_extdepth_v6_9
+   (EMPTY,
+    FULL,
+    dout,
+    rd_clk,
+    RD_EN,
+    RST,
+    wr_clk,
+    WR_EN,
+    din);
+  output EMPTY;
+  output FULL;
+  output [3:0]dout;
+  input rd_clk;
+  input RD_EN;
+  input RST;
+  input wr_clk;
+  input WR_EN;
+  input [3:0]din;
+
+  wire EMPTY;
+  wire FULL;
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
+  (* async_reg = "true" *) (* msgon = "true" *) wire dbr_as_reg;
+  (* async_reg = "true" *) (* msgon = "true" *) wire dbr_d1;
+  wire [3:0]din;
+  wire [3:0]dout;
+  wire rd_clk;
+  (* async_reg = "true" *) (* msgon = "true" *) wire sbr_as_reg;
+  (* async_reg = "true" *) (* msgon = "true" *) wire sbr_d1;
+  wire wr_clk;
+
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[4].gnll_fifo.inst_extdi_0 
+       (.I0(1'b0),
+        .O(sbr_d1));
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[4].gnll_fifo.inst_extdi_1 
+       (.I0(1'b0),
+        .O(dbr_d1));
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[4].gnll_fifo.inst_extdi_2 
+       (.I0(1'b0),
+        .O(sbr_as_reg));
+  LUT1 #(
+    .INIT(2'h2)) 
+    \gextw[4].gnll_fifo.inst_extdi_3 
+       (.I0(1'b0),
+        .O(dbr_as_reg));
+  post_ddr_slow_fifo_builtin_prim_v6_19 \gonep.inst_prim 
+       (.EMPTY(EMPTY),
+        .FULL(FULL),
+        .RD_EN(RD_EN),
+        .RST(RST),
+        .WR_EN(WR_EN),
+        .din(din),
+        .dout(dout),
+        .rd_clk(rd_clk),
+        .wr_clk(wr_clk));
 endmodule
 
 (* ORIG_REF_NAME = "builtin_prim_v6" *) 
 module post_ddr_slow_fifo_builtin_prim_v6
-   (wr_clk_0,
-    DO,
-    e_1,
+   (EMPTY,
+    FULL,
+    dout,
+    rd_clk,
+    RD_EN,
+    RST,
     wr_clk,
-    rd_rst_i,
-    wr_tmp,
-    din,
-    ful_0);
-  output [0:0]wr_clk_0;
-  output [3:0]DO;
-  output e_1;
+    WR_EN,
+    din);
+  output EMPTY;
+  output FULL;
+  output [3:0]dout;
+  input rd_clk;
+  input RD_EN;
+  input RST;
   input wr_clk;
-  input rd_rst_i;
-  input wr_tmp;
+  input WR_EN;
   input [3:0]din;
-  input ful_0;
 
-  wire [3:0]DO;
-  wire [63:4]DO_0;
+  wire [63:4]DO;
+  wire EMPTY;
+  wire FULL;
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
+  wire [9:9]dbiterr_col;
   wire [3:0]din;
-  wire e_1;
-  wire emp_1;
-  wire ful_0;
-  wire \gf36e1_inst.sngfifo36e1_n_0 ;
+  wire [3:0]dout;
   wire \gf36e1_inst.sngfifo36e1_n_10 ;
   wire \gf36e1_inst.sngfifo36e1_n_11 ;
   wire \gf36e1_inst.sngfifo36e1_n_12 ;
@@ -1324,7 +1823,6 @@ module post_ddr_slow_fifo_builtin_prim_v6
   wire \gf36e1_inst.sngfifo36e1_n_17 ;
   wire \gf36e1_inst.sngfifo36e1_n_18 ;
   wire \gf36e1_inst.sngfifo36e1_n_19 ;
-  wire \gf36e1_inst.sngfifo36e1_n_2 ;
   wire \gf36e1_inst.sngfifo36e1_n_20 ;
   wire \gf36e1_inst.sngfifo36e1_n_21 ;
   wire \gf36e1_inst.sngfifo36e1_n_22 ;
@@ -1340,21 +1838,20 @@ module post_ddr_slow_fifo_builtin_prim_v6
   wire \gf36e1_inst.sngfifo36e1_n_32 ;
   wire \gf36e1_inst.sngfifo36e1_n_33 ;
   wire \gf36e1_inst.sngfifo36e1_n_5 ;
-  wire \gf36e1_inst.sngfifo36e1_n_6 ;
   wire \gf36e1_inst.sngfifo36e1_n_7 ;
   wire \gf36e1_inst.sngfifo36e1_n_8 ;
   wire \gf36e1_inst.sngfifo36e1_n_9 ;
-  wire [8:8]pf;
-  wire rd_rst_i;
+  wire [9:9]pe;
+  wire [9:9]pf;
+  wire rd_clk;
+  wire [9:9]sbiterr_col;
   wire wr_clk;
-  wire [0:0]wr_clk_0;
-  wire wr_tmp;
   wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED ;
   wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED ;
 
   (* box_type = "PRIMITIVE" *) 
   FIFO36E1 #(
-    .ALMOST_EMPTY_OFFSET(13'h000A),
+    .ALMOST_EMPTY_OFFSET(13'h0006),
     .ALMOST_FULL_OFFSET(13'h000F),
     .DATA_WIDTH(4),
     .DO_REG(1),
@@ -1373,942 +1870,62 @@ module post_ddr_slow_fifo_builtin_prim_v6
     .SIM_DEVICE("7SERIES"),
     .SRVAL(72'h000000000000000000)) 
     \gf36e1_inst.sngfifo36e1 
-       (.ALMOSTEMPTY(\gf36e1_inst.sngfifo36e1_n_0 ),
+       (.ALMOSTEMPTY(pe),
         .ALMOSTFULL(pf),
-        .DBITERR(\gf36e1_inst.sngfifo36e1_n_2 ),
+        .DBITERR(dbiterr_col),
         .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
         .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
-        .DO({DO_0,DO}),
+        .DO({DO,dout}),
         .DOP(\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED [7:0]),
         .ECCPARITY(\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED [7:0]),
-        .EMPTY(emp_1),
-        .FULL(wr_clk_0),
+        .EMPTY(EMPTY),
+        .FULL(FULL),
         .INJECTDBITERR(1'b0),
         .INJECTSBITERR(1'b0),
-        .RDCLK(wr_clk),
+        .RDCLK(rd_clk),
         .RDCOUNT({\gf36e1_inst.sngfifo36e1_n_8 ,\gf36e1_inst.sngfifo36e1_n_9 ,\gf36e1_inst.sngfifo36e1_n_10 ,\gf36e1_inst.sngfifo36e1_n_11 ,\gf36e1_inst.sngfifo36e1_n_12 ,\gf36e1_inst.sngfifo36e1_n_13 ,\gf36e1_inst.sngfifo36e1_n_14 ,\gf36e1_inst.sngfifo36e1_n_15 ,\gf36e1_inst.sngfifo36e1_n_16 ,\gf36e1_inst.sngfifo36e1_n_17 ,\gf36e1_inst.sngfifo36e1_n_18 ,\gf36e1_inst.sngfifo36e1_n_19 ,\gf36e1_inst.sngfifo36e1_n_20 }),
-        .RDEN(e_1),
+        .RDEN(RD_EN),
         .RDERR(\gf36e1_inst.sngfifo36e1_n_5 ),
         .REGCE(1'b0),
-        .RST(rd_rst_i),
+        .RST(RST),
         .RSTREG(1'b0),
-        .SBITERR(\gf36e1_inst.sngfifo36e1_n_6 ),
+        .SBITERR(sbiterr_col),
         .WRCLK(wr_clk),
         .WRCOUNT({\gf36e1_inst.sngfifo36e1_n_21 ,\gf36e1_inst.sngfifo36e1_n_22 ,\gf36e1_inst.sngfifo36e1_n_23 ,\gf36e1_inst.sngfifo36e1_n_24 ,\gf36e1_inst.sngfifo36e1_n_25 ,\gf36e1_inst.sngfifo36e1_n_26 ,\gf36e1_inst.sngfifo36e1_n_27 ,\gf36e1_inst.sngfifo36e1_n_28 ,\gf36e1_inst.sngfifo36e1_n_29 ,\gf36e1_inst.sngfifo36e1_n_30 ,\gf36e1_inst.sngfifo36e1_n_31 ,\gf36e1_inst.sngfifo36e1_n_32 ,\gf36e1_inst.sngfifo36e1_n_33 }),
-        .WREN(wr_tmp),
+        .WREN(WR_EN),
         .WRERR(\gf36e1_inst.sngfifo36e1_n_7 ));
-  LUT2 #(
-    .INIT(4'h1)) 
-    \gf36e1_inst.sngfifo36e1_i_3 
-       (.I0(emp_1),
-        .I1(ful_0),
-        .O(e_1));
-endmodule
-
-(* ORIG_REF_NAME = "builtin_prim_v6" *) 
-module post_ddr_slow_fifo_builtin_prim_v6_11
-   (ful,
-    DO,
-    e_1,
-    wr_clk,
-    rd_rst_i,
-    wr_tmp,
-    din,
-    ful_0);
-  output [0:0]ful;
-  output [3:0]DO;
-  output e_1;
-  input wr_clk;
-  input rd_rst_i;
-  input wr_tmp;
-  input [3:0]din;
-  input ful_0;
-
-  wire [3:0]DO;
-  wire [63:4]DO_0;
-  wire [3:0]din;
-  wire e_1;
-  wire emp_1;
-  wire [0:0]ful;
-  wire ful_0;
-  wire \gf36e1_inst.sngfifo36e1_n_0 ;
-  wire \gf36e1_inst.sngfifo36e1_n_10 ;
-  wire \gf36e1_inst.sngfifo36e1_n_11 ;
-  wire \gf36e1_inst.sngfifo36e1_n_12 ;
-  wire \gf36e1_inst.sngfifo36e1_n_13 ;
-  wire \gf36e1_inst.sngfifo36e1_n_14 ;
-  wire \gf36e1_inst.sngfifo36e1_n_15 ;
-  wire \gf36e1_inst.sngfifo36e1_n_16 ;
-  wire \gf36e1_inst.sngfifo36e1_n_17 ;
-  wire \gf36e1_inst.sngfifo36e1_n_18 ;
-  wire \gf36e1_inst.sngfifo36e1_n_19 ;
-  wire \gf36e1_inst.sngfifo36e1_n_2 ;
-  wire \gf36e1_inst.sngfifo36e1_n_20 ;
-  wire \gf36e1_inst.sngfifo36e1_n_21 ;
-  wire \gf36e1_inst.sngfifo36e1_n_22 ;
-  wire \gf36e1_inst.sngfifo36e1_n_23 ;
-  wire \gf36e1_inst.sngfifo36e1_n_24 ;
-  wire \gf36e1_inst.sngfifo36e1_n_25 ;
-  wire \gf36e1_inst.sngfifo36e1_n_26 ;
-  wire \gf36e1_inst.sngfifo36e1_n_27 ;
-  wire \gf36e1_inst.sngfifo36e1_n_28 ;
-  wire \gf36e1_inst.sngfifo36e1_n_29 ;
-  wire \gf36e1_inst.sngfifo36e1_n_30 ;
-  wire \gf36e1_inst.sngfifo36e1_n_31 ;
-  wire \gf36e1_inst.sngfifo36e1_n_32 ;
-  wire \gf36e1_inst.sngfifo36e1_n_33 ;
-  wire \gf36e1_inst.sngfifo36e1_n_5 ;
-  wire \gf36e1_inst.sngfifo36e1_n_6 ;
-  wire \gf36e1_inst.sngfifo36e1_n_7 ;
-  wire \gf36e1_inst.sngfifo36e1_n_8 ;
-  wire \gf36e1_inst.sngfifo36e1_n_9 ;
-  wire [5:5]pf;
-  wire rd_rst_i;
-  wire wr_clk;
-  wire wr_tmp;
-  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED ;
-  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED ;
-
-  (* box_type = "PRIMITIVE" *) 
-  FIFO36E1 #(
-    .ALMOST_EMPTY_OFFSET(13'h000A),
-    .ALMOST_FULL_OFFSET(13'h000F),
-    .DATA_WIDTH(4),
-    .DO_REG(1),
-    .EN_ECC_READ("FALSE"),
-    .EN_ECC_WRITE("FALSE"),
-    .EN_SYN("FALSE"),
-    .FIFO_MODE("FIFO36"),
-    .FIRST_WORD_FALL_THROUGH("TRUE"),
-    .INIT(72'h000000000000000000),
-    .IS_RDCLK_INVERTED(1'b0),
-    .IS_RDEN_INVERTED(1'b0),
-    .IS_RSTREG_INVERTED(1'b0),
-    .IS_RST_INVERTED(1'b0),
-    .IS_WRCLK_INVERTED(1'b0),
-    .IS_WREN_INVERTED(1'b0),
-    .SIM_DEVICE("7SERIES"),
-    .SRVAL(72'h000000000000000000)) 
-    \gf36e1_inst.sngfifo36e1 
-       (.ALMOSTEMPTY(\gf36e1_inst.sngfifo36e1_n_0 ),
-        .ALMOSTFULL(pf),
-        .DBITERR(\gf36e1_inst.sngfifo36e1_n_2 ),
-        .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
-        .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
-        .DO({DO_0,DO}),
-        .DOP(\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED [7:0]),
-        .ECCPARITY(\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED [7:0]),
-        .EMPTY(emp_1),
-        .FULL(ful),
-        .INJECTDBITERR(1'b0),
-        .INJECTSBITERR(1'b0),
-        .RDCLK(wr_clk),
-        .RDCOUNT({\gf36e1_inst.sngfifo36e1_n_8 ,\gf36e1_inst.sngfifo36e1_n_9 ,\gf36e1_inst.sngfifo36e1_n_10 ,\gf36e1_inst.sngfifo36e1_n_11 ,\gf36e1_inst.sngfifo36e1_n_12 ,\gf36e1_inst.sngfifo36e1_n_13 ,\gf36e1_inst.sngfifo36e1_n_14 ,\gf36e1_inst.sngfifo36e1_n_15 ,\gf36e1_inst.sngfifo36e1_n_16 ,\gf36e1_inst.sngfifo36e1_n_17 ,\gf36e1_inst.sngfifo36e1_n_18 ,\gf36e1_inst.sngfifo36e1_n_19 ,\gf36e1_inst.sngfifo36e1_n_20 }),
-        .RDEN(e_1),
-        .RDERR(\gf36e1_inst.sngfifo36e1_n_5 ),
-        .REGCE(1'b0),
-        .RST(rd_rst_i),
-        .RSTREG(1'b0),
-        .SBITERR(\gf36e1_inst.sngfifo36e1_n_6 ),
-        .WRCLK(wr_clk),
-        .WRCOUNT({\gf36e1_inst.sngfifo36e1_n_21 ,\gf36e1_inst.sngfifo36e1_n_22 ,\gf36e1_inst.sngfifo36e1_n_23 ,\gf36e1_inst.sngfifo36e1_n_24 ,\gf36e1_inst.sngfifo36e1_n_25 ,\gf36e1_inst.sngfifo36e1_n_26 ,\gf36e1_inst.sngfifo36e1_n_27 ,\gf36e1_inst.sngfifo36e1_n_28 ,\gf36e1_inst.sngfifo36e1_n_29 ,\gf36e1_inst.sngfifo36e1_n_30 ,\gf36e1_inst.sngfifo36e1_n_31 ,\gf36e1_inst.sngfifo36e1_n_32 ,\gf36e1_inst.sngfifo36e1_n_33 }),
-        .WREN(wr_tmp),
-        .WRERR(\gf36e1_inst.sngfifo36e1_n_7 ));
-  LUT2 #(
-    .INIT(4'h1)) 
-    \gf36e1_inst.sngfifo36e1_i_1__4 
-       (.I0(emp_1),
-        .I1(ful_0),
-        .O(e_1));
-endmodule
-
-(* ORIG_REF_NAME = "builtin_prim_v6" *) 
-module post_ddr_slow_fifo_builtin_prim_v6_13
-   (wr_clk_0,
-    DO,
-    e_1,
-    wr_clk,
-    rd_rst_i,
-    wr_tmp,
-    din,
-    ful_0);
-  output [0:0]wr_clk_0;
-  output [3:0]DO;
-  output e_1;
-  input wr_clk;
-  input rd_rst_i;
-  input wr_tmp;
-  input [3:0]din;
-  input ful_0;
-
-  wire [3:0]DO;
-  wire [63:4]DO_0;
-  wire [3:0]din;
-  wire e_1;
-  wire emp_1;
-  wire ful_0;
-  wire \gf36e1_inst.sngfifo36e1_n_0 ;
-  wire \gf36e1_inst.sngfifo36e1_n_10 ;
-  wire \gf36e1_inst.sngfifo36e1_n_11 ;
-  wire \gf36e1_inst.sngfifo36e1_n_12 ;
-  wire \gf36e1_inst.sngfifo36e1_n_13 ;
-  wire \gf36e1_inst.sngfifo36e1_n_14 ;
-  wire \gf36e1_inst.sngfifo36e1_n_15 ;
-  wire \gf36e1_inst.sngfifo36e1_n_16 ;
-  wire \gf36e1_inst.sngfifo36e1_n_17 ;
-  wire \gf36e1_inst.sngfifo36e1_n_18 ;
-  wire \gf36e1_inst.sngfifo36e1_n_19 ;
-  wire \gf36e1_inst.sngfifo36e1_n_2 ;
-  wire \gf36e1_inst.sngfifo36e1_n_20 ;
-  wire \gf36e1_inst.sngfifo36e1_n_21 ;
-  wire \gf36e1_inst.sngfifo36e1_n_22 ;
-  wire \gf36e1_inst.sngfifo36e1_n_23 ;
-  wire \gf36e1_inst.sngfifo36e1_n_24 ;
-  wire \gf36e1_inst.sngfifo36e1_n_25 ;
-  wire \gf36e1_inst.sngfifo36e1_n_26 ;
-  wire \gf36e1_inst.sngfifo36e1_n_27 ;
-  wire \gf36e1_inst.sngfifo36e1_n_28 ;
-  wire \gf36e1_inst.sngfifo36e1_n_29 ;
-  wire \gf36e1_inst.sngfifo36e1_n_30 ;
-  wire \gf36e1_inst.sngfifo36e1_n_31 ;
-  wire \gf36e1_inst.sngfifo36e1_n_32 ;
-  wire \gf36e1_inst.sngfifo36e1_n_33 ;
-  wire \gf36e1_inst.sngfifo36e1_n_5 ;
-  wire \gf36e1_inst.sngfifo36e1_n_6 ;
-  wire \gf36e1_inst.sngfifo36e1_n_7 ;
-  wire \gf36e1_inst.sngfifo36e1_n_8 ;
-  wire \gf36e1_inst.sngfifo36e1_n_9 ;
-  wire [4:4]pf;
-  wire rd_rst_i;
-  wire wr_clk;
-  wire [0:0]wr_clk_0;
-  wire wr_tmp;
-  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED ;
-  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED ;
-
-  (* box_type = "PRIMITIVE" *) 
-  FIFO36E1 #(
-    .ALMOST_EMPTY_OFFSET(13'h000A),
-    .ALMOST_FULL_OFFSET(13'h000F),
-    .DATA_WIDTH(4),
-    .DO_REG(1),
-    .EN_ECC_READ("FALSE"),
-    .EN_ECC_WRITE("FALSE"),
-    .EN_SYN("FALSE"),
-    .FIFO_MODE("FIFO36"),
-    .FIRST_WORD_FALL_THROUGH("TRUE"),
-    .INIT(72'h000000000000000000),
-    .IS_RDCLK_INVERTED(1'b0),
-    .IS_RDEN_INVERTED(1'b0),
-    .IS_RSTREG_INVERTED(1'b0),
-    .IS_RST_INVERTED(1'b0),
-    .IS_WRCLK_INVERTED(1'b0),
-    .IS_WREN_INVERTED(1'b0),
-    .SIM_DEVICE("7SERIES"),
-    .SRVAL(72'h000000000000000000)) 
-    \gf36e1_inst.sngfifo36e1 
-       (.ALMOSTEMPTY(\gf36e1_inst.sngfifo36e1_n_0 ),
-        .ALMOSTFULL(pf),
-        .DBITERR(\gf36e1_inst.sngfifo36e1_n_2 ),
-        .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
-        .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
-        .DO({DO_0,DO}),
-        .DOP(\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED [7:0]),
-        .ECCPARITY(\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED [7:0]),
-        .EMPTY(emp_1),
-        .FULL(wr_clk_0),
-        .INJECTDBITERR(1'b0),
-        .INJECTSBITERR(1'b0),
-        .RDCLK(wr_clk),
-        .RDCOUNT({\gf36e1_inst.sngfifo36e1_n_8 ,\gf36e1_inst.sngfifo36e1_n_9 ,\gf36e1_inst.sngfifo36e1_n_10 ,\gf36e1_inst.sngfifo36e1_n_11 ,\gf36e1_inst.sngfifo36e1_n_12 ,\gf36e1_inst.sngfifo36e1_n_13 ,\gf36e1_inst.sngfifo36e1_n_14 ,\gf36e1_inst.sngfifo36e1_n_15 ,\gf36e1_inst.sngfifo36e1_n_16 ,\gf36e1_inst.sngfifo36e1_n_17 ,\gf36e1_inst.sngfifo36e1_n_18 ,\gf36e1_inst.sngfifo36e1_n_19 ,\gf36e1_inst.sngfifo36e1_n_20 }),
-        .RDEN(e_1),
-        .RDERR(\gf36e1_inst.sngfifo36e1_n_5 ),
-        .REGCE(1'b0),
-        .RST(rd_rst_i),
-        .RSTREG(1'b0),
-        .SBITERR(\gf36e1_inst.sngfifo36e1_n_6 ),
-        .WRCLK(wr_clk),
-        .WRCOUNT({\gf36e1_inst.sngfifo36e1_n_21 ,\gf36e1_inst.sngfifo36e1_n_22 ,\gf36e1_inst.sngfifo36e1_n_23 ,\gf36e1_inst.sngfifo36e1_n_24 ,\gf36e1_inst.sngfifo36e1_n_25 ,\gf36e1_inst.sngfifo36e1_n_26 ,\gf36e1_inst.sngfifo36e1_n_27 ,\gf36e1_inst.sngfifo36e1_n_28 ,\gf36e1_inst.sngfifo36e1_n_29 ,\gf36e1_inst.sngfifo36e1_n_30 ,\gf36e1_inst.sngfifo36e1_n_31 ,\gf36e1_inst.sngfifo36e1_n_32 ,\gf36e1_inst.sngfifo36e1_n_33 }),
-        .WREN(wr_tmp),
-        .WRERR(\gf36e1_inst.sngfifo36e1_n_7 ));
-  LUT2 #(
-    .INIT(4'h1)) 
-    \gf36e1_inst.sngfifo36e1_i_1__3 
-       (.I0(emp_1),
-        .I1(ful_0),
-        .O(e_1));
 endmodule
 
 (* ORIG_REF_NAME = "builtin_prim_v6" *) 
 module post_ddr_slow_fifo_builtin_prim_v6_15
-   (ful,
-    DO,
-    e_1,
-    full,
-    wr_clk,
-    rd_rst_i,
-    wr_tmp,
-    din,
-    ful_0,
-    full_0,
-    full_1);
-  output [0:0]ful;
-  output [3:0]DO;
-  output e_1;
-  output full;
-  input wr_clk;
-  input rd_rst_i;
-  input wr_tmp;
-  input [3:0]din;
-  input ful_0;
-  input [2:0]full_0;
-  input full_1;
-
-  wire [3:0]DO;
-  wire [63:4]DO_0;
-  wire [3:0]din;
-  wire e_1;
-  wire emp_1;
-  wire [0:0]ful;
-  wire ful_0;
-  wire full;
-  wire [2:0]full_0;
-  wire full_1;
-  wire \gf36e1_inst.sngfifo36e1_n_0 ;
-  wire \gf36e1_inst.sngfifo36e1_n_10 ;
-  wire \gf36e1_inst.sngfifo36e1_n_11 ;
-  wire \gf36e1_inst.sngfifo36e1_n_12 ;
-  wire \gf36e1_inst.sngfifo36e1_n_13 ;
-  wire \gf36e1_inst.sngfifo36e1_n_14 ;
-  wire \gf36e1_inst.sngfifo36e1_n_15 ;
-  wire \gf36e1_inst.sngfifo36e1_n_16 ;
-  wire \gf36e1_inst.sngfifo36e1_n_17 ;
-  wire \gf36e1_inst.sngfifo36e1_n_18 ;
-  wire \gf36e1_inst.sngfifo36e1_n_19 ;
-  wire \gf36e1_inst.sngfifo36e1_n_2 ;
-  wire \gf36e1_inst.sngfifo36e1_n_20 ;
-  wire \gf36e1_inst.sngfifo36e1_n_21 ;
-  wire \gf36e1_inst.sngfifo36e1_n_22 ;
-  wire \gf36e1_inst.sngfifo36e1_n_23 ;
-  wire \gf36e1_inst.sngfifo36e1_n_24 ;
-  wire \gf36e1_inst.sngfifo36e1_n_25 ;
-  wire \gf36e1_inst.sngfifo36e1_n_26 ;
-  wire \gf36e1_inst.sngfifo36e1_n_27 ;
-  wire \gf36e1_inst.sngfifo36e1_n_28 ;
-  wire \gf36e1_inst.sngfifo36e1_n_29 ;
-  wire \gf36e1_inst.sngfifo36e1_n_30 ;
-  wire \gf36e1_inst.sngfifo36e1_n_31 ;
-  wire \gf36e1_inst.sngfifo36e1_n_32 ;
-  wire \gf36e1_inst.sngfifo36e1_n_33 ;
-  wire \gf36e1_inst.sngfifo36e1_n_5 ;
-  wire \gf36e1_inst.sngfifo36e1_n_6 ;
-  wire \gf36e1_inst.sngfifo36e1_n_7 ;
-  wire \gf36e1_inst.sngfifo36e1_n_8 ;
-  wire \gf36e1_inst.sngfifo36e1_n_9 ;
-  wire [3:3]pf;
-  wire rd_rst_i;
-  wire wr_clk;
-  wire wr_tmp;
-  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED ;
-  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED ;
-
-  LUT5 #(
-    .INIT(32'hFFFFFFFE)) 
-    full_INST_0
-       (.I0(ful),
-        .I1(full_0[2]),
-        .I2(full_0[0]),
-        .I3(full_0[1]),
-        .I4(full_1),
-        .O(full));
-  (* box_type = "PRIMITIVE" *) 
-  FIFO36E1 #(
-    .ALMOST_EMPTY_OFFSET(13'h000A),
-    .ALMOST_FULL_OFFSET(13'h000F),
-    .DATA_WIDTH(4),
-    .DO_REG(1),
-    .EN_ECC_READ("FALSE"),
-    .EN_ECC_WRITE("FALSE"),
-    .EN_SYN("FALSE"),
-    .FIFO_MODE("FIFO36"),
-    .FIRST_WORD_FALL_THROUGH("TRUE"),
-    .INIT(72'h000000000000000000),
-    .IS_RDCLK_INVERTED(1'b0),
-    .IS_RDEN_INVERTED(1'b0),
-    .IS_RSTREG_INVERTED(1'b0),
-    .IS_RST_INVERTED(1'b0),
-    .IS_WRCLK_INVERTED(1'b0),
-    .IS_WREN_INVERTED(1'b0),
-    .SIM_DEVICE("7SERIES"),
-    .SRVAL(72'h000000000000000000)) 
-    \gf36e1_inst.sngfifo36e1 
-       (.ALMOSTEMPTY(\gf36e1_inst.sngfifo36e1_n_0 ),
-        .ALMOSTFULL(pf),
-        .DBITERR(\gf36e1_inst.sngfifo36e1_n_2 ),
-        .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
-        .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
-        .DO({DO_0,DO}),
-        .DOP(\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED [7:0]),
-        .ECCPARITY(\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED [7:0]),
-        .EMPTY(emp_1),
-        .FULL(ful),
-        .INJECTDBITERR(1'b0),
-        .INJECTSBITERR(1'b0),
-        .RDCLK(wr_clk),
-        .RDCOUNT({\gf36e1_inst.sngfifo36e1_n_8 ,\gf36e1_inst.sngfifo36e1_n_9 ,\gf36e1_inst.sngfifo36e1_n_10 ,\gf36e1_inst.sngfifo36e1_n_11 ,\gf36e1_inst.sngfifo36e1_n_12 ,\gf36e1_inst.sngfifo36e1_n_13 ,\gf36e1_inst.sngfifo36e1_n_14 ,\gf36e1_inst.sngfifo36e1_n_15 ,\gf36e1_inst.sngfifo36e1_n_16 ,\gf36e1_inst.sngfifo36e1_n_17 ,\gf36e1_inst.sngfifo36e1_n_18 ,\gf36e1_inst.sngfifo36e1_n_19 ,\gf36e1_inst.sngfifo36e1_n_20 }),
-        .RDEN(e_1),
-        .RDERR(\gf36e1_inst.sngfifo36e1_n_5 ),
-        .REGCE(1'b0),
-        .RST(rd_rst_i),
-        .RSTREG(1'b0),
-        .SBITERR(\gf36e1_inst.sngfifo36e1_n_6 ),
-        .WRCLK(wr_clk),
-        .WRCOUNT({\gf36e1_inst.sngfifo36e1_n_21 ,\gf36e1_inst.sngfifo36e1_n_22 ,\gf36e1_inst.sngfifo36e1_n_23 ,\gf36e1_inst.sngfifo36e1_n_24 ,\gf36e1_inst.sngfifo36e1_n_25 ,\gf36e1_inst.sngfifo36e1_n_26 ,\gf36e1_inst.sngfifo36e1_n_27 ,\gf36e1_inst.sngfifo36e1_n_28 ,\gf36e1_inst.sngfifo36e1_n_29 ,\gf36e1_inst.sngfifo36e1_n_30 ,\gf36e1_inst.sngfifo36e1_n_31 ,\gf36e1_inst.sngfifo36e1_n_32 ,\gf36e1_inst.sngfifo36e1_n_33 }),
-        .WREN(wr_tmp),
-        .WRERR(\gf36e1_inst.sngfifo36e1_n_7 ));
-  LUT2 #(
-    .INIT(4'h1)) 
-    \gf36e1_inst.sngfifo36e1_i_1__2 
-       (.I0(emp_1),
-        .I1(ful_0),
-        .O(e_1));
-endmodule
-
-(* ORIG_REF_NAME = "builtin_prim_v6" *) 
-module post_ddr_slow_fifo_builtin_prim_v6_17
-   (ful,
-    DO,
-    e_1,
-    wr_clk,
-    rd_rst_i,
-    wr_tmp,
-    din,
-    ful_0);
-  output [0:0]ful;
-  output [3:0]DO;
-  output e_1;
-  input wr_clk;
-  input rd_rst_i;
-  input wr_tmp;
-  input [3:0]din;
-  input ful_0;
-
-  wire [3:0]DO;
-  wire [63:4]DO_0;
-  wire [3:0]din;
-  wire e_1;
-  wire emp_1;
-  wire [0:0]ful;
-  wire ful_0;
-  wire \gf36e1_inst.sngfifo36e1_n_0 ;
-  wire \gf36e1_inst.sngfifo36e1_n_10 ;
-  wire \gf36e1_inst.sngfifo36e1_n_11 ;
-  wire \gf36e1_inst.sngfifo36e1_n_12 ;
-  wire \gf36e1_inst.sngfifo36e1_n_13 ;
-  wire \gf36e1_inst.sngfifo36e1_n_14 ;
-  wire \gf36e1_inst.sngfifo36e1_n_15 ;
-  wire \gf36e1_inst.sngfifo36e1_n_16 ;
-  wire \gf36e1_inst.sngfifo36e1_n_17 ;
-  wire \gf36e1_inst.sngfifo36e1_n_18 ;
-  wire \gf36e1_inst.sngfifo36e1_n_19 ;
-  wire \gf36e1_inst.sngfifo36e1_n_2 ;
-  wire \gf36e1_inst.sngfifo36e1_n_20 ;
-  wire \gf36e1_inst.sngfifo36e1_n_21 ;
-  wire \gf36e1_inst.sngfifo36e1_n_22 ;
-  wire \gf36e1_inst.sngfifo36e1_n_23 ;
-  wire \gf36e1_inst.sngfifo36e1_n_24 ;
-  wire \gf36e1_inst.sngfifo36e1_n_25 ;
-  wire \gf36e1_inst.sngfifo36e1_n_26 ;
-  wire \gf36e1_inst.sngfifo36e1_n_27 ;
-  wire \gf36e1_inst.sngfifo36e1_n_28 ;
-  wire \gf36e1_inst.sngfifo36e1_n_29 ;
-  wire \gf36e1_inst.sngfifo36e1_n_30 ;
-  wire \gf36e1_inst.sngfifo36e1_n_31 ;
-  wire \gf36e1_inst.sngfifo36e1_n_32 ;
-  wire \gf36e1_inst.sngfifo36e1_n_33 ;
-  wire \gf36e1_inst.sngfifo36e1_n_5 ;
-  wire \gf36e1_inst.sngfifo36e1_n_6 ;
-  wire \gf36e1_inst.sngfifo36e1_n_7 ;
-  wire \gf36e1_inst.sngfifo36e1_n_8 ;
-  wire \gf36e1_inst.sngfifo36e1_n_9 ;
-  wire [2:2]pf;
-  wire rd_rst_i;
-  wire wr_clk;
-  wire wr_tmp;
-  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED ;
-  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED ;
-
-  (* box_type = "PRIMITIVE" *) 
-  FIFO36E1 #(
-    .ALMOST_EMPTY_OFFSET(13'h000A),
-    .ALMOST_FULL_OFFSET(13'h000F),
-    .DATA_WIDTH(4),
-    .DO_REG(1),
-    .EN_ECC_READ("FALSE"),
-    .EN_ECC_WRITE("FALSE"),
-    .EN_SYN("FALSE"),
-    .FIFO_MODE("FIFO36"),
-    .FIRST_WORD_FALL_THROUGH("TRUE"),
-    .INIT(72'h000000000000000000),
-    .IS_RDCLK_INVERTED(1'b0),
-    .IS_RDEN_INVERTED(1'b0),
-    .IS_RSTREG_INVERTED(1'b0),
-    .IS_RST_INVERTED(1'b0),
-    .IS_WRCLK_INVERTED(1'b0),
-    .IS_WREN_INVERTED(1'b0),
-    .SIM_DEVICE("7SERIES"),
-    .SRVAL(72'h000000000000000000)) 
-    \gf36e1_inst.sngfifo36e1 
-       (.ALMOSTEMPTY(\gf36e1_inst.sngfifo36e1_n_0 ),
-        .ALMOSTFULL(pf),
-        .DBITERR(\gf36e1_inst.sngfifo36e1_n_2 ),
-        .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
-        .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
-        .DO({DO_0,DO}),
-        .DOP(\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED [7:0]),
-        .ECCPARITY(\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED [7:0]),
-        .EMPTY(emp_1),
-        .FULL(ful),
-        .INJECTDBITERR(1'b0),
-        .INJECTSBITERR(1'b0),
-        .RDCLK(wr_clk),
-        .RDCOUNT({\gf36e1_inst.sngfifo36e1_n_8 ,\gf36e1_inst.sngfifo36e1_n_9 ,\gf36e1_inst.sngfifo36e1_n_10 ,\gf36e1_inst.sngfifo36e1_n_11 ,\gf36e1_inst.sngfifo36e1_n_12 ,\gf36e1_inst.sngfifo36e1_n_13 ,\gf36e1_inst.sngfifo36e1_n_14 ,\gf36e1_inst.sngfifo36e1_n_15 ,\gf36e1_inst.sngfifo36e1_n_16 ,\gf36e1_inst.sngfifo36e1_n_17 ,\gf36e1_inst.sngfifo36e1_n_18 ,\gf36e1_inst.sngfifo36e1_n_19 ,\gf36e1_inst.sngfifo36e1_n_20 }),
-        .RDEN(e_1),
-        .RDERR(\gf36e1_inst.sngfifo36e1_n_5 ),
-        .REGCE(1'b0),
-        .RST(rd_rst_i),
-        .RSTREG(1'b0),
-        .SBITERR(\gf36e1_inst.sngfifo36e1_n_6 ),
-        .WRCLK(wr_clk),
-        .WRCOUNT({\gf36e1_inst.sngfifo36e1_n_21 ,\gf36e1_inst.sngfifo36e1_n_22 ,\gf36e1_inst.sngfifo36e1_n_23 ,\gf36e1_inst.sngfifo36e1_n_24 ,\gf36e1_inst.sngfifo36e1_n_25 ,\gf36e1_inst.sngfifo36e1_n_26 ,\gf36e1_inst.sngfifo36e1_n_27 ,\gf36e1_inst.sngfifo36e1_n_28 ,\gf36e1_inst.sngfifo36e1_n_29 ,\gf36e1_inst.sngfifo36e1_n_30 ,\gf36e1_inst.sngfifo36e1_n_31 ,\gf36e1_inst.sngfifo36e1_n_32 ,\gf36e1_inst.sngfifo36e1_n_33 }),
-        .WREN(wr_tmp),
-        .WRERR(\gf36e1_inst.sngfifo36e1_n_7 ));
-  LUT2 #(
-    .INIT(4'h1)) 
-    \gf36e1_inst.sngfifo36e1_i_1__1 
-       (.I0(emp_1),
-        .I1(ful_0),
-        .O(e_1));
-endmodule
-
-(* ORIG_REF_NAME = "builtin_prim_v6" *) 
-module post_ddr_slow_fifo_builtin_prim_v6_19
-   (ful,
-    DO,
-    e_1,
-    wr_clk,
-    rd_rst_i,
-    wr_tmp,
-    din,
-    ful_0);
-  output [0:0]ful;
-  output [3:0]DO;
-  output e_1;
-  input wr_clk;
-  input rd_rst_i;
-  input wr_tmp;
-  input [3:0]din;
-  input ful_0;
-
-  wire [3:0]DO;
-  wire [63:4]DO_0;
-  wire [3:0]din;
-  wire e_1;
-  wire emp_1;
-  wire [0:0]ful;
-  wire ful_0;
-  wire \gf36e1_inst.sngfifo36e1_n_0 ;
-  wire \gf36e1_inst.sngfifo36e1_n_10 ;
-  wire \gf36e1_inst.sngfifo36e1_n_11 ;
-  wire \gf36e1_inst.sngfifo36e1_n_12 ;
-  wire \gf36e1_inst.sngfifo36e1_n_13 ;
-  wire \gf36e1_inst.sngfifo36e1_n_14 ;
-  wire \gf36e1_inst.sngfifo36e1_n_15 ;
-  wire \gf36e1_inst.sngfifo36e1_n_16 ;
-  wire \gf36e1_inst.sngfifo36e1_n_17 ;
-  wire \gf36e1_inst.sngfifo36e1_n_18 ;
-  wire \gf36e1_inst.sngfifo36e1_n_19 ;
-  wire \gf36e1_inst.sngfifo36e1_n_2 ;
-  wire \gf36e1_inst.sngfifo36e1_n_20 ;
-  wire \gf36e1_inst.sngfifo36e1_n_21 ;
-  wire \gf36e1_inst.sngfifo36e1_n_22 ;
-  wire \gf36e1_inst.sngfifo36e1_n_23 ;
-  wire \gf36e1_inst.sngfifo36e1_n_24 ;
-  wire \gf36e1_inst.sngfifo36e1_n_25 ;
-  wire \gf36e1_inst.sngfifo36e1_n_26 ;
-  wire \gf36e1_inst.sngfifo36e1_n_27 ;
-  wire \gf36e1_inst.sngfifo36e1_n_28 ;
-  wire \gf36e1_inst.sngfifo36e1_n_29 ;
-  wire \gf36e1_inst.sngfifo36e1_n_30 ;
-  wire \gf36e1_inst.sngfifo36e1_n_31 ;
-  wire \gf36e1_inst.sngfifo36e1_n_32 ;
-  wire \gf36e1_inst.sngfifo36e1_n_33 ;
-  wire \gf36e1_inst.sngfifo36e1_n_5 ;
-  wire \gf36e1_inst.sngfifo36e1_n_6 ;
-  wire \gf36e1_inst.sngfifo36e1_n_7 ;
-  wire \gf36e1_inst.sngfifo36e1_n_8 ;
-  wire \gf36e1_inst.sngfifo36e1_n_9 ;
-  wire [1:1]pf;
-  wire rd_rst_i;
-  wire wr_clk;
-  wire wr_tmp;
-  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED ;
-  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED ;
-
-  (* box_type = "PRIMITIVE" *) 
-  FIFO36E1 #(
-    .ALMOST_EMPTY_OFFSET(13'h000A),
-    .ALMOST_FULL_OFFSET(13'h000F),
-    .DATA_WIDTH(4),
-    .DO_REG(1),
-    .EN_ECC_READ("FALSE"),
-    .EN_ECC_WRITE("FALSE"),
-    .EN_SYN("FALSE"),
-    .FIFO_MODE("FIFO36"),
-    .FIRST_WORD_FALL_THROUGH("TRUE"),
-    .INIT(72'h000000000000000000),
-    .IS_RDCLK_INVERTED(1'b0),
-    .IS_RDEN_INVERTED(1'b0),
-    .IS_RSTREG_INVERTED(1'b0),
-    .IS_RST_INVERTED(1'b0),
-    .IS_WRCLK_INVERTED(1'b0),
-    .IS_WREN_INVERTED(1'b0),
-    .SIM_DEVICE("7SERIES"),
-    .SRVAL(72'h000000000000000000)) 
-    \gf36e1_inst.sngfifo36e1 
-       (.ALMOSTEMPTY(\gf36e1_inst.sngfifo36e1_n_0 ),
-        .ALMOSTFULL(pf),
-        .DBITERR(\gf36e1_inst.sngfifo36e1_n_2 ),
-        .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
-        .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
-        .DO({DO_0,DO}),
-        .DOP(\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED [7:0]),
-        .ECCPARITY(\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED [7:0]),
-        .EMPTY(emp_1),
-        .FULL(ful),
-        .INJECTDBITERR(1'b0),
-        .INJECTSBITERR(1'b0),
-        .RDCLK(wr_clk),
-        .RDCOUNT({\gf36e1_inst.sngfifo36e1_n_8 ,\gf36e1_inst.sngfifo36e1_n_9 ,\gf36e1_inst.sngfifo36e1_n_10 ,\gf36e1_inst.sngfifo36e1_n_11 ,\gf36e1_inst.sngfifo36e1_n_12 ,\gf36e1_inst.sngfifo36e1_n_13 ,\gf36e1_inst.sngfifo36e1_n_14 ,\gf36e1_inst.sngfifo36e1_n_15 ,\gf36e1_inst.sngfifo36e1_n_16 ,\gf36e1_inst.sngfifo36e1_n_17 ,\gf36e1_inst.sngfifo36e1_n_18 ,\gf36e1_inst.sngfifo36e1_n_19 ,\gf36e1_inst.sngfifo36e1_n_20 }),
-        .RDEN(e_1),
-        .RDERR(\gf36e1_inst.sngfifo36e1_n_5 ),
-        .REGCE(1'b0),
-        .RST(rd_rst_i),
-        .RSTREG(1'b0),
-        .SBITERR(\gf36e1_inst.sngfifo36e1_n_6 ),
-        .WRCLK(wr_clk),
-        .WRCOUNT({\gf36e1_inst.sngfifo36e1_n_21 ,\gf36e1_inst.sngfifo36e1_n_22 ,\gf36e1_inst.sngfifo36e1_n_23 ,\gf36e1_inst.sngfifo36e1_n_24 ,\gf36e1_inst.sngfifo36e1_n_25 ,\gf36e1_inst.sngfifo36e1_n_26 ,\gf36e1_inst.sngfifo36e1_n_27 ,\gf36e1_inst.sngfifo36e1_n_28 ,\gf36e1_inst.sngfifo36e1_n_29 ,\gf36e1_inst.sngfifo36e1_n_30 ,\gf36e1_inst.sngfifo36e1_n_31 ,\gf36e1_inst.sngfifo36e1_n_32 ,\gf36e1_inst.sngfifo36e1_n_33 }),
-        .WREN(wr_tmp),
-        .WRERR(\gf36e1_inst.sngfifo36e1_n_7 ));
-  LUT2 #(
-    .INIT(4'h1)) 
-    \gf36e1_inst.sngfifo36e1_i_1__0 
-       (.I0(emp_1),
-        .I1(ful_0),
-        .O(e_1));
-endmodule
-
-(* ORIG_REF_NAME = "builtin_prim_v6" *) 
-module post_ddr_slow_fifo_builtin_prim_v6_7
-   (wr_clk_0,
-    DO,
-    e_1,
-    wr_clk,
-    rd_rst_i,
-    wr_tmp,
-    din,
-    ful_0);
-  output [0:0]wr_clk_0;
-  output [3:0]DO;
-  output e_1;
-  input wr_clk;
-  input rd_rst_i;
-  input wr_tmp;
-  input [3:0]din;
-  input ful_0;
-
-  wire [3:0]DO;
-  wire [63:4]DO_0;
-  wire [3:0]din;
-  wire e_1;
-  wire emp_1;
-  wire ful_0;
-  wire \gf36e1_inst.sngfifo36e1_n_0 ;
-  wire \gf36e1_inst.sngfifo36e1_n_10 ;
-  wire \gf36e1_inst.sngfifo36e1_n_11 ;
-  wire \gf36e1_inst.sngfifo36e1_n_12 ;
-  wire \gf36e1_inst.sngfifo36e1_n_13 ;
-  wire \gf36e1_inst.sngfifo36e1_n_14 ;
-  wire \gf36e1_inst.sngfifo36e1_n_15 ;
-  wire \gf36e1_inst.sngfifo36e1_n_16 ;
-  wire \gf36e1_inst.sngfifo36e1_n_17 ;
-  wire \gf36e1_inst.sngfifo36e1_n_18 ;
-  wire \gf36e1_inst.sngfifo36e1_n_19 ;
-  wire \gf36e1_inst.sngfifo36e1_n_2 ;
-  wire \gf36e1_inst.sngfifo36e1_n_20 ;
-  wire \gf36e1_inst.sngfifo36e1_n_21 ;
-  wire \gf36e1_inst.sngfifo36e1_n_22 ;
-  wire \gf36e1_inst.sngfifo36e1_n_23 ;
-  wire \gf36e1_inst.sngfifo36e1_n_24 ;
-  wire \gf36e1_inst.sngfifo36e1_n_25 ;
-  wire \gf36e1_inst.sngfifo36e1_n_26 ;
-  wire \gf36e1_inst.sngfifo36e1_n_27 ;
-  wire \gf36e1_inst.sngfifo36e1_n_28 ;
-  wire \gf36e1_inst.sngfifo36e1_n_29 ;
-  wire \gf36e1_inst.sngfifo36e1_n_30 ;
-  wire \gf36e1_inst.sngfifo36e1_n_31 ;
-  wire \gf36e1_inst.sngfifo36e1_n_32 ;
-  wire \gf36e1_inst.sngfifo36e1_n_33 ;
-  wire \gf36e1_inst.sngfifo36e1_n_5 ;
-  wire \gf36e1_inst.sngfifo36e1_n_6 ;
-  wire \gf36e1_inst.sngfifo36e1_n_7 ;
-  wire \gf36e1_inst.sngfifo36e1_n_8 ;
-  wire \gf36e1_inst.sngfifo36e1_n_9 ;
-  wire [7:7]pf;
-  wire rd_rst_i;
-  wire wr_clk;
-  wire [0:0]wr_clk_0;
-  wire wr_tmp;
-  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED ;
-  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED ;
-
-  (* box_type = "PRIMITIVE" *) 
-  FIFO36E1 #(
-    .ALMOST_EMPTY_OFFSET(13'h000A),
-    .ALMOST_FULL_OFFSET(13'h000F),
-    .DATA_WIDTH(4),
-    .DO_REG(1),
-    .EN_ECC_READ("FALSE"),
-    .EN_ECC_WRITE("FALSE"),
-    .EN_SYN("FALSE"),
-    .FIFO_MODE("FIFO36"),
-    .FIRST_WORD_FALL_THROUGH("TRUE"),
-    .INIT(72'h000000000000000000),
-    .IS_RDCLK_INVERTED(1'b0),
-    .IS_RDEN_INVERTED(1'b0),
-    .IS_RSTREG_INVERTED(1'b0),
-    .IS_RST_INVERTED(1'b0),
-    .IS_WRCLK_INVERTED(1'b0),
-    .IS_WREN_INVERTED(1'b0),
-    .SIM_DEVICE("7SERIES"),
-    .SRVAL(72'h000000000000000000)) 
-    \gf36e1_inst.sngfifo36e1 
-       (.ALMOSTEMPTY(\gf36e1_inst.sngfifo36e1_n_0 ),
-        .ALMOSTFULL(pf),
-        .DBITERR(\gf36e1_inst.sngfifo36e1_n_2 ),
-        .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
-        .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
-        .DO({DO_0,DO}),
-        .DOP(\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED [7:0]),
-        .ECCPARITY(\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED [7:0]),
-        .EMPTY(emp_1),
-        .FULL(wr_clk_0),
-        .INJECTDBITERR(1'b0),
-        .INJECTSBITERR(1'b0),
-        .RDCLK(wr_clk),
-        .RDCOUNT({\gf36e1_inst.sngfifo36e1_n_8 ,\gf36e1_inst.sngfifo36e1_n_9 ,\gf36e1_inst.sngfifo36e1_n_10 ,\gf36e1_inst.sngfifo36e1_n_11 ,\gf36e1_inst.sngfifo36e1_n_12 ,\gf36e1_inst.sngfifo36e1_n_13 ,\gf36e1_inst.sngfifo36e1_n_14 ,\gf36e1_inst.sngfifo36e1_n_15 ,\gf36e1_inst.sngfifo36e1_n_16 ,\gf36e1_inst.sngfifo36e1_n_17 ,\gf36e1_inst.sngfifo36e1_n_18 ,\gf36e1_inst.sngfifo36e1_n_19 ,\gf36e1_inst.sngfifo36e1_n_20 }),
-        .RDEN(e_1),
-        .RDERR(\gf36e1_inst.sngfifo36e1_n_5 ),
-        .REGCE(1'b0),
-        .RST(rd_rst_i),
-        .RSTREG(1'b0),
-        .SBITERR(\gf36e1_inst.sngfifo36e1_n_6 ),
-        .WRCLK(wr_clk),
-        .WRCOUNT({\gf36e1_inst.sngfifo36e1_n_21 ,\gf36e1_inst.sngfifo36e1_n_22 ,\gf36e1_inst.sngfifo36e1_n_23 ,\gf36e1_inst.sngfifo36e1_n_24 ,\gf36e1_inst.sngfifo36e1_n_25 ,\gf36e1_inst.sngfifo36e1_n_26 ,\gf36e1_inst.sngfifo36e1_n_27 ,\gf36e1_inst.sngfifo36e1_n_28 ,\gf36e1_inst.sngfifo36e1_n_29 ,\gf36e1_inst.sngfifo36e1_n_30 ,\gf36e1_inst.sngfifo36e1_n_31 ,\gf36e1_inst.sngfifo36e1_n_32 ,\gf36e1_inst.sngfifo36e1_n_33 }),
-        .WREN(wr_tmp),
-        .WRERR(\gf36e1_inst.sngfifo36e1_n_7 ));
-  LUT2 #(
-    .INIT(4'h1)) 
-    \gf36e1_inst.sngfifo36e1_i_1__6 
-       (.I0(emp_1),
-        .I1(ful_0),
-        .O(e_1));
-endmodule
-
-(* ORIG_REF_NAME = "builtin_prim_v6" *) 
-module post_ddr_slow_fifo_builtin_prim_v6_9
-   (DO,
-    e_1,
-    wr_tmp,
-    overflow_int,
-    wr_clk_0,
-    wr_clk,
-    rd_rst_i,
-    din,
-    ful_0,
-    \govw.govw2.OVERFLOW_reg ,
-    wr_en);
-  output [3:0]DO;
-  output e_1;
-  output wr_tmp;
-  output overflow_int;
-  output wr_clk_0;
-  input wr_clk;
-  input rd_rst_i;
-  input [3:0]din;
-  input ful_0;
-  input [6:0]\govw.govw2.OVERFLOW_reg ;
-  input wr_en;
-
-  wire [3:0]DO;
-  wire [63:4]DO_0;
-  wire [3:0]din;
-  wire e_1;
-  wire emp_1;
-  wire [6:6]ful;
-  wire ful_0;
-  wire \gf36e1_inst.sngfifo36e1_n_0 ;
-  wire \gf36e1_inst.sngfifo36e1_n_10 ;
-  wire \gf36e1_inst.sngfifo36e1_n_11 ;
-  wire \gf36e1_inst.sngfifo36e1_n_12 ;
-  wire \gf36e1_inst.sngfifo36e1_n_13 ;
-  wire \gf36e1_inst.sngfifo36e1_n_14 ;
-  wire \gf36e1_inst.sngfifo36e1_n_15 ;
-  wire \gf36e1_inst.sngfifo36e1_n_16 ;
-  wire \gf36e1_inst.sngfifo36e1_n_17 ;
-  wire \gf36e1_inst.sngfifo36e1_n_18 ;
-  wire \gf36e1_inst.sngfifo36e1_n_19 ;
-  wire \gf36e1_inst.sngfifo36e1_n_2 ;
-  wire \gf36e1_inst.sngfifo36e1_n_20 ;
-  wire \gf36e1_inst.sngfifo36e1_n_21 ;
-  wire \gf36e1_inst.sngfifo36e1_n_22 ;
-  wire \gf36e1_inst.sngfifo36e1_n_23 ;
-  wire \gf36e1_inst.sngfifo36e1_n_24 ;
-  wire \gf36e1_inst.sngfifo36e1_n_25 ;
-  wire \gf36e1_inst.sngfifo36e1_n_26 ;
-  wire \gf36e1_inst.sngfifo36e1_n_27 ;
-  wire \gf36e1_inst.sngfifo36e1_n_28 ;
-  wire \gf36e1_inst.sngfifo36e1_n_29 ;
-  wire \gf36e1_inst.sngfifo36e1_n_30 ;
-  wire \gf36e1_inst.sngfifo36e1_n_31 ;
-  wire \gf36e1_inst.sngfifo36e1_n_32 ;
-  wire \gf36e1_inst.sngfifo36e1_n_33 ;
-  wire \gf36e1_inst.sngfifo36e1_n_5 ;
-  wire \gf36e1_inst.sngfifo36e1_n_6 ;
-  wire \gf36e1_inst.sngfifo36e1_n_7 ;
-  wire \gf36e1_inst.sngfifo36e1_n_8 ;
-  wire \gf36e1_inst.sngfifo36e1_n_9 ;
-  wire [6:0]\govw.govw2.OVERFLOW_reg ;
-  wire overflow_int;
-  wire [6:6]pf;
-  wire rd_rst_i;
-  wire wr_clk;
-  wire wr_clk_0;
-  wire wr_en;
-  wire wr_tmp;
-  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED ;
-  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED ;
-
-  LUT4 #(
-    .INIT(16'hFFFE)) 
-    full_INST_0_i_1
-       (.I0(ful),
-        .I1(\govw.govw2.OVERFLOW_reg [4]),
-        .I2(\govw.govw2.OVERFLOW_reg [6]),
-        .I3(\govw.govw2.OVERFLOW_reg [5]),
-        .O(wr_clk_0));
-  (* box_type = "PRIMITIVE" *) 
-  FIFO36E1 #(
-    .ALMOST_EMPTY_OFFSET(13'h000A),
-    .ALMOST_FULL_OFFSET(13'h000F),
-    .DATA_WIDTH(4),
-    .DO_REG(1),
-    .EN_ECC_READ("FALSE"),
-    .EN_ECC_WRITE("FALSE"),
-    .EN_SYN("FALSE"),
-    .FIFO_MODE("FIFO36"),
-    .FIRST_WORD_FALL_THROUGH("TRUE"),
-    .INIT(72'h000000000000000000),
-    .IS_RDCLK_INVERTED(1'b0),
-    .IS_RDEN_INVERTED(1'b0),
-    .IS_RSTREG_INVERTED(1'b0),
-    .IS_RST_INVERTED(1'b0),
-    .IS_WRCLK_INVERTED(1'b0),
-    .IS_WREN_INVERTED(1'b0),
-    .SIM_DEVICE("7SERIES"),
-    .SRVAL(72'h000000000000000000)) 
-    \gf36e1_inst.sngfifo36e1 
-       (.ALMOSTEMPTY(\gf36e1_inst.sngfifo36e1_n_0 ),
-        .ALMOSTFULL(pf),
-        .DBITERR(\gf36e1_inst.sngfifo36e1_n_2 ),
-        .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
-        .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
-        .DO({DO_0,DO}),
-        .DOP(\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED [7:0]),
-        .ECCPARITY(\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED [7:0]),
-        .EMPTY(emp_1),
-        .FULL(ful),
-        .INJECTDBITERR(1'b0),
-        .INJECTSBITERR(1'b0),
-        .RDCLK(wr_clk),
-        .RDCOUNT({\gf36e1_inst.sngfifo36e1_n_8 ,\gf36e1_inst.sngfifo36e1_n_9 ,\gf36e1_inst.sngfifo36e1_n_10 ,\gf36e1_inst.sngfifo36e1_n_11 ,\gf36e1_inst.sngfifo36e1_n_12 ,\gf36e1_inst.sngfifo36e1_n_13 ,\gf36e1_inst.sngfifo36e1_n_14 ,\gf36e1_inst.sngfifo36e1_n_15 ,\gf36e1_inst.sngfifo36e1_n_16 ,\gf36e1_inst.sngfifo36e1_n_17 ,\gf36e1_inst.sngfifo36e1_n_18 ,\gf36e1_inst.sngfifo36e1_n_19 ,\gf36e1_inst.sngfifo36e1_n_20 }),
-        .RDEN(e_1),
-        .RDERR(\gf36e1_inst.sngfifo36e1_n_5 ),
-        .REGCE(1'b0),
-        .RST(rd_rst_i),
-        .RSTREG(1'b0),
-        .SBITERR(\gf36e1_inst.sngfifo36e1_n_6 ),
-        .WRCLK(wr_clk),
-        .WRCOUNT({\gf36e1_inst.sngfifo36e1_n_21 ,\gf36e1_inst.sngfifo36e1_n_22 ,\gf36e1_inst.sngfifo36e1_n_23 ,\gf36e1_inst.sngfifo36e1_n_24 ,\gf36e1_inst.sngfifo36e1_n_25 ,\gf36e1_inst.sngfifo36e1_n_26 ,\gf36e1_inst.sngfifo36e1_n_27 ,\gf36e1_inst.sngfifo36e1_n_28 ,\gf36e1_inst.sngfifo36e1_n_29 ,\gf36e1_inst.sngfifo36e1_n_30 ,\gf36e1_inst.sngfifo36e1_n_31 ,\gf36e1_inst.sngfifo36e1_n_32 ,\gf36e1_inst.sngfifo36e1_n_33 }),
-        .WREN(wr_tmp),
-        .WRERR(\gf36e1_inst.sngfifo36e1_n_7 ));
-  LUT6 #(
-    .INIT(64'h0000000000000002)) 
-    \gf36e1_inst.sngfifo36e1_i_1 
-       (.I0(wr_en),
-        .I1(wr_clk_0),
-        .I2(\govw.govw2.OVERFLOW_reg [1]),
-        .I3(\govw.govw2.OVERFLOW_reg [0]),
-        .I4(\govw.govw2.OVERFLOW_reg [3]),
-        .I5(\govw.govw2.OVERFLOW_reg [2]),
-        .O(wr_tmp));
-  LUT2 #(
-    .INIT(4'h1)) 
-    \gf36e1_inst.sngfifo36e1_i_1__5 
-       (.I0(emp_1),
-        .I1(ful_0),
-        .O(e_1));
-  LUT6 #(
-    .INIT(64'hFFFFFFFE00000000)) 
-    \govw.govw2.OVERFLOW_i_1 
-       (.I0(wr_clk_0),
-        .I1(\govw.govw2.OVERFLOW_reg [1]),
-        .I2(\govw.govw2.OVERFLOW_reg [0]),
-        .I3(\govw.govw2.OVERFLOW_reg [3]),
-        .I4(\govw.govw2.OVERFLOW_reg [2]),
-        .I5(wr_en),
-        .O(overflow_int));
-endmodule
-
-(* ORIG_REF_NAME = "builtin_prim_v6" *) 
-module post_ddr_slow_fifo_builtin_prim_v6__parameterized0
-   (rd_clk_0,
-    ful_0,
+   (EMPTY,
+    FULL,
     dout,
     rd_clk,
-    \dout[31] ,
-    rd_rst_i,
+    RD_EN,
+    RST,
     wr_clk,
-    e_1,
-    DO);
-  output [0:0]rd_clk_0;
-  output ful_0;
+    WR_EN,
+    din);
+  output EMPTY;
+  output FULL;
   output [3:0]dout;
   input rd_clk;
-  input \dout[31] ;
-  input rd_rst_i;
+  input RD_EN;
+  input RST;
   input wr_clk;
-  input e_1;
-  input [3:0]DO;
+  input WR_EN;
+  input [3:0]din;
 
-  wire [3:0]DO;
-  wire [63:4]DO_0;
+  wire [63:4]DO;
+  wire EMPTY;
+  wire FULL;
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
   wire [8:8]dbiterr_col;
+  wire [3:0]din;
   wire [3:0]dout;
-  wire \dout[31] ;
-  wire e_1;
-  wire ful_0;
-  wire \gf36e1_inst.sngfifo36e1_n_1 ;
   wire \gf36e1_inst.sngfifo36e1_n_10 ;
   wire \gf36e1_inst.sngfifo36e1_n_11 ;
   wire \gf36e1_inst.sngfifo36e1_n_12 ;
@@ -2338,9 +1955,8 @@ module post_ddr_slow_fifo_builtin_prim_v6__parameterized0
   wire \gf36e1_inst.sngfifo36e1_n_8 ;
   wire \gf36e1_inst.sngfifo36e1_n_9 ;
   wire [8:8]pe;
+  wire [8:8]pf;
   wire rd_clk;
-  wire [0:0]rd_clk_0;
-  wire rd_rst_i;
   wire [8:8]sbiterr_col;
   wire wr_clk;
   wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED ;
@@ -2349,7 +1965,7 @@ module post_ddr_slow_fifo_builtin_prim_v6__parameterized0
   (* box_type = "PRIMITIVE" *) 
   FIFO36E1 #(
     .ALMOST_EMPTY_OFFSET(13'h0006),
-    .ALMOST_FULL_OFFSET(13'h000A),
+    .ALMOST_FULL_OFFSET(13'h000F),
     .DATA_WIDTH(4),
     .DO_REG(1),
     .EN_ECC_READ("FALSE"),
@@ -2368,795 +1984,61 @@ module post_ddr_slow_fifo_builtin_prim_v6__parameterized0
     .SRVAL(72'h000000000000000000)) 
     \gf36e1_inst.sngfifo36e1 
        (.ALMOSTEMPTY(pe),
-        .ALMOSTFULL(\gf36e1_inst.sngfifo36e1_n_1 ),
+        .ALMOSTFULL(pf),
         .DBITERR(dbiterr_col),
-        .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,DO}),
+        .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
         .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
-        .DO({DO_0,dout}),
+        .DO({DO,dout}),
         .DOP(\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED [7:0]),
         .ECCPARITY(\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED [7:0]),
-        .EMPTY(rd_clk_0),
-        .FULL(ful_0),
+        .EMPTY(EMPTY),
+        .FULL(FULL),
         .INJECTDBITERR(1'b0),
         .INJECTSBITERR(1'b0),
         .RDCLK(rd_clk),
         .RDCOUNT({\gf36e1_inst.sngfifo36e1_n_8 ,\gf36e1_inst.sngfifo36e1_n_9 ,\gf36e1_inst.sngfifo36e1_n_10 ,\gf36e1_inst.sngfifo36e1_n_11 ,\gf36e1_inst.sngfifo36e1_n_12 ,\gf36e1_inst.sngfifo36e1_n_13 ,\gf36e1_inst.sngfifo36e1_n_14 ,\gf36e1_inst.sngfifo36e1_n_15 ,\gf36e1_inst.sngfifo36e1_n_16 ,\gf36e1_inst.sngfifo36e1_n_17 ,\gf36e1_inst.sngfifo36e1_n_18 ,\gf36e1_inst.sngfifo36e1_n_19 ,\gf36e1_inst.sngfifo36e1_n_20 }),
-        .RDEN(\dout[31] ),
+        .RDEN(RD_EN),
         .RDERR(\gf36e1_inst.sngfifo36e1_n_5 ),
         .REGCE(1'b0),
-        .RST(rd_rst_i),
+        .RST(RST),
         .RSTREG(1'b0),
         .SBITERR(sbiterr_col),
         .WRCLK(wr_clk),
         .WRCOUNT({\gf36e1_inst.sngfifo36e1_n_21 ,\gf36e1_inst.sngfifo36e1_n_22 ,\gf36e1_inst.sngfifo36e1_n_23 ,\gf36e1_inst.sngfifo36e1_n_24 ,\gf36e1_inst.sngfifo36e1_n_25 ,\gf36e1_inst.sngfifo36e1_n_26 ,\gf36e1_inst.sngfifo36e1_n_27 ,\gf36e1_inst.sngfifo36e1_n_28 ,\gf36e1_inst.sngfifo36e1_n_29 ,\gf36e1_inst.sngfifo36e1_n_30 ,\gf36e1_inst.sngfifo36e1_n_31 ,\gf36e1_inst.sngfifo36e1_n_32 ,\gf36e1_inst.sngfifo36e1_n_33 }),
-        .WREN(e_1),
+        .WREN(WR_EN),
         .WRERR(\gf36e1_inst.sngfifo36e1_n_7 ));
 endmodule
 
 (* ORIG_REF_NAME = "builtin_prim_v6" *) 
-module post_ddr_slow_fifo_builtin_prim_v6__parameterized0_10
-   (ful_0,
-    dout,
-    rd_en_0,
-    rd_clk_0,
-    underflow_int,
-    rd_clk,
-    rd_rst_i,
-    wr_clk,
-    e_1,
-    DO,
-    rd_en,
-    \gunf.gunf2.UNDERFLOW_reg );
-  output ful_0;
-  output [3:0]dout;
-  output rd_en_0;
-  output rd_clk_0;
-  output underflow_int;
-  input rd_clk;
-  input rd_rst_i;
-  input wr_clk;
-  input e_1;
-  input [3:0]DO;
-  input rd_en;
-  input [6:0]\gunf.gunf2.UNDERFLOW_reg ;
-
-  wire [3:0]DO;
-  wire [63:4]DO_0;
-  wire [6:6]dbiterr_col;
-  wire [3:0]dout;
-  wire e_1;
-  wire [6:6]emp;
-  wire ful_0;
-  wire \gf36e1_inst.sngfifo36e1_n_1 ;
-  wire \gf36e1_inst.sngfifo36e1_n_10 ;
-  wire \gf36e1_inst.sngfifo36e1_n_11 ;
-  wire \gf36e1_inst.sngfifo36e1_n_12 ;
-  wire \gf36e1_inst.sngfifo36e1_n_13 ;
-  wire \gf36e1_inst.sngfifo36e1_n_14 ;
-  wire \gf36e1_inst.sngfifo36e1_n_15 ;
-  wire \gf36e1_inst.sngfifo36e1_n_16 ;
-  wire \gf36e1_inst.sngfifo36e1_n_17 ;
-  wire \gf36e1_inst.sngfifo36e1_n_18 ;
-  wire \gf36e1_inst.sngfifo36e1_n_19 ;
-  wire \gf36e1_inst.sngfifo36e1_n_20 ;
-  wire \gf36e1_inst.sngfifo36e1_n_21 ;
-  wire \gf36e1_inst.sngfifo36e1_n_22 ;
-  wire \gf36e1_inst.sngfifo36e1_n_23 ;
-  wire \gf36e1_inst.sngfifo36e1_n_24 ;
-  wire \gf36e1_inst.sngfifo36e1_n_25 ;
-  wire \gf36e1_inst.sngfifo36e1_n_26 ;
-  wire \gf36e1_inst.sngfifo36e1_n_27 ;
-  wire \gf36e1_inst.sngfifo36e1_n_28 ;
-  wire \gf36e1_inst.sngfifo36e1_n_29 ;
-  wire \gf36e1_inst.sngfifo36e1_n_30 ;
-  wire \gf36e1_inst.sngfifo36e1_n_31 ;
-  wire \gf36e1_inst.sngfifo36e1_n_32 ;
-  wire \gf36e1_inst.sngfifo36e1_n_33 ;
-  wire \gf36e1_inst.sngfifo36e1_n_5 ;
-  wire \gf36e1_inst.sngfifo36e1_n_7 ;
-  wire \gf36e1_inst.sngfifo36e1_n_8 ;
-  wire \gf36e1_inst.sngfifo36e1_n_9 ;
-  wire [6:0]\gunf.gunf2.UNDERFLOW_reg ;
-  wire [6:6]pe;
-  wire rd_clk;
-  wire rd_clk_0;
-  wire rd_en;
-  wire rd_en_0;
-  wire rd_rst_i;
-  wire [6:6]sbiterr_col;
-  wire underflow_int;
-  wire wr_clk;
-  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED ;
-  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED ;
-
-  LUT4 #(
-    .INIT(16'hFFFE)) 
-    empty_INST_0_i_1
-       (.I0(emp),
-        .I1(\gunf.gunf2.UNDERFLOW_reg [4]),
-        .I2(\gunf.gunf2.UNDERFLOW_reg [6]),
-        .I3(\gunf.gunf2.UNDERFLOW_reg [5]),
-        .O(rd_clk_0));
-  (* box_type = "PRIMITIVE" *) 
-  FIFO36E1 #(
-    .ALMOST_EMPTY_OFFSET(13'h0006),
-    .ALMOST_FULL_OFFSET(13'h000A),
-    .DATA_WIDTH(4),
-    .DO_REG(1),
-    .EN_ECC_READ("FALSE"),
-    .EN_ECC_WRITE("FALSE"),
-    .EN_SYN("FALSE"),
-    .FIFO_MODE("FIFO36"),
-    .FIRST_WORD_FALL_THROUGH("TRUE"),
-    .INIT(72'h000000000000000000),
-    .IS_RDCLK_INVERTED(1'b0),
-    .IS_RDEN_INVERTED(1'b0),
-    .IS_RSTREG_INVERTED(1'b0),
-    .IS_RST_INVERTED(1'b0),
-    .IS_WRCLK_INVERTED(1'b0),
-    .IS_WREN_INVERTED(1'b0),
-    .SIM_DEVICE("7SERIES"),
-    .SRVAL(72'h000000000000000000)) 
-    \gf36e1_inst.sngfifo36e1 
-       (.ALMOSTEMPTY(pe),
-        .ALMOSTFULL(\gf36e1_inst.sngfifo36e1_n_1 ),
-        .DBITERR(dbiterr_col),
-        .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,DO}),
-        .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
-        .DO({DO_0,dout}),
-        .DOP(\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED [7:0]),
-        .ECCPARITY(\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED [7:0]),
-        .EMPTY(emp),
-        .FULL(ful_0),
-        .INJECTDBITERR(1'b0),
-        .INJECTSBITERR(1'b0),
-        .RDCLK(rd_clk),
-        .RDCOUNT({\gf36e1_inst.sngfifo36e1_n_8 ,\gf36e1_inst.sngfifo36e1_n_9 ,\gf36e1_inst.sngfifo36e1_n_10 ,\gf36e1_inst.sngfifo36e1_n_11 ,\gf36e1_inst.sngfifo36e1_n_12 ,\gf36e1_inst.sngfifo36e1_n_13 ,\gf36e1_inst.sngfifo36e1_n_14 ,\gf36e1_inst.sngfifo36e1_n_15 ,\gf36e1_inst.sngfifo36e1_n_16 ,\gf36e1_inst.sngfifo36e1_n_17 ,\gf36e1_inst.sngfifo36e1_n_18 ,\gf36e1_inst.sngfifo36e1_n_19 ,\gf36e1_inst.sngfifo36e1_n_20 }),
-        .RDEN(rd_en_0),
-        .RDERR(\gf36e1_inst.sngfifo36e1_n_5 ),
-        .REGCE(1'b0),
-        .RST(rd_rst_i),
-        .RSTREG(1'b0),
-        .SBITERR(sbiterr_col),
-        .WRCLK(wr_clk),
-        .WRCOUNT({\gf36e1_inst.sngfifo36e1_n_21 ,\gf36e1_inst.sngfifo36e1_n_22 ,\gf36e1_inst.sngfifo36e1_n_23 ,\gf36e1_inst.sngfifo36e1_n_24 ,\gf36e1_inst.sngfifo36e1_n_25 ,\gf36e1_inst.sngfifo36e1_n_26 ,\gf36e1_inst.sngfifo36e1_n_27 ,\gf36e1_inst.sngfifo36e1_n_28 ,\gf36e1_inst.sngfifo36e1_n_29 ,\gf36e1_inst.sngfifo36e1_n_30 ,\gf36e1_inst.sngfifo36e1_n_31 ,\gf36e1_inst.sngfifo36e1_n_32 ,\gf36e1_inst.sngfifo36e1_n_33 }),
-        .WREN(e_1),
-        .WRERR(\gf36e1_inst.sngfifo36e1_n_7 ));
-  LUT6 #(
-    .INIT(64'h0000000000000002)) 
-    \gf36e1_inst.sngfifo36e1_i_1__7 
-       (.I0(rd_en),
-        .I1(rd_clk_0),
-        .I2(\gunf.gunf2.UNDERFLOW_reg [1]),
-        .I3(\gunf.gunf2.UNDERFLOW_reg [0]),
-        .I4(\gunf.gunf2.UNDERFLOW_reg [3]),
-        .I5(\gunf.gunf2.UNDERFLOW_reg [2]),
-        .O(rd_en_0));
-  LUT6 #(
-    .INIT(64'hFFFFFFFE00000000)) 
-    \gunf.gunf2.UNDERFLOW_i_1 
-       (.I0(rd_clk_0),
-        .I1(\gunf.gunf2.UNDERFLOW_reg [1]),
-        .I2(\gunf.gunf2.UNDERFLOW_reg [0]),
-        .I3(\gunf.gunf2.UNDERFLOW_reg [3]),
-        .I4(\gunf.gunf2.UNDERFLOW_reg [2]),
-        .I5(rd_en),
-        .O(underflow_int));
-endmodule
-
-(* ORIG_REF_NAME = "builtin_prim_v6" *) 
-module post_ddr_slow_fifo_builtin_prim_v6__parameterized0_12
-   (emp,
-    ful_0,
+module post_ddr_slow_fifo_builtin_prim_v6_16
+   (EMPTY,
+    FULL,
     dout,
     rd_clk,
-    \dout[19] ,
-    rd_rst_i,
+    RD_EN,
+    RST,
     wr_clk,
-    e_1,
-    DO);
-  output [0:0]emp;
-  output ful_0;
+    WR_EN,
+    din);
+  output EMPTY;
+  output FULL;
   output [3:0]dout;
   input rd_clk;
-  input \dout[19] ;
-  input rd_rst_i;
+  input RD_EN;
+  input RST;
   input wr_clk;
-  input e_1;
-  input [3:0]DO;
+  input WR_EN;
+  input [3:0]din;
 
-  wire [3:0]DO;
-  wire [63:4]DO_0;
-  wire [5:5]dbiterr_col;
-  wire [3:0]dout;
-  wire \dout[19] ;
-  wire e_1;
-  wire [0:0]emp;
-  wire ful_0;
-  wire \gf36e1_inst.sngfifo36e1_n_1 ;
-  wire \gf36e1_inst.sngfifo36e1_n_10 ;
-  wire \gf36e1_inst.sngfifo36e1_n_11 ;
-  wire \gf36e1_inst.sngfifo36e1_n_12 ;
-  wire \gf36e1_inst.sngfifo36e1_n_13 ;
-  wire \gf36e1_inst.sngfifo36e1_n_14 ;
-  wire \gf36e1_inst.sngfifo36e1_n_15 ;
-  wire \gf36e1_inst.sngfifo36e1_n_16 ;
-  wire \gf36e1_inst.sngfifo36e1_n_17 ;
-  wire \gf36e1_inst.sngfifo36e1_n_18 ;
-  wire \gf36e1_inst.sngfifo36e1_n_19 ;
-  wire \gf36e1_inst.sngfifo36e1_n_20 ;
-  wire \gf36e1_inst.sngfifo36e1_n_21 ;
-  wire \gf36e1_inst.sngfifo36e1_n_22 ;
-  wire \gf36e1_inst.sngfifo36e1_n_23 ;
-  wire \gf36e1_inst.sngfifo36e1_n_24 ;
-  wire \gf36e1_inst.sngfifo36e1_n_25 ;
-  wire \gf36e1_inst.sngfifo36e1_n_26 ;
-  wire \gf36e1_inst.sngfifo36e1_n_27 ;
-  wire \gf36e1_inst.sngfifo36e1_n_28 ;
-  wire \gf36e1_inst.sngfifo36e1_n_29 ;
-  wire \gf36e1_inst.sngfifo36e1_n_30 ;
-  wire \gf36e1_inst.sngfifo36e1_n_31 ;
-  wire \gf36e1_inst.sngfifo36e1_n_32 ;
-  wire \gf36e1_inst.sngfifo36e1_n_33 ;
-  wire \gf36e1_inst.sngfifo36e1_n_5 ;
-  wire \gf36e1_inst.sngfifo36e1_n_7 ;
-  wire \gf36e1_inst.sngfifo36e1_n_8 ;
-  wire \gf36e1_inst.sngfifo36e1_n_9 ;
-  wire [5:5]pe;
-  wire rd_clk;
-  wire rd_rst_i;
-  wire [5:5]sbiterr_col;
-  wire wr_clk;
-  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED ;
-  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED ;
-
-  (* box_type = "PRIMITIVE" *) 
-  FIFO36E1 #(
-    .ALMOST_EMPTY_OFFSET(13'h0006),
-    .ALMOST_FULL_OFFSET(13'h000A),
-    .DATA_WIDTH(4),
-    .DO_REG(1),
-    .EN_ECC_READ("FALSE"),
-    .EN_ECC_WRITE("FALSE"),
-    .EN_SYN("FALSE"),
-    .FIFO_MODE("FIFO36"),
-    .FIRST_WORD_FALL_THROUGH("TRUE"),
-    .INIT(72'h000000000000000000),
-    .IS_RDCLK_INVERTED(1'b0),
-    .IS_RDEN_INVERTED(1'b0),
-    .IS_RSTREG_INVERTED(1'b0),
-    .IS_RST_INVERTED(1'b0),
-    .IS_WRCLK_INVERTED(1'b0),
-    .IS_WREN_INVERTED(1'b0),
-    .SIM_DEVICE("7SERIES"),
-    .SRVAL(72'h000000000000000000)) 
-    \gf36e1_inst.sngfifo36e1 
-       (.ALMOSTEMPTY(pe),
-        .ALMOSTFULL(\gf36e1_inst.sngfifo36e1_n_1 ),
-        .DBITERR(dbiterr_col),
-        .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,DO}),
-        .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
-        .DO({DO_0,dout}),
-        .DOP(\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED [7:0]),
-        .ECCPARITY(\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED [7:0]),
-        .EMPTY(emp),
-        .FULL(ful_0),
-        .INJECTDBITERR(1'b0),
-        .INJECTSBITERR(1'b0),
-        .RDCLK(rd_clk),
-        .RDCOUNT({\gf36e1_inst.sngfifo36e1_n_8 ,\gf36e1_inst.sngfifo36e1_n_9 ,\gf36e1_inst.sngfifo36e1_n_10 ,\gf36e1_inst.sngfifo36e1_n_11 ,\gf36e1_inst.sngfifo36e1_n_12 ,\gf36e1_inst.sngfifo36e1_n_13 ,\gf36e1_inst.sngfifo36e1_n_14 ,\gf36e1_inst.sngfifo36e1_n_15 ,\gf36e1_inst.sngfifo36e1_n_16 ,\gf36e1_inst.sngfifo36e1_n_17 ,\gf36e1_inst.sngfifo36e1_n_18 ,\gf36e1_inst.sngfifo36e1_n_19 ,\gf36e1_inst.sngfifo36e1_n_20 }),
-        .RDEN(\dout[19] ),
-        .RDERR(\gf36e1_inst.sngfifo36e1_n_5 ),
-        .REGCE(1'b0),
-        .RST(rd_rst_i),
-        .RSTREG(1'b0),
-        .SBITERR(sbiterr_col),
-        .WRCLK(wr_clk),
-        .WRCOUNT({\gf36e1_inst.sngfifo36e1_n_21 ,\gf36e1_inst.sngfifo36e1_n_22 ,\gf36e1_inst.sngfifo36e1_n_23 ,\gf36e1_inst.sngfifo36e1_n_24 ,\gf36e1_inst.sngfifo36e1_n_25 ,\gf36e1_inst.sngfifo36e1_n_26 ,\gf36e1_inst.sngfifo36e1_n_27 ,\gf36e1_inst.sngfifo36e1_n_28 ,\gf36e1_inst.sngfifo36e1_n_29 ,\gf36e1_inst.sngfifo36e1_n_30 ,\gf36e1_inst.sngfifo36e1_n_31 ,\gf36e1_inst.sngfifo36e1_n_32 ,\gf36e1_inst.sngfifo36e1_n_33 }),
-        .WREN(e_1),
-        .WRERR(\gf36e1_inst.sngfifo36e1_n_7 ));
-endmodule
-
-(* ORIG_REF_NAME = "builtin_prim_v6" *) 
-module post_ddr_slow_fifo_builtin_prim_v6__parameterized0_14
-   (rd_clk_0,
-    ful_0,
-    dout,
-    rd_clk,
-    \dout[15] ,
-    rd_rst_i,
-    wr_clk,
-    e_1,
-    DO);
-  output [0:0]rd_clk_0;
-  output ful_0;
-  output [3:0]dout;
-  input rd_clk;
-  input \dout[15] ;
-  input rd_rst_i;
-  input wr_clk;
-  input e_1;
-  input [3:0]DO;
-
-  wire [3:0]DO;
-  wire [63:4]DO_0;
-  wire [4:4]dbiterr_col;
-  wire [3:0]dout;
-  wire \dout[15] ;
-  wire e_1;
-  wire ful_0;
-  wire \gf36e1_inst.sngfifo36e1_n_1 ;
-  wire \gf36e1_inst.sngfifo36e1_n_10 ;
-  wire \gf36e1_inst.sngfifo36e1_n_11 ;
-  wire \gf36e1_inst.sngfifo36e1_n_12 ;
-  wire \gf36e1_inst.sngfifo36e1_n_13 ;
-  wire \gf36e1_inst.sngfifo36e1_n_14 ;
-  wire \gf36e1_inst.sngfifo36e1_n_15 ;
-  wire \gf36e1_inst.sngfifo36e1_n_16 ;
-  wire \gf36e1_inst.sngfifo36e1_n_17 ;
-  wire \gf36e1_inst.sngfifo36e1_n_18 ;
-  wire \gf36e1_inst.sngfifo36e1_n_19 ;
-  wire \gf36e1_inst.sngfifo36e1_n_20 ;
-  wire \gf36e1_inst.sngfifo36e1_n_21 ;
-  wire \gf36e1_inst.sngfifo36e1_n_22 ;
-  wire \gf36e1_inst.sngfifo36e1_n_23 ;
-  wire \gf36e1_inst.sngfifo36e1_n_24 ;
-  wire \gf36e1_inst.sngfifo36e1_n_25 ;
-  wire \gf36e1_inst.sngfifo36e1_n_26 ;
-  wire \gf36e1_inst.sngfifo36e1_n_27 ;
-  wire \gf36e1_inst.sngfifo36e1_n_28 ;
-  wire \gf36e1_inst.sngfifo36e1_n_29 ;
-  wire \gf36e1_inst.sngfifo36e1_n_30 ;
-  wire \gf36e1_inst.sngfifo36e1_n_31 ;
-  wire \gf36e1_inst.sngfifo36e1_n_32 ;
-  wire \gf36e1_inst.sngfifo36e1_n_33 ;
-  wire \gf36e1_inst.sngfifo36e1_n_5 ;
-  wire \gf36e1_inst.sngfifo36e1_n_7 ;
-  wire \gf36e1_inst.sngfifo36e1_n_8 ;
-  wire \gf36e1_inst.sngfifo36e1_n_9 ;
-  wire [4:4]pe;
-  wire rd_clk;
-  wire [0:0]rd_clk_0;
-  wire rd_rst_i;
-  wire [4:4]sbiterr_col;
-  wire wr_clk;
-  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED ;
-  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED ;
-
-  (* box_type = "PRIMITIVE" *) 
-  FIFO36E1 #(
-    .ALMOST_EMPTY_OFFSET(13'h0006),
-    .ALMOST_FULL_OFFSET(13'h000A),
-    .DATA_WIDTH(4),
-    .DO_REG(1),
-    .EN_ECC_READ("FALSE"),
-    .EN_ECC_WRITE("FALSE"),
-    .EN_SYN("FALSE"),
-    .FIFO_MODE("FIFO36"),
-    .FIRST_WORD_FALL_THROUGH("TRUE"),
-    .INIT(72'h000000000000000000),
-    .IS_RDCLK_INVERTED(1'b0),
-    .IS_RDEN_INVERTED(1'b0),
-    .IS_RSTREG_INVERTED(1'b0),
-    .IS_RST_INVERTED(1'b0),
-    .IS_WRCLK_INVERTED(1'b0),
-    .IS_WREN_INVERTED(1'b0),
-    .SIM_DEVICE("7SERIES"),
-    .SRVAL(72'h000000000000000000)) 
-    \gf36e1_inst.sngfifo36e1 
-       (.ALMOSTEMPTY(pe),
-        .ALMOSTFULL(\gf36e1_inst.sngfifo36e1_n_1 ),
-        .DBITERR(dbiterr_col),
-        .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,DO}),
-        .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
-        .DO({DO_0,dout}),
-        .DOP(\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED [7:0]),
-        .ECCPARITY(\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED [7:0]),
-        .EMPTY(rd_clk_0),
-        .FULL(ful_0),
-        .INJECTDBITERR(1'b0),
-        .INJECTSBITERR(1'b0),
-        .RDCLK(rd_clk),
-        .RDCOUNT({\gf36e1_inst.sngfifo36e1_n_8 ,\gf36e1_inst.sngfifo36e1_n_9 ,\gf36e1_inst.sngfifo36e1_n_10 ,\gf36e1_inst.sngfifo36e1_n_11 ,\gf36e1_inst.sngfifo36e1_n_12 ,\gf36e1_inst.sngfifo36e1_n_13 ,\gf36e1_inst.sngfifo36e1_n_14 ,\gf36e1_inst.sngfifo36e1_n_15 ,\gf36e1_inst.sngfifo36e1_n_16 ,\gf36e1_inst.sngfifo36e1_n_17 ,\gf36e1_inst.sngfifo36e1_n_18 ,\gf36e1_inst.sngfifo36e1_n_19 ,\gf36e1_inst.sngfifo36e1_n_20 }),
-        .RDEN(\dout[15] ),
-        .RDERR(\gf36e1_inst.sngfifo36e1_n_5 ),
-        .REGCE(1'b0),
-        .RST(rd_rst_i),
-        .RSTREG(1'b0),
-        .SBITERR(sbiterr_col),
-        .WRCLK(wr_clk),
-        .WRCOUNT({\gf36e1_inst.sngfifo36e1_n_21 ,\gf36e1_inst.sngfifo36e1_n_22 ,\gf36e1_inst.sngfifo36e1_n_23 ,\gf36e1_inst.sngfifo36e1_n_24 ,\gf36e1_inst.sngfifo36e1_n_25 ,\gf36e1_inst.sngfifo36e1_n_26 ,\gf36e1_inst.sngfifo36e1_n_27 ,\gf36e1_inst.sngfifo36e1_n_28 ,\gf36e1_inst.sngfifo36e1_n_29 ,\gf36e1_inst.sngfifo36e1_n_30 ,\gf36e1_inst.sngfifo36e1_n_31 ,\gf36e1_inst.sngfifo36e1_n_32 ,\gf36e1_inst.sngfifo36e1_n_33 }),
-        .WREN(e_1),
-        .WRERR(\gf36e1_inst.sngfifo36e1_n_7 ));
-endmodule
-
-(* ORIG_REF_NAME = "builtin_prim_v6" *) 
-module post_ddr_slow_fifo_builtin_prim_v6__parameterized0_16
-   (emp,
-    ful_0,
-    dout,
-    empty,
-    rd_clk,
-    \dout[11] ,
-    rd_rst_i,
-    wr_clk,
-    e_1,
-    DO,
-    empty_0,
-    empty_1);
-  output [0:0]emp;
-  output ful_0;
-  output [3:0]dout;
-  output empty;
-  input rd_clk;
-  input \dout[11] ;
-  input rd_rst_i;
-  input wr_clk;
-  input e_1;
-  input [3:0]DO;
-  input [2:0]empty_0;
-  input empty_1;
-
-  wire [3:0]DO;
-  wire [63:4]DO_0;
-  wire [3:3]dbiterr_col;
-  wire [3:0]dout;
-  wire \dout[11] ;
-  wire e_1;
-  wire [0:0]emp;
-  wire empty;
-  wire [2:0]empty_0;
-  wire empty_1;
-  wire ful_0;
-  wire \gf36e1_inst.sngfifo36e1_n_1 ;
-  wire \gf36e1_inst.sngfifo36e1_n_10 ;
-  wire \gf36e1_inst.sngfifo36e1_n_11 ;
-  wire \gf36e1_inst.sngfifo36e1_n_12 ;
-  wire \gf36e1_inst.sngfifo36e1_n_13 ;
-  wire \gf36e1_inst.sngfifo36e1_n_14 ;
-  wire \gf36e1_inst.sngfifo36e1_n_15 ;
-  wire \gf36e1_inst.sngfifo36e1_n_16 ;
-  wire \gf36e1_inst.sngfifo36e1_n_17 ;
-  wire \gf36e1_inst.sngfifo36e1_n_18 ;
-  wire \gf36e1_inst.sngfifo36e1_n_19 ;
-  wire \gf36e1_inst.sngfifo36e1_n_20 ;
-  wire \gf36e1_inst.sngfifo36e1_n_21 ;
-  wire \gf36e1_inst.sngfifo36e1_n_22 ;
-  wire \gf36e1_inst.sngfifo36e1_n_23 ;
-  wire \gf36e1_inst.sngfifo36e1_n_24 ;
-  wire \gf36e1_inst.sngfifo36e1_n_25 ;
-  wire \gf36e1_inst.sngfifo36e1_n_26 ;
-  wire \gf36e1_inst.sngfifo36e1_n_27 ;
-  wire \gf36e1_inst.sngfifo36e1_n_28 ;
-  wire \gf36e1_inst.sngfifo36e1_n_29 ;
-  wire \gf36e1_inst.sngfifo36e1_n_30 ;
-  wire \gf36e1_inst.sngfifo36e1_n_31 ;
-  wire \gf36e1_inst.sngfifo36e1_n_32 ;
-  wire \gf36e1_inst.sngfifo36e1_n_33 ;
-  wire \gf36e1_inst.sngfifo36e1_n_5 ;
-  wire \gf36e1_inst.sngfifo36e1_n_7 ;
-  wire \gf36e1_inst.sngfifo36e1_n_8 ;
-  wire \gf36e1_inst.sngfifo36e1_n_9 ;
-  wire [3:3]pe;
-  wire rd_clk;
-  wire rd_rst_i;
-  wire [3:3]sbiterr_col;
-  wire wr_clk;
-  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED ;
-  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED ;
-
-  LUT5 #(
-    .INIT(32'hFFFFFFFE)) 
-    empty_INST_0
-       (.I0(emp),
-        .I1(empty_0[2]),
-        .I2(empty_0[0]),
-        .I3(empty_0[1]),
-        .I4(empty_1),
-        .O(empty));
-  (* box_type = "PRIMITIVE" *) 
-  FIFO36E1 #(
-    .ALMOST_EMPTY_OFFSET(13'h0006),
-    .ALMOST_FULL_OFFSET(13'h000A),
-    .DATA_WIDTH(4),
-    .DO_REG(1),
-    .EN_ECC_READ("FALSE"),
-    .EN_ECC_WRITE("FALSE"),
-    .EN_SYN("FALSE"),
-    .FIFO_MODE("FIFO36"),
-    .FIRST_WORD_FALL_THROUGH("TRUE"),
-    .INIT(72'h000000000000000000),
-    .IS_RDCLK_INVERTED(1'b0),
-    .IS_RDEN_INVERTED(1'b0),
-    .IS_RSTREG_INVERTED(1'b0),
-    .IS_RST_INVERTED(1'b0),
-    .IS_WRCLK_INVERTED(1'b0),
-    .IS_WREN_INVERTED(1'b0),
-    .SIM_DEVICE("7SERIES"),
-    .SRVAL(72'h000000000000000000)) 
-    \gf36e1_inst.sngfifo36e1 
-       (.ALMOSTEMPTY(pe),
-        .ALMOSTFULL(\gf36e1_inst.sngfifo36e1_n_1 ),
-        .DBITERR(dbiterr_col),
-        .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,DO}),
-        .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
-        .DO({DO_0,dout}),
-        .DOP(\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED [7:0]),
-        .ECCPARITY(\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED [7:0]),
-        .EMPTY(emp),
-        .FULL(ful_0),
-        .INJECTDBITERR(1'b0),
-        .INJECTSBITERR(1'b0),
-        .RDCLK(rd_clk),
-        .RDCOUNT({\gf36e1_inst.sngfifo36e1_n_8 ,\gf36e1_inst.sngfifo36e1_n_9 ,\gf36e1_inst.sngfifo36e1_n_10 ,\gf36e1_inst.sngfifo36e1_n_11 ,\gf36e1_inst.sngfifo36e1_n_12 ,\gf36e1_inst.sngfifo36e1_n_13 ,\gf36e1_inst.sngfifo36e1_n_14 ,\gf36e1_inst.sngfifo36e1_n_15 ,\gf36e1_inst.sngfifo36e1_n_16 ,\gf36e1_inst.sngfifo36e1_n_17 ,\gf36e1_inst.sngfifo36e1_n_18 ,\gf36e1_inst.sngfifo36e1_n_19 ,\gf36e1_inst.sngfifo36e1_n_20 }),
-        .RDEN(\dout[11] ),
-        .RDERR(\gf36e1_inst.sngfifo36e1_n_5 ),
-        .REGCE(1'b0),
-        .RST(rd_rst_i),
-        .RSTREG(1'b0),
-        .SBITERR(sbiterr_col),
-        .WRCLK(wr_clk),
-        .WRCOUNT({\gf36e1_inst.sngfifo36e1_n_21 ,\gf36e1_inst.sngfifo36e1_n_22 ,\gf36e1_inst.sngfifo36e1_n_23 ,\gf36e1_inst.sngfifo36e1_n_24 ,\gf36e1_inst.sngfifo36e1_n_25 ,\gf36e1_inst.sngfifo36e1_n_26 ,\gf36e1_inst.sngfifo36e1_n_27 ,\gf36e1_inst.sngfifo36e1_n_28 ,\gf36e1_inst.sngfifo36e1_n_29 ,\gf36e1_inst.sngfifo36e1_n_30 ,\gf36e1_inst.sngfifo36e1_n_31 ,\gf36e1_inst.sngfifo36e1_n_32 ,\gf36e1_inst.sngfifo36e1_n_33 }),
-        .WREN(e_1),
-        .WRERR(\gf36e1_inst.sngfifo36e1_n_7 ));
-endmodule
-
-(* ORIG_REF_NAME = "builtin_prim_v6" *) 
-module post_ddr_slow_fifo_builtin_prim_v6__parameterized0_18
-   (emp,
-    ful_0,
-    dout,
-    rd_clk,
-    \dout[7] ,
-    rd_rst_i,
-    wr_clk,
-    e_1,
-    DO);
-  output [0:0]emp;
-  output ful_0;
-  output [3:0]dout;
-  input rd_clk;
-  input \dout[7] ;
-  input rd_rst_i;
-  input wr_clk;
-  input e_1;
-  input [3:0]DO;
-
-  wire [3:0]DO;
-  wire [63:4]DO_0;
-  wire [2:2]dbiterr_col;
-  wire [3:0]dout;
-  wire \dout[7] ;
-  wire e_1;
-  wire [0:0]emp;
-  wire ful_0;
-  wire \gf36e1_inst.sngfifo36e1_n_1 ;
-  wire \gf36e1_inst.sngfifo36e1_n_10 ;
-  wire \gf36e1_inst.sngfifo36e1_n_11 ;
-  wire \gf36e1_inst.sngfifo36e1_n_12 ;
-  wire \gf36e1_inst.sngfifo36e1_n_13 ;
-  wire \gf36e1_inst.sngfifo36e1_n_14 ;
-  wire \gf36e1_inst.sngfifo36e1_n_15 ;
-  wire \gf36e1_inst.sngfifo36e1_n_16 ;
-  wire \gf36e1_inst.sngfifo36e1_n_17 ;
-  wire \gf36e1_inst.sngfifo36e1_n_18 ;
-  wire \gf36e1_inst.sngfifo36e1_n_19 ;
-  wire \gf36e1_inst.sngfifo36e1_n_20 ;
-  wire \gf36e1_inst.sngfifo36e1_n_21 ;
-  wire \gf36e1_inst.sngfifo36e1_n_22 ;
-  wire \gf36e1_inst.sngfifo36e1_n_23 ;
-  wire \gf36e1_inst.sngfifo36e1_n_24 ;
-  wire \gf36e1_inst.sngfifo36e1_n_25 ;
-  wire \gf36e1_inst.sngfifo36e1_n_26 ;
-  wire \gf36e1_inst.sngfifo36e1_n_27 ;
-  wire \gf36e1_inst.sngfifo36e1_n_28 ;
-  wire \gf36e1_inst.sngfifo36e1_n_29 ;
-  wire \gf36e1_inst.sngfifo36e1_n_30 ;
-  wire \gf36e1_inst.sngfifo36e1_n_31 ;
-  wire \gf36e1_inst.sngfifo36e1_n_32 ;
-  wire \gf36e1_inst.sngfifo36e1_n_33 ;
-  wire \gf36e1_inst.sngfifo36e1_n_5 ;
-  wire \gf36e1_inst.sngfifo36e1_n_7 ;
-  wire \gf36e1_inst.sngfifo36e1_n_8 ;
-  wire \gf36e1_inst.sngfifo36e1_n_9 ;
-  wire [2:2]pe;
-  wire rd_clk;
-  wire rd_rst_i;
-  wire [2:2]sbiterr_col;
-  wire wr_clk;
-  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED ;
-  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED ;
-
-  (* box_type = "PRIMITIVE" *) 
-  FIFO36E1 #(
-    .ALMOST_EMPTY_OFFSET(13'h0006),
-    .ALMOST_FULL_OFFSET(13'h000A),
-    .DATA_WIDTH(4),
-    .DO_REG(1),
-    .EN_ECC_READ("FALSE"),
-    .EN_ECC_WRITE("FALSE"),
-    .EN_SYN("FALSE"),
-    .FIFO_MODE("FIFO36"),
-    .FIRST_WORD_FALL_THROUGH("TRUE"),
-    .INIT(72'h000000000000000000),
-    .IS_RDCLK_INVERTED(1'b0),
-    .IS_RDEN_INVERTED(1'b0),
-    .IS_RSTREG_INVERTED(1'b0),
-    .IS_RST_INVERTED(1'b0),
-    .IS_WRCLK_INVERTED(1'b0),
-    .IS_WREN_INVERTED(1'b0),
-    .SIM_DEVICE("7SERIES"),
-    .SRVAL(72'h000000000000000000)) 
-    \gf36e1_inst.sngfifo36e1 
-       (.ALMOSTEMPTY(pe),
-        .ALMOSTFULL(\gf36e1_inst.sngfifo36e1_n_1 ),
-        .DBITERR(dbiterr_col),
-        .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,DO}),
-        .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
-        .DO({DO_0,dout}),
-        .DOP(\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED [7:0]),
-        .ECCPARITY(\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED [7:0]),
-        .EMPTY(emp),
-        .FULL(ful_0),
-        .INJECTDBITERR(1'b0),
-        .INJECTSBITERR(1'b0),
-        .RDCLK(rd_clk),
-        .RDCOUNT({\gf36e1_inst.sngfifo36e1_n_8 ,\gf36e1_inst.sngfifo36e1_n_9 ,\gf36e1_inst.sngfifo36e1_n_10 ,\gf36e1_inst.sngfifo36e1_n_11 ,\gf36e1_inst.sngfifo36e1_n_12 ,\gf36e1_inst.sngfifo36e1_n_13 ,\gf36e1_inst.sngfifo36e1_n_14 ,\gf36e1_inst.sngfifo36e1_n_15 ,\gf36e1_inst.sngfifo36e1_n_16 ,\gf36e1_inst.sngfifo36e1_n_17 ,\gf36e1_inst.sngfifo36e1_n_18 ,\gf36e1_inst.sngfifo36e1_n_19 ,\gf36e1_inst.sngfifo36e1_n_20 }),
-        .RDEN(\dout[7] ),
-        .RDERR(\gf36e1_inst.sngfifo36e1_n_5 ),
-        .REGCE(1'b0),
-        .RST(rd_rst_i),
-        .RSTREG(1'b0),
-        .SBITERR(sbiterr_col),
-        .WRCLK(wr_clk),
-        .WRCOUNT({\gf36e1_inst.sngfifo36e1_n_21 ,\gf36e1_inst.sngfifo36e1_n_22 ,\gf36e1_inst.sngfifo36e1_n_23 ,\gf36e1_inst.sngfifo36e1_n_24 ,\gf36e1_inst.sngfifo36e1_n_25 ,\gf36e1_inst.sngfifo36e1_n_26 ,\gf36e1_inst.sngfifo36e1_n_27 ,\gf36e1_inst.sngfifo36e1_n_28 ,\gf36e1_inst.sngfifo36e1_n_29 ,\gf36e1_inst.sngfifo36e1_n_30 ,\gf36e1_inst.sngfifo36e1_n_31 ,\gf36e1_inst.sngfifo36e1_n_32 ,\gf36e1_inst.sngfifo36e1_n_33 }),
-        .WREN(e_1),
-        .WRERR(\gf36e1_inst.sngfifo36e1_n_7 ));
-endmodule
-
-(* ORIG_REF_NAME = "builtin_prim_v6" *) 
-module post_ddr_slow_fifo_builtin_prim_v6__parameterized0_20
-   (emp,
-    ful_0,
-    dout,
-    rd_clk,
-    dout_3_sp_1,
-    rd_rst_i,
-    wr_clk,
-    e_1,
-    DO);
-  output [0:0]emp;
-  output ful_0;
-  output [3:0]dout;
-  input rd_clk;
-  input dout_3_sp_1;
-  input rd_rst_i;
-  input wr_clk;
-  input e_1;
-  input [3:0]DO;
-
-  wire [3:0]DO;
-  wire [63:4]DO_0;
-  wire [1:1]dbiterr_col;
-  wire [3:0]dout;
-  wire dout_3_sn_1;
-  wire e_1;
-  wire [0:0]emp;
-  wire ful_0;
-  wire \gf36e1_inst.sngfifo36e1_n_1 ;
-  wire \gf36e1_inst.sngfifo36e1_n_10 ;
-  wire \gf36e1_inst.sngfifo36e1_n_11 ;
-  wire \gf36e1_inst.sngfifo36e1_n_12 ;
-  wire \gf36e1_inst.sngfifo36e1_n_13 ;
-  wire \gf36e1_inst.sngfifo36e1_n_14 ;
-  wire \gf36e1_inst.sngfifo36e1_n_15 ;
-  wire \gf36e1_inst.sngfifo36e1_n_16 ;
-  wire \gf36e1_inst.sngfifo36e1_n_17 ;
-  wire \gf36e1_inst.sngfifo36e1_n_18 ;
-  wire \gf36e1_inst.sngfifo36e1_n_19 ;
-  wire \gf36e1_inst.sngfifo36e1_n_20 ;
-  wire \gf36e1_inst.sngfifo36e1_n_21 ;
-  wire \gf36e1_inst.sngfifo36e1_n_22 ;
-  wire \gf36e1_inst.sngfifo36e1_n_23 ;
-  wire \gf36e1_inst.sngfifo36e1_n_24 ;
-  wire \gf36e1_inst.sngfifo36e1_n_25 ;
-  wire \gf36e1_inst.sngfifo36e1_n_26 ;
-  wire \gf36e1_inst.sngfifo36e1_n_27 ;
-  wire \gf36e1_inst.sngfifo36e1_n_28 ;
-  wire \gf36e1_inst.sngfifo36e1_n_29 ;
-  wire \gf36e1_inst.sngfifo36e1_n_30 ;
-  wire \gf36e1_inst.sngfifo36e1_n_31 ;
-  wire \gf36e1_inst.sngfifo36e1_n_32 ;
-  wire \gf36e1_inst.sngfifo36e1_n_33 ;
-  wire \gf36e1_inst.sngfifo36e1_n_5 ;
-  wire \gf36e1_inst.sngfifo36e1_n_7 ;
-  wire \gf36e1_inst.sngfifo36e1_n_8 ;
-  wire \gf36e1_inst.sngfifo36e1_n_9 ;
-  wire [1:1]pe;
-  wire rd_clk;
-  wire rd_rst_i;
-  wire [1:1]sbiterr_col;
-  wire wr_clk;
-  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED ;
-  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED ;
-
-  assign dout_3_sn_1 = dout_3_sp_1;
-  (* box_type = "PRIMITIVE" *) 
-  FIFO36E1 #(
-    .ALMOST_EMPTY_OFFSET(13'h0006),
-    .ALMOST_FULL_OFFSET(13'h000A),
-    .DATA_WIDTH(4),
-    .DO_REG(1),
-    .EN_ECC_READ("FALSE"),
-    .EN_ECC_WRITE("FALSE"),
-    .EN_SYN("FALSE"),
-    .FIFO_MODE("FIFO36"),
-    .FIRST_WORD_FALL_THROUGH("TRUE"),
-    .INIT(72'h000000000000000000),
-    .IS_RDCLK_INVERTED(1'b0),
-    .IS_RDEN_INVERTED(1'b0),
-    .IS_RSTREG_INVERTED(1'b0),
-    .IS_RST_INVERTED(1'b0),
-    .IS_WRCLK_INVERTED(1'b0),
-    .IS_WREN_INVERTED(1'b0),
-    .SIM_DEVICE("7SERIES"),
-    .SRVAL(72'h000000000000000000)) 
-    \gf36e1_inst.sngfifo36e1 
-       (.ALMOSTEMPTY(pe),
-        .ALMOSTFULL(\gf36e1_inst.sngfifo36e1_n_1 ),
-        .DBITERR(dbiterr_col),
-        .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,DO}),
-        .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
-        .DO({DO_0,dout}),
-        .DOP(\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED [7:0]),
-        .ECCPARITY(\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED [7:0]),
-        .EMPTY(emp),
-        .FULL(ful_0),
-        .INJECTDBITERR(1'b0),
-        .INJECTSBITERR(1'b0),
-        .RDCLK(rd_clk),
-        .RDCOUNT({\gf36e1_inst.sngfifo36e1_n_8 ,\gf36e1_inst.sngfifo36e1_n_9 ,\gf36e1_inst.sngfifo36e1_n_10 ,\gf36e1_inst.sngfifo36e1_n_11 ,\gf36e1_inst.sngfifo36e1_n_12 ,\gf36e1_inst.sngfifo36e1_n_13 ,\gf36e1_inst.sngfifo36e1_n_14 ,\gf36e1_inst.sngfifo36e1_n_15 ,\gf36e1_inst.sngfifo36e1_n_16 ,\gf36e1_inst.sngfifo36e1_n_17 ,\gf36e1_inst.sngfifo36e1_n_18 ,\gf36e1_inst.sngfifo36e1_n_19 ,\gf36e1_inst.sngfifo36e1_n_20 }),
-        .RDEN(dout_3_sn_1),
-        .RDERR(\gf36e1_inst.sngfifo36e1_n_5 ),
-        .REGCE(1'b0),
-        .RST(rd_rst_i),
-        .RSTREG(1'b0),
-        .SBITERR(sbiterr_col),
-        .WRCLK(wr_clk),
-        .WRCOUNT({\gf36e1_inst.sngfifo36e1_n_21 ,\gf36e1_inst.sngfifo36e1_n_22 ,\gf36e1_inst.sngfifo36e1_n_23 ,\gf36e1_inst.sngfifo36e1_n_24 ,\gf36e1_inst.sngfifo36e1_n_25 ,\gf36e1_inst.sngfifo36e1_n_26 ,\gf36e1_inst.sngfifo36e1_n_27 ,\gf36e1_inst.sngfifo36e1_n_28 ,\gf36e1_inst.sngfifo36e1_n_29 ,\gf36e1_inst.sngfifo36e1_n_30 ,\gf36e1_inst.sngfifo36e1_n_31 ,\gf36e1_inst.sngfifo36e1_n_32 ,\gf36e1_inst.sngfifo36e1_n_33 }),
-        .WREN(e_1),
-        .WRERR(\gf36e1_inst.sngfifo36e1_n_7 ));
-endmodule
-
-(* ORIG_REF_NAME = "builtin_prim_v6" *) 
-module post_ddr_slow_fifo_builtin_prim_v6__parameterized0_8
-   (rd_clk_0,
-    ful_0,
-    dout,
-    rd_clk,
-    \dout[27] ,
-    rd_rst_i,
-    wr_clk,
-    e_1,
-    DO);
-  output [0:0]rd_clk_0;
-  output ful_0;
-  output [3:0]dout;
-  input rd_clk;
-  input \dout[27] ;
-  input rd_rst_i;
-  input wr_clk;
-  input e_1;
-  input [3:0]DO;
-
-  wire [3:0]DO;
-  wire [63:4]DO_0;
+  wire [63:4]DO;
+  wire EMPTY;
+  wire FULL;
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
   wire [7:7]dbiterr_col;
+  wire [3:0]din;
   wire [3:0]dout;
-  wire \dout[27] ;
-  wire e_1;
-  wire ful_0;
-  wire \gf36e1_inst.sngfifo36e1_n_1 ;
   wire \gf36e1_inst.sngfifo36e1_n_10 ;
   wire \gf36e1_inst.sngfifo36e1_n_11 ;
   wire \gf36e1_inst.sngfifo36e1_n_12 ;
@@ -3186,9 +2068,8 @@ module post_ddr_slow_fifo_builtin_prim_v6__parameterized0_8
   wire \gf36e1_inst.sngfifo36e1_n_8 ;
   wire \gf36e1_inst.sngfifo36e1_n_9 ;
   wire [7:7]pe;
+  wire [7:7]pf;
   wire rd_clk;
-  wire [0:0]rd_clk_0;
-  wire rd_rst_i;
   wire [7:7]sbiterr_col;
   wire wr_clk;
   wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED ;
@@ -3197,7 +2078,7 @@ module post_ddr_slow_fifo_builtin_prim_v6__parameterized0_8
   (* box_type = "PRIMITIVE" *) 
   FIFO36E1 #(
     .ALMOST_EMPTY_OFFSET(13'h0006),
-    .ALMOST_FULL_OFFSET(13'h000A),
+    .ALMOST_FULL_OFFSET(13'h000F),
     .DATA_WIDTH(4),
     .DO_REG(1),
     .EN_ECC_READ("FALSE"),
@@ -3216,174 +2097,1949 @@ module post_ddr_slow_fifo_builtin_prim_v6__parameterized0_8
     .SRVAL(72'h000000000000000000)) 
     \gf36e1_inst.sngfifo36e1 
        (.ALMOSTEMPTY(pe),
-        .ALMOSTFULL(\gf36e1_inst.sngfifo36e1_n_1 ),
+        .ALMOSTFULL(pf),
         .DBITERR(dbiterr_col),
-        .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,DO}),
+        .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
         .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
-        .DO({DO_0,dout}),
+        .DO({DO,dout}),
         .DOP(\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED [7:0]),
         .ECCPARITY(\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED [7:0]),
-        .EMPTY(rd_clk_0),
-        .FULL(ful_0),
+        .EMPTY(EMPTY),
+        .FULL(FULL),
         .INJECTDBITERR(1'b0),
         .INJECTSBITERR(1'b0),
         .RDCLK(rd_clk),
         .RDCOUNT({\gf36e1_inst.sngfifo36e1_n_8 ,\gf36e1_inst.sngfifo36e1_n_9 ,\gf36e1_inst.sngfifo36e1_n_10 ,\gf36e1_inst.sngfifo36e1_n_11 ,\gf36e1_inst.sngfifo36e1_n_12 ,\gf36e1_inst.sngfifo36e1_n_13 ,\gf36e1_inst.sngfifo36e1_n_14 ,\gf36e1_inst.sngfifo36e1_n_15 ,\gf36e1_inst.sngfifo36e1_n_16 ,\gf36e1_inst.sngfifo36e1_n_17 ,\gf36e1_inst.sngfifo36e1_n_18 ,\gf36e1_inst.sngfifo36e1_n_19 ,\gf36e1_inst.sngfifo36e1_n_20 }),
-        .RDEN(\dout[27] ),
+        .RDEN(RD_EN),
         .RDERR(\gf36e1_inst.sngfifo36e1_n_5 ),
         .REGCE(1'b0),
-        .RST(rd_rst_i),
+        .RST(RST),
         .RSTREG(1'b0),
         .SBITERR(sbiterr_col),
         .WRCLK(wr_clk),
         .WRCOUNT({\gf36e1_inst.sngfifo36e1_n_21 ,\gf36e1_inst.sngfifo36e1_n_22 ,\gf36e1_inst.sngfifo36e1_n_23 ,\gf36e1_inst.sngfifo36e1_n_24 ,\gf36e1_inst.sngfifo36e1_n_25 ,\gf36e1_inst.sngfifo36e1_n_26 ,\gf36e1_inst.sngfifo36e1_n_27 ,\gf36e1_inst.sngfifo36e1_n_28 ,\gf36e1_inst.sngfifo36e1_n_29 ,\gf36e1_inst.sngfifo36e1_n_30 ,\gf36e1_inst.sngfifo36e1_n_31 ,\gf36e1_inst.sngfifo36e1_n_32 ,\gf36e1_inst.sngfifo36e1_n_33 }),
-        .WREN(e_1),
+        .WREN(WR_EN),
         .WRERR(\gf36e1_inst.sngfifo36e1_n_7 ));
+endmodule
+
+(* ORIG_REF_NAME = "builtin_prim_v6" *) 
+module post_ddr_slow_fifo_builtin_prim_v6_17
+   (dout,
+    full,
+    rd_clk_0,
+    empty,
+    rd_clk_1,
+    rd_clk,
+    RD_EN,
+    RST,
+    wr_clk,
+    WR_EN,
+    din,
+    full_0,
+    full_1,
+    full_2,
+    full_3,
+    empty_0,
+    empty_1,
+    empty_2,
+    empty_3);
+  output [3:0]dout;
+  output full;
+  output rd_clk_0;
+  output empty;
+  output rd_clk_1;
+  input rd_clk;
+  input RD_EN;
+  input RST;
+  input wr_clk;
+  input WR_EN;
+  input [3:0]din;
+  input full_0;
+  input full_1;
+  input full_2;
+  input [2:0]full_3;
+  input empty_0;
+  input empty_1;
+  input empty_2;
+  input [2:0]empty_3;
+
+  wire [63:4]DO;
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
+  wire [6:6]dbiterr_col;
+  wire [3:0]din;
+  wire [3:0]dout;
+  wire [6:6]emp;
+  wire empty;
+  wire empty_0;
+  wire empty_1;
+  wire empty_2;
+  wire [2:0]empty_3;
+  wire [6:6]ful;
+  wire full;
+  wire full_0;
+  wire full_1;
+  wire full_2;
+  wire [2:0]full_3;
+  wire \gf36e1_inst.sngfifo36e1_n_10 ;
+  wire \gf36e1_inst.sngfifo36e1_n_11 ;
+  wire \gf36e1_inst.sngfifo36e1_n_12 ;
+  wire \gf36e1_inst.sngfifo36e1_n_13 ;
+  wire \gf36e1_inst.sngfifo36e1_n_14 ;
+  wire \gf36e1_inst.sngfifo36e1_n_15 ;
+  wire \gf36e1_inst.sngfifo36e1_n_16 ;
+  wire \gf36e1_inst.sngfifo36e1_n_17 ;
+  wire \gf36e1_inst.sngfifo36e1_n_18 ;
+  wire \gf36e1_inst.sngfifo36e1_n_19 ;
+  wire \gf36e1_inst.sngfifo36e1_n_20 ;
+  wire \gf36e1_inst.sngfifo36e1_n_21 ;
+  wire \gf36e1_inst.sngfifo36e1_n_22 ;
+  wire \gf36e1_inst.sngfifo36e1_n_23 ;
+  wire \gf36e1_inst.sngfifo36e1_n_24 ;
+  wire \gf36e1_inst.sngfifo36e1_n_25 ;
+  wire \gf36e1_inst.sngfifo36e1_n_26 ;
+  wire \gf36e1_inst.sngfifo36e1_n_27 ;
+  wire \gf36e1_inst.sngfifo36e1_n_28 ;
+  wire \gf36e1_inst.sngfifo36e1_n_29 ;
+  wire \gf36e1_inst.sngfifo36e1_n_30 ;
+  wire \gf36e1_inst.sngfifo36e1_n_31 ;
+  wire \gf36e1_inst.sngfifo36e1_n_32 ;
+  wire \gf36e1_inst.sngfifo36e1_n_33 ;
+  wire \gf36e1_inst.sngfifo36e1_n_5 ;
+  wire \gf36e1_inst.sngfifo36e1_n_7 ;
+  wire \gf36e1_inst.sngfifo36e1_n_8 ;
+  wire \gf36e1_inst.sngfifo36e1_n_9 ;
+  wire [6:6]pe;
+  wire [6:6]pf;
+  wire rd_clk;
+  wire rd_clk_0;
+  wire rd_clk_1;
+  wire [6:6]sbiterr_col;
+  wire wr_clk;
+  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED ;
+  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED ;
+
+  LUT4 #(
+    .INIT(16'hFFFE)) 
+    empty_INST_0
+       (.I0(rd_clk_1),
+        .I1(empty_0),
+        .I2(empty_1),
+        .I3(empty_2),
+        .O(empty));
+  LUT4 #(
+    .INIT(16'hFFFE)) 
+    empty_INST_0_i_1
+       (.I0(emp),
+        .I1(empty_3[0]),
+        .I2(empty_3[2]),
+        .I3(empty_3[1]),
+        .O(rd_clk_1));
+  LUT4 #(
+    .INIT(16'hFFFE)) 
+    full_INST_0
+       (.I0(rd_clk_0),
+        .I1(full_0),
+        .I2(full_1),
+        .I3(full_2),
+        .O(full));
+  LUT4 #(
+    .INIT(16'hFFFE)) 
+    full_INST_0_i_1
+       (.I0(ful),
+        .I1(full_3[0]),
+        .I2(full_3[2]),
+        .I3(full_3[1]),
+        .O(rd_clk_0));
+  (* box_type = "PRIMITIVE" *) 
+  FIFO36E1 #(
+    .ALMOST_EMPTY_OFFSET(13'h0006),
+    .ALMOST_FULL_OFFSET(13'h000F),
+    .DATA_WIDTH(4),
+    .DO_REG(1),
+    .EN_ECC_READ("FALSE"),
+    .EN_ECC_WRITE("FALSE"),
+    .EN_SYN("FALSE"),
+    .FIFO_MODE("FIFO36"),
+    .FIRST_WORD_FALL_THROUGH("TRUE"),
+    .INIT(72'h000000000000000000),
+    .IS_RDCLK_INVERTED(1'b0),
+    .IS_RDEN_INVERTED(1'b0),
+    .IS_RSTREG_INVERTED(1'b0),
+    .IS_RST_INVERTED(1'b0),
+    .IS_WRCLK_INVERTED(1'b0),
+    .IS_WREN_INVERTED(1'b0),
+    .SIM_DEVICE("7SERIES"),
+    .SRVAL(72'h000000000000000000)) 
+    \gf36e1_inst.sngfifo36e1 
+       (.ALMOSTEMPTY(pe),
+        .ALMOSTFULL(pf),
+        .DBITERR(dbiterr_col),
+        .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
+        .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
+        .DO({DO,dout}),
+        .DOP(\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED [7:0]),
+        .ECCPARITY(\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED [7:0]),
+        .EMPTY(emp),
+        .FULL(ful),
+        .INJECTDBITERR(1'b0),
+        .INJECTSBITERR(1'b0),
+        .RDCLK(rd_clk),
+        .RDCOUNT({\gf36e1_inst.sngfifo36e1_n_8 ,\gf36e1_inst.sngfifo36e1_n_9 ,\gf36e1_inst.sngfifo36e1_n_10 ,\gf36e1_inst.sngfifo36e1_n_11 ,\gf36e1_inst.sngfifo36e1_n_12 ,\gf36e1_inst.sngfifo36e1_n_13 ,\gf36e1_inst.sngfifo36e1_n_14 ,\gf36e1_inst.sngfifo36e1_n_15 ,\gf36e1_inst.sngfifo36e1_n_16 ,\gf36e1_inst.sngfifo36e1_n_17 ,\gf36e1_inst.sngfifo36e1_n_18 ,\gf36e1_inst.sngfifo36e1_n_19 ,\gf36e1_inst.sngfifo36e1_n_20 }),
+        .RDEN(RD_EN),
+        .RDERR(\gf36e1_inst.sngfifo36e1_n_5 ),
+        .REGCE(1'b0),
+        .RST(RST),
+        .RSTREG(1'b0),
+        .SBITERR(sbiterr_col),
+        .WRCLK(wr_clk),
+        .WRCOUNT({\gf36e1_inst.sngfifo36e1_n_21 ,\gf36e1_inst.sngfifo36e1_n_22 ,\gf36e1_inst.sngfifo36e1_n_23 ,\gf36e1_inst.sngfifo36e1_n_24 ,\gf36e1_inst.sngfifo36e1_n_25 ,\gf36e1_inst.sngfifo36e1_n_26 ,\gf36e1_inst.sngfifo36e1_n_27 ,\gf36e1_inst.sngfifo36e1_n_28 ,\gf36e1_inst.sngfifo36e1_n_29 ,\gf36e1_inst.sngfifo36e1_n_30 ,\gf36e1_inst.sngfifo36e1_n_31 ,\gf36e1_inst.sngfifo36e1_n_32 ,\gf36e1_inst.sngfifo36e1_n_33 }),
+        .WREN(WR_EN),
+        .WRERR(\gf36e1_inst.sngfifo36e1_n_7 ));
+endmodule
+
+(* ORIG_REF_NAME = "builtin_prim_v6" *) 
+module post_ddr_slow_fifo_builtin_prim_v6_18
+   (EMPTY,
+    FULL,
+    dout,
+    rd_clk,
+    RD_EN,
+    RST,
+    wr_clk,
+    WR_EN,
+    din);
+  output EMPTY;
+  output FULL;
+  output [3:0]dout;
+  input rd_clk;
+  input RD_EN;
+  input RST;
+  input wr_clk;
+  input WR_EN;
+  input [3:0]din;
+
+  wire [63:4]DO;
+  wire EMPTY;
+  wire FULL;
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
+  wire [5:5]dbiterr_col;
+  wire [3:0]din;
+  wire [3:0]dout;
+  wire \gf36e1_inst.sngfifo36e1_n_10 ;
+  wire \gf36e1_inst.sngfifo36e1_n_11 ;
+  wire \gf36e1_inst.sngfifo36e1_n_12 ;
+  wire \gf36e1_inst.sngfifo36e1_n_13 ;
+  wire \gf36e1_inst.sngfifo36e1_n_14 ;
+  wire \gf36e1_inst.sngfifo36e1_n_15 ;
+  wire \gf36e1_inst.sngfifo36e1_n_16 ;
+  wire \gf36e1_inst.sngfifo36e1_n_17 ;
+  wire \gf36e1_inst.sngfifo36e1_n_18 ;
+  wire \gf36e1_inst.sngfifo36e1_n_19 ;
+  wire \gf36e1_inst.sngfifo36e1_n_20 ;
+  wire \gf36e1_inst.sngfifo36e1_n_21 ;
+  wire \gf36e1_inst.sngfifo36e1_n_22 ;
+  wire \gf36e1_inst.sngfifo36e1_n_23 ;
+  wire \gf36e1_inst.sngfifo36e1_n_24 ;
+  wire \gf36e1_inst.sngfifo36e1_n_25 ;
+  wire \gf36e1_inst.sngfifo36e1_n_26 ;
+  wire \gf36e1_inst.sngfifo36e1_n_27 ;
+  wire \gf36e1_inst.sngfifo36e1_n_28 ;
+  wire \gf36e1_inst.sngfifo36e1_n_29 ;
+  wire \gf36e1_inst.sngfifo36e1_n_30 ;
+  wire \gf36e1_inst.sngfifo36e1_n_31 ;
+  wire \gf36e1_inst.sngfifo36e1_n_32 ;
+  wire \gf36e1_inst.sngfifo36e1_n_33 ;
+  wire \gf36e1_inst.sngfifo36e1_n_5 ;
+  wire \gf36e1_inst.sngfifo36e1_n_7 ;
+  wire \gf36e1_inst.sngfifo36e1_n_8 ;
+  wire \gf36e1_inst.sngfifo36e1_n_9 ;
+  wire [5:5]pe;
+  wire [5:5]pf;
+  wire rd_clk;
+  wire [5:5]sbiterr_col;
+  wire wr_clk;
+  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED ;
+  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED ;
+
+  (* box_type = "PRIMITIVE" *) 
+  FIFO36E1 #(
+    .ALMOST_EMPTY_OFFSET(13'h0006),
+    .ALMOST_FULL_OFFSET(13'h000F),
+    .DATA_WIDTH(4),
+    .DO_REG(1),
+    .EN_ECC_READ("FALSE"),
+    .EN_ECC_WRITE("FALSE"),
+    .EN_SYN("FALSE"),
+    .FIFO_MODE("FIFO36"),
+    .FIRST_WORD_FALL_THROUGH("TRUE"),
+    .INIT(72'h000000000000000000),
+    .IS_RDCLK_INVERTED(1'b0),
+    .IS_RDEN_INVERTED(1'b0),
+    .IS_RSTREG_INVERTED(1'b0),
+    .IS_RST_INVERTED(1'b0),
+    .IS_WRCLK_INVERTED(1'b0),
+    .IS_WREN_INVERTED(1'b0),
+    .SIM_DEVICE("7SERIES"),
+    .SRVAL(72'h000000000000000000)) 
+    \gf36e1_inst.sngfifo36e1 
+       (.ALMOSTEMPTY(pe),
+        .ALMOSTFULL(pf),
+        .DBITERR(dbiterr_col),
+        .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
+        .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
+        .DO({DO,dout}),
+        .DOP(\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED [7:0]),
+        .ECCPARITY(\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED [7:0]),
+        .EMPTY(EMPTY),
+        .FULL(FULL),
+        .INJECTDBITERR(1'b0),
+        .INJECTSBITERR(1'b0),
+        .RDCLK(rd_clk),
+        .RDCOUNT({\gf36e1_inst.sngfifo36e1_n_8 ,\gf36e1_inst.sngfifo36e1_n_9 ,\gf36e1_inst.sngfifo36e1_n_10 ,\gf36e1_inst.sngfifo36e1_n_11 ,\gf36e1_inst.sngfifo36e1_n_12 ,\gf36e1_inst.sngfifo36e1_n_13 ,\gf36e1_inst.sngfifo36e1_n_14 ,\gf36e1_inst.sngfifo36e1_n_15 ,\gf36e1_inst.sngfifo36e1_n_16 ,\gf36e1_inst.sngfifo36e1_n_17 ,\gf36e1_inst.sngfifo36e1_n_18 ,\gf36e1_inst.sngfifo36e1_n_19 ,\gf36e1_inst.sngfifo36e1_n_20 }),
+        .RDEN(RD_EN),
+        .RDERR(\gf36e1_inst.sngfifo36e1_n_5 ),
+        .REGCE(1'b0),
+        .RST(RST),
+        .RSTREG(1'b0),
+        .SBITERR(sbiterr_col),
+        .WRCLK(wr_clk),
+        .WRCOUNT({\gf36e1_inst.sngfifo36e1_n_21 ,\gf36e1_inst.sngfifo36e1_n_22 ,\gf36e1_inst.sngfifo36e1_n_23 ,\gf36e1_inst.sngfifo36e1_n_24 ,\gf36e1_inst.sngfifo36e1_n_25 ,\gf36e1_inst.sngfifo36e1_n_26 ,\gf36e1_inst.sngfifo36e1_n_27 ,\gf36e1_inst.sngfifo36e1_n_28 ,\gf36e1_inst.sngfifo36e1_n_29 ,\gf36e1_inst.sngfifo36e1_n_30 ,\gf36e1_inst.sngfifo36e1_n_31 ,\gf36e1_inst.sngfifo36e1_n_32 ,\gf36e1_inst.sngfifo36e1_n_33 }),
+        .WREN(WR_EN),
+        .WRERR(\gf36e1_inst.sngfifo36e1_n_7 ));
+endmodule
+
+(* ORIG_REF_NAME = "builtin_prim_v6" *) 
+module post_ddr_slow_fifo_builtin_prim_v6_19
+   (EMPTY,
+    FULL,
+    dout,
+    rd_clk,
+    RD_EN,
+    RST,
+    wr_clk,
+    WR_EN,
+    din);
+  output EMPTY;
+  output FULL;
+  output [3:0]dout;
+  input rd_clk;
+  input RD_EN;
+  input RST;
+  input wr_clk;
+  input WR_EN;
+  input [3:0]din;
+
+  wire [63:4]DO;
+  wire EMPTY;
+  wire FULL;
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
+  wire [4:4]dbiterr_col;
+  wire [3:0]din;
+  wire [3:0]dout;
+  wire \gf36e1_inst.sngfifo36e1_n_10 ;
+  wire \gf36e1_inst.sngfifo36e1_n_11 ;
+  wire \gf36e1_inst.sngfifo36e1_n_12 ;
+  wire \gf36e1_inst.sngfifo36e1_n_13 ;
+  wire \gf36e1_inst.sngfifo36e1_n_14 ;
+  wire \gf36e1_inst.sngfifo36e1_n_15 ;
+  wire \gf36e1_inst.sngfifo36e1_n_16 ;
+  wire \gf36e1_inst.sngfifo36e1_n_17 ;
+  wire \gf36e1_inst.sngfifo36e1_n_18 ;
+  wire \gf36e1_inst.sngfifo36e1_n_19 ;
+  wire \gf36e1_inst.sngfifo36e1_n_20 ;
+  wire \gf36e1_inst.sngfifo36e1_n_21 ;
+  wire \gf36e1_inst.sngfifo36e1_n_22 ;
+  wire \gf36e1_inst.sngfifo36e1_n_23 ;
+  wire \gf36e1_inst.sngfifo36e1_n_24 ;
+  wire \gf36e1_inst.sngfifo36e1_n_25 ;
+  wire \gf36e1_inst.sngfifo36e1_n_26 ;
+  wire \gf36e1_inst.sngfifo36e1_n_27 ;
+  wire \gf36e1_inst.sngfifo36e1_n_28 ;
+  wire \gf36e1_inst.sngfifo36e1_n_29 ;
+  wire \gf36e1_inst.sngfifo36e1_n_30 ;
+  wire \gf36e1_inst.sngfifo36e1_n_31 ;
+  wire \gf36e1_inst.sngfifo36e1_n_32 ;
+  wire \gf36e1_inst.sngfifo36e1_n_33 ;
+  wire \gf36e1_inst.sngfifo36e1_n_5 ;
+  wire \gf36e1_inst.sngfifo36e1_n_7 ;
+  wire \gf36e1_inst.sngfifo36e1_n_8 ;
+  wire \gf36e1_inst.sngfifo36e1_n_9 ;
+  wire [4:4]pe;
+  wire [4:4]pf;
+  wire rd_clk;
+  wire [4:4]sbiterr_col;
+  wire wr_clk;
+  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED ;
+  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED ;
+
+  (* box_type = "PRIMITIVE" *) 
+  FIFO36E1 #(
+    .ALMOST_EMPTY_OFFSET(13'h0006),
+    .ALMOST_FULL_OFFSET(13'h000F),
+    .DATA_WIDTH(4),
+    .DO_REG(1),
+    .EN_ECC_READ("FALSE"),
+    .EN_ECC_WRITE("FALSE"),
+    .EN_SYN("FALSE"),
+    .FIFO_MODE("FIFO36"),
+    .FIRST_WORD_FALL_THROUGH("TRUE"),
+    .INIT(72'h000000000000000000),
+    .IS_RDCLK_INVERTED(1'b0),
+    .IS_RDEN_INVERTED(1'b0),
+    .IS_RSTREG_INVERTED(1'b0),
+    .IS_RST_INVERTED(1'b0),
+    .IS_WRCLK_INVERTED(1'b0),
+    .IS_WREN_INVERTED(1'b0),
+    .SIM_DEVICE("7SERIES"),
+    .SRVAL(72'h000000000000000000)) 
+    \gf36e1_inst.sngfifo36e1 
+       (.ALMOSTEMPTY(pe),
+        .ALMOSTFULL(pf),
+        .DBITERR(dbiterr_col),
+        .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
+        .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
+        .DO({DO,dout}),
+        .DOP(\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED [7:0]),
+        .ECCPARITY(\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED [7:0]),
+        .EMPTY(EMPTY),
+        .FULL(FULL),
+        .INJECTDBITERR(1'b0),
+        .INJECTSBITERR(1'b0),
+        .RDCLK(rd_clk),
+        .RDCOUNT({\gf36e1_inst.sngfifo36e1_n_8 ,\gf36e1_inst.sngfifo36e1_n_9 ,\gf36e1_inst.sngfifo36e1_n_10 ,\gf36e1_inst.sngfifo36e1_n_11 ,\gf36e1_inst.sngfifo36e1_n_12 ,\gf36e1_inst.sngfifo36e1_n_13 ,\gf36e1_inst.sngfifo36e1_n_14 ,\gf36e1_inst.sngfifo36e1_n_15 ,\gf36e1_inst.sngfifo36e1_n_16 ,\gf36e1_inst.sngfifo36e1_n_17 ,\gf36e1_inst.sngfifo36e1_n_18 ,\gf36e1_inst.sngfifo36e1_n_19 ,\gf36e1_inst.sngfifo36e1_n_20 }),
+        .RDEN(RD_EN),
+        .RDERR(\gf36e1_inst.sngfifo36e1_n_5 ),
+        .REGCE(1'b0),
+        .RST(RST),
+        .RSTREG(1'b0),
+        .SBITERR(sbiterr_col),
+        .WRCLK(wr_clk),
+        .WRCOUNT({\gf36e1_inst.sngfifo36e1_n_21 ,\gf36e1_inst.sngfifo36e1_n_22 ,\gf36e1_inst.sngfifo36e1_n_23 ,\gf36e1_inst.sngfifo36e1_n_24 ,\gf36e1_inst.sngfifo36e1_n_25 ,\gf36e1_inst.sngfifo36e1_n_26 ,\gf36e1_inst.sngfifo36e1_n_27 ,\gf36e1_inst.sngfifo36e1_n_28 ,\gf36e1_inst.sngfifo36e1_n_29 ,\gf36e1_inst.sngfifo36e1_n_30 ,\gf36e1_inst.sngfifo36e1_n_31 ,\gf36e1_inst.sngfifo36e1_n_32 ,\gf36e1_inst.sngfifo36e1_n_33 }),
+        .WREN(WR_EN),
+        .WRERR(\gf36e1_inst.sngfifo36e1_n_7 ));
+endmodule
+
+(* ORIG_REF_NAME = "builtin_prim_v6" *) 
+module post_ddr_slow_fifo_builtin_prim_v6_20
+   (EMPTY,
+    FULL,
+    dout,
+    rd_clk,
+    RD_EN,
+    RST,
+    wr_clk,
+    WR_EN,
+    din);
+  output EMPTY;
+  output FULL;
+  output [3:0]dout;
+  input rd_clk;
+  input RD_EN;
+  input RST;
+  input wr_clk;
+  input WR_EN;
+  input [3:0]din;
+
+  wire [63:4]DO;
+  wire EMPTY;
+  wire FULL;
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
+  wire [3:3]dbiterr_col;
+  wire [3:0]din;
+  wire [3:0]dout;
+  wire \gf36e1_inst.sngfifo36e1_n_10 ;
+  wire \gf36e1_inst.sngfifo36e1_n_11 ;
+  wire \gf36e1_inst.sngfifo36e1_n_12 ;
+  wire \gf36e1_inst.sngfifo36e1_n_13 ;
+  wire \gf36e1_inst.sngfifo36e1_n_14 ;
+  wire \gf36e1_inst.sngfifo36e1_n_15 ;
+  wire \gf36e1_inst.sngfifo36e1_n_16 ;
+  wire \gf36e1_inst.sngfifo36e1_n_17 ;
+  wire \gf36e1_inst.sngfifo36e1_n_18 ;
+  wire \gf36e1_inst.sngfifo36e1_n_19 ;
+  wire \gf36e1_inst.sngfifo36e1_n_20 ;
+  wire \gf36e1_inst.sngfifo36e1_n_21 ;
+  wire \gf36e1_inst.sngfifo36e1_n_22 ;
+  wire \gf36e1_inst.sngfifo36e1_n_23 ;
+  wire \gf36e1_inst.sngfifo36e1_n_24 ;
+  wire \gf36e1_inst.sngfifo36e1_n_25 ;
+  wire \gf36e1_inst.sngfifo36e1_n_26 ;
+  wire \gf36e1_inst.sngfifo36e1_n_27 ;
+  wire \gf36e1_inst.sngfifo36e1_n_28 ;
+  wire \gf36e1_inst.sngfifo36e1_n_29 ;
+  wire \gf36e1_inst.sngfifo36e1_n_30 ;
+  wire \gf36e1_inst.sngfifo36e1_n_31 ;
+  wire \gf36e1_inst.sngfifo36e1_n_32 ;
+  wire \gf36e1_inst.sngfifo36e1_n_33 ;
+  wire \gf36e1_inst.sngfifo36e1_n_5 ;
+  wire \gf36e1_inst.sngfifo36e1_n_7 ;
+  wire \gf36e1_inst.sngfifo36e1_n_8 ;
+  wire \gf36e1_inst.sngfifo36e1_n_9 ;
+  wire [3:3]pe;
+  wire [3:3]pf;
+  wire rd_clk;
+  wire [3:3]sbiterr_col;
+  wire wr_clk;
+  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED ;
+  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED ;
+
+  (* box_type = "PRIMITIVE" *) 
+  FIFO36E1 #(
+    .ALMOST_EMPTY_OFFSET(13'h0006),
+    .ALMOST_FULL_OFFSET(13'h000F),
+    .DATA_WIDTH(4),
+    .DO_REG(1),
+    .EN_ECC_READ("FALSE"),
+    .EN_ECC_WRITE("FALSE"),
+    .EN_SYN("FALSE"),
+    .FIFO_MODE("FIFO36"),
+    .FIRST_WORD_FALL_THROUGH("TRUE"),
+    .INIT(72'h000000000000000000),
+    .IS_RDCLK_INVERTED(1'b0),
+    .IS_RDEN_INVERTED(1'b0),
+    .IS_RSTREG_INVERTED(1'b0),
+    .IS_RST_INVERTED(1'b0),
+    .IS_WRCLK_INVERTED(1'b0),
+    .IS_WREN_INVERTED(1'b0),
+    .SIM_DEVICE("7SERIES"),
+    .SRVAL(72'h000000000000000000)) 
+    \gf36e1_inst.sngfifo36e1 
+       (.ALMOSTEMPTY(pe),
+        .ALMOSTFULL(pf),
+        .DBITERR(dbiterr_col),
+        .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
+        .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
+        .DO({DO,dout}),
+        .DOP(\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED [7:0]),
+        .ECCPARITY(\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED [7:0]),
+        .EMPTY(EMPTY),
+        .FULL(FULL),
+        .INJECTDBITERR(1'b0),
+        .INJECTSBITERR(1'b0),
+        .RDCLK(rd_clk),
+        .RDCOUNT({\gf36e1_inst.sngfifo36e1_n_8 ,\gf36e1_inst.sngfifo36e1_n_9 ,\gf36e1_inst.sngfifo36e1_n_10 ,\gf36e1_inst.sngfifo36e1_n_11 ,\gf36e1_inst.sngfifo36e1_n_12 ,\gf36e1_inst.sngfifo36e1_n_13 ,\gf36e1_inst.sngfifo36e1_n_14 ,\gf36e1_inst.sngfifo36e1_n_15 ,\gf36e1_inst.sngfifo36e1_n_16 ,\gf36e1_inst.sngfifo36e1_n_17 ,\gf36e1_inst.sngfifo36e1_n_18 ,\gf36e1_inst.sngfifo36e1_n_19 ,\gf36e1_inst.sngfifo36e1_n_20 }),
+        .RDEN(RD_EN),
+        .RDERR(\gf36e1_inst.sngfifo36e1_n_5 ),
+        .REGCE(1'b0),
+        .RST(RST),
+        .RSTREG(1'b0),
+        .SBITERR(sbiterr_col),
+        .WRCLK(wr_clk),
+        .WRCOUNT({\gf36e1_inst.sngfifo36e1_n_21 ,\gf36e1_inst.sngfifo36e1_n_22 ,\gf36e1_inst.sngfifo36e1_n_23 ,\gf36e1_inst.sngfifo36e1_n_24 ,\gf36e1_inst.sngfifo36e1_n_25 ,\gf36e1_inst.sngfifo36e1_n_26 ,\gf36e1_inst.sngfifo36e1_n_27 ,\gf36e1_inst.sngfifo36e1_n_28 ,\gf36e1_inst.sngfifo36e1_n_29 ,\gf36e1_inst.sngfifo36e1_n_30 ,\gf36e1_inst.sngfifo36e1_n_31 ,\gf36e1_inst.sngfifo36e1_n_32 ,\gf36e1_inst.sngfifo36e1_n_33 }),
+        .WREN(WR_EN),
+        .WRERR(\gf36e1_inst.sngfifo36e1_n_7 ));
+endmodule
+
+(* ORIG_REF_NAME = "builtin_prim_v6" *) 
+module post_ddr_slow_fifo_builtin_prim_v6_21
+   (dout,
+    rd_clk_0,
+    rd_clk_1,
+    rd_clk,
+    RD_EN,
+    RST,
+    wr_clk,
+    WR_EN,
+    din,
+    full,
+    empty);
+  output [3:0]dout;
+  output rd_clk_0;
+  output rd_clk_1;
+  input rd_clk;
+  input RD_EN;
+  input RST;
+  input wr_clk;
+  input WR_EN;
+  input [3:0]din;
+  input [2:0]full;
+  input [2:0]empty;
+
+  wire [63:4]DO;
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
+  wire [2:2]dbiterr_col;
+  wire [3:0]din;
+  wire [3:0]dout;
+  wire [2:2]emp;
+  wire [2:0]empty;
+  wire [2:2]ful;
+  wire [2:0]full;
+  wire \gf36e1_inst.sngfifo36e1_n_10 ;
+  wire \gf36e1_inst.sngfifo36e1_n_11 ;
+  wire \gf36e1_inst.sngfifo36e1_n_12 ;
+  wire \gf36e1_inst.sngfifo36e1_n_13 ;
+  wire \gf36e1_inst.sngfifo36e1_n_14 ;
+  wire \gf36e1_inst.sngfifo36e1_n_15 ;
+  wire \gf36e1_inst.sngfifo36e1_n_16 ;
+  wire \gf36e1_inst.sngfifo36e1_n_17 ;
+  wire \gf36e1_inst.sngfifo36e1_n_18 ;
+  wire \gf36e1_inst.sngfifo36e1_n_19 ;
+  wire \gf36e1_inst.sngfifo36e1_n_20 ;
+  wire \gf36e1_inst.sngfifo36e1_n_21 ;
+  wire \gf36e1_inst.sngfifo36e1_n_22 ;
+  wire \gf36e1_inst.sngfifo36e1_n_23 ;
+  wire \gf36e1_inst.sngfifo36e1_n_24 ;
+  wire \gf36e1_inst.sngfifo36e1_n_25 ;
+  wire \gf36e1_inst.sngfifo36e1_n_26 ;
+  wire \gf36e1_inst.sngfifo36e1_n_27 ;
+  wire \gf36e1_inst.sngfifo36e1_n_28 ;
+  wire \gf36e1_inst.sngfifo36e1_n_29 ;
+  wire \gf36e1_inst.sngfifo36e1_n_30 ;
+  wire \gf36e1_inst.sngfifo36e1_n_31 ;
+  wire \gf36e1_inst.sngfifo36e1_n_32 ;
+  wire \gf36e1_inst.sngfifo36e1_n_33 ;
+  wire \gf36e1_inst.sngfifo36e1_n_5 ;
+  wire \gf36e1_inst.sngfifo36e1_n_7 ;
+  wire \gf36e1_inst.sngfifo36e1_n_8 ;
+  wire \gf36e1_inst.sngfifo36e1_n_9 ;
+  wire [2:2]pe;
+  wire [2:2]pf;
+  wire rd_clk;
+  wire rd_clk_0;
+  wire rd_clk_1;
+  wire [2:2]sbiterr_col;
+  wire wr_clk;
+  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED ;
+  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED ;
+
+  LUT4 #(
+    .INIT(16'hFFFE)) 
+    empty_INST_0_i_2
+       (.I0(emp),
+        .I1(empty[0]),
+        .I2(empty[2]),
+        .I3(empty[1]),
+        .O(rd_clk_1));
+  LUT4 #(
+    .INIT(16'hFFFE)) 
+    full_INST_0_i_2
+       (.I0(ful),
+        .I1(full[0]),
+        .I2(full[2]),
+        .I3(full[1]),
+        .O(rd_clk_0));
+  (* box_type = "PRIMITIVE" *) 
+  FIFO36E1 #(
+    .ALMOST_EMPTY_OFFSET(13'h0006),
+    .ALMOST_FULL_OFFSET(13'h000F),
+    .DATA_WIDTH(4),
+    .DO_REG(1),
+    .EN_ECC_READ("FALSE"),
+    .EN_ECC_WRITE("FALSE"),
+    .EN_SYN("FALSE"),
+    .FIFO_MODE("FIFO36"),
+    .FIRST_WORD_FALL_THROUGH("TRUE"),
+    .INIT(72'h000000000000000000),
+    .IS_RDCLK_INVERTED(1'b0),
+    .IS_RDEN_INVERTED(1'b0),
+    .IS_RSTREG_INVERTED(1'b0),
+    .IS_RST_INVERTED(1'b0),
+    .IS_WRCLK_INVERTED(1'b0),
+    .IS_WREN_INVERTED(1'b0),
+    .SIM_DEVICE("7SERIES"),
+    .SRVAL(72'h000000000000000000)) 
+    \gf36e1_inst.sngfifo36e1 
+       (.ALMOSTEMPTY(pe),
+        .ALMOSTFULL(pf),
+        .DBITERR(dbiterr_col),
+        .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
+        .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
+        .DO({DO,dout}),
+        .DOP(\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED [7:0]),
+        .ECCPARITY(\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED [7:0]),
+        .EMPTY(emp),
+        .FULL(ful),
+        .INJECTDBITERR(1'b0),
+        .INJECTSBITERR(1'b0),
+        .RDCLK(rd_clk),
+        .RDCOUNT({\gf36e1_inst.sngfifo36e1_n_8 ,\gf36e1_inst.sngfifo36e1_n_9 ,\gf36e1_inst.sngfifo36e1_n_10 ,\gf36e1_inst.sngfifo36e1_n_11 ,\gf36e1_inst.sngfifo36e1_n_12 ,\gf36e1_inst.sngfifo36e1_n_13 ,\gf36e1_inst.sngfifo36e1_n_14 ,\gf36e1_inst.sngfifo36e1_n_15 ,\gf36e1_inst.sngfifo36e1_n_16 ,\gf36e1_inst.sngfifo36e1_n_17 ,\gf36e1_inst.sngfifo36e1_n_18 ,\gf36e1_inst.sngfifo36e1_n_19 ,\gf36e1_inst.sngfifo36e1_n_20 }),
+        .RDEN(RD_EN),
+        .RDERR(\gf36e1_inst.sngfifo36e1_n_5 ),
+        .REGCE(1'b0),
+        .RST(RST),
+        .RSTREG(1'b0),
+        .SBITERR(sbiterr_col),
+        .WRCLK(wr_clk),
+        .WRCOUNT({\gf36e1_inst.sngfifo36e1_n_21 ,\gf36e1_inst.sngfifo36e1_n_22 ,\gf36e1_inst.sngfifo36e1_n_23 ,\gf36e1_inst.sngfifo36e1_n_24 ,\gf36e1_inst.sngfifo36e1_n_25 ,\gf36e1_inst.sngfifo36e1_n_26 ,\gf36e1_inst.sngfifo36e1_n_27 ,\gf36e1_inst.sngfifo36e1_n_28 ,\gf36e1_inst.sngfifo36e1_n_29 ,\gf36e1_inst.sngfifo36e1_n_30 ,\gf36e1_inst.sngfifo36e1_n_31 ,\gf36e1_inst.sngfifo36e1_n_32 ,\gf36e1_inst.sngfifo36e1_n_33 }),
+        .WREN(WR_EN),
+        .WRERR(\gf36e1_inst.sngfifo36e1_n_7 ));
+endmodule
+
+(* ORIG_REF_NAME = "builtin_prim_v6" *) 
+module post_ddr_slow_fifo_builtin_prim_v6_22
+   (EMPTY,
+    FULL,
+    dout,
+    rd_clk,
+    RD_EN,
+    RST,
+    wr_clk,
+    WR_EN,
+    din);
+  output EMPTY;
+  output FULL;
+  output [3:0]dout;
+  input rd_clk;
+  input RD_EN;
+  input RST;
+  input wr_clk;
+  input WR_EN;
+  input [3:0]din;
+
+  wire [63:4]DO;
+  wire EMPTY;
+  wire FULL;
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
+  wire [1:1]dbiterr_col;
+  wire [3:0]din;
+  wire [3:0]dout;
+  wire \gf36e1_inst.sngfifo36e1_n_10 ;
+  wire \gf36e1_inst.sngfifo36e1_n_11 ;
+  wire \gf36e1_inst.sngfifo36e1_n_12 ;
+  wire \gf36e1_inst.sngfifo36e1_n_13 ;
+  wire \gf36e1_inst.sngfifo36e1_n_14 ;
+  wire \gf36e1_inst.sngfifo36e1_n_15 ;
+  wire \gf36e1_inst.sngfifo36e1_n_16 ;
+  wire \gf36e1_inst.sngfifo36e1_n_17 ;
+  wire \gf36e1_inst.sngfifo36e1_n_18 ;
+  wire \gf36e1_inst.sngfifo36e1_n_19 ;
+  wire \gf36e1_inst.sngfifo36e1_n_20 ;
+  wire \gf36e1_inst.sngfifo36e1_n_21 ;
+  wire \gf36e1_inst.sngfifo36e1_n_22 ;
+  wire \gf36e1_inst.sngfifo36e1_n_23 ;
+  wire \gf36e1_inst.sngfifo36e1_n_24 ;
+  wire \gf36e1_inst.sngfifo36e1_n_25 ;
+  wire \gf36e1_inst.sngfifo36e1_n_26 ;
+  wire \gf36e1_inst.sngfifo36e1_n_27 ;
+  wire \gf36e1_inst.sngfifo36e1_n_28 ;
+  wire \gf36e1_inst.sngfifo36e1_n_29 ;
+  wire \gf36e1_inst.sngfifo36e1_n_30 ;
+  wire \gf36e1_inst.sngfifo36e1_n_31 ;
+  wire \gf36e1_inst.sngfifo36e1_n_32 ;
+  wire \gf36e1_inst.sngfifo36e1_n_33 ;
+  wire \gf36e1_inst.sngfifo36e1_n_5 ;
+  wire \gf36e1_inst.sngfifo36e1_n_7 ;
+  wire \gf36e1_inst.sngfifo36e1_n_8 ;
+  wire \gf36e1_inst.sngfifo36e1_n_9 ;
+  wire [1:1]pe;
+  wire [1:1]pf;
+  wire rd_clk;
+  wire [1:1]sbiterr_col;
+  wire wr_clk;
+  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED ;
+  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED ;
+
+  (* box_type = "PRIMITIVE" *) 
+  FIFO36E1 #(
+    .ALMOST_EMPTY_OFFSET(13'h0006),
+    .ALMOST_FULL_OFFSET(13'h000F),
+    .DATA_WIDTH(4),
+    .DO_REG(1),
+    .EN_ECC_READ("FALSE"),
+    .EN_ECC_WRITE("FALSE"),
+    .EN_SYN("FALSE"),
+    .FIFO_MODE("FIFO36"),
+    .FIRST_WORD_FALL_THROUGH("TRUE"),
+    .INIT(72'h000000000000000000),
+    .IS_RDCLK_INVERTED(1'b0),
+    .IS_RDEN_INVERTED(1'b0),
+    .IS_RSTREG_INVERTED(1'b0),
+    .IS_RST_INVERTED(1'b0),
+    .IS_WRCLK_INVERTED(1'b0),
+    .IS_WREN_INVERTED(1'b0),
+    .SIM_DEVICE("7SERIES"),
+    .SRVAL(72'h000000000000000000)) 
+    \gf36e1_inst.sngfifo36e1 
+       (.ALMOSTEMPTY(pe),
+        .ALMOSTFULL(pf),
+        .DBITERR(dbiterr_col),
+        .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
+        .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
+        .DO({DO,dout}),
+        .DOP(\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED [7:0]),
+        .ECCPARITY(\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED [7:0]),
+        .EMPTY(EMPTY),
+        .FULL(FULL),
+        .INJECTDBITERR(1'b0),
+        .INJECTSBITERR(1'b0),
+        .RDCLK(rd_clk),
+        .RDCOUNT({\gf36e1_inst.sngfifo36e1_n_8 ,\gf36e1_inst.sngfifo36e1_n_9 ,\gf36e1_inst.sngfifo36e1_n_10 ,\gf36e1_inst.sngfifo36e1_n_11 ,\gf36e1_inst.sngfifo36e1_n_12 ,\gf36e1_inst.sngfifo36e1_n_13 ,\gf36e1_inst.sngfifo36e1_n_14 ,\gf36e1_inst.sngfifo36e1_n_15 ,\gf36e1_inst.sngfifo36e1_n_16 ,\gf36e1_inst.sngfifo36e1_n_17 ,\gf36e1_inst.sngfifo36e1_n_18 ,\gf36e1_inst.sngfifo36e1_n_19 ,\gf36e1_inst.sngfifo36e1_n_20 }),
+        .RDEN(RD_EN),
+        .RDERR(\gf36e1_inst.sngfifo36e1_n_5 ),
+        .REGCE(1'b0),
+        .RST(RST),
+        .RSTREG(1'b0),
+        .SBITERR(sbiterr_col),
+        .WRCLK(wr_clk),
+        .WRCOUNT({\gf36e1_inst.sngfifo36e1_n_21 ,\gf36e1_inst.sngfifo36e1_n_22 ,\gf36e1_inst.sngfifo36e1_n_23 ,\gf36e1_inst.sngfifo36e1_n_24 ,\gf36e1_inst.sngfifo36e1_n_25 ,\gf36e1_inst.sngfifo36e1_n_26 ,\gf36e1_inst.sngfifo36e1_n_27 ,\gf36e1_inst.sngfifo36e1_n_28 ,\gf36e1_inst.sngfifo36e1_n_29 ,\gf36e1_inst.sngfifo36e1_n_30 ,\gf36e1_inst.sngfifo36e1_n_31 ,\gf36e1_inst.sngfifo36e1_n_32 ,\gf36e1_inst.sngfifo36e1_n_33 }),
+        .WREN(WR_EN),
+        .WRERR(\gf36e1_inst.sngfifo36e1_n_7 ));
+endmodule
+
+(* ORIG_REF_NAME = "builtin_prim_v6" *) 
+module post_ddr_slow_fifo_builtin_prim_v6_23
+   (EMPTY,
+    FULL,
+    dout,
+    rd_clk,
+    RD_EN,
+    RST,
+    wr_clk,
+    WR_EN,
+    din);
+  output EMPTY;
+  output FULL;
+  output [3:0]dout;
+  input rd_clk;
+  input RD_EN;
+  input RST;
+  input wr_clk;
+  input WR_EN;
+  input [3:0]din;
+
+  wire [63:4]DO;
+  wire EMPTY;
+  wire FULL;
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
+  wire [16:16]dbiterr_col;
+  wire [3:0]din;
+  wire [3:0]dout;
+  wire \gf36e1_inst.sngfifo36e1_n_10 ;
+  wire \gf36e1_inst.sngfifo36e1_n_11 ;
+  wire \gf36e1_inst.sngfifo36e1_n_12 ;
+  wire \gf36e1_inst.sngfifo36e1_n_13 ;
+  wire \gf36e1_inst.sngfifo36e1_n_14 ;
+  wire \gf36e1_inst.sngfifo36e1_n_15 ;
+  wire \gf36e1_inst.sngfifo36e1_n_16 ;
+  wire \gf36e1_inst.sngfifo36e1_n_17 ;
+  wire \gf36e1_inst.sngfifo36e1_n_18 ;
+  wire \gf36e1_inst.sngfifo36e1_n_19 ;
+  wire \gf36e1_inst.sngfifo36e1_n_20 ;
+  wire \gf36e1_inst.sngfifo36e1_n_21 ;
+  wire \gf36e1_inst.sngfifo36e1_n_22 ;
+  wire \gf36e1_inst.sngfifo36e1_n_23 ;
+  wire \gf36e1_inst.sngfifo36e1_n_24 ;
+  wire \gf36e1_inst.sngfifo36e1_n_25 ;
+  wire \gf36e1_inst.sngfifo36e1_n_26 ;
+  wire \gf36e1_inst.sngfifo36e1_n_27 ;
+  wire \gf36e1_inst.sngfifo36e1_n_28 ;
+  wire \gf36e1_inst.sngfifo36e1_n_29 ;
+  wire \gf36e1_inst.sngfifo36e1_n_30 ;
+  wire \gf36e1_inst.sngfifo36e1_n_31 ;
+  wire \gf36e1_inst.sngfifo36e1_n_32 ;
+  wire \gf36e1_inst.sngfifo36e1_n_33 ;
+  wire \gf36e1_inst.sngfifo36e1_n_5 ;
+  wire \gf36e1_inst.sngfifo36e1_n_7 ;
+  wire \gf36e1_inst.sngfifo36e1_n_8 ;
+  wire \gf36e1_inst.sngfifo36e1_n_9 ;
+  wire [16:16]pe;
+  wire [16:16]pf;
+  wire rd_clk;
+  wire [16:16]sbiterr_col;
+  wire wr_clk;
+  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED ;
+  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED ;
+
+  (* box_type = "PRIMITIVE" *) 
+  FIFO36E1 #(
+    .ALMOST_EMPTY_OFFSET(13'h0006),
+    .ALMOST_FULL_OFFSET(13'h000F),
+    .DATA_WIDTH(4),
+    .DO_REG(1),
+    .EN_ECC_READ("FALSE"),
+    .EN_ECC_WRITE("FALSE"),
+    .EN_SYN("FALSE"),
+    .FIFO_MODE("FIFO36"),
+    .FIRST_WORD_FALL_THROUGH("TRUE"),
+    .INIT(72'h000000000000000000),
+    .IS_RDCLK_INVERTED(1'b0),
+    .IS_RDEN_INVERTED(1'b0),
+    .IS_RSTREG_INVERTED(1'b0),
+    .IS_RST_INVERTED(1'b0),
+    .IS_WRCLK_INVERTED(1'b0),
+    .IS_WREN_INVERTED(1'b0),
+    .SIM_DEVICE("7SERIES"),
+    .SRVAL(72'h000000000000000000)) 
+    \gf36e1_inst.sngfifo36e1 
+       (.ALMOSTEMPTY(pe),
+        .ALMOSTFULL(pf),
+        .DBITERR(dbiterr_col),
+        .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
+        .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
+        .DO({DO,dout}),
+        .DOP(\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED [7:0]),
+        .ECCPARITY(\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED [7:0]),
+        .EMPTY(EMPTY),
+        .FULL(FULL),
+        .INJECTDBITERR(1'b0),
+        .INJECTSBITERR(1'b0),
+        .RDCLK(rd_clk),
+        .RDCOUNT({\gf36e1_inst.sngfifo36e1_n_8 ,\gf36e1_inst.sngfifo36e1_n_9 ,\gf36e1_inst.sngfifo36e1_n_10 ,\gf36e1_inst.sngfifo36e1_n_11 ,\gf36e1_inst.sngfifo36e1_n_12 ,\gf36e1_inst.sngfifo36e1_n_13 ,\gf36e1_inst.sngfifo36e1_n_14 ,\gf36e1_inst.sngfifo36e1_n_15 ,\gf36e1_inst.sngfifo36e1_n_16 ,\gf36e1_inst.sngfifo36e1_n_17 ,\gf36e1_inst.sngfifo36e1_n_18 ,\gf36e1_inst.sngfifo36e1_n_19 ,\gf36e1_inst.sngfifo36e1_n_20 }),
+        .RDEN(RD_EN),
+        .RDERR(\gf36e1_inst.sngfifo36e1_n_5 ),
+        .REGCE(1'b0),
+        .RST(RST),
+        .RSTREG(1'b0),
+        .SBITERR(sbiterr_col),
+        .WRCLK(wr_clk),
+        .WRCOUNT({\gf36e1_inst.sngfifo36e1_n_21 ,\gf36e1_inst.sngfifo36e1_n_22 ,\gf36e1_inst.sngfifo36e1_n_23 ,\gf36e1_inst.sngfifo36e1_n_24 ,\gf36e1_inst.sngfifo36e1_n_25 ,\gf36e1_inst.sngfifo36e1_n_26 ,\gf36e1_inst.sngfifo36e1_n_27 ,\gf36e1_inst.sngfifo36e1_n_28 ,\gf36e1_inst.sngfifo36e1_n_29 ,\gf36e1_inst.sngfifo36e1_n_30 ,\gf36e1_inst.sngfifo36e1_n_31 ,\gf36e1_inst.sngfifo36e1_n_32 ,\gf36e1_inst.sngfifo36e1_n_33 }),
+        .WREN(WR_EN),
+        .WRERR(\gf36e1_inst.sngfifo36e1_n_7 ));
+endmodule
+
+(* ORIG_REF_NAME = "builtin_prim_v6" *) 
+module post_ddr_slow_fifo_builtin_prim_v6_24
+   (EMPTY,
+    FULL,
+    dout,
+    rd_clk,
+    RD_EN,
+    RST,
+    wr_clk,
+    WR_EN,
+    din);
+  output EMPTY;
+  output FULL;
+  output [3:0]dout;
+  input rd_clk;
+  input RD_EN;
+  input RST;
+  input wr_clk;
+  input WR_EN;
+  input [3:0]din;
+
+  wire [63:4]DO;
+  wire EMPTY;
+  wire FULL;
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
+  wire [15:15]dbiterr_col;
+  wire [3:0]din;
+  wire [3:0]dout;
+  wire \gf36e1_inst.sngfifo36e1_n_10 ;
+  wire \gf36e1_inst.sngfifo36e1_n_11 ;
+  wire \gf36e1_inst.sngfifo36e1_n_12 ;
+  wire \gf36e1_inst.sngfifo36e1_n_13 ;
+  wire \gf36e1_inst.sngfifo36e1_n_14 ;
+  wire \gf36e1_inst.sngfifo36e1_n_15 ;
+  wire \gf36e1_inst.sngfifo36e1_n_16 ;
+  wire \gf36e1_inst.sngfifo36e1_n_17 ;
+  wire \gf36e1_inst.sngfifo36e1_n_18 ;
+  wire \gf36e1_inst.sngfifo36e1_n_19 ;
+  wire \gf36e1_inst.sngfifo36e1_n_20 ;
+  wire \gf36e1_inst.sngfifo36e1_n_21 ;
+  wire \gf36e1_inst.sngfifo36e1_n_22 ;
+  wire \gf36e1_inst.sngfifo36e1_n_23 ;
+  wire \gf36e1_inst.sngfifo36e1_n_24 ;
+  wire \gf36e1_inst.sngfifo36e1_n_25 ;
+  wire \gf36e1_inst.sngfifo36e1_n_26 ;
+  wire \gf36e1_inst.sngfifo36e1_n_27 ;
+  wire \gf36e1_inst.sngfifo36e1_n_28 ;
+  wire \gf36e1_inst.sngfifo36e1_n_29 ;
+  wire \gf36e1_inst.sngfifo36e1_n_30 ;
+  wire \gf36e1_inst.sngfifo36e1_n_31 ;
+  wire \gf36e1_inst.sngfifo36e1_n_32 ;
+  wire \gf36e1_inst.sngfifo36e1_n_33 ;
+  wire \gf36e1_inst.sngfifo36e1_n_5 ;
+  wire \gf36e1_inst.sngfifo36e1_n_7 ;
+  wire \gf36e1_inst.sngfifo36e1_n_8 ;
+  wire \gf36e1_inst.sngfifo36e1_n_9 ;
+  wire [15:15]pe;
+  wire [15:15]pf;
+  wire rd_clk;
+  wire [15:15]sbiterr_col;
+  wire wr_clk;
+  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED ;
+  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED ;
+
+  (* box_type = "PRIMITIVE" *) 
+  FIFO36E1 #(
+    .ALMOST_EMPTY_OFFSET(13'h0006),
+    .ALMOST_FULL_OFFSET(13'h000F),
+    .DATA_WIDTH(4),
+    .DO_REG(1),
+    .EN_ECC_READ("FALSE"),
+    .EN_ECC_WRITE("FALSE"),
+    .EN_SYN("FALSE"),
+    .FIFO_MODE("FIFO36"),
+    .FIRST_WORD_FALL_THROUGH("TRUE"),
+    .INIT(72'h000000000000000000),
+    .IS_RDCLK_INVERTED(1'b0),
+    .IS_RDEN_INVERTED(1'b0),
+    .IS_RSTREG_INVERTED(1'b0),
+    .IS_RST_INVERTED(1'b0),
+    .IS_WRCLK_INVERTED(1'b0),
+    .IS_WREN_INVERTED(1'b0),
+    .SIM_DEVICE("7SERIES"),
+    .SRVAL(72'h000000000000000000)) 
+    \gf36e1_inst.sngfifo36e1 
+       (.ALMOSTEMPTY(pe),
+        .ALMOSTFULL(pf),
+        .DBITERR(dbiterr_col),
+        .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
+        .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
+        .DO({DO,dout}),
+        .DOP(\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED [7:0]),
+        .ECCPARITY(\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED [7:0]),
+        .EMPTY(EMPTY),
+        .FULL(FULL),
+        .INJECTDBITERR(1'b0),
+        .INJECTSBITERR(1'b0),
+        .RDCLK(rd_clk),
+        .RDCOUNT({\gf36e1_inst.sngfifo36e1_n_8 ,\gf36e1_inst.sngfifo36e1_n_9 ,\gf36e1_inst.sngfifo36e1_n_10 ,\gf36e1_inst.sngfifo36e1_n_11 ,\gf36e1_inst.sngfifo36e1_n_12 ,\gf36e1_inst.sngfifo36e1_n_13 ,\gf36e1_inst.sngfifo36e1_n_14 ,\gf36e1_inst.sngfifo36e1_n_15 ,\gf36e1_inst.sngfifo36e1_n_16 ,\gf36e1_inst.sngfifo36e1_n_17 ,\gf36e1_inst.sngfifo36e1_n_18 ,\gf36e1_inst.sngfifo36e1_n_19 ,\gf36e1_inst.sngfifo36e1_n_20 }),
+        .RDEN(RD_EN),
+        .RDERR(\gf36e1_inst.sngfifo36e1_n_5 ),
+        .REGCE(1'b0),
+        .RST(RST),
+        .RSTREG(1'b0),
+        .SBITERR(sbiterr_col),
+        .WRCLK(wr_clk),
+        .WRCOUNT({\gf36e1_inst.sngfifo36e1_n_21 ,\gf36e1_inst.sngfifo36e1_n_22 ,\gf36e1_inst.sngfifo36e1_n_23 ,\gf36e1_inst.sngfifo36e1_n_24 ,\gf36e1_inst.sngfifo36e1_n_25 ,\gf36e1_inst.sngfifo36e1_n_26 ,\gf36e1_inst.sngfifo36e1_n_27 ,\gf36e1_inst.sngfifo36e1_n_28 ,\gf36e1_inst.sngfifo36e1_n_29 ,\gf36e1_inst.sngfifo36e1_n_30 ,\gf36e1_inst.sngfifo36e1_n_31 ,\gf36e1_inst.sngfifo36e1_n_32 ,\gf36e1_inst.sngfifo36e1_n_33 }),
+        .WREN(WR_EN),
+        .WRERR(\gf36e1_inst.sngfifo36e1_n_7 ));
+endmodule
+
+(* ORIG_REF_NAME = "builtin_prim_v6" *) 
+module post_ddr_slow_fifo_builtin_prim_v6_25
+   (dout,
+    rd_clk_0,
+    rd_clk_1,
+    rd_clk,
+    RD_EN,
+    RST,
+    wr_clk,
+    WR_EN,
+    din,
+    full,
+    empty);
+  output [3:0]dout;
+  output rd_clk_0;
+  output rd_clk_1;
+  input rd_clk;
+  input RD_EN;
+  input RST;
+  input wr_clk;
+  input WR_EN;
+  input [3:0]din;
+  input [2:0]full;
+  input [2:0]empty;
+
+  wire [63:4]DO;
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
+  wire [14:14]dbiterr_col;
+  wire [3:0]din;
+  wire [3:0]dout;
+  wire [14:14]emp;
+  wire [2:0]empty;
+  wire [14:14]ful;
+  wire [2:0]full;
+  wire \gf36e1_inst.sngfifo36e1_n_10 ;
+  wire \gf36e1_inst.sngfifo36e1_n_11 ;
+  wire \gf36e1_inst.sngfifo36e1_n_12 ;
+  wire \gf36e1_inst.sngfifo36e1_n_13 ;
+  wire \gf36e1_inst.sngfifo36e1_n_14 ;
+  wire \gf36e1_inst.sngfifo36e1_n_15 ;
+  wire \gf36e1_inst.sngfifo36e1_n_16 ;
+  wire \gf36e1_inst.sngfifo36e1_n_17 ;
+  wire \gf36e1_inst.sngfifo36e1_n_18 ;
+  wire \gf36e1_inst.sngfifo36e1_n_19 ;
+  wire \gf36e1_inst.sngfifo36e1_n_20 ;
+  wire \gf36e1_inst.sngfifo36e1_n_21 ;
+  wire \gf36e1_inst.sngfifo36e1_n_22 ;
+  wire \gf36e1_inst.sngfifo36e1_n_23 ;
+  wire \gf36e1_inst.sngfifo36e1_n_24 ;
+  wire \gf36e1_inst.sngfifo36e1_n_25 ;
+  wire \gf36e1_inst.sngfifo36e1_n_26 ;
+  wire \gf36e1_inst.sngfifo36e1_n_27 ;
+  wire \gf36e1_inst.sngfifo36e1_n_28 ;
+  wire \gf36e1_inst.sngfifo36e1_n_29 ;
+  wire \gf36e1_inst.sngfifo36e1_n_30 ;
+  wire \gf36e1_inst.sngfifo36e1_n_31 ;
+  wire \gf36e1_inst.sngfifo36e1_n_32 ;
+  wire \gf36e1_inst.sngfifo36e1_n_33 ;
+  wire \gf36e1_inst.sngfifo36e1_n_5 ;
+  wire \gf36e1_inst.sngfifo36e1_n_7 ;
+  wire \gf36e1_inst.sngfifo36e1_n_8 ;
+  wire \gf36e1_inst.sngfifo36e1_n_9 ;
+  wire [14:14]pe;
+  wire [14:14]pf;
+  wire rd_clk;
+  wire rd_clk_0;
+  wire rd_clk_1;
+  wire [14:14]sbiterr_col;
+  wire wr_clk;
+  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED ;
+  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED ;
+
+  LUT4 #(
+    .INIT(16'hFFFE)) 
+    empty_INST_0_i_3
+       (.I0(emp),
+        .I1(empty[0]),
+        .I2(empty[2]),
+        .I3(empty[1]),
+        .O(rd_clk_1));
+  LUT4 #(
+    .INIT(16'hFFFE)) 
+    full_INST_0_i_3
+       (.I0(ful),
+        .I1(full[0]),
+        .I2(full[2]),
+        .I3(full[1]),
+        .O(rd_clk_0));
+  (* box_type = "PRIMITIVE" *) 
+  FIFO36E1 #(
+    .ALMOST_EMPTY_OFFSET(13'h0006),
+    .ALMOST_FULL_OFFSET(13'h000F),
+    .DATA_WIDTH(4),
+    .DO_REG(1),
+    .EN_ECC_READ("FALSE"),
+    .EN_ECC_WRITE("FALSE"),
+    .EN_SYN("FALSE"),
+    .FIFO_MODE("FIFO36"),
+    .FIRST_WORD_FALL_THROUGH("TRUE"),
+    .INIT(72'h000000000000000000),
+    .IS_RDCLK_INVERTED(1'b0),
+    .IS_RDEN_INVERTED(1'b0),
+    .IS_RSTREG_INVERTED(1'b0),
+    .IS_RST_INVERTED(1'b0),
+    .IS_WRCLK_INVERTED(1'b0),
+    .IS_WREN_INVERTED(1'b0),
+    .SIM_DEVICE("7SERIES"),
+    .SRVAL(72'h000000000000000000)) 
+    \gf36e1_inst.sngfifo36e1 
+       (.ALMOSTEMPTY(pe),
+        .ALMOSTFULL(pf),
+        .DBITERR(dbiterr_col),
+        .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
+        .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
+        .DO({DO,dout}),
+        .DOP(\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED [7:0]),
+        .ECCPARITY(\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED [7:0]),
+        .EMPTY(emp),
+        .FULL(ful),
+        .INJECTDBITERR(1'b0),
+        .INJECTSBITERR(1'b0),
+        .RDCLK(rd_clk),
+        .RDCOUNT({\gf36e1_inst.sngfifo36e1_n_8 ,\gf36e1_inst.sngfifo36e1_n_9 ,\gf36e1_inst.sngfifo36e1_n_10 ,\gf36e1_inst.sngfifo36e1_n_11 ,\gf36e1_inst.sngfifo36e1_n_12 ,\gf36e1_inst.sngfifo36e1_n_13 ,\gf36e1_inst.sngfifo36e1_n_14 ,\gf36e1_inst.sngfifo36e1_n_15 ,\gf36e1_inst.sngfifo36e1_n_16 ,\gf36e1_inst.sngfifo36e1_n_17 ,\gf36e1_inst.sngfifo36e1_n_18 ,\gf36e1_inst.sngfifo36e1_n_19 ,\gf36e1_inst.sngfifo36e1_n_20 }),
+        .RDEN(RD_EN),
+        .RDERR(\gf36e1_inst.sngfifo36e1_n_5 ),
+        .REGCE(1'b0),
+        .RST(RST),
+        .RSTREG(1'b0),
+        .SBITERR(sbiterr_col),
+        .WRCLK(wr_clk),
+        .WRCOUNT({\gf36e1_inst.sngfifo36e1_n_21 ,\gf36e1_inst.sngfifo36e1_n_22 ,\gf36e1_inst.sngfifo36e1_n_23 ,\gf36e1_inst.sngfifo36e1_n_24 ,\gf36e1_inst.sngfifo36e1_n_25 ,\gf36e1_inst.sngfifo36e1_n_26 ,\gf36e1_inst.sngfifo36e1_n_27 ,\gf36e1_inst.sngfifo36e1_n_28 ,\gf36e1_inst.sngfifo36e1_n_29 ,\gf36e1_inst.sngfifo36e1_n_30 ,\gf36e1_inst.sngfifo36e1_n_31 ,\gf36e1_inst.sngfifo36e1_n_32 ,\gf36e1_inst.sngfifo36e1_n_33 }),
+        .WREN(WR_EN),
+        .WRERR(\gf36e1_inst.sngfifo36e1_n_7 ));
+endmodule
+
+(* ORIG_REF_NAME = "builtin_prim_v6" *) 
+module post_ddr_slow_fifo_builtin_prim_v6_26
+   (EMPTY,
+    FULL,
+    dout,
+    rd_clk,
+    RD_EN,
+    RST,
+    wr_clk,
+    WR_EN,
+    din);
+  output EMPTY;
+  output FULL;
+  output [3:0]dout;
+  input rd_clk;
+  input RD_EN;
+  input RST;
+  input wr_clk;
+  input WR_EN;
+  input [3:0]din;
+
+  wire [63:4]DO;
+  wire EMPTY;
+  wire FULL;
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
+  wire [13:13]dbiterr_col;
+  wire [3:0]din;
+  wire [3:0]dout;
+  wire \gf36e1_inst.sngfifo36e1_n_10 ;
+  wire \gf36e1_inst.sngfifo36e1_n_11 ;
+  wire \gf36e1_inst.sngfifo36e1_n_12 ;
+  wire \gf36e1_inst.sngfifo36e1_n_13 ;
+  wire \gf36e1_inst.sngfifo36e1_n_14 ;
+  wire \gf36e1_inst.sngfifo36e1_n_15 ;
+  wire \gf36e1_inst.sngfifo36e1_n_16 ;
+  wire \gf36e1_inst.sngfifo36e1_n_17 ;
+  wire \gf36e1_inst.sngfifo36e1_n_18 ;
+  wire \gf36e1_inst.sngfifo36e1_n_19 ;
+  wire \gf36e1_inst.sngfifo36e1_n_20 ;
+  wire \gf36e1_inst.sngfifo36e1_n_21 ;
+  wire \gf36e1_inst.sngfifo36e1_n_22 ;
+  wire \gf36e1_inst.sngfifo36e1_n_23 ;
+  wire \gf36e1_inst.sngfifo36e1_n_24 ;
+  wire \gf36e1_inst.sngfifo36e1_n_25 ;
+  wire \gf36e1_inst.sngfifo36e1_n_26 ;
+  wire \gf36e1_inst.sngfifo36e1_n_27 ;
+  wire \gf36e1_inst.sngfifo36e1_n_28 ;
+  wire \gf36e1_inst.sngfifo36e1_n_29 ;
+  wire \gf36e1_inst.sngfifo36e1_n_30 ;
+  wire \gf36e1_inst.sngfifo36e1_n_31 ;
+  wire \gf36e1_inst.sngfifo36e1_n_32 ;
+  wire \gf36e1_inst.sngfifo36e1_n_33 ;
+  wire \gf36e1_inst.sngfifo36e1_n_5 ;
+  wire \gf36e1_inst.sngfifo36e1_n_7 ;
+  wire \gf36e1_inst.sngfifo36e1_n_8 ;
+  wire \gf36e1_inst.sngfifo36e1_n_9 ;
+  wire [13:13]pe;
+  wire [13:13]pf;
+  wire rd_clk;
+  wire [13:13]sbiterr_col;
+  wire wr_clk;
+  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED ;
+  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED ;
+
+  (* box_type = "PRIMITIVE" *) 
+  FIFO36E1 #(
+    .ALMOST_EMPTY_OFFSET(13'h0006),
+    .ALMOST_FULL_OFFSET(13'h000F),
+    .DATA_WIDTH(4),
+    .DO_REG(1),
+    .EN_ECC_READ("FALSE"),
+    .EN_ECC_WRITE("FALSE"),
+    .EN_SYN("FALSE"),
+    .FIFO_MODE("FIFO36"),
+    .FIRST_WORD_FALL_THROUGH("TRUE"),
+    .INIT(72'h000000000000000000),
+    .IS_RDCLK_INVERTED(1'b0),
+    .IS_RDEN_INVERTED(1'b0),
+    .IS_RSTREG_INVERTED(1'b0),
+    .IS_RST_INVERTED(1'b0),
+    .IS_WRCLK_INVERTED(1'b0),
+    .IS_WREN_INVERTED(1'b0),
+    .SIM_DEVICE("7SERIES"),
+    .SRVAL(72'h000000000000000000)) 
+    \gf36e1_inst.sngfifo36e1 
+       (.ALMOSTEMPTY(pe),
+        .ALMOSTFULL(pf),
+        .DBITERR(dbiterr_col),
+        .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
+        .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
+        .DO({DO,dout}),
+        .DOP(\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED [7:0]),
+        .ECCPARITY(\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED [7:0]),
+        .EMPTY(EMPTY),
+        .FULL(FULL),
+        .INJECTDBITERR(1'b0),
+        .INJECTSBITERR(1'b0),
+        .RDCLK(rd_clk),
+        .RDCOUNT({\gf36e1_inst.sngfifo36e1_n_8 ,\gf36e1_inst.sngfifo36e1_n_9 ,\gf36e1_inst.sngfifo36e1_n_10 ,\gf36e1_inst.sngfifo36e1_n_11 ,\gf36e1_inst.sngfifo36e1_n_12 ,\gf36e1_inst.sngfifo36e1_n_13 ,\gf36e1_inst.sngfifo36e1_n_14 ,\gf36e1_inst.sngfifo36e1_n_15 ,\gf36e1_inst.sngfifo36e1_n_16 ,\gf36e1_inst.sngfifo36e1_n_17 ,\gf36e1_inst.sngfifo36e1_n_18 ,\gf36e1_inst.sngfifo36e1_n_19 ,\gf36e1_inst.sngfifo36e1_n_20 }),
+        .RDEN(RD_EN),
+        .RDERR(\gf36e1_inst.sngfifo36e1_n_5 ),
+        .REGCE(1'b0),
+        .RST(RST),
+        .RSTREG(1'b0),
+        .SBITERR(sbiterr_col),
+        .WRCLK(wr_clk),
+        .WRCOUNT({\gf36e1_inst.sngfifo36e1_n_21 ,\gf36e1_inst.sngfifo36e1_n_22 ,\gf36e1_inst.sngfifo36e1_n_23 ,\gf36e1_inst.sngfifo36e1_n_24 ,\gf36e1_inst.sngfifo36e1_n_25 ,\gf36e1_inst.sngfifo36e1_n_26 ,\gf36e1_inst.sngfifo36e1_n_27 ,\gf36e1_inst.sngfifo36e1_n_28 ,\gf36e1_inst.sngfifo36e1_n_29 ,\gf36e1_inst.sngfifo36e1_n_30 ,\gf36e1_inst.sngfifo36e1_n_31 ,\gf36e1_inst.sngfifo36e1_n_32 ,\gf36e1_inst.sngfifo36e1_n_33 }),
+        .WREN(WR_EN),
+        .WRERR(\gf36e1_inst.sngfifo36e1_n_7 ));
+endmodule
+
+(* ORIG_REF_NAME = "builtin_prim_v6" *) 
+module post_ddr_slow_fifo_builtin_prim_v6_27
+   (EMPTY,
+    FULL,
+    dout,
+    rd_clk,
+    RD_EN,
+    RST,
+    wr_clk,
+    WR_EN,
+    din);
+  output EMPTY;
+  output FULL;
+  output [3:0]dout;
+  input rd_clk;
+  input RD_EN;
+  input RST;
+  input wr_clk;
+  input WR_EN;
+  input [3:0]din;
+
+  wire [63:4]DO;
+  wire EMPTY;
+  wire FULL;
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
+  wire [12:12]dbiterr_col;
+  wire [3:0]din;
+  wire [3:0]dout;
+  wire \gf36e1_inst.sngfifo36e1_n_10 ;
+  wire \gf36e1_inst.sngfifo36e1_n_11 ;
+  wire \gf36e1_inst.sngfifo36e1_n_12 ;
+  wire \gf36e1_inst.sngfifo36e1_n_13 ;
+  wire \gf36e1_inst.sngfifo36e1_n_14 ;
+  wire \gf36e1_inst.sngfifo36e1_n_15 ;
+  wire \gf36e1_inst.sngfifo36e1_n_16 ;
+  wire \gf36e1_inst.sngfifo36e1_n_17 ;
+  wire \gf36e1_inst.sngfifo36e1_n_18 ;
+  wire \gf36e1_inst.sngfifo36e1_n_19 ;
+  wire \gf36e1_inst.sngfifo36e1_n_20 ;
+  wire \gf36e1_inst.sngfifo36e1_n_21 ;
+  wire \gf36e1_inst.sngfifo36e1_n_22 ;
+  wire \gf36e1_inst.sngfifo36e1_n_23 ;
+  wire \gf36e1_inst.sngfifo36e1_n_24 ;
+  wire \gf36e1_inst.sngfifo36e1_n_25 ;
+  wire \gf36e1_inst.sngfifo36e1_n_26 ;
+  wire \gf36e1_inst.sngfifo36e1_n_27 ;
+  wire \gf36e1_inst.sngfifo36e1_n_28 ;
+  wire \gf36e1_inst.sngfifo36e1_n_29 ;
+  wire \gf36e1_inst.sngfifo36e1_n_30 ;
+  wire \gf36e1_inst.sngfifo36e1_n_31 ;
+  wire \gf36e1_inst.sngfifo36e1_n_32 ;
+  wire \gf36e1_inst.sngfifo36e1_n_33 ;
+  wire \gf36e1_inst.sngfifo36e1_n_5 ;
+  wire \gf36e1_inst.sngfifo36e1_n_7 ;
+  wire \gf36e1_inst.sngfifo36e1_n_8 ;
+  wire \gf36e1_inst.sngfifo36e1_n_9 ;
+  wire [12:12]pe;
+  wire [12:12]pf;
+  wire rd_clk;
+  wire [12:12]sbiterr_col;
+  wire wr_clk;
+  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED ;
+  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED ;
+
+  (* box_type = "PRIMITIVE" *) 
+  FIFO36E1 #(
+    .ALMOST_EMPTY_OFFSET(13'h0006),
+    .ALMOST_FULL_OFFSET(13'h000F),
+    .DATA_WIDTH(4),
+    .DO_REG(1),
+    .EN_ECC_READ("FALSE"),
+    .EN_ECC_WRITE("FALSE"),
+    .EN_SYN("FALSE"),
+    .FIFO_MODE("FIFO36"),
+    .FIRST_WORD_FALL_THROUGH("TRUE"),
+    .INIT(72'h000000000000000000),
+    .IS_RDCLK_INVERTED(1'b0),
+    .IS_RDEN_INVERTED(1'b0),
+    .IS_RSTREG_INVERTED(1'b0),
+    .IS_RST_INVERTED(1'b0),
+    .IS_WRCLK_INVERTED(1'b0),
+    .IS_WREN_INVERTED(1'b0),
+    .SIM_DEVICE("7SERIES"),
+    .SRVAL(72'h000000000000000000)) 
+    \gf36e1_inst.sngfifo36e1 
+       (.ALMOSTEMPTY(pe),
+        .ALMOSTFULL(pf),
+        .DBITERR(dbiterr_col),
+        .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
+        .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
+        .DO({DO,dout}),
+        .DOP(\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED [7:0]),
+        .ECCPARITY(\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED [7:0]),
+        .EMPTY(EMPTY),
+        .FULL(FULL),
+        .INJECTDBITERR(1'b0),
+        .INJECTSBITERR(1'b0),
+        .RDCLK(rd_clk),
+        .RDCOUNT({\gf36e1_inst.sngfifo36e1_n_8 ,\gf36e1_inst.sngfifo36e1_n_9 ,\gf36e1_inst.sngfifo36e1_n_10 ,\gf36e1_inst.sngfifo36e1_n_11 ,\gf36e1_inst.sngfifo36e1_n_12 ,\gf36e1_inst.sngfifo36e1_n_13 ,\gf36e1_inst.sngfifo36e1_n_14 ,\gf36e1_inst.sngfifo36e1_n_15 ,\gf36e1_inst.sngfifo36e1_n_16 ,\gf36e1_inst.sngfifo36e1_n_17 ,\gf36e1_inst.sngfifo36e1_n_18 ,\gf36e1_inst.sngfifo36e1_n_19 ,\gf36e1_inst.sngfifo36e1_n_20 }),
+        .RDEN(RD_EN),
+        .RDERR(\gf36e1_inst.sngfifo36e1_n_5 ),
+        .REGCE(1'b0),
+        .RST(RST),
+        .RSTREG(1'b0),
+        .SBITERR(sbiterr_col),
+        .WRCLK(wr_clk),
+        .WRCOUNT({\gf36e1_inst.sngfifo36e1_n_21 ,\gf36e1_inst.sngfifo36e1_n_22 ,\gf36e1_inst.sngfifo36e1_n_23 ,\gf36e1_inst.sngfifo36e1_n_24 ,\gf36e1_inst.sngfifo36e1_n_25 ,\gf36e1_inst.sngfifo36e1_n_26 ,\gf36e1_inst.sngfifo36e1_n_27 ,\gf36e1_inst.sngfifo36e1_n_28 ,\gf36e1_inst.sngfifo36e1_n_29 ,\gf36e1_inst.sngfifo36e1_n_30 ,\gf36e1_inst.sngfifo36e1_n_31 ,\gf36e1_inst.sngfifo36e1_n_32 ,\gf36e1_inst.sngfifo36e1_n_33 }),
+        .WREN(WR_EN),
+        .WRERR(\gf36e1_inst.sngfifo36e1_n_7 ));
+endmodule
+
+(* ORIG_REF_NAME = "builtin_prim_v6" *) 
+module post_ddr_slow_fifo_builtin_prim_v6_28
+   (EMPTY,
+    FULL,
+    dout,
+    rd_clk,
+    RD_EN,
+    RST,
+    wr_clk,
+    WR_EN,
+    din);
+  output EMPTY;
+  output FULL;
+  output [3:0]dout;
+  input rd_clk;
+  input RD_EN;
+  input RST;
+  input wr_clk;
+  input WR_EN;
+  input [3:0]din;
+
+  wire [63:4]DO;
+  wire EMPTY;
+  wire FULL;
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
+  wire [11:11]dbiterr_col;
+  wire [3:0]din;
+  wire [3:0]dout;
+  wire \gf36e1_inst.sngfifo36e1_n_10 ;
+  wire \gf36e1_inst.sngfifo36e1_n_11 ;
+  wire \gf36e1_inst.sngfifo36e1_n_12 ;
+  wire \gf36e1_inst.sngfifo36e1_n_13 ;
+  wire \gf36e1_inst.sngfifo36e1_n_14 ;
+  wire \gf36e1_inst.sngfifo36e1_n_15 ;
+  wire \gf36e1_inst.sngfifo36e1_n_16 ;
+  wire \gf36e1_inst.sngfifo36e1_n_17 ;
+  wire \gf36e1_inst.sngfifo36e1_n_18 ;
+  wire \gf36e1_inst.sngfifo36e1_n_19 ;
+  wire \gf36e1_inst.sngfifo36e1_n_20 ;
+  wire \gf36e1_inst.sngfifo36e1_n_21 ;
+  wire \gf36e1_inst.sngfifo36e1_n_22 ;
+  wire \gf36e1_inst.sngfifo36e1_n_23 ;
+  wire \gf36e1_inst.sngfifo36e1_n_24 ;
+  wire \gf36e1_inst.sngfifo36e1_n_25 ;
+  wire \gf36e1_inst.sngfifo36e1_n_26 ;
+  wire \gf36e1_inst.sngfifo36e1_n_27 ;
+  wire \gf36e1_inst.sngfifo36e1_n_28 ;
+  wire \gf36e1_inst.sngfifo36e1_n_29 ;
+  wire \gf36e1_inst.sngfifo36e1_n_30 ;
+  wire \gf36e1_inst.sngfifo36e1_n_31 ;
+  wire \gf36e1_inst.sngfifo36e1_n_32 ;
+  wire \gf36e1_inst.sngfifo36e1_n_33 ;
+  wire \gf36e1_inst.sngfifo36e1_n_5 ;
+  wire \gf36e1_inst.sngfifo36e1_n_7 ;
+  wire \gf36e1_inst.sngfifo36e1_n_8 ;
+  wire \gf36e1_inst.sngfifo36e1_n_9 ;
+  wire [11:11]pe;
+  wire [11:11]pf;
+  wire rd_clk;
+  wire [11:11]sbiterr_col;
+  wire wr_clk;
+  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED ;
+  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED ;
+
+  (* box_type = "PRIMITIVE" *) 
+  FIFO36E1 #(
+    .ALMOST_EMPTY_OFFSET(13'h0006),
+    .ALMOST_FULL_OFFSET(13'h000F),
+    .DATA_WIDTH(4),
+    .DO_REG(1),
+    .EN_ECC_READ("FALSE"),
+    .EN_ECC_WRITE("FALSE"),
+    .EN_SYN("FALSE"),
+    .FIFO_MODE("FIFO36"),
+    .FIRST_WORD_FALL_THROUGH("TRUE"),
+    .INIT(72'h000000000000000000),
+    .IS_RDCLK_INVERTED(1'b0),
+    .IS_RDEN_INVERTED(1'b0),
+    .IS_RSTREG_INVERTED(1'b0),
+    .IS_RST_INVERTED(1'b0),
+    .IS_WRCLK_INVERTED(1'b0),
+    .IS_WREN_INVERTED(1'b0),
+    .SIM_DEVICE("7SERIES"),
+    .SRVAL(72'h000000000000000000)) 
+    \gf36e1_inst.sngfifo36e1 
+       (.ALMOSTEMPTY(pe),
+        .ALMOSTFULL(pf),
+        .DBITERR(dbiterr_col),
+        .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
+        .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
+        .DO({DO,dout}),
+        .DOP(\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED [7:0]),
+        .ECCPARITY(\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED [7:0]),
+        .EMPTY(EMPTY),
+        .FULL(FULL),
+        .INJECTDBITERR(1'b0),
+        .INJECTSBITERR(1'b0),
+        .RDCLK(rd_clk),
+        .RDCOUNT({\gf36e1_inst.sngfifo36e1_n_8 ,\gf36e1_inst.sngfifo36e1_n_9 ,\gf36e1_inst.sngfifo36e1_n_10 ,\gf36e1_inst.sngfifo36e1_n_11 ,\gf36e1_inst.sngfifo36e1_n_12 ,\gf36e1_inst.sngfifo36e1_n_13 ,\gf36e1_inst.sngfifo36e1_n_14 ,\gf36e1_inst.sngfifo36e1_n_15 ,\gf36e1_inst.sngfifo36e1_n_16 ,\gf36e1_inst.sngfifo36e1_n_17 ,\gf36e1_inst.sngfifo36e1_n_18 ,\gf36e1_inst.sngfifo36e1_n_19 ,\gf36e1_inst.sngfifo36e1_n_20 }),
+        .RDEN(RD_EN),
+        .RDERR(\gf36e1_inst.sngfifo36e1_n_5 ),
+        .REGCE(1'b0),
+        .RST(RST),
+        .RSTREG(1'b0),
+        .SBITERR(sbiterr_col),
+        .WRCLK(wr_clk),
+        .WRCOUNT({\gf36e1_inst.sngfifo36e1_n_21 ,\gf36e1_inst.sngfifo36e1_n_22 ,\gf36e1_inst.sngfifo36e1_n_23 ,\gf36e1_inst.sngfifo36e1_n_24 ,\gf36e1_inst.sngfifo36e1_n_25 ,\gf36e1_inst.sngfifo36e1_n_26 ,\gf36e1_inst.sngfifo36e1_n_27 ,\gf36e1_inst.sngfifo36e1_n_28 ,\gf36e1_inst.sngfifo36e1_n_29 ,\gf36e1_inst.sngfifo36e1_n_30 ,\gf36e1_inst.sngfifo36e1_n_31 ,\gf36e1_inst.sngfifo36e1_n_32 ,\gf36e1_inst.sngfifo36e1_n_33 }),
+        .WREN(WR_EN),
+        .WRERR(\gf36e1_inst.sngfifo36e1_n_7 ));
+endmodule
+
+(* ORIG_REF_NAME = "builtin_prim_v6" *) 
+module post_ddr_slow_fifo_builtin_prim_v6_29
+   (dout,
+    RD_EN,
+    WR_EN,
+    rd_clk_0,
+    overflow_i_ic,
+    rd_clk_1,
+    underflow_i_ic,
+    rd_clk,
+    RST,
+    wr_clk,
+    din,
+    rd_en,
+    \gunf.gunf2.UNDERFLOW_reg ,
+    \gunf.gunf2.UNDERFLOW_reg_0 ,
+    \gunf.gunf2.UNDERFLOW_reg_1 ,
+    \govw.govw2.OVERFLOW_reg ,
+    \govw.govw2.OVERFLOW_reg_0 ,
+    \govw.govw2.OVERFLOW_reg_1 ,
+    wr_en,
+    \govw.govw2.OVERFLOW_reg_2 ,
+    \gunf.gunf2.UNDERFLOW_reg_2 );
+  output [3:0]dout;
+  output RD_EN;
+  output WR_EN;
+  output rd_clk_0;
+  output overflow_i_ic;
+  output rd_clk_1;
+  output underflow_i_ic;
+  input rd_clk;
+  input RST;
+  input wr_clk;
+  input [3:0]din;
+  input rd_en;
+  input \gunf.gunf2.UNDERFLOW_reg ;
+  input \gunf.gunf2.UNDERFLOW_reg_0 ;
+  input \gunf.gunf2.UNDERFLOW_reg_1 ;
+  input \govw.govw2.OVERFLOW_reg ;
+  input \govw.govw2.OVERFLOW_reg_0 ;
+  input \govw.govw2.OVERFLOW_reg_1 ;
+  input wr_en;
+  input [2:0]\govw.govw2.OVERFLOW_reg_2 ;
+  input [2:0]\gunf.gunf2.UNDERFLOW_reg_2 ;
+
+  wire [63:4]DO;
+  wire RD_EN;
+  wire RST;
+  wire WR_EN;
+  wire [10:10]dbiterr_col;
+  wire [3:0]din;
+  wire [3:0]dout;
+  wire [10:10]emp;
+  wire [10:10]ful;
+  wire \gf36e1_inst.sngfifo36e1_n_10 ;
+  wire \gf36e1_inst.sngfifo36e1_n_11 ;
+  wire \gf36e1_inst.sngfifo36e1_n_12 ;
+  wire \gf36e1_inst.sngfifo36e1_n_13 ;
+  wire \gf36e1_inst.sngfifo36e1_n_14 ;
+  wire \gf36e1_inst.sngfifo36e1_n_15 ;
+  wire \gf36e1_inst.sngfifo36e1_n_16 ;
+  wire \gf36e1_inst.sngfifo36e1_n_17 ;
+  wire \gf36e1_inst.sngfifo36e1_n_18 ;
+  wire \gf36e1_inst.sngfifo36e1_n_19 ;
+  wire \gf36e1_inst.sngfifo36e1_n_20 ;
+  wire \gf36e1_inst.sngfifo36e1_n_21 ;
+  wire \gf36e1_inst.sngfifo36e1_n_22 ;
+  wire \gf36e1_inst.sngfifo36e1_n_23 ;
+  wire \gf36e1_inst.sngfifo36e1_n_24 ;
+  wire \gf36e1_inst.sngfifo36e1_n_25 ;
+  wire \gf36e1_inst.sngfifo36e1_n_26 ;
+  wire \gf36e1_inst.sngfifo36e1_n_27 ;
+  wire \gf36e1_inst.sngfifo36e1_n_28 ;
+  wire \gf36e1_inst.sngfifo36e1_n_29 ;
+  wire \gf36e1_inst.sngfifo36e1_n_30 ;
+  wire \gf36e1_inst.sngfifo36e1_n_31 ;
+  wire \gf36e1_inst.sngfifo36e1_n_32 ;
+  wire \gf36e1_inst.sngfifo36e1_n_33 ;
+  wire \gf36e1_inst.sngfifo36e1_n_5 ;
+  wire \gf36e1_inst.sngfifo36e1_n_7 ;
+  wire \gf36e1_inst.sngfifo36e1_n_8 ;
+  wire \gf36e1_inst.sngfifo36e1_n_9 ;
+  wire \govw.govw2.OVERFLOW_reg ;
+  wire \govw.govw2.OVERFLOW_reg_0 ;
+  wire \govw.govw2.OVERFLOW_reg_1 ;
+  wire [2:0]\govw.govw2.OVERFLOW_reg_2 ;
+  wire \gunf.gunf2.UNDERFLOW_reg ;
+  wire \gunf.gunf2.UNDERFLOW_reg_0 ;
+  wire \gunf.gunf2.UNDERFLOW_reg_1 ;
+  wire [2:0]\gunf.gunf2.UNDERFLOW_reg_2 ;
+  wire overflow_i_ic;
+  wire [10:10]pe;
+  wire [10:10]pf;
+  wire rd_clk;
+  wire rd_clk_0;
+  wire rd_clk_1;
+  wire rd_en;
+  wire [10:10]sbiterr_col;
+  wire underflow_i_ic;
+  wire wr_clk;
+  wire wr_en;
+  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED ;
+  wire [7:0]\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED ;
+
+  LUT4 #(
+    .INIT(16'hFFFE)) 
+    empty_INST_0_i_4
+       (.I0(emp),
+        .I1(\gunf.gunf2.UNDERFLOW_reg_2 [0]),
+        .I2(\gunf.gunf2.UNDERFLOW_reg_2 [2]),
+        .I3(\gunf.gunf2.UNDERFLOW_reg_2 [1]),
+        .O(rd_clk_0));
+  LUT4 #(
+    .INIT(16'hFFFE)) 
+    full_INST_0_i_4
+       (.I0(ful),
+        .I1(\govw.govw2.OVERFLOW_reg_2 [0]),
+        .I2(\govw.govw2.OVERFLOW_reg_2 [2]),
+        .I3(\govw.govw2.OVERFLOW_reg_2 [1]),
+        .O(rd_clk_1));
+  (* box_type = "PRIMITIVE" *) 
+  FIFO36E1 #(
+    .ALMOST_EMPTY_OFFSET(13'h0006),
+    .ALMOST_FULL_OFFSET(13'h000F),
+    .DATA_WIDTH(4),
+    .DO_REG(1),
+    .EN_ECC_READ("FALSE"),
+    .EN_ECC_WRITE("FALSE"),
+    .EN_SYN("FALSE"),
+    .FIFO_MODE("FIFO36"),
+    .FIRST_WORD_FALL_THROUGH("TRUE"),
+    .INIT(72'h000000000000000000),
+    .IS_RDCLK_INVERTED(1'b0),
+    .IS_RDEN_INVERTED(1'b0),
+    .IS_RSTREG_INVERTED(1'b0),
+    .IS_RST_INVERTED(1'b0),
+    .IS_WRCLK_INVERTED(1'b0),
+    .IS_WREN_INVERTED(1'b0),
+    .SIM_DEVICE("7SERIES"),
+    .SRVAL(72'h000000000000000000)) 
+    \gf36e1_inst.sngfifo36e1 
+       (.ALMOSTEMPTY(pe),
+        .ALMOSTFULL(pf),
+        .DBITERR(dbiterr_col),
+        .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
+        .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
+        .DO({DO,dout}),
+        .DOP(\NLW_gf36e1_inst.sngfifo36e1_DOP_UNCONNECTED [7:0]),
+        .ECCPARITY(\NLW_gf36e1_inst.sngfifo36e1_ECCPARITY_UNCONNECTED [7:0]),
+        .EMPTY(emp),
+        .FULL(ful),
+        .INJECTDBITERR(1'b0),
+        .INJECTSBITERR(1'b0),
+        .RDCLK(rd_clk),
+        .RDCOUNT({\gf36e1_inst.sngfifo36e1_n_8 ,\gf36e1_inst.sngfifo36e1_n_9 ,\gf36e1_inst.sngfifo36e1_n_10 ,\gf36e1_inst.sngfifo36e1_n_11 ,\gf36e1_inst.sngfifo36e1_n_12 ,\gf36e1_inst.sngfifo36e1_n_13 ,\gf36e1_inst.sngfifo36e1_n_14 ,\gf36e1_inst.sngfifo36e1_n_15 ,\gf36e1_inst.sngfifo36e1_n_16 ,\gf36e1_inst.sngfifo36e1_n_17 ,\gf36e1_inst.sngfifo36e1_n_18 ,\gf36e1_inst.sngfifo36e1_n_19 ,\gf36e1_inst.sngfifo36e1_n_20 }),
+        .RDEN(RD_EN),
+        .RDERR(\gf36e1_inst.sngfifo36e1_n_5 ),
+        .REGCE(1'b0),
+        .RST(RST),
+        .RSTREG(1'b0),
+        .SBITERR(sbiterr_col),
+        .WRCLK(wr_clk),
+        .WRCOUNT({\gf36e1_inst.sngfifo36e1_n_21 ,\gf36e1_inst.sngfifo36e1_n_22 ,\gf36e1_inst.sngfifo36e1_n_23 ,\gf36e1_inst.sngfifo36e1_n_24 ,\gf36e1_inst.sngfifo36e1_n_25 ,\gf36e1_inst.sngfifo36e1_n_26 ,\gf36e1_inst.sngfifo36e1_n_27 ,\gf36e1_inst.sngfifo36e1_n_28 ,\gf36e1_inst.sngfifo36e1_n_29 ,\gf36e1_inst.sngfifo36e1_n_30 ,\gf36e1_inst.sngfifo36e1_n_31 ,\gf36e1_inst.sngfifo36e1_n_32 ,\gf36e1_inst.sngfifo36e1_n_33 }),
+        .WREN(WR_EN),
+        .WRERR(\gf36e1_inst.sngfifo36e1_n_7 ));
+  (* SOFT_HLUTNM = "soft_lutpair1" *) 
+  LUT5 #(
+    .INIT(32'h00000002)) 
+    \gf36e1_inst.sngfifo36e1_i_1 
+       (.I0(rd_en),
+        .I1(rd_clk_0),
+        .I2(\gunf.gunf2.UNDERFLOW_reg ),
+        .I3(\gunf.gunf2.UNDERFLOW_reg_0 ),
+        .I4(\gunf.gunf2.UNDERFLOW_reg_1 ),
+        .O(RD_EN));
+  (* SOFT_HLUTNM = "soft_lutpair0" *) 
+  LUT5 #(
+    .INIT(32'h00000002)) 
+    \gf36e1_inst.sngfifo36e1_i_3 
+       (.I0(wr_en),
+        .I1(rd_clk_1),
+        .I2(\govw.govw2.OVERFLOW_reg ),
+        .I3(\govw.govw2.OVERFLOW_reg_0 ),
+        .I4(\govw.govw2.OVERFLOW_reg_1 ),
+        .O(WR_EN));
+  (* SOFT_HLUTNM = "soft_lutpair0" *) 
+  LUT5 #(
+    .INIT(32'hFFFE0000)) 
+    \govw.govw2.OVERFLOW_i_1 
+       (.I0(rd_clk_1),
+        .I1(\govw.govw2.OVERFLOW_reg ),
+        .I2(\govw.govw2.OVERFLOW_reg_0 ),
+        .I3(\govw.govw2.OVERFLOW_reg_1 ),
+        .I4(wr_en),
+        .O(overflow_i_ic));
+  (* SOFT_HLUTNM = "soft_lutpair1" *) 
+  LUT5 #(
+    .INIT(32'hFFFE0000)) 
+    \gunf.gunf2.UNDERFLOW_i_1 
+       (.I0(rd_clk_0),
+        .I1(\gunf.gunf2.UNDERFLOW_reg ),
+        .I2(\gunf.gunf2.UNDERFLOW_reg_0 ),
+        .I3(\gunf.gunf2.UNDERFLOW_reg_1 ),
+        .I4(rd_en),
+        .O(underflow_i_ic));
 endmodule
 
 (* ORIG_REF_NAME = "builtin_top_v6" *) 
 module post_ddr_slow_fifo_builtin_top_v6
-   (dout,
-    overflow,
+   (overflow,
     underflow,
+    dout,
     full,
     empty,
     wr_clk,
-    rd_rst_i,
-    din,
     rd_clk,
     rd_en,
+    RST,
+    din,
     wr_en);
-  output [31:0]dout;
   output overflow;
   output underflow;
+  output [63:0]dout;
   output full;
   output empty;
   input wr_clk;
-  input rd_rst_i;
-  input [31:0]din;
   input rd_clk;
   input rd_en;
+  input RST;
+  input [63:0]din;
   input wr_en;
 
-  wire [31:0]din;
-  wire [31:0]dout;
-  wire [8:1]emp;
+  wire RST;
+  wire [63:0]din;
+  wire [63:0]dout;
+  wire [16:1]emp;
   wire empty;
-  wire [8:1]ful;
+  wire [16:1]ful;
   wire full;
-  wire \gextw[6].gnll_fifo.inst_extd_n_5 ;
-  wire \gextw[6].gnll_fifo.inst_extd_n_6 ;
-  wire \gextw[6].gnll_fifo.inst_extd_n_8 ;
+  wire \gextw[10].gnll_fifo.inst_extd_n_0 ;
+  wire \gextw[10].gnll_fifo.inst_extd_n_1 ;
+  wire \gextw[10].gnll_fifo.inst_extd_n_3 ;
+  wire \gextw[14].gnll_fifo.inst_extd_n_0 ;
+  wire \gextw[14].gnll_fifo.inst_extd_n_1 ;
+  wire \gextw[2].gnll_fifo.inst_extd_n_0 ;
+  wire \gextw[2].gnll_fifo.inst_extd_n_1 ;
+  wire \gextw[6].gnll_fifo.inst_extd_n_1 ;
+  wire \gextw[6].gnll_fifo.inst_extd_n_3 ;
   wire overflow;
-  wire overflow_int;
+  wire overflow_i_ic;
   wire rd_clk;
   wire rd_en;
-  wire rd_rst_i;
   wire underflow;
-  wire underflow_int;
+  wire underflow_i_ic;
   wire wr_clk;
   wire wr_en;
   wire wr_tmp;
 
-  post_ddr_slow_fifo_builtin_extdepth_v6 \gextw[1].gnll_fifo.inst_extd 
-       (.din(din[3:0]),
-        .dout(dout[3:0]),
-        .dout_3_sp_1(\gextw[6].gnll_fifo.inst_extd_n_5 ),
-        .emp(emp[1]),
-        .ful(ful[1]),
+  post_ddr_slow_fifo_builtin_extdepth_v6 \gextw[10].gnll_fifo.inst_extd 
+       (.RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
+        .RST(RST),
+        .WR_EN(wr_tmp),
+        .din(din[39:36]),
+        .dout(dout[39:36]),
+        .\govw.govw2.OVERFLOW_reg (\gextw[14].gnll_fifo.inst_extd_n_0 ),
+        .\govw.govw2.OVERFLOW_reg_0 (\gextw[2].gnll_fifo.inst_extd_n_0 ),
+        .\govw.govw2.OVERFLOW_reg_1 (\gextw[6].gnll_fifo.inst_extd_n_1 ),
+        .\govw.govw2.OVERFLOW_reg_2 ({ful[12:11],ful[9]}),
+        .\gunf.gunf2.UNDERFLOW_reg (\gextw[14].gnll_fifo.inst_extd_n_1 ),
+        .\gunf.gunf2.UNDERFLOW_reg_0 (\gextw[2].gnll_fifo.inst_extd_n_1 ),
+        .\gunf.gunf2.UNDERFLOW_reg_1 (\gextw[6].gnll_fifo.inst_extd_n_3 ),
+        .\gunf.gunf2.UNDERFLOW_reg_2 ({emp[12:11],emp[9]}),
+        .overflow_i_ic(overflow_i_ic),
         .rd_clk(rd_clk),
-        .rd_rst_i(rd_rst_i),
-        .wr_clk(wr_clk),
-        .wr_tmp(wr_tmp));
-  post_ddr_slow_fifo_builtin_extdepth_v6_0 \gextw[2].gnll_fifo.inst_extd 
-       (.din(din[7:4]),
-        .dout(dout[7:4]),
-        .\dout[7] (\gextw[6].gnll_fifo.inst_extd_n_5 ),
-        .emp(emp[2]),
-        .ful(ful[2]),
-        .rd_clk(rd_clk),
-        .rd_rst_i(rd_rst_i),
-        .wr_clk(wr_clk),
-        .wr_tmp(wr_tmp));
-  post_ddr_slow_fifo_builtin_extdepth_v6_1 \gextw[3].gnll_fifo.inst_extd 
-       (.din(din[11:8]),
-        .dout(dout[11:8]),
-        .\dout[11] (\gextw[6].gnll_fifo.inst_extd_n_5 ),
-        .emp(emp[3]),
-        .empty(empty),
-        .empty_0({emp[4],emp[2:1]}),
-        .empty_1(\gextw[6].gnll_fifo.inst_extd_n_6 ),
-        .ful(ful[3]),
-        .full(full),
-        .full_0({ful[4],ful[2:1]}),
-        .full_1(\gextw[6].gnll_fifo.inst_extd_n_8 ),
-        .rd_clk(rd_clk),
-        .rd_rst_i(rd_rst_i),
-        .wr_clk(wr_clk),
-        .wr_tmp(wr_tmp));
-  post_ddr_slow_fifo_builtin_extdepth_v6_2 \gextw[4].gnll_fifo.inst_extd 
-       (.din(din[15:12]),
-        .dout(dout[15:12]),
-        .\dout[15] (\gextw[6].gnll_fifo.inst_extd_n_5 ),
-        .rd_clk(rd_clk),
-        .rd_clk_0(emp[4]),
-        .rd_rst_i(rd_rst_i),
-        .wr_clk(wr_clk),
-        .wr_clk_0(ful[4]),
-        .wr_tmp(wr_tmp));
-  post_ddr_slow_fifo_builtin_extdepth_v6_3 \gextw[5].gnll_fifo.inst_extd 
-       (.din(din[19:16]),
-        .dout(dout[19:16]),
-        .\dout[19] (\gextw[6].gnll_fifo.inst_extd_n_5 ),
-        .emp(emp[5]),
-        .ful(ful[5]),
-        .rd_clk(rd_clk),
-        .rd_rst_i(rd_rst_i),
-        .wr_clk(wr_clk),
-        .wr_tmp(wr_tmp));
-  post_ddr_slow_fifo_builtin_extdepth_v6_4 \gextw[6].gnll_fifo.inst_extd 
-       (.din(din[23:20]),
-        .dout(dout[23:20]),
-        .\govw.govw2.OVERFLOW_reg ({ful[8:7],ful[5:1]}),
-        .\gunf.gunf2.UNDERFLOW_reg ({emp[8:7],emp[5:1]}),
-        .overflow_int(overflow_int),
-        .rd_clk(rd_clk),
-        .rd_clk_0(\gextw[6].gnll_fifo.inst_extd_n_6 ),
+        .rd_clk_0(\gextw[10].gnll_fifo.inst_extd_n_1 ),
+        .rd_clk_1(\gextw[10].gnll_fifo.inst_extd_n_3 ),
         .rd_en(rd_en),
-        .rd_en_0(\gextw[6].gnll_fifo.inst_extd_n_5 ),
-        .rd_rst_i(rd_rst_i),
-        .underflow_int(underflow_int),
+        .underflow_i_ic(underflow_i_ic),
         .wr_clk(wr_clk),
-        .wr_clk_0(\gextw[6].gnll_fifo.inst_extd_n_8 ),
-        .wr_en(wr_en),
-        .wr_tmp(wr_tmp));
-  post_ddr_slow_fifo_builtin_extdepth_v6_5 \gextw[7].gnll_fifo.inst_extd 
-       (.din(din[27:24]),
+        .wr_en(wr_en));
+  post_ddr_slow_fifo_builtin_extdepth_v6_0 \gextw[11].gnll_fifo.inst_extd 
+       (.EMPTY(emp[11]),
+        .FULL(ful[11]),
+        .RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
+        .RST(RST),
+        .WR_EN(wr_tmp),
+        .din(din[43:40]),
+        .dout(dout[43:40]),
+        .rd_clk(rd_clk),
+        .wr_clk(wr_clk));
+  post_ddr_slow_fifo_builtin_extdepth_v6_1 \gextw[12].gnll_fifo.inst_extd 
+       (.EMPTY(emp[12]),
+        .FULL(ful[12]),
+        .RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
+        .RST(RST),
+        .WR_EN(wr_tmp),
+        .din(din[47:44]),
+        .dout(dout[47:44]),
+        .rd_clk(rd_clk),
+        .wr_clk(wr_clk));
+  post_ddr_slow_fifo_builtin_extdepth_v6_2 \gextw[13].gnll_fifo.inst_extd 
+       (.EMPTY(emp[13]),
+        .FULL(ful[13]),
+        .RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
+        .RST(RST),
+        .WR_EN(wr_tmp),
+        .din(din[51:48]),
+        .dout(dout[51:48]),
+        .rd_clk(rd_clk),
+        .wr_clk(wr_clk));
+  post_ddr_slow_fifo_builtin_extdepth_v6_3 \gextw[14].gnll_fifo.inst_extd 
+       (.RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
+        .RST(RST),
+        .WR_EN(wr_tmp),
+        .din(din[55:52]),
+        .dout(dout[55:52]),
+        .empty({emp[16:15],emp[13]}),
+        .full({ful[16:15],ful[13]}),
+        .rd_clk(rd_clk),
+        .rd_clk_0(\gextw[14].gnll_fifo.inst_extd_n_0 ),
+        .rd_clk_1(\gextw[14].gnll_fifo.inst_extd_n_1 ),
+        .wr_clk(wr_clk));
+  post_ddr_slow_fifo_builtin_extdepth_v6_4 \gextw[15].gnll_fifo.inst_extd 
+       (.EMPTY(emp[15]),
+        .FULL(ful[15]),
+        .RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
+        .RST(RST),
+        .WR_EN(wr_tmp),
+        .din(din[59:56]),
+        .dout(dout[59:56]),
+        .rd_clk(rd_clk),
+        .wr_clk(wr_clk));
+  post_ddr_slow_fifo_builtin_extdepth_v6_5 \gextw[16].gnll_fifo.inst_extd 
+       (.EMPTY(emp[16]),
+        .FULL(ful[16]),
+        .RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
+        .RST(RST),
+        .WR_EN(wr_tmp),
+        .din(din[63:60]),
+        .dout(dout[63:60]),
+        .rd_clk(rd_clk),
+        .wr_clk(wr_clk));
+  post_ddr_slow_fifo_builtin_extdepth_v6_6 \gextw[1].gnll_fifo.inst_extd 
+       (.EMPTY(emp[1]),
+        .FULL(ful[1]),
+        .RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
+        .RST(RST),
+        .WR_EN(wr_tmp),
+        .din(din[3:0]),
+        .dout(dout[3:0]),
+        .rd_clk(rd_clk),
+        .wr_clk(wr_clk));
+  post_ddr_slow_fifo_builtin_extdepth_v6_7 \gextw[2].gnll_fifo.inst_extd 
+       (.RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
+        .RST(RST),
+        .WR_EN(wr_tmp),
+        .din(din[7:4]),
+        .dout(dout[7:4]),
+        .empty({emp[4:3],emp[1]}),
+        .full({ful[4:3],ful[1]}),
+        .rd_clk(rd_clk),
+        .rd_clk_0(\gextw[2].gnll_fifo.inst_extd_n_0 ),
+        .rd_clk_1(\gextw[2].gnll_fifo.inst_extd_n_1 ),
+        .wr_clk(wr_clk));
+  post_ddr_slow_fifo_builtin_extdepth_v6_8 \gextw[3].gnll_fifo.inst_extd 
+       (.EMPTY(emp[3]),
+        .FULL(ful[3]),
+        .RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
+        .RST(RST),
+        .WR_EN(wr_tmp),
+        .din(din[11:8]),
+        .dout(dout[11:8]),
+        .rd_clk(rd_clk),
+        .wr_clk(wr_clk));
+  post_ddr_slow_fifo_builtin_extdepth_v6_9 \gextw[4].gnll_fifo.inst_extd 
+       (.EMPTY(emp[4]),
+        .FULL(ful[4]),
+        .RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
+        .RST(RST),
+        .WR_EN(wr_tmp),
+        .din(din[15:12]),
+        .dout(dout[15:12]),
+        .rd_clk(rd_clk),
+        .wr_clk(wr_clk));
+  post_ddr_slow_fifo_builtin_extdepth_v6_10 \gextw[5].gnll_fifo.inst_extd 
+       (.EMPTY(emp[5]),
+        .FULL(ful[5]),
+        .RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
+        .RST(RST),
+        .WR_EN(wr_tmp),
+        .din(din[19:16]),
+        .dout(dout[19:16]),
+        .rd_clk(rd_clk),
+        .wr_clk(wr_clk));
+  post_ddr_slow_fifo_builtin_extdepth_v6_11 \gextw[6].gnll_fifo.inst_extd 
+       (.RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
+        .RST(RST),
+        .WR_EN(wr_tmp),
+        .din(din[23:20]),
+        .dout(dout[23:20]),
+        .empty(empty),
+        .empty_0(\gextw[2].gnll_fifo.inst_extd_n_1 ),
+        .empty_1(\gextw[14].gnll_fifo.inst_extd_n_1 ),
+        .empty_2(\gextw[10].gnll_fifo.inst_extd_n_1 ),
+        .empty_3({emp[8:7],emp[5]}),
+        .full(full),
+        .full_0(\gextw[2].gnll_fifo.inst_extd_n_0 ),
+        .full_1(\gextw[14].gnll_fifo.inst_extd_n_0 ),
+        .full_2(\gextw[10].gnll_fifo.inst_extd_n_3 ),
+        .full_3({ful[8:7],ful[5]}),
+        .rd_clk(rd_clk),
+        .rd_clk_0(\gextw[6].gnll_fifo.inst_extd_n_1 ),
+        .rd_clk_1(\gextw[6].gnll_fifo.inst_extd_n_3 ),
+        .wr_clk(wr_clk));
+  post_ddr_slow_fifo_builtin_extdepth_v6_12 \gextw[7].gnll_fifo.inst_extd 
+       (.EMPTY(emp[7]),
+        .FULL(ful[7]),
+        .RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
+        .RST(RST),
+        .WR_EN(wr_tmp),
+        .din(din[27:24]),
         .dout(dout[27:24]),
-        .\dout[27] (\gextw[6].gnll_fifo.inst_extd_n_5 ),
         .rd_clk(rd_clk),
-        .rd_clk_0(emp[7]),
-        .rd_rst_i(rd_rst_i),
-        .wr_clk(wr_clk),
-        .wr_clk_0(ful[7]),
-        .wr_tmp(wr_tmp));
-  post_ddr_slow_fifo_builtin_extdepth_v6_6 \gextw[8].gnll_fifo.inst_extd 
-       (.din(din[31:28]),
+        .wr_clk(wr_clk));
+  post_ddr_slow_fifo_builtin_extdepth_v6_13 \gextw[8].gnll_fifo.inst_extd 
+       (.EMPTY(emp[8]),
+        .FULL(ful[8]),
+        .RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
+        .RST(RST),
+        .WR_EN(wr_tmp),
+        .din(din[31:28]),
         .dout(dout[31:28]),
-        .\dout[31] (\gextw[6].gnll_fifo.inst_extd_n_5 ),
         .rd_clk(rd_clk),
-        .rd_clk_0(emp[8]),
-        .rd_rst_i(rd_rst_i),
-        .wr_clk(wr_clk),
-        .wr_clk_0(ful[8]),
-        .wr_tmp(wr_tmp));
+        .wr_clk(wr_clk));
+  post_ddr_slow_fifo_builtin_extdepth_v6_14 \gextw[9].gnll_fifo.inst_extd 
+       (.EMPTY(emp[9]),
+        .FULL(ful[9]),
+        .RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
+        .RST(RST),
+        .WR_EN(wr_tmp),
+        .din(din[35:32]),
+        .dout(dout[35:32]),
+        .rd_clk(rd_clk),
+        .wr_clk(wr_clk));
   FDRE #(
     .INIT(1'b0)) 
     \govw.govw2.OVERFLOW_reg 
        (.C(wr_clk),
         .CE(1'b1),
-        .D(overflow_int),
+        .D(overflow_i_ic),
         .Q(overflow),
         .R(1'b0));
   FDRE #(
@@ -3391,7 +4047,7 @@ module post_ddr_slow_fifo_builtin_top_v6
     \gunf.gunf2.UNDERFLOW_reg 
        (.C(rd_clk),
         .CE(1'b1),
-        .D(underflow_int),
+        .D(underflow_i_ic),
         .Q(underflow),
         .R(1'b0));
 endmodule
@@ -3409,7 +4065,7 @@ module post_ddr_slow_fifo_fifo_generator_top
     din,
     rst,
     wr_en);
-  output [31:0]dout;
+  output [63:0]dout;
   output overflow;
   output underflow;
   output full;
@@ -3417,12 +4073,12 @@ module post_ddr_slow_fifo_fifo_generator_top
   input rd_clk;
   input rd_en;
   input wr_clk;
-  input [31:0]din;
+  input [63:0]din;
   input rst;
   input wr_en;
 
-  wire [31:0]din;
-  wire [31:0]dout;
+  wire [63:0]din;
+  wire [63:0]dout;
   wire empty;
   wire full;
   wire overflow;
@@ -3456,10 +4112,10 @@ endmodule
 (* C_AXI_DATA_WIDTH = "64" *) (* C_AXI_ID_WIDTH = "1" *) (* C_AXI_LEN_WIDTH = "8" *) 
 (* C_AXI_LOCK_WIDTH = "1" *) (* C_AXI_RUSER_WIDTH = "1" *) (* C_AXI_TYPE = "1" *) 
 (* C_AXI_WUSER_WIDTH = "1" *) (* C_COMMON_CLOCK = "0" *) (* C_COUNT_TYPE = "0" *) 
-(* C_DATA_COUNT_WIDTH = "14" *) (* C_DEFAULT_VALUE = "BlankString" *) (* C_DIN_WIDTH = "32" *) 
+(* C_DATA_COUNT_WIDTH = "13" *) (* C_DEFAULT_VALUE = "BlankString" *) (* C_DIN_WIDTH = "64" *) 
 (* C_DIN_WIDTH_AXIS = "1" *) (* C_DIN_WIDTH_RACH = "32" *) (* C_DIN_WIDTH_RDCH = "64" *) 
 (* C_DIN_WIDTH_WACH = "1" *) (* C_DIN_WIDTH_WDCH = "64" *) (* C_DIN_WIDTH_WRCH = "2" *) 
-(* C_DOUT_RST_VAL = "0" *) (* C_DOUT_WIDTH = "32" *) (* C_ENABLE_RLOCS = "0" *) 
+(* C_DOUT_RST_VAL = "0" *) (* C_DOUT_WIDTH = "64" *) (* C_ENABLE_RLOCS = "0" *) 
 (* C_ENABLE_RST_SYNC = "1" *) (* C_EN_SAFETY_CKT = "0" *) (* C_ERROR_INJECTION_TYPE = "0" *) 
 (* C_ERROR_INJECTION_TYPE_AXIS = "0" *) (* C_ERROR_INJECTION_TYPE_RACH = "0" *) (* C_ERROR_INJECTION_TYPE_RDCH = "0" *) 
 (* C_ERROR_INJECTION_TYPE_WACH = "0" *) (* C_ERROR_INJECTION_TYPE_WDCH = "0" *) (* C_ERROR_INJECTION_TYPE_WRCH = "0" *) 
@@ -3492,13 +4148,13 @@ endmodule
 (* C_PROG_EMPTY_THRESH_ASSERT_VAL_WRCH = "1022" *) (* C_PROG_EMPTY_THRESH_NEGATE_VAL = "7" *) (* C_PROG_EMPTY_TYPE = "0" *) 
 (* C_PROG_EMPTY_TYPE_AXIS = "0" *) (* C_PROG_EMPTY_TYPE_RACH = "0" *) (* C_PROG_EMPTY_TYPE_RDCH = "0" *) 
 (* C_PROG_EMPTY_TYPE_WACH = "0" *) (* C_PROG_EMPTY_TYPE_WDCH = "0" *) (* C_PROG_EMPTY_TYPE_WRCH = "0" *) 
-(* C_PROG_FULL_THRESH_ASSERT_VAL = "16371" *) (* C_PROG_FULL_THRESH_ASSERT_VAL_AXIS = "1023" *) (* C_PROG_FULL_THRESH_ASSERT_VAL_RACH = "1023" *) 
+(* C_PROG_FULL_THRESH_ASSERT_VAL = "8178" *) (* C_PROG_FULL_THRESH_ASSERT_VAL_AXIS = "1023" *) (* C_PROG_FULL_THRESH_ASSERT_VAL_RACH = "1023" *) 
 (* C_PROG_FULL_THRESH_ASSERT_VAL_RDCH = "1023" *) (* C_PROG_FULL_THRESH_ASSERT_VAL_WACH = "1023" *) (* C_PROG_FULL_THRESH_ASSERT_VAL_WDCH = "1023" *) 
-(* C_PROG_FULL_THRESH_ASSERT_VAL_WRCH = "1023" *) (* C_PROG_FULL_THRESH_NEGATE_VAL = "16370" *) (* C_PROG_FULL_TYPE = "0" *) 
+(* C_PROG_FULL_THRESH_ASSERT_VAL_WRCH = "1023" *) (* C_PROG_FULL_THRESH_NEGATE_VAL = "8177" *) (* C_PROG_FULL_TYPE = "0" *) 
 (* C_PROG_FULL_TYPE_AXIS = "0" *) (* C_PROG_FULL_TYPE_RACH = "0" *) (* C_PROG_FULL_TYPE_RDCH = "0" *) 
 (* C_PROG_FULL_TYPE_WACH = "0" *) (* C_PROG_FULL_TYPE_WDCH = "0" *) (* C_PROG_FULL_TYPE_WRCH = "0" *) 
-(* C_RACH_TYPE = "0" *) (* C_RDCH_TYPE = "0" *) (* C_RD_DATA_COUNT_WIDTH = "14" *) 
-(* C_RD_DEPTH = "16384" *) (* C_RD_FREQ = "96" *) (* C_RD_PNTR_WIDTH = "14" *) 
+(* C_RACH_TYPE = "0" *) (* C_RDCH_TYPE = "0" *) (* C_RD_DATA_COUNT_WIDTH = "13" *) 
+(* C_RD_DEPTH = "8192" *) (* C_RD_FREQ = "96" *) (* C_RD_PNTR_WIDTH = "13" *) 
 (* C_REG_SLICE_MODE_AXIS = "0" *) (* C_REG_SLICE_MODE_RACH = "0" *) (* C_REG_SLICE_MODE_RDCH = "0" *) 
 (* C_REG_SLICE_MODE_WACH = "0" *) (* C_REG_SLICE_MODE_WDCH = "0" *) (* C_REG_SLICE_MODE_WRCH = "0" *) 
 (* C_SELECT_XPM = "0" *) (* C_SYNCHRONIZER_STAGE = "2" *) (* C_UNDERFLOW_LOW = "0" *) 
@@ -3508,10 +4164,10 @@ endmodule
 (* C_USE_ECC_WDCH = "0" *) (* C_USE_ECC_WRCH = "0" *) (* C_USE_EMBEDDED_REG = "0" *) 
 (* C_USE_FIFO16_FLAGS = "0" *) (* C_USE_FWFT_DATA_COUNT = "0" *) (* C_USE_PIPELINE_REG = "0" *) 
 (* C_VALID_LOW = "0" *) (* C_WACH_TYPE = "0" *) (* C_WDCH_TYPE = "0" *) 
-(* C_WRCH_TYPE = "0" *) (* C_WR_ACK_LOW = "0" *) (* C_WR_DATA_COUNT_WIDTH = "14" *) 
-(* C_WR_DEPTH = "16384" *) (* C_WR_DEPTH_AXIS = "1024" *) (* C_WR_DEPTH_RACH = "16" *) 
+(* C_WRCH_TYPE = "0" *) (* C_WR_ACK_LOW = "0" *) (* C_WR_DATA_COUNT_WIDTH = "13" *) 
+(* C_WR_DEPTH = "8192" *) (* C_WR_DEPTH_AXIS = "1024" *) (* C_WR_DEPTH_RACH = "16" *) 
 (* C_WR_DEPTH_RDCH = "1024" *) (* C_WR_DEPTH_WACH = "16" *) (* C_WR_DEPTH_WDCH = "1024" *) 
-(* C_WR_DEPTH_WRCH = "16" *) (* C_WR_FREQ = "200" *) (* C_WR_PNTR_WIDTH = "14" *) 
+(* C_WR_DEPTH_WRCH = "16" *) (* C_WR_FREQ = "200" *) (* C_WR_PNTR_WIDTH = "13" *) 
 (* C_WR_PNTR_WIDTH_AXIS = "10" *) (* C_WR_PNTR_WIDTH_RACH = "4" *) (* C_WR_PNTR_WIDTH_RDCH = "10" *) 
 (* C_WR_PNTR_WIDTH_WACH = "4" *) (* C_WR_PNTR_WIDTH_WDCH = "10" *) (* C_WR_PNTR_WIDTH_WRCH = "4" *) 
 (* C_WR_RESPONSE_LATENCY = "1" *) (* ORIG_REF_NAME = "fifo_generator_v13_2_5" *) 
@@ -3756,20 +4412,20 @@ module post_ddr_slow_fifo_fifo_generator_v13_2_5
   input wr_rst;
   input rd_clk;
   input rd_rst;
-  input [31:0]din;
+  input [63:0]din;
   input wr_en;
   input rd_en;
-  input [13:0]prog_empty_thresh;
-  input [13:0]prog_empty_thresh_assert;
-  input [13:0]prog_empty_thresh_negate;
-  input [13:0]prog_full_thresh;
-  input [13:0]prog_full_thresh_assert;
-  input [13:0]prog_full_thresh_negate;
+  input [12:0]prog_empty_thresh;
+  input [12:0]prog_empty_thresh_assert;
+  input [12:0]prog_empty_thresh_negate;
+  input [12:0]prog_full_thresh;
+  input [12:0]prog_full_thresh_assert;
+  input [12:0]prog_full_thresh_negate;
   input int_clk;
   input injectdbiterr;
   input injectsbiterr;
   input sleep;
-  output [31:0]dout;
+  output [63:0]dout;
   output full;
   output almost_full;
   output wr_ack;
@@ -3778,9 +4434,9 @@ module post_ddr_slow_fifo_fifo_generator_v13_2_5
   output almost_empty;
   output valid;
   output underflow;
-  output [13:0]data_count;
-  output [13:0]rd_data_count;
-  output [13:0]wr_data_count;
+  output [12:0]data_count;
+  output [12:0]rd_data_count;
+  output [12:0]wr_data_count;
   output prog_full;
   output prog_empty;
   output sbiterr;
@@ -3981,8 +4637,8 @@ module post_ddr_slow_fifo_fifo_generator_v13_2_5
 
   wire \<const0> ;
   wire \<const1> ;
-  wire [31:0]din;
-  wire [31:0]dout;
+  wire [63:0]din;
+  wire [63:0]dout;
   wire empty;
   wire full;
   wire overflow;
@@ -4175,7 +4831,6 @@ module post_ddr_slow_fifo_fifo_generator_v13_2_5
   assign axis_wr_data_count[2] = \<const0> ;
   assign axis_wr_data_count[1] = \<const0> ;
   assign axis_wr_data_count[0] = \<const0> ;
-  assign data_count[13] = \<const0> ;
   assign data_count[12] = \<const0> ;
   assign data_count[11] = \<const0> ;
   assign data_count[10] = \<const0> ;
@@ -4416,7 +5071,6 @@ module post_ddr_slow_fifo_fifo_generator_v13_2_5
   assign m_axis_tvalid = \<const0> ;
   assign prog_empty = \<const0> ;
   assign prog_full = \<const0> ;
-  assign rd_data_count[13] = \<const0> ;
   assign rd_data_count[12] = \<const0> ;
   assign rd_data_count[11] = \<const0> ;
   assign rd_data_count[10] = \<const0> ;
@@ -4513,7 +5167,6 @@ module post_ddr_slow_fifo_fifo_generator_v13_2_5
   assign sbiterr = \<const0> ;
   assign valid = \<const0> ;
   assign wr_ack = \<const0> ;
-  assign wr_data_count[13] = \<const0> ;
   assign wr_data_count[12] = \<const0> ;
   assign wr_data_count[11] = \<const0> ;
   assign wr_data_count[10] = \<const0> ;
@@ -4559,7 +5212,7 @@ module post_ddr_slow_fifo_fifo_generator_v13_2_5_builtin
     din,
     rst,
     wr_en);
-  output [31:0]dout;
+  output [63:0]dout;
   output overflow;
   output underflow;
   output full;
@@ -4567,12 +5220,12 @@ module post_ddr_slow_fifo_fifo_generator_v13_2_5_builtin
   input rd_clk;
   input rd_en;
   input wr_clk;
-  input [31:0]din;
+  input [63:0]din;
   input rst;
   input wr_en;
 
-  wire [31:0]din;
-  wire [31:0]dout;
+  wire [63:0]din;
+  wire [63:0]dout;
   wire empty;
   wire full;
   wire overflow;
@@ -4585,19 +5238,19 @@ module post_ddr_slow_fifo_fifo_generator_v13_2_5_builtin
   wire wr_en;
 
   post_ddr_slow_fifo_reset_builtin \g7ser_birst.rstbt 
-       (.rd_clk(rd_clk),
-        .rd_rst_i(rd_rst_i),
+       (.RST(rd_rst_i),
+        .rd_clk(rd_clk),
         .rst(rst),
         .wr_clk(wr_clk));
   post_ddr_slow_fifo_builtin_top_v6 \v7_bi_fifo.fblk 
-       (.din(din),
+       (.RST(rd_rst_i),
+        .din(din),
         .dout(dout),
         .empty(empty),
         .full(full),
         .overflow(overflow),
         .rd_clk(rd_clk),
         .rd_en(rd_en),
-        .rd_rst_i(rd_rst_i),
         .underflow(underflow),
         .wr_clk(wr_clk),
         .wr_en(wr_en));
@@ -4616,7 +5269,7 @@ module post_ddr_slow_fifo_fifo_generator_v13_2_5_synth
     din,
     rst,
     wr_en);
-  output [31:0]dout;
+  output [63:0]dout;
   output overflow;
   output underflow;
   output full;
@@ -4624,12 +5277,12 @@ module post_ddr_slow_fifo_fifo_generator_v13_2_5_synth
   input rd_clk;
   input rd_en;
   input wr_clk;
-  input [31:0]din;
+  input [63:0]din;
   input rst;
   input wr_en;
 
-  wire [31:0]din;
-  wire [31:0]dout;
+  wire [63:0]din;
+  wire [63:0]dout;
   wire empty;
   wire full;
   wire overflow;
@@ -4656,19 +5309,19 @@ endmodule
 
 (* ORIG_REF_NAME = "reset_builtin" *) 
 module post_ddr_slow_fifo_reset_builtin
-   (rd_rst_i,
+   (RST,
     rd_clk,
     wr_clk,
     rst);
-  output rd_rst_i;
+  output RST;
   input rd_clk;
   input wr_clk;
   input rst;
 
+  wire RST;
   (* async_reg = "true" *) (* msgon = "true" *) wire [5:0]power_on_rd_rst;
   (* async_reg = "true" *) (* msgon = "true" *) wire [5:0]power_on_wr_rst;
   wire rd_clk;
-  wire rd_rst_i;
   wire rd_rst_reg;
   (* async_reg = "true" *) (* msgon = "true" *) wire rd_rst_reg1;
   (* async_reg = "true" *) (* msgon = "true" *) wire rd_rst_reg2;
@@ -4685,7 +5338,7 @@ module post_ddr_slow_fifo_reset_builtin
     \gf36e1_inst.sngfifo36e1_i_2 
        (.I0(rd_rst_reg),
         .I1(power_on_rd_rst[0]),
-        .O(rd_rst_i));
+        .O(RST));
   (* ASYNC_REG *) 
   (* KEEP = "yes" *) 
   (* msgon = "true" *) 
