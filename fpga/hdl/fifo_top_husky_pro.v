@@ -183,9 +183,6 @@ module fifo_top_husky_pro (
     reg                 capture_go_r;
     reg                 capture_go_r2;
 
-    reg [2:0]           fast_write_count;
-    reg [2:0]           fast_write_count_init;
-    reg                 filling_out_to_done;
     reg                 slow_fifo_underflow_sticky;
     reg [1:0]           slow_fifo_underflow_count;
     reg                 slow_fifo_underflow_masked;
@@ -416,7 +413,6 @@ module fifo_top_husky_pro (
           fast_fifo_rd_en <= 1'b0;
           segment_counter <= 0;
           segment_cycle_counter <= 0;
-          filling_out_to_done <= 0;
           downsample_error <= 1'b0;
           segment_error <= 1'b0;
           filler_read <= 1'b0;
@@ -434,7 +430,6 @@ module fifo_top_husky_pro (
                 fast_fifo_rd_en <= 1'b0;
                 segment_counter <= 0;
                 segment_cycle_counter <= 0;
-                filling_out_to_done <= 0;
                 segment_error <= 1'b0;
                 fsm_fast_wr_en <= 1'b0;
                 filler_read <= 1'b0;
@@ -502,17 +497,13 @@ module fifo_top_husky_pro (
                 fast_fifo_rd_en <= 1'b1;
                 segment_cycle_counter <= segment_cycle_counter + 1;
 
-                if (stop_capture_conditions || (last_sample && fast_fifo_wr && last_segment) || (filling_out_to_done && fast_fifo_wr)) begin
-                   if (fast_write_count == 2) begin
-                      adc_capture_stop <= 1'b1;
-                      done_wait_count <= 20;  // established by trial/error to account for the latency in the Xilinx FIFO updating its empty flag
-                                              // plus extra cycles to execute filler_read (to generate the last 64-bit word)
-                                              // TODO: update to 20 for Pro needs to be more carefully checked
-                      fsm_fast_wr_en <= 1'b0;
-                      state <= pS_DONE;
-                   end
-                   else
-                      filling_out_to_done <= 1'b1;
+                if (stop_capture_conditions || (last_sample && fast_fifo_wr && last_segment)) begin
+                   adc_capture_stop <= 1'b1;
+                   done_wait_count <= 20;  // established by trial/error to account for the latency in the Xilinx FIFO updating its empty flag
+                                           // plus extra cycles to execute filler_read (to generate the last 64-bit word)
+                                           // TODO: update to 20 for Pro needs to be more carefully checked
+                   fsm_fast_wr_en <= 1'b0;
+                   state <= pS_DONE;
                 end
 
                 else if (last_sample && ~last_segment && fast_fifo_wr) begin
@@ -748,25 +739,6 @@ module fifo_top_husky_pro (
        end
     end
 
-
-
-    // Track fast FIFO writes to ensure they're a multiple of 3 by the end of the capture:
-    // TODO: do we still need this?
-    always @(posedge adc_sampleclk) begin
-       if (reset) begin
-          fast_write_count <= 0;
-       end
-       else begin
-          fast_write_count_init <= presample_i % 3; // alternatively, this could be precomputed in Python
-          if (state == pS_IDLE)
-             fast_write_count <= fast_write_count_init;
-          else if (fast_fifo_wr && (state == pS_TRIGGERED))
-             if (fast_write_count < 2)
-                fast_write_count <= fast_write_count + 1;
-             else
-                fast_write_count <= 0;
-       end
-    end
 
     // Assemble 64-bit words from 12-bit samples to feed DDR.
     // Ideally we'd handle this with an asymetric+asynchronous FIFO, but Xilinx's simulation
