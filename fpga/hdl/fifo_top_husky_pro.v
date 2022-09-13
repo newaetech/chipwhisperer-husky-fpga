@@ -57,8 +57,8 @@ module fifo_top_husky_pro (
     output wire         fifo_overflow, //If overflow happens (bad during stream mode)
     input  wire         stream_mode, //1=Enable stream mode, 0=Normal
     output reg          error_flag,
-    output reg [8:0]    error_stat,
-    output reg [8:0]    first_error_stat,
+    output reg [10:0]   error_stat,
+    output reg [10:0]   first_error_stat,
     output reg [2:0]    first_error_state,
     input  wire         clear_fifo_errors,
     output reg          stream_segment_available,
@@ -139,12 +139,13 @@ module fifo_top_husky_pro (
     //reg                 slow_fifo_prewr = 1'b0;
     reg                 slow_fifo_rd_slow;
     wire                slow_fifo_rd_fast;
+    /*
     wire [35:0]         slow_fifo_dout;
     wire                slow_fifo_full;
     wire                slow_fifo_empty;
     wire                slow_fifo_overflow;
     wire                slow_fifo_underflow;
-    //
+    */
 
     reg                 preddr_fifo_prewr = 1'b0;
     reg                 preddr_fifo_rd_slow;
@@ -170,7 +171,8 @@ module fifo_top_husky_pro (
     reg                 postddr_fifo_wr = 1'b0;
 
     reg                 fast_fifo_overflow_reg;
-    reg                 slow_fifo_overflow_reg;
+    reg                 preddr_fifo_overflow_reg;
+    reg                 postddr_fifo_overflow_reg;
     reg  [14:0]         presample_counter;
     reg  [31:0]         sample_counter;
     reg  [15:0]         segment_counter;
@@ -183,9 +185,9 @@ module fifo_top_husky_pro (
     reg                 capture_go_r;
     reg                 capture_go_r2;
 
-    reg                 slow_fifo_underflow_sticky;
-    reg [1:0]           slow_fifo_underflow_count;
-    reg                 slow_fifo_underflow_masked;
+    reg                 postddr_fifo_underflow_sticky;
+    reg [1:0]           postddr_fifo_underflow_count;
+    reg                 postddr_fifo_underflow_masked;
 
     reg  [4:0]          done_wait_count;
     reg                 gain_error;
@@ -262,31 +264,31 @@ module fifo_top_husky_pro (
                         init_calib_complete
                        };
 
-    assign fifo_overflow = fast_fifo_overflow_reg || slow_fifo_overflow_reg;
+    assign fifo_overflow = fast_fifo_overflow_reg || preddr_fifo_overflow_reg || postddr_fifo_overflow_reg;
 
     // make overflow sticky:
     always @(posedge adc_sampleclk) begin
        if (fifo_rst) begin
           fast_fifo_overflow_reg <= 1'b0;
-          slow_fifo_overflow_reg <= 1'b0;
+          preddr_fifo_overflow_reg <= 1'b0;
        end
        else begin
           if (fast_fifo_overflow)
              fast_fifo_overflow_reg <= 1'b1;
-          if (slow_fifo_overflow)
-             slow_fifo_overflow_reg <= 1'b1;
+          if (preddr_fifo_overflow)
+             preddr_fifo_overflow_reg <= 1'b1;
        end
     end
 
-    always @(posedge adc_sampleclk) begin
+    always @(posedge ui_clk) begin
        if (fifo_rst)
-          fast_fifo_overflow_reg <= 1'b0;
-       else if (fast_fifo_overflow)
-          fast_fifo_overflow_reg <= 1'b1;
+          postddr_fifo_overflow_reg <= 1'b0;
+       else if (postddr_fifo_overflow)
+          postddr_fifo_overflow_reg <= 1'b1;
     end
 
 
-    assign fifo_read_fifoempty = slow_fifo_empty;
+    assign fifo_read_fifoempty = postddr_fifo_empty;
 
     //Counter for downsampling (NOT proper decimation)
     reg [12:0] downsample_ctr;
@@ -663,23 +665,25 @@ module fifo_top_husky_pro (
 
     always @(*) begin
        if (stream_mode)
-          slow_fifo_underflow_masked = slow_fifo_underflow && (read_count < max_samples_i) && ~no_underflow_errors;
+          postddr_fifo_underflow_masked = postddr_fifo_underflow && (read_count < max_samples_i) && ~no_underflow_errors;
        else
-          slow_fifo_underflow_masked = slow_fifo_underflow && ~no_underflow_errors && (slow_fifo_underflow_count == pMAX_UNDERFLOWS);
+          postddr_fifo_underflow_masked = postddr_fifo_underflow && ~no_underflow_errors && (postddr_fifo_underflow_count == pMAX_UNDERFLOWS);
     end
 
-    function [8:0] error_bits (input [8:0] current_error);
+    function [10:0] error_bits (input [10:0] current_error);
        begin
           error_bits = current_error;
-          if (gain_error)                    error_bits[8] = 1'b1;
-          if (segment_error)                 error_bits[7] = 1'b1;
-          if (downsample_error)              error_bits[6] = 1'b1;
-          if (clip_error)                    error_bits[5] = 1'b1;
-          if (presamp_error)                 error_bits[4] = 1'b1;
-          if (fast_fifo_overflow)            error_bits[3] = 1'b1;
-          if (fast_fifo_underflow)           error_bits[2] = 1'b1;
-          if (slow_fifo_overflow)            error_bits[1] = 1'b1;
-          if (slow_fifo_underflow_masked)    error_bits[0] = 1'b1;
+          if (preddr_fifo_overflow)          error_bits[10] = 1'b1;
+          if (preddr_fifo_underflow)         error_bits[9]  = 1'b1;
+          if (gain_error)                    error_bits[8]  = 1'b1;
+          if (segment_error)                 error_bits[7]  = 1'b1;
+          if (downsample_error)              error_bits[6]  = 1'b1;
+          if (clip_error)                    error_bits[5]  = 1'b1;
+          if (presamp_error)                 error_bits[4]  = 1'b1;
+          if (fast_fifo_overflow)            error_bits[3]  = 1'b1;
+          if (fast_fifo_underflow)           error_bits[2]  = 1'b1;
+          if (postddr_fifo_overflow)         error_bits[1]  = 1'b1;
+          if (postddr_fifo_underflow_masked) error_bits[0]  = 1'b1;
        end
     endfunction
 
@@ -701,7 +705,8 @@ module fifo_top_husky_pro (
           end
           else begin
              if (gain_error || segment_error || downsample_error || clip_error || presamp_error || 
-                 fast_fifo_overflow || fast_fifo_underflow || slow_fifo_overflow || slow_fifo_underflow_masked) begin
+                 fast_fifo_overflow || fast_fifo_underflow || postddr_fifo_overflow || postddr_fifo_underflow_masked || 
+                 preddr_fifo_overflow || preddr_fifo_underflow) begin
                 error_flag <= 1;
                 if (!error_flag) begin
                    first_error_stat <= error_bits(first_error_stat);
@@ -711,7 +716,7 @@ module fifo_top_husky_pro (
 
              error_stat <= error_bits(error_stat);
 
-             if (slow_fifo_underflow_masked && (underflow_count != 8'hFF))
+             if (postddr_fifo_underflow_masked && (underflow_count != 8'hFF))
                 underflow_count <= underflow_count + 1;
           end
        end
@@ -719,22 +724,22 @@ module fifo_top_husky_pro (
 
     always @(posedge clk_usb) begin
        if (reset) begin
-          slow_fifo_underflow_sticky <= 0;
-          slow_fifo_underflow_count <= 0;
+          postddr_fifo_underflow_sticky <= 0;
+          postddr_fifo_underflow_count <= 0;
        end
        else begin
           // Xilinx FIFO asserts "underflow" for a single cycle only:
           if (fifo_rst_start_r)
-             slow_fifo_underflow_sticky <= 0;
-          else if (slow_fifo_underflow)
-             slow_fifo_underflow_sticky <= 1;
+             postddr_fifo_underflow_sticky <= 0;
+          else if (postddr_fifo_underflow)
+             postddr_fifo_underflow_sticky <= 1;
 
           // SAM3U likes to read multiples of 4 bytes, so we don't flag an
           // underflow unless we observe at least 3 underflow reads
           if (fifo_rst_start_r)
-             slow_fifo_underflow_count <= 0;
-          else if (slow_fifo_underflow && slow_fifo_underflow_count < pMAX_UNDERFLOWS)
-             slow_fifo_underflow_count <= slow_fifo_underflow_count + 1;
+             postddr_fifo_underflow_count <= 0;
+          else if (postddr_fifo_underflow && postddr_fifo_underflow_count < pMAX_UNDERFLOWS)
+             postddr_fifo_underflow_count <= postddr_fifo_underflow_count + 1;
 
        end
     end
@@ -1096,13 +1101,13 @@ module fifo_top_husky_pro (
 
     reg [7:0] fifo_read_data_pre;
     always @(*) begin
-       if (slow_fifo_underflow_sticky)
+       if (postddr_fifo_underflow_sticky)
           fifo_read_data_pre = 0;
        else if (low_res) begin // TODO (later)
           if (low_res_lsb)
-             fifo_read_data_pre = slow_fifo_dout[(2-slow_read_count)*12 +: 8];
+             fifo_read_data_pre = postddr_fifo_dout[(2-slow_read_count)*12 +: 8];
           else
-             fifo_read_data_pre = slow_fifo_dout[(2-slow_read_count)*12 + 4 +: 8];
+             fifo_read_data_pre = postddr_fifo_dout[(2-slow_read_count)*12 + 4 +: 8];
        end
        else
           fifo_read_data_pre = postddr_fifo_dout[(7-slow_read_count)*8 +: 8];
@@ -1177,8 +1182,6 @@ module fifo_top_husky_pro (
 
        pre_ddr_slow_fifo U_pre_ddr_slow_fifo (
           .rst          (fifo_rst),
-          //.wr_rst       (fifo_rst),
-          //.rd_rst       (fifo_rst),
           .wr_clk       (adc_sampleclk),
           .rd_clk       (ui_clk),
           .din          (preddr_fifo_din),
@@ -1190,23 +1193,6 @@ module fifo_top_husky_pro (
           .overflow     (preddr_fifo_overflow),
           .underflow    (preddr_fifo_underflow)
        );
-
-       /* for reference of old signal names
-       usb_slow_fifo U_pre_ddr_slow_fifo (
-          .rst          (fifo_rst),
-          .wr_clk       (adc_sampleclk),
-          .rd_clk       (clk_usb),
-          .din          (slow_fifo_din),
-          .wr_en        (slow_fifo_wr),
-          .rd_en        (slow_fifo_rd),
-          .dout         (slow_fifo_dout),
-          .full         (slow_fifo_full),
-          .empty        (slow_fifo_empty),
-          .overflow     (slow_fifo_overflow),
-          .underflow    (slow_fifo_underflow)
-       );
-       */
-
 
        post_ddr_slow_fifo U_post_ddr_slow_fifo (
           .rst          (fifo_rst),

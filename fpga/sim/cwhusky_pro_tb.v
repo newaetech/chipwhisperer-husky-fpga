@@ -597,10 +597,15 @@ initial begin
          if (!pERRORS_OK) errors += 1;
          $display("ERROR at t=%0t: fast FIFO not empty at the end of a read cycle", $time);
       end
-      if (U_dut.oadc.U_fifo.slow_fifo_empty == 0) begin
+      if (U_dut.oadc.U_fifo.postddr_fifo_empty == 0) begin
          if (!pERRORS_OK) errors += 1;
-         $display("ERROR at t=%0t: slow FIFO not empty at the end of a read cycle", $time);
+         $display("ERROR at t=%0t: post-DDR FIFO not empty at the end of a read cycle", $time);
       end
+      if (U_dut.oadc.U_fifo.preddr_fifo_empty == 0) begin
+         if (!pERRORS_OK) errors += 1;
+         $display("ERROR at t=%0t: pre-DDR FIFO not empty at the end of a read cycle", $time);
+      end
+
 
       // TODO-temporary to manually verify if fast reads get disabled: (clean up later)
       write_1byte(`ECHO_ADDR, 155);

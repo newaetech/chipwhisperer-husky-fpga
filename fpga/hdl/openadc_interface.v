@@ -115,8 +115,8 @@ module openadc_interface #(
     wire        segment_cycle_counter_en;
     wire [1:0]  led_select;
     wire       data_source_select;
-    wire [8:0] fifo_error_stat;
-    wire [8:0] fifo_first_error_stat;
+    wire [10:0] fifo_error_stat;
+    wire [10:0] fifo_first_error_stat;
     wire [2:0] fifo_first_error_state;
     wire       no_clip_errors;
     wire       no_gain_errors;
