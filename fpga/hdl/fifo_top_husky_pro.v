@@ -362,6 +362,11 @@ module fifo_top_husky_pro (
     reg last_segment;
     reg last_sample;
     reg filler_read;
+    // We're storing 12-bit samples into 64-bit words. If the number of samples is not a multiple of 
+    // 16 (because 16 is the smallest number x such that x*12 is a number that can be divided by 64), 
+    // then we need to execute dummy/filler ADC reads to fill out the last incomplete 64-bit word.
+    wire filler_read_needed = (max_samples_i[3:0] != 4'b0000);
+
     always @(posedge adc_sampleclk) begin
         if (segment_cycles > 1) // alternatively, could do this in Python instead  (but why- everything works now)
             segment_cycles_adjusted <= segment_cycles - 2;
@@ -555,7 +560,7 @@ module fifo_top_husky_pro (
                 end
                 else
                    done_wait_count <= done_wait_count - 1;
-                if (done_wait_count < 5) // TODO: "5" is just a placeholder; need to calculate correct value here!
+                if (filler_read_needed && (done_wait_count < 6)) // TODO: "5" is just a placeholder; need to calculate correct value here!
                    filler_read <= 1'b1;
              end
 
@@ -782,18 +787,18 @@ module fifo_top_husky_pro (
             adc_sample_counter <= 0;
             preddr_fifo_din <= 0;
             preddr_fifo_wr <= 0;
+            filler_write <= 0;
         end
         else begin
             preddr_fifo_wr <= wide_word_valid;
+            filler_write <= wide_word_valid && filler_read;
             if (state == pS_IDLE) begin
                 wide_word_count <= 0;
                 wide_word_valid <= 0;
                 wide_word_shifter <= 0;
                 adc_sample_counter <= 0;
             end
-            //else if (fast_fifo_rd && ((state == pS_TRIGGERED) || (state == pS_DONE) || (state == pS_SEGMENT_DONE))) begin
             else if ((fast_fifo_rd || filler_read) && (state != pS_PRESAMP_FILLING) && (state != pS_PRESAMP_FULL)) begin
-                //wide_word_shifter <= {fast_fifo_dout, wide_word_shifter[71:12]};
                 wide_word_shifter <= {wide_word_shifter[63:0], fast_fifo_dout};
                 if ( ((wide_word_count == 0) && (adc_sample_counter == 5)) ||
                      ((wide_word_count == 1) && (adc_sample_counter == 4)) ||
@@ -810,11 +815,10 @@ module fifo_top_husky_pro (
                     adc_sample_counter <= adc_sample_counter + 1;
                 end
             end
+            else if (~filler_read)
+                wide_word_valid <= 0;
 
             if (wide_word_valid)
-                //preddr_fifo_din <= (wide_word_count == 1)? wide_word_shifter[63:0] :
-                //                   (wide_word_count == 2)? wide_word_shifter[67:4] :
-                //                                           wide_word_shifter[71:8] ;
                 preddr_fifo_din <= (wide_word_count == 1)? wide_word_shifter[71:8] :
                                    (wide_word_count == 2)? wide_word_shifter[67:4] :
                                                            wide_word_shifter[63:0] ;
@@ -873,7 +877,8 @@ module fifo_top_husky_pro (
     //wire ddr_write_data_done = fast_fifo_empty && (state == pS_DONE) && (done_wait_count == 0); // TODO: not sure if that'll do? think of edge cases, including errors; segments?
     reg ddr_write_data_done;
     reg write_data_done_hold;
-    wire write_done_adc = (state == pS_IDLE) && (state_r == pS_DONE);
+    reg filler_write;
+    reg  write_done_adc;
     wire write_done_ui;
     wire ddr_read_data_done = (adc_top_app_addr == adc_app_addr);
     reg incr_app_address;
@@ -881,6 +886,13 @@ module fifo_top_husky_pro (
 
     reg reset_app_address;
     reg [29:0] adc_top_app_addr;
+
+    always @ (*) begin
+        if (filler_read_needed)
+            write_done_adc = filler_write;
+        else
+            write_done_adc = (state == pS_IDLE) && (state_r == pS_DONE);
+    end
 
     cdc_pulse U_write_done_cdc (
        .reset_i       (reset),

@@ -124,3 +124,7 @@ run:
 
 clean:
 	rm -f a.out results/*.vvp
+
+sad_nofifo: compile
+
+compile_edge: compile
