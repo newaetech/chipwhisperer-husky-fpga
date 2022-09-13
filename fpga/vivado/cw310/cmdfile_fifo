@@ -33,5 +33,14 @@ cwhusky_cw310_top.v
 ../../tracewhisperer/phywhisperer-common/hardware/hdl/fe_capture_main.v
 ../../tracewhisperer/phywhisperer-common/hardware/hdl/reg_main.v
 ../../tracewhisperer/phywhisperer-common/hardware/hdl/pw_trigger.v
+../../tracewhisperer/sim/vivado/fifo_generator_0_sim_netlist.v
+../../tracewhisperer/sim/vivado/fifo_generator_tiny_sim_netlist.v
+../../tracewhisperer/phywhisperer-common/hardware/hdl/fifo.v
+../../sim/vivado/adc_fast_fifo_sim_netlist.v
+../../sim/vivado/pre_ddr_slow_fifo_sim_netlist.v
+../../sim/vivado/post_ddr_slow_fifo_sim_netlist.v
+../../sim/vivado/sad_fifo_sim_netlist.v
+../../sim/vivado/ddr_model_fifo_sim_netlist.v
+-y/tools/Xilinx/Vivado/2020.2/ids_lite/ISE/verilog/src/unisims/
 ../../beh/ddr3_app_model.v
 

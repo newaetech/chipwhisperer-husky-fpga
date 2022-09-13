@@ -82,6 +82,8 @@ module ddr3_app_model #(
 
     assign app_rdy = app_rdy_wr & app_rdy_rd;
 
+`ifndef LINT
+
     // write logic:
     initial begin
         app_rdy_wr = 1'b0;
@@ -196,6 +198,8 @@ module ddr3_app_model #(
     wire [pDATA_WIDTH*2-1:0] memory1 = memory[1];
     wire [pDATA_WIDTH*2-1:0] memory2 = memory[2];
     wire [pDATA_WIDTH*2-1:0] memory3 = memory[3];
+
+`endif
 
 endmodule
 

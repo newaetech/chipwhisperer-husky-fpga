@@ -45,7 +45,6 @@ all: compile run
 
 nofifo:
 	iverilog -ccmdfile \
-	../../beh/ddr3_app_model.v \
 	-g2005-sv \
 	-I../../hdl \
 	-I../../tracewhisperer/hdl/ \
@@ -60,7 +59,6 @@ nofifo:
 compile:
 	iverilog -ccmdfile_fifo \
 	../../sim/cwhusky_pro_tb.v \
-	../../beh/ddr3_app_model.v \
 	-g2005-sv \
 	-I../../hdl \
 	-I../../sim \
@@ -116,6 +114,7 @@ lint:
 	-DPRO \
 	-DNOFIFO \
 	-DTRACE \
+	-DLINT \
 	--top-module cwhusky_cw310_top \
 	2>&1 | tee lint.out \
 
