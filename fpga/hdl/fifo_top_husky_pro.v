@@ -505,9 +505,9 @@ module fifo_top_husky_pro (
                 if (stop_capture_conditions || (last_sample && fast_fifo_wr && last_segment) || (filling_out_to_done && fast_fifo_wr)) begin
                    if (fast_write_count == 2) begin
                       adc_capture_stop <= 1'b1;
-                      done_wait_count <= 17;  // established by trial/error to account for the latency in the Xilinx FIFO updating its empty flag
+                      done_wait_count <= 20;  // established by trial/error to account for the latency in the Xilinx FIFO updating its empty flag
                                               // plus extra cycles to execute filler_read (to generate the last 64-bit word)
-                                              // TODO: update to 17 for Pro needs to be more carefully checked
+                                              // TODO: update to 20 for Pro needs to be more carefully checked
                       fsm_fast_wr_en <= 1'b0;
                       state <= pS_DONE;
                    end
@@ -562,7 +562,7 @@ module fifo_top_husky_pro (
                 end
                 else
                    done_wait_count <= done_wait_count - 1;
-                if (done_wait_count < 5)
+                if (done_wait_count < 5) // TODO: "5" is just a placeholder; need to calculate correct value here!
                    filler_read <= 1'b1;
              end
 
@@ -882,6 +882,7 @@ module fifo_top_husky_pro (
 
     //wire ddr_write_data_done = fast_fifo_empty && (state == pS_DONE) && (done_wait_count == 0); // TODO: not sure if that'll do? think of edge cases, including errors; segments?
     reg ddr_write_data_done;
+    reg write_data_done_hold;
     wire write_done_adc = (state == pS_IDLE) && (state_r == pS_DONE);
     wire write_done_ui;
     wire ddr_read_data_done = (adc_top_app_addr == adc_app_addr);
@@ -1030,6 +1031,7 @@ module fifo_top_husky_pro (
             ddr_full_error <= 0;
             postddr_fifo_wr <= 0;
             ddr_write_data_done <= 0;
+            write_data_done_hold <= 0;
         end
 
         else begin
@@ -1065,10 +1067,16 @@ module fifo_top_husky_pro (
             else
                 postddr_fifo_wr <= 1'b0;
 
-            if (ddr_state == pS_DDR_IDLE)
+            if (ddr_state == pS_DDR_IDLE) begin
+                write_data_done_hold <= 1'b0;
                 ddr_write_data_done <= 1'b0;
-            else if (write_done_ui)
-                ddr_write_data_done <= 1'b1;
+            end
+            else begin
+                if (write_done_ui)
+                    write_data_done_hold <= 1'b1;
+                if (preddr_fifo_empty && write_data_done_hold)
+                    ddr_write_data_done <= 1'b1;
+            end
 
         end
     end
