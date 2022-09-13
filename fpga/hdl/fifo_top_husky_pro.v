@@ -158,7 +158,7 @@ module fifo_top_husky_pro (
     wire                postddr_fifo_underflow;
 
     reg                 preddr_fifo_rd;
-    reg                 postddr_fifo_wr = 1'b0;
+    reg                 postddr_fifo_wr;
 
     reg                 fast_fifo_overflow_reg;
     reg                 preddr_fifo_overflow_reg;
@@ -436,7 +436,7 @@ module fifo_top_husky_pro (
                 else
                    downsample_error <= 1'b0;
 
-                if (armed_and_ready && ~adc_capture_stop) begin
+                if (armed_and_ready && ~adc_capture_stop && ~ddr3_rwtest_en) begin
                    if (presample_i > 0) begin
                       fsm_fast_wr_en <= 1'b1;
                       state <= pS_PRESAMP_FILLING;
@@ -882,7 +882,7 @@ module fifo_top_husky_pro (
 
         case (ddr_state)
             pS_DDR_IDLE: begin
-                if (init_calib_complete && ~main_idle_ui) begin
+                if (init_calib_complete && ~main_idle_ui && ~ddr3_rwtest_en) begin
                     reset_app_address = 1'b1;
                     next_ddr_state = pS_DDR_WAIT_WRITE;
                 end
@@ -901,7 +901,9 @@ module fifo_top_husky_pro (
                 // slower than read clock). We keep it simple by CDC'ing going
                 // from pS_DONE to pS_IDLE, then waiting for the preddr FIFO to
                 // go empty.
-                if (ddr_write_data_done) begin
+                if (ddr3_rwtest_en)
+                    next_ddr_state = pS_DDR_IDLE;
+                else if (ddr_write_data_done) begin
                     reset_app_address = 1'b1;
                     next_ddr_state = pS_DDR_WAIT_READ;
                 end
@@ -1013,7 +1015,9 @@ module fifo_top_husky_pro (
                     adc_app_addr <= adc_app_addr + pDDR_INC_ADDR;
             end
 
-            if (app_rd_data_valid) begin
+            if (ddr3_rwtest_en)
+                postddr_fifo_wr <= 1'b0;
+            else if (app_rd_data_valid) begin
                 app_rd_data_r <= app_rd_data;
                 if (app_rd_data_end) begin
                     postddr_fifo_wr <= 1'b1;
