@@ -957,8 +957,10 @@ module fifo_top_husky_pro (
 
             pS_DDR_READ1: begin
                 adc_app_en = 1'b1;
-                if (app_rdy)
+                if (app_rdy) begin
+                    incr_app_address = 1'b1;
                     next_ddr_state = pS_DDR_READ2;
+                end
                 else
                     next_ddr_state = pS_DDR_READ1;
             end
@@ -968,7 +970,6 @@ module fifo_top_husky_pro (
                 if (ddr_read_data_done)
                     next_ddr_state = pS_DDR_IDLE;
                 else if (app_rdy) begin
-                    incr_app_address = 1'b1;
                     next_ddr_state = pS_DDR_READ1;
                 end
                 else
@@ -1002,9 +1003,9 @@ module fifo_top_husky_pro (
                 adc_app_addr <= 0;
                 if (ddr_state != pS_DDR_IDLE) begin
                     if (ddr_state == pS_DDR_WAIT_WRITE)
-                        adc_top_app_addr <= adc_app_addr - pDDR_INC_ADDR;
-                    else
                         adc_top_app_addr <= adc_app_addr;
+                    else
+                        adc_top_app_addr <= adc_app_addr + pDDR_INC_ADDR;
                 end
             end
             else if (incr_app_address) begin
