@@ -1464,6 +1464,87 @@ ila_ddr3 U_ila_ddr3 (
 );
 `endif
 
+`ifdef ILA_HUSKY_FIFO
+    ila_fast_fifo U_ila_fast_fifo (
+        .clk            (adc_sampleclk),        // input wire clk
+        .probe0         (reset),                // input wire [0:0]  probe0  
+        .probe1         (fast_fifo_wr),         // input wire [0:0]  probe1 
+        .probe2         (fast_fifo_rd),         // input wire [0:0]  probe2 
+        .probe3         (fast_fifo_dout),       // input wire [11:0] probe3 
+        .probe4         (fast_fifo_full),       // input wire [0:0]  probe4 
+        .probe5         (fast_fifo_empty),      // input wire [0:0]  probe5 
+        .probe6         (fast_fifo_overflow),   // input wire [0:0]  probe6 
+        .probe7         (fast_fifo_underflow),  // input wire [0:0]  probe7 
+        .probe8         (capture_active),       // input wire [0:0]  probe8 
+        .probe9         (adc_capture_stop),     // input wire [0:0]  probe9 
+        .probe10        (state),                // input wire [2:0]  probe10
+        .probe11        (adc_datain),           // input wire [11:0] probe11
+        .probe12        (preddr_fifo_wr),       // input wire [0:0]  probe12
+        .probe13        (preddr_fifo_full),     // input wire [0:0]  probe13
+        .probe14        (preddr_fifo_overflow), // input wire [0:0]  probe14
+        .probe15        (error_stat),           // input wire [10:0] probe15
+        .probe16        (error_flag),           // input wire [0:0]  probe16
+        .probe17        (filler_read),          // input wire [0:0]  probe17
+        .probe18        (filler_write),         // input wire [0:0]  probe18
+        .probe19        (write_done_adc),       // input wire [0:0]  probe19
+        .probe20        (adc_sample_counter),   // input wire [3:0]  probe20
+        .probe21        (wide_word_valid),      // input wire [0:0]  probe21
+        .probe22        (wide_word_shifter),    // input wire [71:0] probe22
+        .probe23        (filler_read_needed),   // input wire [0:0]  probe23
+        .probe24        (preddr_fifo_din)       // input wire [63:0] probe24
+    );
+
+
+    ila_ui_fifo U_ila_ui_fifo (
+        .clk            (ui_clk),               // input wire clk
+        .probe0         (preddr_fifo_rd),       // input wire [0:0]
+        .probe1         (preddr_fifo_dout),     // input wire [63:0]
+        .probe2         (preddr_fifo_empty),    // input wire [0:0]
+        .probe3         (preddr_fifo_underflow),// input wire [0:0]
+        .probe4         (postddr_fifo_wr),      // input wire [0:0]
+        .probe5         (postddr_fifo_din),     // input wire [63:0]
+        .probe6         (postddr_fifo_full),    // input wire [0:0]
+        .probe7         (postddr_fifo_overflow),// input wire [0:0]
+        .probe8         (app_addr),             // input wire [29:0]
+        .probe9         (app_cmd),              // input wire [2:0]
+        .probe10        (app_en),               // input wire [0:0]
+        .probe11        (app_wdf_data),         // input wire [31:0]
+        .probe12        (app_wdf_end),          // input wire [0:0]
+        .probe13        (app_wdf_wren),         // input wire [0:0]
+        .probe14        (app_rd_data),          // input wire [31:0]
+        .probe15        (app_rd_data_end),      // input wire [0:0]
+        .probe16        (app_rd_data_valid),    // input wire [0:0]
+        .probe17        (app_rdy),              // input wire [0:0]
+        .probe18        (app_wdf_rdy),          // input wire [0:0]
+        .probe19        (ddr_state),            // input wire [2:0]
+        .probe20        (ddr3_rwtest_en),       // input wire [0:0]
+        .probe21        (reset_app_address),    // input wire [0:0]
+        .probe22        (incr_app_address),     // input wire [0:0]
+        .probe23        (ddr_write_data_done),  // input wire [0:0]
+        .probe24        (ddr_read_data_done),   // input wire [0:0]
+        .probe25        (ddr_full_error),       // input wire [0:0]
+        .probe26        (ddr_writing)           // input wire [0:0]
+    );
+
+    ila_slow_fifo U_ila_slow_fifo (
+        .clk            (clk_usb),              // input wire clk
+        .probe0         (reset),                // input wire [0:0]
+        .probe1         (postddr_fifo_dout),    // input wire [63:0]
+        .probe2         (postddr_fifo_rd),      // input wire [0:0]
+        .probe3         (postddr_fifo_empty),   // input wire [0:0]
+        .probe4         (postddr_fifo_underflow),// input wire [0:0]
+        .probe5         (fifo_rst),             // input wire [0:0]
+        .probe6         (reset_done),           // input wire [0:0]
+        .probe7         (slow_fifo_rd_fast),    // input wire [0:0]
+        .probe8         (fifo_read_fifoen),     // input wire [0:0]
+        .probe9         (slow_read_count),      // input wire [3:0]
+        .probe10        (stream_segment_available), // input wire [0:0]
+        .probe11        (fast_fifo_read_mode),  // input wire [0:0]
+        .probe12        (fifo_read_data)        // input wire [7:0]
+    );
+
+`endif
+
 
 endmodule
 `default_nettype wire

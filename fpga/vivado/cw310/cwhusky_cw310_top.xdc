@@ -60,7 +60,7 @@ set_clock_groups -asynchronous \
                  -group [get_clocks target_hs1]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks clk_usb ] \
+                 -group [get_clocks {clk_usb ADC_clk_fb} ] \
                  -group [get_clocks clk_pll_i]
 
 set_clock_groups -asynchronous \
