@@ -857,7 +857,6 @@ module fifo_top_husky_pro (
        .dst_pulse     (write_done_ui)
     );
 
-    // debug only:
     wire ddr_writing = (ddr_state == pS_DDR_WAIT_WRITE) ||
                        (ddr_state == pS_DDR_WRITE1) ||
                        (ddr_state == pS_DDR_WRITE2);
@@ -865,7 +864,7 @@ module fifo_top_husky_pro (
                        (ddr_state == pS_DDR_READ1) ||
                        (ddr_state == pS_DDR_READ2);
 
-    assign adc_app_cmd = ddr_writing? CMD_WRITE : CMD_READ;
+    assign adc_app_cmd = (ddr_writing)? CMD_WRITE : CMD_READ;
 
     assign adc_app_wdf_data = (ddr_state == pS_DDR_WRITE1)? preddr_fifo_dout[31:0] : 
                               (ddr_state == pS_DDR_WRITE2)? preddr_fifo_dout[63:32] : 32'b0;
@@ -1080,7 +1079,7 @@ module fifo_top_husky_pro (
           slow_fifo_rd_slow <= 1'b0;
     end
 
-    assign slow_fifo_rd_fast = fifo_read_fifoen && (low_res? (slow_read_count == 2) : ((slow_read_count == 3) || (slow_read_count == 8)));
+    assign slow_fifo_rd_fast = fifo_read_fifoen && (low_res? (slow_read_count == 2) : ((slow_read_count == 3) || (slow_read_count == 8))); // TODO!
     assign postddr_fifo_rd = (fast_fifo_read_mode)? slow_fifo_rd_fast : slow_fifo_rd_slow;
 
     reg [7:0] fifo_read_data_pre;
@@ -1369,7 +1368,7 @@ module fifo_top_husky_pro (
    reg [5:0] write_cycle_count = 0;
 
    // track how many FIFO entries (roughly) are available to be read; tricky because of two clock domains!
-   always @(posedge adc_sampleclk) begin
+   always @(posedge ui_clk) begin
       if (fifo_rst) begin
          write_count <= 0;
          write_count_to_usb <= 0;
@@ -1378,7 +1377,9 @@ module fifo_top_husky_pro (
       else begin
          write_cycle_count <= write_cycle_count + 1;
          if (postddr_fifo_wr)
-            write_count <= write_count + 3;
+            // TODO/NOTE: in Husky, write_count and read_count counted actual ADC samples; now they could 64-bit words
+            // (i.e. 5.33 samples); this needs to be accounted for in Python 
+            write_count <= write_count + 1;
          if (write_cycle_count == 0) begin
             read_update <= 1'b1;
             write_count_to_usb <= write_count;
@@ -1395,7 +1396,7 @@ module fifo_top_husky_pro (
       end
       else begin
          if (postddr_fifo_rd)
-            read_count <= read_count + 3;
+            read_count <= read_count + 1;
          if (read_update_usb) begin
             if (write_count_to_usb > read_count)
                stream_segment_available <= ( (write_count_to_usb - read_count > stream_segment_threshold) || (write_count_to_usb >= max_samples_i) );
