@@ -153,6 +153,7 @@ module fifo_top_husky_pro (
     wire                postddr_fifo_rd_fast;
     wire [63:0]         postddr_fifo_dout;
     wire                postddr_fifo_full;
+    wire                postddr_fifo_prog_full;
     wire                postddr_fifo_empty;
     wire                postddr_fifo_overflow;
     wire                postddr_fifo_underflow;
@@ -949,7 +950,7 @@ module fifo_top_husky_pro (
 
             pS_DDR_WAIT_READ: begin
                 adc_app_en = 1'b0;
-                if (app_rdy && ~postddr_fifo_full)
+                if (app_rdy && ~postddr_fifo_prog_full)
                     next_ddr_state = pS_DDR_READ1;
                 else
                     next_ddr_state = pS_DDR_WAIT_READ;
@@ -969,9 +970,8 @@ module fifo_top_husky_pro (
                 adc_app_en = 1'b0;
                 if (ddr_read_data_done)
                     next_ddr_state = pS_DDR_IDLE;
-                else if (app_rdy) begin
+                else if (app_rdy && ~postddr_fifo_prog_full)
                     next_ddr_state = pS_DDR_READ1;
-                end
                 else
                     next_ddr_state = pS_DDR_WAIT_READ;
             end
@@ -1187,6 +1187,7 @@ module fifo_top_husky_pro (
           .rd_en        (postddr_fifo_rd),
           .dout         (postddr_fifo_dout),
           .full         (postddr_fifo_full),
+          .prog_full    (postddr_fifo_prog_full),
           .empty        (postddr_fifo_empty),
           .overflow     (postddr_fifo_overflow),
           .underflow    (postddr_fifo_underflow)
@@ -1524,7 +1525,8 @@ ila_ddr3 U_ila_ddr3 (
         .probe23        (ddr_write_data_done),  // input wire [0:0]
         .probe24        (ddr_read_data_done),   // input wire [0:0]
         .probe25        (ddr_full_error),       // input wire [0:0]
-        .probe26        (ddr_writing)           // input wire [0:0]
+        .probe26        (ddr_writing),          // input wire [0:0]
+        .probe27        (postddr_fifo_prog_full)// input wire [0:0]
     );
 
     ila_slow_fifo U_ila_slow_fifo (

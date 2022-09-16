@@ -1,7 +1,7 @@
 // Copyright 1986-2019 Xilinx, Inc. All Rights Reserved.
 // --------------------------------------------------------------------------------
 // Tool Version: Vivado v.2019.2 (lin64) Build 2708876 Wed Nov  6 21:39:14 MST 2019
-// Date        : Sat Sep 10 17:43:34 2022
+// Date        : Thu Sep 15 17:10:53 2022
 // Host        : red running 64-bit Ubuntu 18.04.6 LTS
 // Command     : write_verilog -force -mode funcsim
 //               /home/jpnewae/git/xilinx_simulation_fifos/xilinx_simulation_fifos.srcs/sources_1/ip/post_ddr_slow_fifo/post_ddr_slow_fifo_sim_netlist.v
@@ -25,7 +25,8 @@ module post_ddr_slow_fifo
     full,
     overflow,
     empty,
-    underflow);
+    underflow,
+    prog_full);
   input rst;
   (* x_interface_info = "xilinx.com:signal:clock:1.0 write_clk CLK" *) (* x_interface_parameter = "XIL_INTERFACENAME write_clk, FREQ_HZ 200000000, PHASE 0.000, INSERT_VIP 0" *) input wr_clk;
   (* x_interface_info = "xilinx.com:signal:clock:1.0 read_clk CLK" *) (* x_interface_parameter = "XIL_INTERFACENAME read_clk, FREQ_HZ 96000000, PHASE 0.000, INSERT_VIP 0" *) input rd_clk;
@@ -37,12 +38,14 @@ module post_ddr_slow_fifo
   output overflow;
   (* x_interface_info = "xilinx.com:interface:fifo_read:1.0 FIFO_READ EMPTY" *) output empty;
   output underflow;
+  output prog_full;
 
   wire [63:0]din;
   wire [63:0]dout;
   wire empty;
   wire full;
   wire overflow;
+  wire prog_full;
   wire rd_clk;
   wire rd_en;
   wire rst;
@@ -97,7 +100,6 @@ module post_ddr_slow_fifo
   wire NLW_U0_m_axis_tlast_UNCONNECTED;
   wire NLW_U0_m_axis_tvalid_UNCONNECTED;
   wire NLW_U0_prog_empty_UNCONNECTED;
-  wire NLW_U0_prog_full_UNCONNECTED;
   wire NLW_U0_rd_rst_busy_UNCONNECTED;
   wire NLW_U0_s_axi_arready_UNCONNECTED;
   wire NLW_U0_s_axi_awready_UNCONNECTED;
@@ -306,15 +308,15 @@ module post_ddr_slow_fifo
   (* C_PROG_EMPTY_TYPE_WACH = "0" *) 
   (* C_PROG_EMPTY_TYPE_WDCH = "0" *) 
   (* C_PROG_EMPTY_TYPE_WRCH = "0" *) 
-  (* C_PROG_FULL_THRESH_ASSERT_VAL = "8178" *) 
+  (* C_PROG_FULL_THRESH_ASSERT_VAL = "4096" *) 
   (* C_PROG_FULL_THRESH_ASSERT_VAL_AXIS = "1023" *) 
   (* C_PROG_FULL_THRESH_ASSERT_VAL_RACH = "1023" *) 
   (* C_PROG_FULL_THRESH_ASSERT_VAL_RDCH = "1023" *) 
   (* C_PROG_FULL_THRESH_ASSERT_VAL_WACH = "1023" *) 
   (* C_PROG_FULL_THRESH_ASSERT_VAL_WDCH = "1023" *) 
   (* C_PROG_FULL_THRESH_ASSERT_VAL_WRCH = "1023" *) 
-  (* C_PROG_FULL_THRESH_NEGATE_VAL = "8177" *) 
-  (* C_PROG_FULL_TYPE = "0" *) 
+  (* C_PROG_FULL_THRESH_NEGATE_VAL = "4095" *) 
+  (* C_PROG_FULL_TYPE = "1" *) 
   (* C_PROG_FULL_TYPE_AXIS = "0" *) 
   (* C_PROG_FULL_TYPE_RACH = "0" *) 
   (* C_PROG_FULL_TYPE_RDCH = "0" *) 
@@ -527,7 +529,7 @@ module post_ddr_slow_fifo
         .prog_empty_thresh({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
         .prog_empty_thresh_assert({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
         .prog_empty_thresh_negate({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
-        .prog_full(NLW_U0_prog_full_UNCONNECTED),
+        .prog_full(prog_full),
         .prog_full_thresh({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
         .prog_full_thresh_assert({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
         .prog_full_thresh_negate({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
@@ -615,6 +617,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6
     rd_clk_1,
     WR_EN,
     underflow_i_ic,
+    PROG_FULL,
     dout,
     rd_en,
     \gunf.gunf2.UNDERFLOW_reg ,
@@ -636,6 +639,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6
   output rd_clk_1;
   output WR_EN;
   output underflow_i_ic;
+  output PROG_FULL;
   output [3:0]dout;
   input rd_en;
   input \gunf.gunf2.UNDERFLOW_reg ;
@@ -652,6 +656,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6
   input wr_clk;
   input [3:0]din;
 
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -679,7 +684,8 @@ module post_ddr_slow_fifo_builtin_extdepth_v6
   wire wr_en;
 
   post_ddr_slow_fifo_builtin_prim_v6_29 \gonep.inst_prim 
-       (.RD_EN(RD_EN),
+       (.PROG_FULL(PROG_FULL),
+        .RD_EN(RD_EN),
         .RST(RST),
         .WR_EN(WR_EN),
         .din(din),
@@ -724,7 +730,8 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_extdepth_v6" *) 
 module post_ddr_slow_fifo_builtin_extdepth_v6_0
-   (EMPTY,
+   (PROG_FULL,
+    EMPTY,
     FULL,
     dout,
     rd_clk,
@@ -733,6 +740,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_0
     wr_clk,
     WR_EN,
     din);
+  output PROG_FULL;
   output EMPTY;
   output FULL;
   output [3:0]dout;
@@ -745,6 +753,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_0
 
   wire EMPTY;
   wire FULL;
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -780,6 +789,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_0
   post_ddr_slow_fifo_builtin_prim_v6_28 \gonep.inst_prim 
        (.EMPTY(EMPTY),
         .FULL(FULL),
+        .PROG_FULL(PROG_FULL),
         .RD_EN(RD_EN),
         .RST(RST),
         .WR_EN(WR_EN),
@@ -791,7 +801,8 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_extdepth_v6" *) 
 module post_ddr_slow_fifo_builtin_extdepth_v6_1
-   (EMPTY,
+   (PROG_FULL,
+    EMPTY,
     FULL,
     dout,
     rd_clk,
@@ -800,6 +811,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_1
     wr_clk,
     WR_EN,
     din);
+  output PROG_FULL;
   output EMPTY;
   output FULL;
   output [3:0]dout;
@@ -812,6 +824,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_1
 
   wire EMPTY;
   wire FULL;
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -847,6 +860,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_1
   post_ddr_slow_fifo_builtin_prim_v6_27 \gonep.inst_prim 
        (.EMPTY(EMPTY),
         .FULL(FULL),
+        .PROG_FULL(PROG_FULL),
         .RD_EN(RD_EN),
         .RST(RST),
         .WR_EN(WR_EN),
@@ -858,7 +872,8 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_extdepth_v6" *) 
 module post_ddr_slow_fifo_builtin_extdepth_v6_10
-   (EMPTY,
+   (PROG_FULL,
+    EMPTY,
     FULL,
     dout,
     rd_clk,
@@ -867,6 +882,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_10
     wr_clk,
     WR_EN,
     din);
+  output PROG_FULL;
   output EMPTY;
   output FULL;
   output [3:0]dout;
@@ -879,6 +895,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_10
 
   wire EMPTY;
   wire FULL;
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -914,6 +931,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_10
   post_ddr_slow_fifo_builtin_prim_v6_18 \gonep.inst_prim 
        (.EMPTY(EMPTY),
         .FULL(FULL),
+        .PROG_FULL(PROG_FULL),
         .RD_EN(RD_EN),
         .RST(RST),
         .WR_EN(WR_EN),
@@ -929,6 +947,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_11
     rd_clk_0,
     empty,
     rd_clk_1,
+    PROG_FULL,
     dout,
     full_0,
     full_1,
@@ -948,6 +967,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_11
   output rd_clk_0;
   output empty;
   output rd_clk_1;
+  output PROG_FULL;
   output [3:0]dout;
   input full_0;
   input full_1;
@@ -964,6 +984,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_11
   input WR_EN;
   input [3:0]din;
 
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -989,7 +1010,8 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_11
   wire wr_clk;
 
   post_ddr_slow_fifo_builtin_prim_v6_17 \gonep.inst_prim 
-       (.RD_EN(RD_EN),
+       (.PROG_FULL(PROG_FULL),
+        .RD_EN(RD_EN),
         .RST(RST),
         .WR_EN(WR_EN),
         .din(din),
@@ -1032,7 +1054,8 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_extdepth_v6" *) 
 module post_ddr_slow_fifo_builtin_extdepth_v6_12
-   (EMPTY,
+   (PROG_FULL,
+    EMPTY,
     FULL,
     dout,
     rd_clk,
@@ -1041,6 +1064,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_12
     wr_clk,
     WR_EN,
     din);
+  output PROG_FULL;
   output EMPTY;
   output FULL;
   output [3:0]dout;
@@ -1053,6 +1077,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_12
 
   wire EMPTY;
   wire FULL;
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -1088,6 +1113,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_12
   post_ddr_slow_fifo_builtin_prim_v6_16 \gonep.inst_prim 
        (.EMPTY(EMPTY),
         .FULL(FULL),
+        .PROG_FULL(PROG_FULL),
         .RD_EN(RD_EN),
         .RST(RST),
         .WR_EN(WR_EN),
@@ -1099,7 +1125,8 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_extdepth_v6" *) 
 module post_ddr_slow_fifo_builtin_extdepth_v6_13
-   (EMPTY,
+   (PROG_FULL,
+    EMPTY,
     FULL,
     dout,
     rd_clk,
@@ -1108,6 +1135,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_13
     wr_clk,
     WR_EN,
     din);
+  output PROG_FULL;
   output EMPTY;
   output FULL;
   output [3:0]dout;
@@ -1120,6 +1148,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_13
 
   wire EMPTY;
   wire FULL;
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -1155,6 +1184,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_13
   post_ddr_slow_fifo_builtin_prim_v6_15 \gonep.inst_prim 
        (.EMPTY(EMPTY),
         .FULL(FULL),
+        .PROG_FULL(PROG_FULL),
         .RD_EN(RD_EN),
         .RST(RST),
         .WR_EN(WR_EN),
@@ -1166,7 +1196,8 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_extdepth_v6" *) 
 module post_ddr_slow_fifo_builtin_extdepth_v6_14
-   (EMPTY,
+   (PROG_FULL,
+    EMPTY,
     FULL,
     dout,
     rd_clk,
@@ -1175,6 +1206,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_14
     wr_clk,
     WR_EN,
     din);
+  output PROG_FULL;
   output EMPTY;
   output FULL;
   output [3:0]dout;
@@ -1187,6 +1219,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_14
 
   wire EMPTY;
   wire FULL;
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -1222,6 +1255,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_14
   post_ddr_slow_fifo_builtin_prim_v6 \gonep.inst_prim 
        (.EMPTY(EMPTY),
         .FULL(FULL),
+        .PROG_FULL(PROG_FULL),
         .RD_EN(RD_EN),
         .RST(RST),
         .WR_EN(WR_EN),
@@ -1233,7 +1267,8 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_extdepth_v6" *) 
 module post_ddr_slow_fifo_builtin_extdepth_v6_2
-   (EMPTY,
+   (PROG_FULL,
+    EMPTY,
     FULL,
     dout,
     rd_clk,
@@ -1242,6 +1277,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_2
     wr_clk,
     WR_EN,
     din);
+  output PROG_FULL;
   output EMPTY;
   output FULL;
   output [3:0]dout;
@@ -1254,6 +1290,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_2
 
   wire EMPTY;
   wire FULL;
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -1289,6 +1326,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_2
   post_ddr_slow_fifo_builtin_prim_v6_26 \gonep.inst_prim 
        (.EMPTY(EMPTY),
         .FULL(FULL),
+        .PROG_FULL(PROG_FULL),
         .RD_EN(RD_EN),
         .RST(RST),
         .WR_EN(WR_EN),
@@ -1302,6 +1340,7 @@ endmodule
 module post_ddr_slow_fifo_builtin_extdepth_v6_3
    (rd_clk_0,
     rd_clk_1,
+    PROG_FULL,
     dout,
     full,
     empty,
@@ -1313,6 +1352,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_3
     din);
   output rd_clk_0;
   output rd_clk_1;
+  output PROG_FULL;
   output [3:0]dout;
   input [2:0]full;
   input [2:0]empty;
@@ -1323,6 +1363,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_3
   input WR_EN;
   input [3:0]din;
 
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -1340,7 +1381,8 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_3
   wire wr_clk;
 
   post_ddr_slow_fifo_builtin_prim_v6_25 \gonep.inst_prim 
-       (.RD_EN(RD_EN),
+       (.PROG_FULL(PROG_FULL),
+        .RD_EN(RD_EN),
         .RST(RST),
         .WR_EN(WR_EN),
         .din(din),
@@ -1375,7 +1417,8 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_extdepth_v6" *) 
 module post_ddr_slow_fifo_builtin_extdepth_v6_4
-   (EMPTY,
+   (PROG_FULL,
+    EMPTY,
     FULL,
     dout,
     rd_clk,
@@ -1384,6 +1427,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_4
     wr_clk,
     WR_EN,
     din);
+  output PROG_FULL;
   output EMPTY;
   output FULL;
   output [3:0]dout;
@@ -1396,6 +1440,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_4
 
   wire EMPTY;
   wire FULL;
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -1431,6 +1476,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_4
   post_ddr_slow_fifo_builtin_prim_v6_24 \gonep.inst_prim 
        (.EMPTY(EMPTY),
         .FULL(FULL),
+        .PROG_FULL(PROG_FULL),
         .RD_EN(RD_EN),
         .RST(RST),
         .WR_EN(WR_EN),
@@ -1442,7 +1488,8 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_extdepth_v6" *) 
 module post_ddr_slow_fifo_builtin_extdepth_v6_5
-   (EMPTY,
+   (PROG_FULL,
+    EMPTY,
     FULL,
     dout,
     rd_clk,
@@ -1451,6 +1498,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_5
     wr_clk,
     WR_EN,
     din);
+  output PROG_FULL;
   output EMPTY;
   output FULL;
   output [3:0]dout;
@@ -1463,6 +1511,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_5
 
   wire EMPTY;
   wire FULL;
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -1498,6 +1547,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_5
   post_ddr_slow_fifo_builtin_prim_v6_23 \gonep.inst_prim 
        (.EMPTY(EMPTY),
         .FULL(FULL),
+        .PROG_FULL(PROG_FULL),
         .RD_EN(RD_EN),
         .RST(RST),
         .WR_EN(WR_EN),
@@ -1509,7 +1559,8 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_extdepth_v6" *) 
 module post_ddr_slow_fifo_builtin_extdepth_v6_6
-   (EMPTY,
+   (PROG_FULL,
+    EMPTY,
     FULL,
     dout,
     rd_clk,
@@ -1518,6 +1569,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_6
     wr_clk,
     WR_EN,
     din);
+  output PROG_FULL;
   output EMPTY;
   output FULL;
   output [3:0]dout;
@@ -1530,6 +1582,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_6
 
   wire EMPTY;
   wire FULL;
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -1565,6 +1618,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_6
   post_ddr_slow_fifo_builtin_prim_v6_22 \gonep.inst_prim 
        (.EMPTY(EMPTY),
         .FULL(FULL),
+        .PROG_FULL(PROG_FULL),
         .RD_EN(RD_EN),
         .RST(RST),
         .WR_EN(WR_EN),
@@ -1578,6 +1632,7 @@ endmodule
 module post_ddr_slow_fifo_builtin_extdepth_v6_7
    (rd_clk_0,
     rd_clk_1,
+    PROG_FULL,
     dout,
     full,
     empty,
@@ -1589,6 +1644,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_7
     din);
   output rd_clk_0;
   output rd_clk_1;
+  output PROG_FULL;
   output [3:0]dout;
   input [2:0]full;
   input [2:0]empty;
@@ -1599,6 +1655,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_7
   input WR_EN;
   input [3:0]din;
 
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -1616,7 +1673,8 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_7
   wire wr_clk;
 
   post_ddr_slow_fifo_builtin_prim_v6_21 \gonep.inst_prim 
-       (.RD_EN(RD_EN),
+       (.PROG_FULL(PROG_FULL),
+        .RD_EN(RD_EN),
         .RST(RST),
         .WR_EN(WR_EN),
         .din(din),
@@ -1651,7 +1709,8 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_extdepth_v6" *) 
 module post_ddr_slow_fifo_builtin_extdepth_v6_8
-   (EMPTY,
+   (PROG_FULL,
+    EMPTY,
     FULL,
     dout,
     rd_clk,
@@ -1660,6 +1719,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_8
     wr_clk,
     WR_EN,
     din);
+  output PROG_FULL;
   output EMPTY;
   output FULL;
   output [3:0]dout;
@@ -1672,6 +1732,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_8
 
   wire EMPTY;
   wire FULL;
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -1707,6 +1768,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_8
   post_ddr_slow_fifo_builtin_prim_v6_20 \gonep.inst_prim 
        (.EMPTY(EMPTY),
         .FULL(FULL),
+        .PROG_FULL(PROG_FULL),
         .RD_EN(RD_EN),
         .RST(RST),
         .WR_EN(WR_EN),
@@ -1718,7 +1780,8 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_extdepth_v6" *) 
 module post_ddr_slow_fifo_builtin_extdepth_v6_9
-   (EMPTY,
+   (PROG_FULL,
+    EMPTY,
     FULL,
     dout,
     rd_clk,
@@ -1727,6 +1790,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_9
     wr_clk,
     WR_EN,
     din);
+  output PROG_FULL;
   output EMPTY;
   output FULL;
   output [3:0]dout;
@@ -1739,6 +1803,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_9
 
   wire EMPTY;
   wire FULL;
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -1774,6 +1839,7 @@ module post_ddr_slow_fifo_builtin_extdepth_v6_9
   post_ddr_slow_fifo_builtin_prim_v6_19 \gonep.inst_prim 
        (.EMPTY(EMPTY),
         .FULL(FULL),
+        .PROG_FULL(PROG_FULL),
         .RD_EN(RD_EN),
         .RST(RST),
         .WR_EN(WR_EN),
@@ -1785,7 +1851,8 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_prim_v6" *) 
 module post_ddr_slow_fifo_builtin_prim_v6
-   (EMPTY,
+   (PROG_FULL,
+    EMPTY,
     FULL,
     dout,
     rd_clk,
@@ -1794,6 +1861,7 @@ module post_ddr_slow_fifo_builtin_prim_v6
     wr_clk,
     WR_EN,
     din);
+  output PROG_FULL;
   output EMPTY;
   output FULL;
   output [3:0]dout;
@@ -1807,6 +1875,7 @@ module post_ddr_slow_fifo_builtin_prim_v6
   wire [63:4]DO;
   wire EMPTY;
   wire FULL;
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -1842,7 +1911,6 @@ module post_ddr_slow_fifo_builtin_prim_v6
   wire \gf36e1_inst.sngfifo36e1_n_8 ;
   wire \gf36e1_inst.sngfifo36e1_n_9 ;
   wire [9:9]pe;
-  wire [9:9]pf;
   wire rd_clk;
   wire [9:9]sbiterr_col;
   wire wr_clk;
@@ -1852,7 +1920,7 @@ module post_ddr_slow_fifo_builtin_prim_v6
   (* box_type = "PRIMITIVE" *) 
   FIFO36E1 #(
     .ALMOST_EMPTY_OFFSET(13'h0006),
-    .ALMOST_FULL_OFFSET(13'h000F),
+    .ALMOST_FULL_OFFSET(13'h1001),
     .DATA_WIDTH(4),
     .DO_REG(1),
     .EN_ECC_READ("FALSE"),
@@ -1871,7 +1939,7 @@ module post_ddr_slow_fifo_builtin_prim_v6
     .SRVAL(72'h000000000000000000)) 
     \gf36e1_inst.sngfifo36e1 
        (.ALMOSTEMPTY(pe),
-        .ALMOSTFULL(pf),
+        .ALMOSTFULL(PROG_FULL),
         .DBITERR(dbiterr_col),
         .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
         .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
@@ -1898,7 +1966,8 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_prim_v6" *) 
 module post_ddr_slow_fifo_builtin_prim_v6_15
-   (EMPTY,
+   (PROG_FULL,
+    EMPTY,
     FULL,
     dout,
     rd_clk,
@@ -1907,6 +1976,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_15
     wr_clk,
     WR_EN,
     din);
+  output PROG_FULL;
   output EMPTY;
   output FULL;
   output [3:0]dout;
@@ -1920,6 +1990,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_15
   wire [63:4]DO;
   wire EMPTY;
   wire FULL;
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -1955,7 +2026,6 @@ module post_ddr_slow_fifo_builtin_prim_v6_15
   wire \gf36e1_inst.sngfifo36e1_n_8 ;
   wire \gf36e1_inst.sngfifo36e1_n_9 ;
   wire [8:8]pe;
-  wire [8:8]pf;
   wire rd_clk;
   wire [8:8]sbiterr_col;
   wire wr_clk;
@@ -1965,7 +2035,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_15
   (* box_type = "PRIMITIVE" *) 
   FIFO36E1 #(
     .ALMOST_EMPTY_OFFSET(13'h0006),
-    .ALMOST_FULL_OFFSET(13'h000F),
+    .ALMOST_FULL_OFFSET(13'h1001),
     .DATA_WIDTH(4),
     .DO_REG(1),
     .EN_ECC_READ("FALSE"),
@@ -1984,7 +2054,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_15
     .SRVAL(72'h000000000000000000)) 
     \gf36e1_inst.sngfifo36e1 
        (.ALMOSTEMPTY(pe),
-        .ALMOSTFULL(pf),
+        .ALMOSTFULL(PROG_FULL),
         .DBITERR(dbiterr_col),
         .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
         .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
@@ -2011,7 +2081,8 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_prim_v6" *) 
 module post_ddr_slow_fifo_builtin_prim_v6_16
-   (EMPTY,
+   (PROG_FULL,
+    EMPTY,
     FULL,
     dout,
     rd_clk,
@@ -2020,6 +2091,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_16
     wr_clk,
     WR_EN,
     din);
+  output PROG_FULL;
   output EMPTY;
   output FULL;
   output [3:0]dout;
@@ -2033,6 +2105,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_16
   wire [63:4]DO;
   wire EMPTY;
   wire FULL;
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -2068,7 +2141,6 @@ module post_ddr_slow_fifo_builtin_prim_v6_16
   wire \gf36e1_inst.sngfifo36e1_n_8 ;
   wire \gf36e1_inst.sngfifo36e1_n_9 ;
   wire [7:7]pe;
-  wire [7:7]pf;
   wire rd_clk;
   wire [7:7]sbiterr_col;
   wire wr_clk;
@@ -2078,7 +2150,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_16
   (* box_type = "PRIMITIVE" *) 
   FIFO36E1 #(
     .ALMOST_EMPTY_OFFSET(13'h0006),
-    .ALMOST_FULL_OFFSET(13'h000F),
+    .ALMOST_FULL_OFFSET(13'h1001),
     .DATA_WIDTH(4),
     .DO_REG(1),
     .EN_ECC_READ("FALSE"),
@@ -2097,7 +2169,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_16
     .SRVAL(72'h000000000000000000)) 
     \gf36e1_inst.sngfifo36e1 
        (.ALMOSTEMPTY(pe),
-        .ALMOSTFULL(pf),
+        .ALMOSTFULL(PROG_FULL),
         .DBITERR(dbiterr_col),
         .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
         .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
@@ -2124,7 +2196,8 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_prim_v6" *) 
 module post_ddr_slow_fifo_builtin_prim_v6_17
-   (dout,
+   (PROG_FULL,
+    dout,
     full,
     rd_clk_0,
     empty,
@@ -2143,6 +2216,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_17
     empty_1,
     empty_2,
     empty_3);
+  output PROG_FULL;
   output [3:0]dout;
   output full;
   output rd_clk_0;
@@ -2164,6 +2238,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_17
   input [2:0]empty_3;
 
   wire [63:4]DO;
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -2211,7 +2286,6 @@ module post_ddr_slow_fifo_builtin_prim_v6_17
   wire \gf36e1_inst.sngfifo36e1_n_8 ;
   wire \gf36e1_inst.sngfifo36e1_n_9 ;
   wire [6:6]pe;
-  wire [6:6]pf;
   wire rd_clk;
   wire rd_clk_0;
   wire rd_clk_1;
@@ -2255,7 +2329,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_17
   (* box_type = "PRIMITIVE" *) 
   FIFO36E1 #(
     .ALMOST_EMPTY_OFFSET(13'h0006),
-    .ALMOST_FULL_OFFSET(13'h000F),
+    .ALMOST_FULL_OFFSET(13'h1001),
     .DATA_WIDTH(4),
     .DO_REG(1),
     .EN_ECC_READ("FALSE"),
@@ -2274,7 +2348,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_17
     .SRVAL(72'h000000000000000000)) 
     \gf36e1_inst.sngfifo36e1 
        (.ALMOSTEMPTY(pe),
-        .ALMOSTFULL(pf),
+        .ALMOSTFULL(PROG_FULL),
         .DBITERR(dbiterr_col),
         .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
         .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
@@ -2301,7 +2375,8 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_prim_v6" *) 
 module post_ddr_slow_fifo_builtin_prim_v6_18
-   (EMPTY,
+   (PROG_FULL,
+    EMPTY,
     FULL,
     dout,
     rd_clk,
@@ -2310,6 +2385,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_18
     wr_clk,
     WR_EN,
     din);
+  output PROG_FULL;
   output EMPTY;
   output FULL;
   output [3:0]dout;
@@ -2323,6 +2399,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_18
   wire [63:4]DO;
   wire EMPTY;
   wire FULL;
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -2358,7 +2435,6 @@ module post_ddr_slow_fifo_builtin_prim_v6_18
   wire \gf36e1_inst.sngfifo36e1_n_8 ;
   wire \gf36e1_inst.sngfifo36e1_n_9 ;
   wire [5:5]pe;
-  wire [5:5]pf;
   wire rd_clk;
   wire [5:5]sbiterr_col;
   wire wr_clk;
@@ -2368,7 +2444,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_18
   (* box_type = "PRIMITIVE" *) 
   FIFO36E1 #(
     .ALMOST_EMPTY_OFFSET(13'h0006),
-    .ALMOST_FULL_OFFSET(13'h000F),
+    .ALMOST_FULL_OFFSET(13'h1001),
     .DATA_WIDTH(4),
     .DO_REG(1),
     .EN_ECC_READ("FALSE"),
@@ -2387,7 +2463,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_18
     .SRVAL(72'h000000000000000000)) 
     \gf36e1_inst.sngfifo36e1 
        (.ALMOSTEMPTY(pe),
-        .ALMOSTFULL(pf),
+        .ALMOSTFULL(PROG_FULL),
         .DBITERR(dbiterr_col),
         .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
         .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
@@ -2414,7 +2490,8 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_prim_v6" *) 
 module post_ddr_slow_fifo_builtin_prim_v6_19
-   (EMPTY,
+   (PROG_FULL,
+    EMPTY,
     FULL,
     dout,
     rd_clk,
@@ -2423,6 +2500,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_19
     wr_clk,
     WR_EN,
     din);
+  output PROG_FULL;
   output EMPTY;
   output FULL;
   output [3:0]dout;
@@ -2436,6 +2514,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_19
   wire [63:4]DO;
   wire EMPTY;
   wire FULL;
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -2471,7 +2550,6 @@ module post_ddr_slow_fifo_builtin_prim_v6_19
   wire \gf36e1_inst.sngfifo36e1_n_8 ;
   wire \gf36e1_inst.sngfifo36e1_n_9 ;
   wire [4:4]pe;
-  wire [4:4]pf;
   wire rd_clk;
   wire [4:4]sbiterr_col;
   wire wr_clk;
@@ -2481,7 +2559,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_19
   (* box_type = "PRIMITIVE" *) 
   FIFO36E1 #(
     .ALMOST_EMPTY_OFFSET(13'h0006),
-    .ALMOST_FULL_OFFSET(13'h000F),
+    .ALMOST_FULL_OFFSET(13'h1001),
     .DATA_WIDTH(4),
     .DO_REG(1),
     .EN_ECC_READ("FALSE"),
@@ -2500,7 +2578,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_19
     .SRVAL(72'h000000000000000000)) 
     \gf36e1_inst.sngfifo36e1 
        (.ALMOSTEMPTY(pe),
-        .ALMOSTFULL(pf),
+        .ALMOSTFULL(PROG_FULL),
         .DBITERR(dbiterr_col),
         .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
         .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
@@ -2527,7 +2605,8 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_prim_v6" *) 
 module post_ddr_slow_fifo_builtin_prim_v6_20
-   (EMPTY,
+   (PROG_FULL,
+    EMPTY,
     FULL,
     dout,
     rd_clk,
@@ -2536,6 +2615,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_20
     wr_clk,
     WR_EN,
     din);
+  output PROG_FULL;
   output EMPTY;
   output FULL;
   output [3:0]dout;
@@ -2549,6 +2629,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_20
   wire [63:4]DO;
   wire EMPTY;
   wire FULL;
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -2584,7 +2665,6 @@ module post_ddr_slow_fifo_builtin_prim_v6_20
   wire \gf36e1_inst.sngfifo36e1_n_8 ;
   wire \gf36e1_inst.sngfifo36e1_n_9 ;
   wire [3:3]pe;
-  wire [3:3]pf;
   wire rd_clk;
   wire [3:3]sbiterr_col;
   wire wr_clk;
@@ -2594,7 +2674,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_20
   (* box_type = "PRIMITIVE" *) 
   FIFO36E1 #(
     .ALMOST_EMPTY_OFFSET(13'h0006),
-    .ALMOST_FULL_OFFSET(13'h000F),
+    .ALMOST_FULL_OFFSET(13'h1001),
     .DATA_WIDTH(4),
     .DO_REG(1),
     .EN_ECC_READ("FALSE"),
@@ -2613,7 +2693,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_20
     .SRVAL(72'h000000000000000000)) 
     \gf36e1_inst.sngfifo36e1 
        (.ALMOSTEMPTY(pe),
-        .ALMOSTFULL(pf),
+        .ALMOSTFULL(PROG_FULL),
         .DBITERR(dbiterr_col),
         .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
         .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
@@ -2640,7 +2720,8 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_prim_v6" *) 
 module post_ddr_slow_fifo_builtin_prim_v6_21
-   (dout,
+   (PROG_FULL,
+    dout,
     rd_clk_0,
     rd_clk_1,
     rd_clk,
@@ -2651,6 +2732,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_21
     din,
     full,
     empty);
+  output PROG_FULL;
   output [3:0]dout;
   output rd_clk_0;
   output rd_clk_1;
@@ -2664,6 +2746,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_21
   input [2:0]empty;
 
   wire [63:4]DO;
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -2703,7 +2786,6 @@ module post_ddr_slow_fifo_builtin_prim_v6_21
   wire \gf36e1_inst.sngfifo36e1_n_8 ;
   wire \gf36e1_inst.sngfifo36e1_n_9 ;
   wire [2:2]pe;
-  wire [2:2]pf;
   wire rd_clk;
   wire rd_clk_0;
   wire rd_clk_1;
@@ -2731,7 +2813,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_21
   (* box_type = "PRIMITIVE" *) 
   FIFO36E1 #(
     .ALMOST_EMPTY_OFFSET(13'h0006),
-    .ALMOST_FULL_OFFSET(13'h000F),
+    .ALMOST_FULL_OFFSET(13'h1001),
     .DATA_WIDTH(4),
     .DO_REG(1),
     .EN_ECC_READ("FALSE"),
@@ -2750,7 +2832,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_21
     .SRVAL(72'h000000000000000000)) 
     \gf36e1_inst.sngfifo36e1 
        (.ALMOSTEMPTY(pe),
-        .ALMOSTFULL(pf),
+        .ALMOSTFULL(PROG_FULL),
         .DBITERR(dbiterr_col),
         .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
         .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
@@ -2777,7 +2859,8 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_prim_v6" *) 
 module post_ddr_slow_fifo_builtin_prim_v6_22
-   (EMPTY,
+   (PROG_FULL,
+    EMPTY,
     FULL,
     dout,
     rd_clk,
@@ -2786,6 +2869,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_22
     wr_clk,
     WR_EN,
     din);
+  output PROG_FULL;
   output EMPTY;
   output FULL;
   output [3:0]dout;
@@ -2799,6 +2883,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_22
   wire [63:4]DO;
   wire EMPTY;
   wire FULL;
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -2834,7 +2919,6 @@ module post_ddr_slow_fifo_builtin_prim_v6_22
   wire \gf36e1_inst.sngfifo36e1_n_8 ;
   wire \gf36e1_inst.sngfifo36e1_n_9 ;
   wire [1:1]pe;
-  wire [1:1]pf;
   wire rd_clk;
   wire [1:1]sbiterr_col;
   wire wr_clk;
@@ -2844,7 +2928,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_22
   (* box_type = "PRIMITIVE" *) 
   FIFO36E1 #(
     .ALMOST_EMPTY_OFFSET(13'h0006),
-    .ALMOST_FULL_OFFSET(13'h000F),
+    .ALMOST_FULL_OFFSET(13'h1001),
     .DATA_WIDTH(4),
     .DO_REG(1),
     .EN_ECC_READ("FALSE"),
@@ -2863,7 +2947,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_22
     .SRVAL(72'h000000000000000000)) 
     \gf36e1_inst.sngfifo36e1 
        (.ALMOSTEMPTY(pe),
-        .ALMOSTFULL(pf),
+        .ALMOSTFULL(PROG_FULL),
         .DBITERR(dbiterr_col),
         .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
         .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
@@ -2890,7 +2974,8 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_prim_v6" *) 
 module post_ddr_slow_fifo_builtin_prim_v6_23
-   (EMPTY,
+   (PROG_FULL,
+    EMPTY,
     FULL,
     dout,
     rd_clk,
@@ -2899,6 +2984,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_23
     wr_clk,
     WR_EN,
     din);
+  output PROG_FULL;
   output EMPTY;
   output FULL;
   output [3:0]dout;
@@ -2912,6 +2998,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_23
   wire [63:4]DO;
   wire EMPTY;
   wire FULL;
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -2947,7 +3034,6 @@ module post_ddr_slow_fifo_builtin_prim_v6_23
   wire \gf36e1_inst.sngfifo36e1_n_8 ;
   wire \gf36e1_inst.sngfifo36e1_n_9 ;
   wire [16:16]pe;
-  wire [16:16]pf;
   wire rd_clk;
   wire [16:16]sbiterr_col;
   wire wr_clk;
@@ -2957,7 +3043,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_23
   (* box_type = "PRIMITIVE" *) 
   FIFO36E1 #(
     .ALMOST_EMPTY_OFFSET(13'h0006),
-    .ALMOST_FULL_OFFSET(13'h000F),
+    .ALMOST_FULL_OFFSET(13'h1001),
     .DATA_WIDTH(4),
     .DO_REG(1),
     .EN_ECC_READ("FALSE"),
@@ -2976,7 +3062,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_23
     .SRVAL(72'h000000000000000000)) 
     \gf36e1_inst.sngfifo36e1 
        (.ALMOSTEMPTY(pe),
-        .ALMOSTFULL(pf),
+        .ALMOSTFULL(PROG_FULL),
         .DBITERR(dbiterr_col),
         .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
         .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
@@ -3003,7 +3089,8 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_prim_v6" *) 
 module post_ddr_slow_fifo_builtin_prim_v6_24
-   (EMPTY,
+   (PROG_FULL,
+    EMPTY,
     FULL,
     dout,
     rd_clk,
@@ -3012,6 +3099,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_24
     wr_clk,
     WR_EN,
     din);
+  output PROG_FULL;
   output EMPTY;
   output FULL;
   output [3:0]dout;
@@ -3025,6 +3113,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_24
   wire [63:4]DO;
   wire EMPTY;
   wire FULL;
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -3060,7 +3149,6 @@ module post_ddr_slow_fifo_builtin_prim_v6_24
   wire \gf36e1_inst.sngfifo36e1_n_8 ;
   wire \gf36e1_inst.sngfifo36e1_n_9 ;
   wire [15:15]pe;
-  wire [15:15]pf;
   wire rd_clk;
   wire [15:15]sbiterr_col;
   wire wr_clk;
@@ -3070,7 +3158,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_24
   (* box_type = "PRIMITIVE" *) 
   FIFO36E1 #(
     .ALMOST_EMPTY_OFFSET(13'h0006),
-    .ALMOST_FULL_OFFSET(13'h000F),
+    .ALMOST_FULL_OFFSET(13'h1001),
     .DATA_WIDTH(4),
     .DO_REG(1),
     .EN_ECC_READ("FALSE"),
@@ -3089,7 +3177,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_24
     .SRVAL(72'h000000000000000000)) 
     \gf36e1_inst.sngfifo36e1 
        (.ALMOSTEMPTY(pe),
-        .ALMOSTFULL(pf),
+        .ALMOSTFULL(PROG_FULL),
         .DBITERR(dbiterr_col),
         .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
         .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
@@ -3116,7 +3204,8 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_prim_v6" *) 
 module post_ddr_slow_fifo_builtin_prim_v6_25
-   (dout,
+   (PROG_FULL,
+    dout,
     rd_clk_0,
     rd_clk_1,
     rd_clk,
@@ -3127,6 +3216,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_25
     din,
     full,
     empty);
+  output PROG_FULL;
   output [3:0]dout;
   output rd_clk_0;
   output rd_clk_1;
@@ -3140,6 +3230,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_25
   input [2:0]empty;
 
   wire [63:4]DO;
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -3179,7 +3270,6 @@ module post_ddr_slow_fifo_builtin_prim_v6_25
   wire \gf36e1_inst.sngfifo36e1_n_8 ;
   wire \gf36e1_inst.sngfifo36e1_n_9 ;
   wire [14:14]pe;
-  wire [14:14]pf;
   wire rd_clk;
   wire rd_clk_0;
   wire rd_clk_1;
@@ -3207,7 +3297,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_25
   (* box_type = "PRIMITIVE" *) 
   FIFO36E1 #(
     .ALMOST_EMPTY_OFFSET(13'h0006),
-    .ALMOST_FULL_OFFSET(13'h000F),
+    .ALMOST_FULL_OFFSET(13'h1001),
     .DATA_WIDTH(4),
     .DO_REG(1),
     .EN_ECC_READ("FALSE"),
@@ -3226,7 +3316,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_25
     .SRVAL(72'h000000000000000000)) 
     \gf36e1_inst.sngfifo36e1 
        (.ALMOSTEMPTY(pe),
-        .ALMOSTFULL(pf),
+        .ALMOSTFULL(PROG_FULL),
         .DBITERR(dbiterr_col),
         .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
         .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
@@ -3253,7 +3343,8 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_prim_v6" *) 
 module post_ddr_slow_fifo_builtin_prim_v6_26
-   (EMPTY,
+   (PROG_FULL,
+    EMPTY,
     FULL,
     dout,
     rd_clk,
@@ -3262,6 +3353,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_26
     wr_clk,
     WR_EN,
     din);
+  output PROG_FULL;
   output EMPTY;
   output FULL;
   output [3:0]dout;
@@ -3275,6 +3367,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_26
   wire [63:4]DO;
   wire EMPTY;
   wire FULL;
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -3310,7 +3403,6 @@ module post_ddr_slow_fifo_builtin_prim_v6_26
   wire \gf36e1_inst.sngfifo36e1_n_8 ;
   wire \gf36e1_inst.sngfifo36e1_n_9 ;
   wire [13:13]pe;
-  wire [13:13]pf;
   wire rd_clk;
   wire [13:13]sbiterr_col;
   wire wr_clk;
@@ -3320,7 +3412,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_26
   (* box_type = "PRIMITIVE" *) 
   FIFO36E1 #(
     .ALMOST_EMPTY_OFFSET(13'h0006),
-    .ALMOST_FULL_OFFSET(13'h000F),
+    .ALMOST_FULL_OFFSET(13'h1001),
     .DATA_WIDTH(4),
     .DO_REG(1),
     .EN_ECC_READ("FALSE"),
@@ -3339,7 +3431,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_26
     .SRVAL(72'h000000000000000000)) 
     \gf36e1_inst.sngfifo36e1 
        (.ALMOSTEMPTY(pe),
-        .ALMOSTFULL(pf),
+        .ALMOSTFULL(PROG_FULL),
         .DBITERR(dbiterr_col),
         .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
         .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
@@ -3366,7 +3458,8 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_prim_v6" *) 
 module post_ddr_slow_fifo_builtin_prim_v6_27
-   (EMPTY,
+   (PROG_FULL,
+    EMPTY,
     FULL,
     dout,
     rd_clk,
@@ -3375,6 +3468,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_27
     wr_clk,
     WR_EN,
     din);
+  output PROG_FULL;
   output EMPTY;
   output FULL;
   output [3:0]dout;
@@ -3388,6 +3482,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_27
   wire [63:4]DO;
   wire EMPTY;
   wire FULL;
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -3423,7 +3518,6 @@ module post_ddr_slow_fifo_builtin_prim_v6_27
   wire \gf36e1_inst.sngfifo36e1_n_8 ;
   wire \gf36e1_inst.sngfifo36e1_n_9 ;
   wire [12:12]pe;
-  wire [12:12]pf;
   wire rd_clk;
   wire [12:12]sbiterr_col;
   wire wr_clk;
@@ -3433,7 +3527,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_27
   (* box_type = "PRIMITIVE" *) 
   FIFO36E1 #(
     .ALMOST_EMPTY_OFFSET(13'h0006),
-    .ALMOST_FULL_OFFSET(13'h000F),
+    .ALMOST_FULL_OFFSET(13'h1001),
     .DATA_WIDTH(4),
     .DO_REG(1),
     .EN_ECC_READ("FALSE"),
@@ -3452,7 +3546,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_27
     .SRVAL(72'h000000000000000000)) 
     \gf36e1_inst.sngfifo36e1 
        (.ALMOSTEMPTY(pe),
-        .ALMOSTFULL(pf),
+        .ALMOSTFULL(PROG_FULL),
         .DBITERR(dbiterr_col),
         .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
         .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
@@ -3479,7 +3573,8 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_prim_v6" *) 
 module post_ddr_slow_fifo_builtin_prim_v6_28
-   (EMPTY,
+   (PROG_FULL,
+    EMPTY,
     FULL,
     dout,
     rd_clk,
@@ -3488,6 +3583,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_28
     wr_clk,
     WR_EN,
     din);
+  output PROG_FULL;
   output EMPTY;
   output FULL;
   output [3:0]dout;
@@ -3501,6 +3597,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_28
   wire [63:4]DO;
   wire EMPTY;
   wire FULL;
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -3536,7 +3633,6 @@ module post_ddr_slow_fifo_builtin_prim_v6_28
   wire \gf36e1_inst.sngfifo36e1_n_8 ;
   wire \gf36e1_inst.sngfifo36e1_n_9 ;
   wire [11:11]pe;
-  wire [11:11]pf;
   wire rd_clk;
   wire [11:11]sbiterr_col;
   wire wr_clk;
@@ -3546,7 +3642,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_28
   (* box_type = "PRIMITIVE" *) 
   FIFO36E1 #(
     .ALMOST_EMPTY_OFFSET(13'h0006),
-    .ALMOST_FULL_OFFSET(13'h000F),
+    .ALMOST_FULL_OFFSET(13'h1001),
     .DATA_WIDTH(4),
     .DO_REG(1),
     .EN_ECC_READ("FALSE"),
@@ -3565,7 +3661,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_28
     .SRVAL(72'h000000000000000000)) 
     \gf36e1_inst.sngfifo36e1 
        (.ALMOSTEMPTY(pe),
-        .ALMOSTFULL(pf),
+        .ALMOSTFULL(PROG_FULL),
         .DBITERR(dbiterr_col),
         .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
         .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
@@ -3592,7 +3688,8 @@ endmodule
 
 (* ORIG_REF_NAME = "builtin_prim_v6" *) 
 module post_ddr_slow_fifo_builtin_prim_v6_29
-   (dout,
+   (PROG_FULL,
+    dout,
     RD_EN,
     WR_EN,
     rd_clk_0,
@@ -3613,6 +3710,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_29
     wr_en,
     \govw.govw2.OVERFLOW_reg_2 ,
     \gunf.gunf2.UNDERFLOW_reg_2 );
+  output PROG_FULL;
   output [3:0]dout;
   output RD_EN;
   output WR_EN;
@@ -3636,6 +3734,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_29
   input [2:0]\gunf.gunf2.UNDERFLOW_reg_2 ;
 
   wire [63:4]DO;
+  wire PROG_FULL;
   wire RD_EN;
   wire RST;
   wire WR_EN;
@@ -3682,7 +3781,6 @@ module post_ddr_slow_fifo_builtin_prim_v6_29
   wire [2:0]\gunf.gunf2.UNDERFLOW_reg_2 ;
   wire overflow_i_ic;
   wire [10:10]pe;
-  wire [10:10]pf;
   wire rd_clk;
   wire rd_clk_0;
   wire rd_clk_1;
@@ -3713,7 +3811,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_29
   (* box_type = "PRIMITIVE" *) 
   FIFO36E1 #(
     .ALMOST_EMPTY_OFFSET(13'h0006),
-    .ALMOST_FULL_OFFSET(13'h000F),
+    .ALMOST_FULL_OFFSET(13'h1001),
     .DATA_WIDTH(4),
     .DO_REG(1),
     .EN_ECC_READ("FALSE"),
@@ -3732,7 +3830,7 @@ module post_ddr_slow_fifo_builtin_prim_v6_29
     .SRVAL(72'h000000000000000000)) 
     \gf36e1_inst.sngfifo36e1 
        (.ALMOSTEMPTY(pe),
-        .ALMOSTFULL(pf),
+        .ALMOSTFULL(PROG_FULL),
         .DBITERR(dbiterr_col),
         .DI({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,din}),
         .DIP({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
@@ -3802,6 +3900,7 @@ module post_ddr_slow_fifo_builtin_top_v6
    (overflow,
     underflow,
     dout,
+    prog_full,
     full,
     empty,
     wr_clk,
@@ -3813,6 +3912,7 @@ module post_ddr_slow_fifo_builtin_top_v6
   output overflow;
   output underflow;
   output [63:0]dout;
+  output prog_full;
   output full;
   output empty;
   input wr_clk;
@@ -3840,6 +3940,10 @@ module post_ddr_slow_fifo_builtin_top_v6
   wire \gextw[6].gnll_fifo.inst_extd_n_3 ;
   wire overflow;
   wire overflow_i_ic;
+  wire [16:1]pf;
+  wire prog_full;
+  wire prog_full_INST_0_i_1_n_0;
+  wire prog_full_INST_0_i_2_n_0;
   wire rd_clk;
   wire rd_en;
   wire underflow;
@@ -3849,7 +3953,8 @@ module post_ddr_slow_fifo_builtin_top_v6
   wire wr_tmp;
 
   post_ddr_slow_fifo_builtin_extdepth_v6 \gextw[10].gnll_fifo.inst_extd 
-       (.RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
+       (.PROG_FULL(pf[10]),
+        .RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
         .RST(RST),
         .WR_EN(wr_tmp),
         .din(din[39:36]),
@@ -3873,6 +3978,7 @@ module post_ddr_slow_fifo_builtin_top_v6
   post_ddr_slow_fifo_builtin_extdepth_v6_0 \gextw[11].gnll_fifo.inst_extd 
        (.EMPTY(emp[11]),
         .FULL(ful[11]),
+        .PROG_FULL(pf[11]),
         .RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
         .RST(RST),
         .WR_EN(wr_tmp),
@@ -3883,6 +3989,7 @@ module post_ddr_slow_fifo_builtin_top_v6
   post_ddr_slow_fifo_builtin_extdepth_v6_1 \gextw[12].gnll_fifo.inst_extd 
        (.EMPTY(emp[12]),
         .FULL(ful[12]),
+        .PROG_FULL(pf[12]),
         .RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
         .RST(RST),
         .WR_EN(wr_tmp),
@@ -3893,6 +4000,7 @@ module post_ddr_slow_fifo_builtin_top_v6
   post_ddr_slow_fifo_builtin_extdepth_v6_2 \gextw[13].gnll_fifo.inst_extd 
        (.EMPTY(emp[13]),
         .FULL(ful[13]),
+        .PROG_FULL(pf[13]),
         .RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
         .RST(RST),
         .WR_EN(wr_tmp),
@@ -3901,7 +4009,8 @@ module post_ddr_slow_fifo_builtin_top_v6
         .rd_clk(rd_clk),
         .wr_clk(wr_clk));
   post_ddr_slow_fifo_builtin_extdepth_v6_3 \gextw[14].gnll_fifo.inst_extd 
-       (.RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
+       (.PROG_FULL(pf[14]),
+        .RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
         .RST(RST),
         .WR_EN(wr_tmp),
         .din(din[55:52]),
@@ -3915,6 +4024,7 @@ module post_ddr_slow_fifo_builtin_top_v6
   post_ddr_slow_fifo_builtin_extdepth_v6_4 \gextw[15].gnll_fifo.inst_extd 
        (.EMPTY(emp[15]),
         .FULL(ful[15]),
+        .PROG_FULL(pf[15]),
         .RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
         .RST(RST),
         .WR_EN(wr_tmp),
@@ -3925,6 +4035,7 @@ module post_ddr_slow_fifo_builtin_top_v6
   post_ddr_slow_fifo_builtin_extdepth_v6_5 \gextw[16].gnll_fifo.inst_extd 
        (.EMPTY(emp[16]),
         .FULL(ful[16]),
+        .PROG_FULL(pf[16]),
         .RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
         .RST(RST),
         .WR_EN(wr_tmp),
@@ -3935,6 +4046,7 @@ module post_ddr_slow_fifo_builtin_top_v6
   post_ddr_slow_fifo_builtin_extdepth_v6_6 \gextw[1].gnll_fifo.inst_extd 
        (.EMPTY(emp[1]),
         .FULL(ful[1]),
+        .PROG_FULL(pf[1]),
         .RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
         .RST(RST),
         .WR_EN(wr_tmp),
@@ -3943,7 +4055,8 @@ module post_ddr_slow_fifo_builtin_top_v6
         .rd_clk(rd_clk),
         .wr_clk(wr_clk));
   post_ddr_slow_fifo_builtin_extdepth_v6_7 \gextw[2].gnll_fifo.inst_extd 
-       (.RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
+       (.PROG_FULL(pf[2]),
+        .RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
         .RST(RST),
         .WR_EN(wr_tmp),
         .din(din[7:4]),
@@ -3957,6 +4070,7 @@ module post_ddr_slow_fifo_builtin_top_v6
   post_ddr_slow_fifo_builtin_extdepth_v6_8 \gextw[3].gnll_fifo.inst_extd 
        (.EMPTY(emp[3]),
         .FULL(ful[3]),
+        .PROG_FULL(pf[3]),
         .RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
         .RST(RST),
         .WR_EN(wr_tmp),
@@ -3967,6 +4081,7 @@ module post_ddr_slow_fifo_builtin_top_v6
   post_ddr_slow_fifo_builtin_extdepth_v6_9 \gextw[4].gnll_fifo.inst_extd 
        (.EMPTY(emp[4]),
         .FULL(ful[4]),
+        .PROG_FULL(pf[4]),
         .RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
         .RST(RST),
         .WR_EN(wr_tmp),
@@ -3977,6 +4092,7 @@ module post_ddr_slow_fifo_builtin_top_v6
   post_ddr_slow_fifo_builtin_extdepth_v6_10 \gextw[5].gnll_fifo.inst_extd 
        (.EMPTY(emp[5]),
         .FULL(ful[5]),
+        .PROG_FULL(pf[5]),
         .RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
         .RST(RST),
         .WR_EN(wr_tmp),
@@ -3985,7 +4101,8 @@ module post_ddr_slow_fifo_builtin_top_v6
         .rd_clk(rd_clk),
         .wr_clk(wr_clk));
   post_ddr_slow_fifo_builtin_extdepth_v6_11 \gextw[6].gnll_fifo.inst_extd 
-       (.RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
+       (.PROG_FULL(pf[6]),
+        .RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
         .RST(RST),
         .WR_EN(wr_tmp),
         .din(din[23:20]),
@@ -4007,6 +4124,7 @@ module post_ddr_slow_fifo_builtin_top_v6
   post_ddr_slow_fifo_builtin_extdepth_v6_12 \gextw[7].gnll_fifo.inst_extd 
        (.EMPTY(emp[7]),
         .FULL(ful[7]),
+        .PROG_FULL(pf[7]),
         .RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
         .RST(RST),
         .WR_EN(wr_tmp),
@@ -4017,6 +4135,7 @@ module post_ddr_slow_fifo_builtin_top_v6
   post_ddr_slow_fifo_builtin_extdepth_v6_13 \gextw[8].gnll_fifo.inst_extd 
        (.EMPTY(emp[8]),
         .FULL(ful[8]),
+        .PROG_FULL(pf[8]),
         .RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
         .RST(RST),
         .WR_EN(wr_tmp),
@@ -4027,6 +4146,7 @@ module post_ddr_slow_fifo_builtin_top_v6
   post_ddr_slow_fifo_builtin_extdepth_v6_14 \gextw[9].gnll_fifo.inst_extd 
        (.EMPTY(emp[9]),
         .FULL(ful[9]),
+        .PROG_FULL(pf[9]),
         .RD_EN(\gextw[10].gnll_fifo.inst_extd_n_0 ),
         .RST(RST),
         .WR_EN(wr_tmp),
@@ -4050,6 +4170,36 @@ module post_ddr_slow_fifo_builtin_top_v6
         .D(underflow_i_ic),
         .Q(underflow),
         .R(1'b0));
+  LUT6 #(
+    .INIT(64'hFFFFFFFFFFFFFFFE)) 
+    prog_full_INST_0
+       (.I0(pf[3]),
+        .I1(pf[4]),
+        .I2(pf[1]),
+        .I3(pf[2]),
+        .I4(prog_full_INST_0_i_1_n_0),
+        .I5(prog_full_INST_0_i_2_n_0),
+        .O(prog_full));
+  LUT6 #(
+    .INIT(64'hFFFFFFFFFFFFFFFE)) 
+    prog_full_INST_0_i_1
+       (.I0(pf[15]),
+        .I1(pf[16]),
+        .I2(pf[13]),
+        .I3(pf[14]),
+        .I4(pf[12]),
+        .I5(pf[11]),
+        .O(prog_full_INST_0_i_1_n_0));
+  LUT6 #(
+    .INIT(64'hFFFFFFFFFFFFFFFE)) 
+    prog_full_INST_0_i_2
+       (.I0(pf[9]),
+        .I1(pf[10]),
+        .I2(pf[7]),
+        .I3(pf[8]),
+        .I4(pf[6]),
+        .I5(pf[5]),
+        .O(prog_full_INST_0_i_2_n_0));
 endmodule
 
 (* ORIG_REF_NAME = "fifo_generator_top" *) 
@@ -4057,6 +4207,7 @@ module post_ddr_slow_fifo_fifo_generator_top
    (dout,
     overflow,
     underflow,
+    prog_full,
     full,
     empty,
     rd_clk,
@@ -4068,6 +4219,7 @@ module post_ddr_slow_fifo_fifo_generator_top
   output [63:0]dout;
   output overflow;
   output underflow;
+  output prog_full;
   output full;
   output empty;
   input rd_clk;
@@ -4082,6 +4234,7 @@ module post_ddr_slow_fifo_fifo_generator_top
   wire empty;
   wire full;
   wire overflow;
+  wire prog_full;
   wire rd_clk;
   wire rd_en;
   wire rst;
@@ -4095,6 +4248,7 @@ module post_ddr_slow_fifo_fifo_generator_top
         .empty(empty),
         .full(full),
         .overflow(overflow),
+        .prog_full(prog_full),
         .rd_clk(rd_clk),
         .rd_en(rd_en),
         .rst(rst),
@@ -4148,9 +4302,9 @@ endmodule
 (* C_PROG_EMPTY_THRESH_ASSERT_VAL_WRCH = "1022" *) (* C_PROG_EMPTY_THRESH_NEGATE_VAL = "7" *) (* C_PROG_EMPTY_TYPE = "0" *) 
 (* C_PROG_EMPTY_TYPE_AXIS = "0" *) (* C_PROG_EMPTY_TYPE_RACH = "0" *) (* C_PROG_EMPTY_TYPE_RDCH = "0" *) 
 (* C_PROG_EMPTY_TYPE_WACH = "0" *) (* C_PROG_EMPTY_TYPE_WDCH = "0" *) (* C_PROG_EMPTY_TYPE_WRCH = "0" *) 
-(* C_PROG_FULL_THRESH_ASSERT_VAL = "8178" *) (* C_PROG_FULL_THRESH_ASSERT_VAL_AXIS = "1023" *) (* C_PROG_FULL_THRESH_ASSERT_VAL_RACH = "1023" *) 
+(* C_PROG_FULL_THRESH_ASSERT_VAL = "4096" *) (* C_PROG_FULL_THRESH_ASSERT_VAL_AXIS = "1023" *) (* C_PROG_FULL_THRESH_ASSERT_VAL_RACH = "1023" *) 
 (* C_PROG_FULL_THRESH_ASSERT_VAL_RDCH = "1023" *) (* C_PROG_FULL_THRESH_ASSERT_VAL_WACH = "1023" *) (* C_PROG_FULL_THRESH_ASSERT_VAL_WDCH = "1023" *) 
-(* C_PROG_FULL_THRESH_ASSERT_VAL_WRCH = "1023" *) (* C_PROG_FULL_THRESH_NEGATE_VAL = "8177" *) (* C_PROG_FULL_TYPE = "0" *) 
+(* C_PROG_FULL_THRESH_ASSERT_VAL_WRCH = "1023" *) (* C_PROG_FULL_THRESH_NEGATE_VAL = "4095" *) (* C_PROG_FULL_TYPE = "1" *) 
 (* C_PROG_FULL_TYPE_AXIS = "0" *) (* C_PROG_FULL_TYPE_RACH = "0" *) (* C_PROG_FULL_TYPE_RDCH = "0" *) 
 (* C_PROG_FULL_TYPE_WACH = "0" *) (* C_PROG_FULL_TYPE_WDCH = "0" *) (* C_PROG_FULL_TYPE_WRCH = "0" *) 
 (* C_RACH_TYPE = "0" *) (* C_RDCH_TYPE = "0" *) (* C_RD_DATA_COUNT_WIDTH = "13" *) 
@@ -4642,6 +4796,7 @@ module post_ddr_slow_fifo_fifo_generator_v13_2_5
   wire empty;
   wire full;
   wire overflow;
+  wire prog_full;
   wire rd_clk;
   wire rd_en;
   wire rst;
@@ -5070,7 +5225,6 @@ module post_ddr_slow_fifo_fifo_generator_v13_2_5
   assign m_axis_tuser[0] = \<const0> ;
   assign m_axis_tvalid = \<const0> ;
   assign prog_empty = \<const0> ;
-  assign prog_full = \<const0> ;
   assign rd_data_count[12] = \<const0> ;
   assign rd_data_count[11] = \<const0> ;
   assign rd_data_count[10] = \<const0> ;
@@ -5191,6 +5345,7 @@ module post_ddr_slow_fifo_fifo_generator_v13_2_5
         .empty(empty),
         .full(full),
         .overflow(overflow),
+        .prog_full(prog_full),
         .rd_clk(rd_clk),
         .rd_en(rd_en),
         .rst(rst),
@@ -5204,6 +5359,7 @@ module post_ddr_slow_fifo_fifo_generator_v13_2_5_builtin
    (dout,
     overflow,
     underflow,
+    prog_full,
     full,
     empty,
     rd_clk,
@@ -5215,6 +5371,7 @@ module post_ddr_slow_fifo_fifo_generator_v13_2_5_builtin
   output [63:0]dout;
   output overflow;
   output underflow;
+  output prog_full;
   output full;
   output empty;
   input rd_clk;
@@ -5229,6 +5386,7 @@ module post_ddr_slow_fifo_fifo_generator_v13_2_5_builtin
   wire empty;
   wire full;
   wire overflow;
+  wire prog_full;
   wire rd_clk;
   wire rd_en;
   wire rd_rst_i;
@@ -5249,6 +5407,7 @@ module post_ddr_slow_fifo_fifo_generator_v13_2_5_builtin
         .empty(empty),
         .full(full),
         .overflow(overflow),
+        .prog_full(prog_full),
         .rd_clk(rd_clk),
         .rd_en(rd_en),
         .underflow(underflow),
@@ -5261,6 +5420,7 @@ module post_ddr_slow_fifo_fifo_generator_v13_2_5_synth
    (dout,
     overflow,
     underflow,
+    prog_full,
     full,
     empty,
     rd_clk,
@@ -5272,6 +5432,7 @@ module post_ddr_slow_fifo_fifo_generator_v13_2_5_synth
   output [63:0]dout;
   output overflow;
   output underflow;
+  output prog_full;
   output full;
   output empty;
   input rd_clk;
@@ -5286,6 +5447,7 @@ module post_ddr_slow_fifo_fifo_generator_v13_2_5_synth
   wire empty;
   wire full;
   wire overflow;
+  wire prog_full;
   wire rd_clk;
   wire rd_en;
   wire rst;
@@ -5299,6 +5461,7 @@ module post_ddr_slow_fifo_fifo_generator_v13_2_5_synth
         .empty(empty),
         .full(full),
         .overflow(overflow),
+        .prog_full(prog_full),
         .rd_clk(rd_clk),
         .rd_en(rd_en),
         .rst(rst),
