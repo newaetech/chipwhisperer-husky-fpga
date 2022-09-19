@@ -175,6 +175,7 @@ module fifo_top_husky_pro (
     reg                 arming;
     reg                 capture_go_r;
     reg                 capture_go_r2;
+    wire                capture_go_ui;
 
     reg                 postddr_fifo_underflow_sticky;
     reg [1:0]           postddr_fifo_underflow_count;
@@ -858,6 +859,14 @@ module fifo_top_husky_pro (
        .dst_pulse     (write_done_ui)
     );
 
+    cdc_pulse U_capture_go_cdc (
+       .reset_i       (reset),
+       .src_clk       (adc_sampleclk),
+       .src_pulse     (capture_go_r && ~capture_go_r2),
+       .dst_clk       (ui_clk),
+       .dst_pulse     (capture_go_ui)
+    );
+
     wire ddr_writing = (ddr_state == pS_DDR_WAIT_WRITE) ||
                        (ddr_state == pS_DDR_WRITE1) ||
                        (ddr_state == pS_DDR_WRITE2);
@@ -901,7 +910,7 @@ module fifo_top_husky_pro (
                 // slower than read clock). We keep it simple by CDC'ing going
                 // from pS_DONE to pS_IDLE, then waiting for the preddr FIFO to
                 // go empty.
-                if (ddr3_rwtest_en)
+                if (ddr3_rwtest_en || capture_go_ui)
                     next_ddr_state = pS_DDR_IDLE;
                 else if (ddr_write_data_done) begin
                     reset_app_address = 1'b1;
@@ -950,7 +959,9 @@ module fifo_top_husky_pro (
 
             pS_DDR_WAIT_READ: begin
                 adc_app_en = 1'b0;
-                if (app_rdy && ~postddr_fifo_prog_full)
+                if (ddr3_rwtest_en || capture_go_ui)
+                    next_ddr_state = pS_DDR_IDLE;
+                else if (app_rdy && ~postddr_fifo_prog_full)
                     next_ddr_state = pS_DDR_READ1;
                 else
                     next_ddr_state = pS_DDR_WAIT_READ;
@@ -1526,7 +1537,8 @@ ila_ddr3 U_ila_ddr3 (
         .probe24        (ddr_read_data_done),   // input wire [0:0]
         .probe25        (ddr_full_error),       // input wire [0:0]
         .probe26        (ddr_writing),          // input wire [0:0]
-        .probe27        (postddr_fifo_prog_full)// input wire [0:0]
+        .probe27        (postddr_fifo_prog_full),// input wire [0:0]
+        .probe28        (adc_top_app_addr)      // input wire [29:0]
     );
 
     ila_slow_fifo U_ila_slow_fifo (
