@@ -578,9 +578,6 @@ module fifo_top_husky_pro (
    reg clear_fifo_errors_r2;
    assign clear_fifo_errors_adc = clear_fifo_errors_r2;
 
-   (* ASYNC_REG = "TRUE" *) reg[1:0] main_idle_pipe;
-   reg main_idle_ui;
-
 
     always @(posedge adc_sampleclk) begin
        if (reset) begin
@@ -614,16 +611,6 @@ module fifo_top_husky_pro (
              armed_and_ready <= 1'b0;
        end
     end
-
-    always @(posedge ui_clk) begin
-       if (reset) begin
-          main_idle_pipe <= 0;
-          main_idle_ui <= 0;
-       end
-       else begin
-          {main_idle_ui, main_idle_pipe} <= {main_idle_pipe, (state == pS_IDLE)};
-      end
-  end
 
     assign fast_fifo_wr = downsample_wr_en & fsm_fast_wr_en & reset_done & !fifo_rst_pre;
 
@@ -891,7 +878,7 @@ module fifo_top_husky_pro (
 
         case (ddr_state)
             pS_DDR_IDLE: begin
-                if (init_calib_complete && ~main_idle_ui && ~ddr3_rwtest_en) begin
+                if (init_calib_complete && capture_go_ui && ~ddr3_rwtest_en) begin
                     reset_app_address = 1'b1;
                     next_ddr_state = pS_DDR_WAIT_WRITE;
                 end

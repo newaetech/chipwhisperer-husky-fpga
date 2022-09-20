@@ -743,7 +743,7 @@ end
 
 
    // monitor internal errors to help debug:
-   always @(posedge U_dut.oadc.U_fifo.error_flag) begin
+   always @(posedge (U_dut.oadc.U_fifo.error_flag || U_dut.oadc.U_fifo.U_ddr3_model.dropped_read_request)) begin
       if (!pERRORS_OK) begin
          errors += 1;
          $display("ERROR: internal FIFO at t = %t", $time);

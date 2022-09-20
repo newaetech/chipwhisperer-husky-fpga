@@ -70,6 +70,7 @@ module ddr3_app_model #(
     reg  fifo_rd;
     wire [63:0] fifo_out;
     wire fifo_full;
+    wire prog_full;
     wire fifo_empty;
     wire fifo_overflow;
     wire fifo_underflow;
@@ -128,7 +129,9 @@ module ddr3_app_model #(
             else
                 fifo_wr <= 1'b0;
 
-            if (fifo_full)
+            // use a lower full threshold to throttle read requests on smaller
+            // captures too (prog full goes high at 16 entries = 85 12-bit samples)
+            if (prog_full)
                 app_rdy_rd <= 1'b0;
             else
                 app_rdy_rd <= 1'b1;
@@ -187,6 +190,7 @@ module ddr3_app_model #(
            .dout         (fifo_out),
            .full         (fifo_full),
            .empty        (fifo_empty),
+           .prog_full    (prog_full),
            .overflow     (fifo_overflow),
            .underflow    (fifo_underflow)
         );

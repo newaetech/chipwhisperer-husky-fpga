@@ -1,7 +1,7 @@
 // Copyright 1986-2019 Xilinx, Inc. All Rights Reserved.
 // --------------------------------------------------------------------------------
 // Tool Version: Vivado v.2019.2 (lin64) Build 2708876 Wed Nov  6 21:39:14 MST 2019
-// Date        : Wed Sep  7 10:47:16 2022
+// Date        : Tue Sep 20 10:57:40 2022
 // Host        : red running 64-bit Ubuntu 18.04.6 LTS
 // Command     : write_verilog -force -mode funcsim
 //               /home/jpnewae/git/xilinx_simulation_fifos/xilinx_simulation_fifos.srcs/sources_1/ip/ddr_model_fifo/ddr_model_fifo_sim_netlist.v
@@ -24,7 +24,8 @@ module ddr_model_fifo
     full,
     overflow,
     empty,
-    underflow);
+    underflow,
+    prog_full);
   (* x_interface_info = "xilinx.com:signal:clock:1.0 core_clk CLK" *) (* x_interface_parameter = "XIL_INTERFACENAME core_clk, FREQ_HZ 100000000, PHASE 0.000, INSERT_VIP 0" *) input clk;
   input rst;
   (* x_interface_info = "xilinx.com:interface:fifo_write:1.0 FIFO_WRITE WR_DATA" *) input [63:0]din;
@@ -35,6 +36,7 @@ module ddr_model_fifo
   output overflow;
   (* x_interface_info = "xilinx.com:interface:fifo_read:1.0 FIFO_READ EMPTY" *) output empty;
   output underflow;
+  output prog_full;
 
   wire clk;
   wire [63:0]din;
@@ -42,6 +44,7 @@ module ddr_model_fifo
   wire empty;
   wire full;
   wire overflow;
+  wire prog_full;
   wire rd_en;
   wire rst;
   wire underflow;
@@ -94,7 +97,6 @@ module ddr_model_fifo
   wire NLW_U0_m_axis_tlast_UNCONNECTED;
   wire NLW_U0_m_axis_tvalid_UNCONNECTED;
   wire NLW_U0_prog_empty_UNCONNECTED;
-  wire NLW_U0_prog_full_UNCONNECTED;
   wire NLW_U0_rd_rst_busy_UNCONNECTED;
   wire NLW_U0_s_axi_arready_UNCONNECTED;
   wire NLW_U0_s_axi_awready_UNCONNECTED;
@@ -303,15 +305,15 @@ module ddr_model_fifo
   (* C_PROG_EMPTY_TYPE_WACH = "0" *) 
   (* C_PROG_EMPTY_TYPE_WDCH = "0" *) 
   (* C_PROG_EMPTY_TYPE_WRCH = "0" *) 
-  (* C_PROG_FULL_THRESH_ASSERT_VAL = "510" *) 
+  (* C_PROG_FULL_THRESH_ASSERT_VAL = "16" *) 
   (* C_PROG_FULL_THRESH_ASSERT_VAL_AXIS = "1023" *) 
   (* C_PROG_FULL_THRESH_ASSERT_VAL_RACH = "1023" *) 
   (* C_PROG_FULL_THRESH_ASSERT_VAL_RDCH = "1023" *) 
   (* C_PROG_FULL_THRESH_ASSERT_VAL_WACH = "1023" *) 
   (* C_PROG_FULL_THRESH_ASSERT_VAL_WDCH = "1023" *) 
   (* C_PROG_FULL_THRESH_ASSERT_VAL_WRCH = "1023" *) 
-  (* C_PROG_FULL_THRESH_NEGATE_VAL = "509" *) 
-  (* C_PROG_FULL_TYPE = "0" *) 
+  (* C_PROG_FULL_THRESH_NEGATE_VAL = "15" *) 
+  (* C_PROG_FULL_TYPE = "1" *) 
   (* C_PROG_FULL_TYPE_AXIS = "0" *) 
   (* C_PROG_FULL_TYPE_RACH = "0" *) 
   (* C_PROG_FULL_TYPE_RDCH = "0" *) 
@@ -524,7 +526,7 @@ module ddr_model_fifo
         .prog_empty_thresh({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
         .prog_empty_thresh_assert({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
         .prog_empty_thresh_negate({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
-        .prog_full(NLW_U0_prog_full_UNCONNECTED),
+        .prog_full(prog_full),
         .prog_full_thresh({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
         .prog_full_thresh_assert({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
         .prog_full_thresh_negate({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
@@ -611,6 +613,7 @@ module ddr_model_fifo_builtin_extdepth_v6
     underflow,
     overflow,
     dout,
+    prog_full,
     clk,
     rd_en,
     rd_rst_i,
@@ -621,6 +624,7 @@ module ddr_model_fifo_builtin_extdepth_v6
   output underflow;
   output overflow;
   output [63:0]dout;
+  output prog_full;
   input clk;
   input rd_en;
   input rd_rst_i;
@@ -635,6 +639,7 @@ module ddr_model_fifo_builtin_extdepth_v6
   wire empty;
   wire full;
   wire overflow;
+  wire prog_full;
   wire rd_en;
   wire rd_rst_i;
   (* async_reg = "true" *) (* msgon = "true" *) wire sbr_as_reg;
@@ -649,6 +654,7 @@ module ddr_model_fifo_builtin_extdepth_v6
         .empty(empty),
         .full(full),
         .overflow(overflow),
+        .prog_full(prog_full),
         .rd_en(rd_en),
         .rd_rst_i(rd_rst_i),
         .underflow(underflow),
@@ -682,6 +688,7 @@ module ddr_model_fifo_builtin_prim_v6
     underflow,
     overflow,
     dout,
+    prog_full,
     clk,
     rd_en,
     rd_rst_i,
@@ -692,6 +699,7 @@ module ddr_model_fifo_builtin_prim_v6
   output underflow;
   output overflow;
   output [63:0]dout;
+  output prog_full;
   input clk;
   input rd_en;
   input rd_rst_i;
@@ -732,6 +740,7 @@ module ddr_model_fifo_builtin_prim_v6
   wire \gf36e1_inst.sngfifo36e1_n_99 ;
   wire overflow;
   wire prog_empty_fifo;
+  wire prog_full;
   wire prog_full_fifo;
   wire rd_en;
   wire rd_rst_i;
@@ -745,7 +754,7 @@ module ddr_model_fifo_builtin_prim_v6
   (* box_type = "PRIMITIVE" *) 
   FIFO36E1 #(
     .ALMOST_EMPTY_OFFSET(13'h0002),
-    .ALMOST_FULL_OFFSET(13'h0002),
+    .ALMOST_FULL_OFFSET(13'h01F0),
     .DATA_WIDTH(72),
     .DO_REG(0),
     .EN_ECC_READ("FALSE"),
@@ -787,6 +796,14 @@ module ddr_model_fifo_builtin_prim_v6
         .WRCOUNT({\NLW_gf36e1_inst.sngfifo36e1_WRCOUNT_UNCONNECTED [12:9],\gf36e1_inst.sngfifo36e1_n_25 ,\gf36e1_inst.sngfifo36e1_n_26 ,\gf36e1_inst.sngfifo36e1_n_27 ,\gf36e1_inst.sngfifo36e1_n_28 ,\gf36e1_inst.sngfifo36e1_n_29 ,\gf36e1_inst.sngfifo36e1_n_30 ,\gf36e1_inst.sngfifo36e1_n_31 ,\gf36e1_inst.sngfifo36e1_n_32 ,\gf36e1_inst.sngfifo36e1_n_33 }),
         .WREN(wr_en),
         .WRERR(overflow));
+  FDCE #(
+    .INIT(1'b0)) 
+    \gpfd.prog_full_q_reg 
+       (.C(clk),
+        .CE(1'b1),
+        .CLR(rd_rst_i),
+        .D(prog_full_fifo),
+        .Q(prog_full));
 endmodule
 
 (* ORIG_REF_NAME = "builtin_top_v6" *) 
@@ -796,6 +813,7 @@ module ddr_model_fifo_builtin_top_v6
     underflow,
     overflow,
     dout,
+    prog_full,
     clk,
     rd_en,
     rd_rst_i,
@@ -806,6 +824,7 @@ module ddr_model_fifo_builtin_top_v6
   output underflow;
   output overflow;
   output [63:0]dout;
+  output prog_full;
   input clk;
   input rd_en;
   input rd_rst_i;
@@ -818,6 +837,7 @@ module ddr_model_fifo_builtin_top_v6
   wire empty;
   wire full;
   wire overflow;
+  wire prog_full;
   wire rd_en;
   wire rd_rst_i;
   wire underflow;
@@ -830,6 +850,7 @@ module ddr_model_fifo_builtin_top_v6
         .empty(empty),
         .full(full),
         .overflow(overflow),
+        .prog_full(prog_full),
         .rd_en(rd_en),
         .rd_rst_i(rd_rst_i),
         .underflow(underflow),
@@ -843,6 +864,7 @@ module ddr_model_fifo_fifo_generator_top
     underflow,
     overflow,
     dout,
+    prog_full,
     clk,
     rd_en,
     wr_en,
@@ -853,6 +875,7 @@ module ddr_model_fifo_fifo_generator_top
   output underflow;
   output overflow;
   output [63:0]dout;
+  output prog_full;
   input clk;
   input rd_en;
   input wr_en;
@@ -865,6 +888,7 @@ module ddr_model_fifo_fifo_generator_top
   wire empty;
   wire full;
   wire overflow;
+  wire prog_full;
   wire rd_en;
   wire rst;
   wire underflow;
@@ -877,6 +901,7 @@ module ddr_model_fifo_fifo_generator_top
         .empty(empty),
         .full(full),
         .overflow(overflow),
+        .prog_full(prog_full),
         .rd_en(rd_en),
         .rst(rst),
         .underflow(underflow),
@@ -928,9 +953,9 @@ endmodule
 (* C_PROG_EMPTY_THRESH_ASSERT_VAL_WRCH = "1022" *) (* C_PROG_EMPTY_THRESH_NEGATE_VAL = "3" *) (* C_PROG_EMPTY_TYPE = "0" *) 
 (* C_PROG_EMPTY_TYPE_AXIS = "0" *) (* C_PROG_EMPTY_TYPE_RACH = "0" *) (* C_PROG_EMPTY_TYPE_RDCH = "0" *) 
 (* C_PROG_EMPTY_TYPE_WACH = "0" *) (* C_PROG_EMPTY_TYPE_WDCH = "0" *) (* C_PROG_EMPTY_TYPE_WRCH = "0" *) 
-(* C_PROG_FULL_THRESH_ASSERT_VAL = "510" *) (* C_PROG_FULL_THRESH_ASSERT_VAL_AXIS = "1023" *) (* C_PROG_FULL_THRESH_ASSERT_VAL_RACH = "1023" *) 
+(* C_PROG_FULL_THRESH_ASSERT_VAL = "16" *) (* C_PROG_FULL_THRESH_ASSERT_VAL_AXIS = "1023" *) (* C_PROG_FULL_THRESH_ASSERT_VAL_RACH = "1023" *) 
 (* C_PROG_FULL_THRESH_ASSERT_VAL_RDCH = "1023" *) (* C_PROG_FULL_THRESH_ASSERT_VAL_WACH = "1023" *) (* C_PROG_FULL_THRESH_ASSERT_VAL_WDCH = "1023" *) 
-(* C_PROG_FULL_THRESH_ASSERT_VAL_WRCH = "1023" *) (* C_PROG_FULL_THRESH_NEGATE_VAL = "509" *) (* C_PROG_FULL_TYPE = "0" *) 
+(* C_PROG_FULL_THRESH_ASSERT_VAL_WRCH = "1023" *) (* C_PROG_FULL_THRESH_NEGATE_VAL = "15" *) (* C_PROG_FULL_TYPE = "1" *) 
 (* C_PROG_FULL_TYPE_AXIS = "0" *) (* C_PROG_FULL_TYPE_RACH = "0" *) (* C_PROG_FULL_TYPE_RDCH = "0" *) 
 (* C_PROG_FULL_TYPE_WACH = "0" *) (* C_PROG_FULL_TYPE_WDCH = "0" *) (* C_PROG_FULL_TYPE_WRCH = "0" *) 
 (* C_RACH_TYPE = "0" *) (* C_RDCH_TYPE = "0" *) (* C_RD_DATA_COUNT_WIDTH = "9" *) 
@@ -1423,6 +1448,7 @@ module ddr_model_fifo_fifo_generator_v13_2_5
   wire empty;
   wire full;
   wire overflow;
+  wire prog_full;
   wire rd_en;
   wire rst;
   wire underflow;
@@ -1845,7 +1871,6 @@ module ddr_model_fifo_fifo_generator_v13_2_5
   assign m_axis_tuser[0] = \<const0> ;
   assign m_axis_tvalid = \<const0> ;
   assign prog_empty = \<const0> ;
-  assign prog_full = \<const0> ;
   assign rd_data_count[8] = \<const0> ;
   assign rd_data_count[7] = \<const0> ;
   assign rd_data_count[6] = \<const0> ;
@@ -1959,6 +1984,7 @@ module ddr_model_fifo_fifo_generator_v13_2_5
         .empty(empty),
         .full(full),
         .overflow(overflow),
+        .prog_full(prog_full),
         .rd_en(rd_en),
         .rst(rst),
         .underflow(underflow),
@@ -1972,6 +1998,7 @@ module ddr_model_fifo_fifo_generator_v13_2_5_builtin
     underflow,
     overflow,
     dout,
+    prog_full,
     clk,
     rd_en,
     wr_en,
@@ -1982,6 +2009,7 @@ module ddr_model_fifo_fifo_generator_v13_2_5_builtin
   output underflow;
   output overflow;
   output [63:0]dout;
+  output prog_full;
   input clk;
   input rd_en;
   input wr_en;
@@ -1994,6 +2022,7 @@ module ddr_model_fifo_fifo_generator_v13_2_5_builtin
   wire empty;
   wire full;
   wire overflow;
+  wire prog_full;
   wire rd_en;
   wire rd_rst_i;
   wire rst;
@@ -2011,6 +2040,7 @@ module ddr_model_fifo_fifo_generator_v13_2_5_builtin
         .empty(empty),
         .full(full),
         .overflow(overflow),
+        .prog_full(prog_full),
         .rd_en(rd_en),
         .rd_rst_i(rd_rst_i),
         .underflow(underflow),
@@ -2024,6 +2054,7 @@ module ddr_model_fifo_fifo_generator_v13_2_5_synth
     underflow,
     overflow,
     dout,
+    prog_full,
     clk,
     rd_en,
     wr_en,
@@ -2034,6 +2065,7 @@ module ddr_model_fifo_fifo_generator_v13_2_5_synth
   output underflow;
   output overflow;
   output [63:0]dout;
+  output prog_full;
   input clk;
   input rd_en;
   input wr_en;
@@ -2046,6 +2078,7 @@ module ddr_model_fifo_fifo_generator_v13_2_5_synth
   wire empty;
   wire full;
   wire overflow;
+  wire prog_full;
   wire rd_en;
   wire rst;
   wire underflow;
@@ -2058,6 +2091,7 @@ module ddr_model_fifo_fifo_generator_v13_2_5_synth
         .empty(empty),
         .full(full),
         .overflow(overflow),
+        .prog_full(prog_full),
         .rd_en(rd_en),
         .rst(rst),
         .underflow(underflow),
