@@ -104,6 +104,7 @@ module reg_chipwhisperer #(
    output wire        trigger_o,        // Trigger signal to capture system
    output wire        trig_glitch_o,    // trig/glitch MCX 
 
+   output reg         cw310_adc_clk_sel, // CW310 only
    input  wire        trace_exists,
    input  wire        la_exists
 ); 
@@ -480,6 +481,8 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
            `EXTERNAL_CLOCK:             reg_datao_reg = reg_external_clock;
            `COMPONENTS_EXIST:           reg_datao_reg = {6'b0, trace_exists, la_exists};
+
+           `REG_CW310_SPECIFIC:         reg_datao_reg = {7'b0, cw310_adc_clk_sel};
            default: reg_datao_reg = 0;
          endcase
       end
@@ -501,6 +504,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
          userio_fpga_debug_select <= 4'b0;
          reg_external_clock <= 1'b0;
          registers_cwauxio <= 2'b0;
+         cw310_adc_clk_sel <= 1'b0;
       end else if (reg_write) begin
          case (reg_address)
            `CW_AUX_IO: registers_cwauxio <= reg_datai[1:0];
@@ -515,6 +519,8 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
            `USERIO_DRIVE_DATA: userio_drive_data[reg_bytecnt*8 +: 8] <= reg_datai;
 
            `EXTERNAL_CLOCK: reg_external_clock <= reg_datai[0];
+
+           `REG_CW310_SPECIFIC: cw310_adc_clk_sel <= reg_datai[0];
            default: ;
          endcase
       end

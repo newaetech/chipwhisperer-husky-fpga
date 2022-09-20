@@ -362,6 +362,8 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define REG_DDR3_RW_STATS       118
 `define REG_DDR3_TEST_EN_STAT   119
 
+`define REG_CW310_SPECIFIC      120
+
 `define REGISTER_VERSION 1
 
 `define TW_MAIN_REG_SELECT      2'b10

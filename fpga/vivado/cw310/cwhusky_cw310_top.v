@@ -287,6 +287,7 @@ module cwhusky_cw310_top(
 
    wire la_exists;
    wire trace_exists;
+   wire cw310_adc_clk_sel;
 
    wire           fifo_full;
    wire           fifo_overflow_blocked;
@@ -610,6 +611,8 @@ module cwhusky_cw310_top(
         .trace_exists           (trace_exists),
         .la_exists              (la_exists),
 
+        .cw310_adc_clk_sel      (cw310_adc_clk_sel), // CW310 only
+
         .trigger_o              (ext_trigger),
         .trig_glitch_o          (TRIG_GLITCHOUT)
    );
@@ -758,17 +761,85 @@ module cwhusky_cw310_top(
 
    // NOTE: this is very CW310-specific:
 
+    wire pll_clk_x2;
+
 `ifdef __ICARUS__
-    assign ADC_clk_fb = PLL_CLK1;
-    assign pll_fpga_clk = PLL_CLK1;
+    assign ADC_clk_fb = cw310_adc_clk_sel ? pll_clk_x2 : PLL_CLK1;
+    assign pll_fpga_clk = ADC_clk_fb;
 
 `else
-    BUFG BUFG_ADC_clk_fb (
-       .O(ADC_clk_fb),
-       .I(PLL_CLK1)
+    wire mmcm1_clkfb;
+
+    BUFGMUX BUFG_ADC_clk_fb (
+       .O       (ADC_clk_fb),
+       .I0      (PLL_CLK1),
+       .I1      (pll_clk_x2),
+       .S       (cw310_adc_clk_sel)
     );
 
     assign pll_fpga_clk = ADC_clk_fb;
+
+    // expected use is to take 125 MHz clock and double it to 250 MHz, so
+    // settings are chosen for this, with some room in the VCO operating
+    // frequency to go higher still
+    MMCME2_ADV #(
+       .BANDWIDTH                    ("OPTIMIZED"), // Jitter programming (OPTIMIZED, HIGH, LOW)
+       .CLKFBOUT_MULT_F              (12.0), // Multiply value for all CLKOUT (2.000-64.000)
+       .CLKOUT0_DIVIDE_F             (3.0),
+       .CLKFBOUT_PHASE               (0.0), // Phase offset in degrees of CLKFB (-360.000-360.000).
+       .CLKIN1_PERIOD                (10.0),
+       .CLKOUT0_DUTY_CYCLE           (0.5),
+       .CLKOUT0_PHASE                (0.0),  // Phase offset for CLKOUT outputs (-360.000-360.000).
+       .CLKOUT4_CASCADE              ("FALSE"), // Cascade CLKOUT4 counter with CLKOUT6 (FALSE, TRUE)
+       .COMPENSATION                 ("INTERNAL"), // ZHOLD, BUF_IN, EXTERNAL, INTERNAL
+       .DIVCLK_DIVIDE                (2), // Master division value (1-106)
+       .STARTUP_WAIT                 ("FALSE"), // Delays DONE until MMCM is locked (FALSE, TRUE)
+       .CLKFBOUT_USE_FINE_PS         ("FALSE"),
+       .CLKOUT0_USE_FINE_PS          ("FALSE")
+    ) U_mmcm_x2 (
+       // Clock Outputs:
+       .CLKOUT0                      (pll_clk_x2), 
+       .CLKOUT0B                     (),
+       .CLKOUT1                      (),
+       .CLKOUT1B                     (),
+       .CLKOUT2                      (),
+       .CLKOUT2B                     (),
+       .CLKOUT3                      (),
+       .CLKOUT3B                     (),
+       .CLKOUT4                      (),
+       .CLKOUT5                      (),
+       .CLKOUT6                      (),
+       // Feedback Clocks:
+       .CLKFBOUT                     (mmcm1_clkfb),
+       .CLKFBOUTB                    (),
+       // Status Ports: 1-bit (each) output: MMCM status ports
+       .CLKFBSTOPPED                 (),
+       .CLKINSTOPPED                 (),
+       .LOCKED                       (),
+       // Clock Inputs:
+       .CLKIN1                       (PLL_CLK1),
+       .CLKIN2                       (1'b0),
+       // Control Ports: 1-bit (each) input: MMCM control ports
+       .CLKINSEL                     (1'b1),
+       .PWRDWN                       (1'b0),
+       .RST                          (reg_rst),
+       // DRP Ports:
+       .DADDR                        (0),
+       .DCLK                         (clk_usb_buf),
+       .DEN                          (0),
+       .DI                           (0),
+       .DWE                          (0),
+       .DO                           (),
+       .DRDY                         (),
+       // Dynamic Phase Shift Ports:
+       .PSCLK                        (clk_usb_buf),
+       .PSEN                         (1'b0),
+       .PSINCDEC                     (1'b0),
+       .PSDONE                       (),
+       // Feedback Clocks
+       .CLKFBIN                      (mmcm1_clkfb) // 1-bit input: Feedback clock
+    );
+
 `endif
 
 

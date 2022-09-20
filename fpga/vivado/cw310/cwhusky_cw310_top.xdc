@@ -7,7 +7,8 @@ create_clock -period 10.400 -name clk_usb -waveform {0.000 5.200} [get_nets clk_
 #create_clock -period 3.300 -name pll_fpga_clk -waveform {0.000 1.650} [get_nets pll_fpga_clk]
 #create_clock -period 4.000 -name ADC_clk_fb -waveform {0.000 2.000} [get_nets ADC_clk_fb]
 #create_clock -period 4.000 -name pll_fpga_clk -waveform {0.000 2.000} [get_nets pll_fpga_clk]
-create_clock -period 4.000 -name ADC_clk_fb -waveform {0.000 2.000} [get_nets PLL_CLK1]
+#create_clock -period 4.000 -name ADC_clk_fb -waveform {0.000 2.000} [get_nets PLL_CLK1]
+create_clock -period 8.000 -name ADC_clk_fb -waveform {0.000 4.000} [get_nets PLL_CLK1]
 
 create_clock -period 20.000 -name target_hs1 -waveform {0.000 10.000} [get_nets target_hs1]
 #create_clock -period 20.000 -name AUXIO -waveform {0.000 10.500} [get_nets AUXIO]
@@ -43,6 +44,7 @@ create_generated_clock -name trace_clk_selected -source [get_pins U_trace_top/U_
 create_generated_clock -name trace_clk_shifted [get_pins U_trace_top/U_trace_clock_mmcm/CLKOUT0]
 #set_case_analysis 0 [get_pins U_trace_top/U_fe_clock_mux1/S]
 set_case_analysis 1 [get_pins U_trace_top/U_fe_clock_mux2/S]
+set_case_analysis 1 [get_pins BUFG_ADC_clk_fb/S]
 
 set_case_analysis 1 [get_pins U_fifo_clk_mux/S]
 
@@ -60,20 +62,20 @@ set_clock_groups -asynchronous \
                  -group [get_clocks target_hs1]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks {clk_usb ADC_clk_fb} ] \
+                 -group [get_clocks {clk_usb ADC_clk_fb pll_clk_x2} ] \
                  -group [get_clocks clk_pll_i]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks {clk_usb target_hs1} ] \
-                 -group [get_clocks ADC_clk_fb]
+                 -group [get_clocks {ADC_clk_fb pll_clk_x2}]
 
 
 set_clock_groups -asynchronous \
                  -group [get_clocks {clk_usb target_hs1} ] \
-                 -group [get_clocks ADC_clk_fb]
+                 -group [get_clocks {ADC_clk_fb pll_clk_x2}]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks ADC_clk_fb] \
+                 -group [get_clocks {ADC_clk_fb pll_clk_x2}] \
                  -group [get_clocks glitch_mmcm1_clk_out*]
 
 set_clock_groups -asynchronous \
@@ -90,7 +92,7 @@ set_clock_groups -asynchronous \
 
 set_clock_groups -asynchronous \
                  -group [get_clocks observer_clk*] \
-                 -group [get_clocks ADC_clk_fb]
+                 -group [get_clocks {ADC_clk_fb pll_clk_x2}]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks observer_clk*] \
@@ -102,7 +104,7 @@ set_clock_groups -asynchronous \
 
 set_clock_groups -asynchronous \
                  -group [get_clocks observer_clk*] \
-                 -group [get_clocks ADC_clk_fb]
+                 -group [get_clocks {ADC_clk_fb pll_clk_x2}]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks TRACECLOCK ] \
@@ -110,11 +112,11 @@ set_clock_groups -asynchronous \
 
 set_clock_groups -asynchronous \
                  -group [get_clocks fe_clk ] \
-                 -group [get_clocks {clk_usb observer_clk* ADC_clk_fb}]
+                 -group [get_clocks {clk_usb observer_clk* ADC_clk_fb pll_clk_x2}]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks {fe_clk ADC_clk_fb} ] \
-                 -group [get_clocks glitch_mmcm1_clk_out]
+                 -group [get_clocks {fe_clk ADC_clk_fb pll_clk_x2} ] \
+                 -group [get_clocks glitch_mmcm1_clk_out*]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks {trace_clk_selected trace_clk_shifted}] \

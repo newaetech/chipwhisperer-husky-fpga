@@ -747,6 +747,7 @@ end
       if (!pERRORS_OK) begin
          errors += 1;
          $display("ERROR: internal FIFO at t = %t", $time);
+         $finish;
       end
    end
 
