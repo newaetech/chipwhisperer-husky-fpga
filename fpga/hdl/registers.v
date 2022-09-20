@@ -363,6 +363,7 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define REG_DDR3_TEST_EN_STAT   119
 
 `define REG_CW310_SPECIFIC      120
+`define FIFO_CONFIG             121
 
 `define REGISTER_VERSION 1
 

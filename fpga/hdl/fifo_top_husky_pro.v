@@ -92,6 +92,7 @@ module fifo_top_husky_pro (
     output wire         ddr3_test_fail,
     input  wire         ddr3_test_clear_fail,
     input  wire         ddr3_rwtest_en,
+    input  wire         use_ddr,           
     output wire [15:0]  ddr3_test_iteration,
     output wire [7:0]   ddr3_test_errors,
     output wire [31:0]  ddr3_read_read,
@@ -159,6 +160,7 @@ module fifo_top_husky_pro (
     wire                postddr_fifo_underflow;
 
     reg                 preddr_fifo_rd;
+    reg                 preddr_fifo_rd_r;
     reg                 postddr_fifo_wr;
 
     reg                 fast_fifo_overflow_reg;
@@ -432,6 +434,7 @@ module fifo_top_husky_pro (
                 segment_error <= 1'b0;
                 fsm_fast_wr_en <= 1'b0;
                 filler_read <= 1'b0;
+                done_wait_count <= 0;
 
                 if ((downsample_i > 0) && ((presample_i > 0) || (num_segments > 1)))
                    downsample_error <= 1'b1;
@@ -817,6 +820,7 @@ module fifo_top_husky_pro (
     localparam pS_DDR_READ1           = 3'd4;
     localparam pS_DDR_READ2           = 3'd5;
     localparam pS_DDR_WAIT_WRITE      = 3'd6;
+    localparam pS_DDR_BYPASS          = 3'd7;
     reg [2:0] ddr_state, next_ddr_state;
 
     reg ddr_full_error; // TODO: store this
@@ -875,15 +879,30 @@ module fifo_top_husky_pro (
         incr_app_address = 1'b0;
         reset_app_address = 1'b0;
         preddr_fifo_rd = 1'b0;
+        next_ddr_state = pS_DDR_IDLE;
 
         case (ddr_state)
             pS_DDR_IDLE: begin
-                if (init_calib_complete && capture_go_ui && ~ddr3_rwtest_en) begin
-                    reset_app_address = 1'b1;
-                    next_ddr_state = pS_DDR_WAIT_WRITE;
+                if (capture_go_ui && ~ddr3_rwtest_en) begin
+                    if (use_ddr && init_calib_complete) begin
+                        reset_app_address = 1'b1;
+                        next_ddr_state = pS_DDR_WAIT_WRITE;
+                    end
+                    else
+                        next_ddr_state = pS_DDR_BYPASS;
                 end
                 else
                     next_ddr_state = pS_DDR_IDLE;
+            end
+
+            pS_DDR_BYPASS: begin
+                if (use_ddr)
+                    next_ddr_state = pS_DDR_IDLE;
+                else begin
+                    next_ddr_state = pS_DDR_BYPASS;
+                    if (~preddr_fifo_empty && ~postddr_fifo_full && ~preddr_fifo_rd)
+                        preddr_fifo_rd = 1'b1;
+                end
             end
 
             pS_DDR_WAIT_WRITE: begin
@@ -897,7 +916,7 @@ module fifo_top_husky_pro (
                 // slower than read clock). We keep it simple by CDC'ing going
                 // from pS_DONE to pS_IDLE, then waiting for the preddr FIFO to
                 // go empty.
-                if (ddr3_rwtest_en || capture_go_ui)
+                if (capture_go_ui)
                     next_ddr_state = pS_DDR_IDLE;
                 else if (ddr_write_data_done) begin
                     reset_app_address = 1'b1;
@@ -990,13 +1009,14 @@ module fifo_top_husky_pro (
             postddr_fifo_wr <= 0;
             ddr_write_data_done <= 0;
             write_data_done_hold <= 0;
+            preddr_fifo_rd_r <= 0;
+            adc_top_app_addr <= 0;
         end
 
         else begin
             ddr_state <= next_ddr_state;
-
+            preddr_fifo_rd_r <= preddr_fifo_rd;
             // TODO (later): clear mechanism for ddr_full_error
-
             if (reset_app_address) begin
                 adc_app_addr <= 0;
                 if (ddr_state != pS_DDR_IDLE) begin
@@ -1015,7 +1035,8 @@ module fifo_top_husky_pro (
 
             if (ddr3_rwtest_en)
                 postddr_fifo_wr <= 1'b0;
-            else if (app_rd_data_valid) begin
+
+            else if (use_ddr && app_rd_data_valid) begin
                 app_rd_data_r <= app_rd_data;
                 if (app_rd_data_end) begin
                     postddr_fifo_wr <= 1'b1;
@@ -1024,6 +1045,14 @@ module fifo_top_husky_pro (
                 else
                     postddr_fifo_wr <= 1'b0;
             end
+
+            else if (~use_ddr) begin
+                // in this case DDR is bypassed: data is read from preddr and
+                // immediately written to postddr
+                postddr_fifo_wr <= preddr_fifo_rd_r;
+                postddr_fifo_din <= preddr_fifo_dout;
+            end
+
             else
                 postddr_fifo_wr <= 1'b0;
 
@@ -1039,6 +1068,7 @@ module fifo_top_husky_pro (
             end
 
         end
+
     end
 
 
@@ -1525,7 +1555,9 @@ ila_ddr3 U_ila_ddr3 (
         .probe25        (ddr_full_error),       // input wire [0:0]
         .probe26        (ddr_writing),          // input wire [0:0]
         .probe27        (postddr_fifo_prog_full),// input wire [0:0]
-        .probe28        (adc_top_app_addr)      // input wire [29:0]
+        .probe28        (adc_top_app_addr),     // input wire [29:0]
+        .probe29        (capture_go_ui),        // input wire [0:0]
+        .probe30        (init_calib_complete)   // input wire [0:0]
     );
 
     ila_slow_fifo U_ila_slow_fifo (

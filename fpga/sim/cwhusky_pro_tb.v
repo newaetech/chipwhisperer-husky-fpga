@@ -63,6 +63,7 @@ module cwhusky_tb();
    parameter pPRESAMP_ERROR = 0;
    parameter pDOWNSAMPLE = 0;
    parameter pDDR_TEST = 0;
+   parameter pBYPASS_DDR = 0;
    parameter pDDR_TEST_LOOPS = 1;
 
    `include "tb_reg_tasks.v"
@@ -463,6 +464,9 @@ module cwhusky_tb();
 
       if (pDDR_TEST)
           write_1byte(`REG_DDR3_TEST_EN_STAT, 1);
+      if (pBYPASS_DDR)
+          write_1byte(`FIFO_CONFIG, 0);
+
       setup_done = 1;
 
    end

@@ -132,6 +132,7 @@ module openadc_interface #(
     wire       ddr3_test_fail;
     wire       ddr3_test_clear_fail;
     wire       ddr3_rwtest_en;
+    wire       use_ddr;
 
     assign reset_o = reset;
 
@@ -517,7 +518,8 @@ module openadc_interface #(
       .clear_fifo_errors                (clear_fifo_errors),
       .capture_done                     (capture_done),
 
-      .O_ddr3_en                        (ddr3_rwtest_en             ),
+      .O_use_ddr                        (use_ddr                    ),
+      .O_ddr3_rwtest_en                 (ddr3_rwtest_en             ),
       .O_xo_en                          (O_xo_en                    ),
       .O_vddr_enable                    (O_vddr_enable              ),
       .I_vddr_pgood                     (I_vddr_pgood               ),
@@ -619,6 +621,7 @@ module openadc_interface #(
           .ddr3_test_fail           (ddr3_test_fail    ),
           .ddr3_test_clear_fail     (ddr3_test_clear_fail),
           .ddr3_rwtest_en           (ddr3_rwtest_en),
+          .use_ddr                  (use_ddr),
 
           .ddr3_test_iteration      (ddr3_test_iteration        ),
           .ddr3_test_errors         (ddr3_test_errors           ),

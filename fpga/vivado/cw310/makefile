@@ -40,6 +40,7 @@ THRESHOLD=0
 VERBOSE=0
 DDR_TEST=0
 DDR_TEST_LOOPS=1
+BYPASS_DDR=0
 
 all: compile run
 
@@ -98,6 +99,7 @@ compile:
 	-P cwhusky_tb.pSEED=$(SEED) \
 	-P cwhusky_tb.pDDR_TEST=$(DDR_TEST) \
 	-P cwhusky_tb.pDDR_TEST_LOOPS=$(DDR_TEST_LOOPS) \
+	-P cwhusky_tb.pBYPASS_DDR=$(BYPASS_DDR) \
 	-o $(EXEFILE) \
 
 lint:
