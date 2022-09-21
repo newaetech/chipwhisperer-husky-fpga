@@ -39,6 +39,8 @@ cwhusky_cw310_top.v
 ../../sim/vivado/adc_fast_fifo_sim_netlist.v
 ../../sim/vivado/pre_ddr_slow_fifo_sim_netlist.v
 ../../sim/vivado/post_ddr_slow_fifo_sim_netlist.v
+../../sim/vivado/tiny_adc_fast_fifo_sim_netlist.v
+../../sim/vivado/tiny_post_ddr_slow_fifo_sim_netlist.v
 ../../sim/vivado/sad_fifo_sim_netlist.v
 ../../sim/vivado/ddr_model_fifo_sim_netlist.v
 -y/tools/Xilinx/Vivado/2020.2/ids_lite/ISE/verilog/src/unisims/

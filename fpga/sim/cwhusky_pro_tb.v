@@ -132,7 +132,7 @@ module cwhusky_tb();
    reg i12BitReadCount;
    int trigger_gen_index;
    int segment_read_index;
-   int good_reads, bad_reads, errors, warnings;
+   int good_reads, bad_reads, errors, warnings, fifo_error;
    int seed;
 
    real prFIFO_SAMPLES;
@@ -193,6 +193,7 @@ module cwhusky_tb();
       end
       setup_done = 0;
       errors = 0;
+      fifo_error = 0;
       warnings = 0;
       clk_usb = 0;
       clk_adc_slow = 0;
@@ -738,11 +739,13 @@ end
 
    // timeout thread:
    initial begin
-      #(pCLK_USB_PERIOD*pTIMEOUT_CYCLES);
-      errors += 1;
-      $display("ERROR: global timeout.");
-      $display("SIMULATION FAILED (%0d errors)", errors);
-      $finish;
+      if (pTIMEOUT_CYCLES > 0) begin
+          #(pCLK_USB_PERIOD*pTIMEOUT_CYCLES);
+          errors += 1;
+          $display("ERROR: global timeout.");
+          $display("SIMULATION FAILED (%0d errors)", errors);
+          $finish;
+      end
    end
 
 
@@ -750,9 +753,15 @@ end
    always @(posedge (U_dut.oadc.U_fifo.error_flag || U_dut.oadc.U_fifo.U_ddr3_model.dropped_read_request)) begin
       if (!pERRORS_OK) begin
          errors += 1;
-         $display("ERROR: internal FIFO at t = %t", $time);
-         $finish;
+         $display("ERROR: internal FIFO at t = %t (error_stat = %d)", $time, U_dut.oadc.U_fifo.error_stat);
+         fifo_error = 1; // don't die right away - see initial block below
       end
+   end
+
+   initial begin
+       wait (fifo_error);
+       repeat(20) @(posedge clk_usb);
+       $finish;
    end
 
 

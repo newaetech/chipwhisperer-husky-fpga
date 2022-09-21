@@ -70,6 +70,7 @@ compile:
 	-DCW310 \
 	-DPRO \
 	-DTRACE \
+	-D$(FIFOSIZE) \
 	-P cwhusky_tb.pADC_LOW_RES=$(ADC_LOW_RES) \
 	-P cwhusky_tb.pSLOW_ADC=$(SLOW_ADC) \
 	-P cwhusky_tb.pFAST_ADC=$(FAST_ADC) \
