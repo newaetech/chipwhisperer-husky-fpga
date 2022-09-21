@@ -550,6 +550,7 @@ module fifo_top_husky_pro (
                 // 2. generate "filler reads" so that the last full 64-bit word of ADC samples can be formed
                 // 3. wait state so that we don't get back out of idle right away
                 // TODO: need extra conditions for DDR?
+                // TODO: this is assuming that fast FIFO is empty when we get here!
                 if ((fast_fifo_empty && (done_wait_count == 0)) || arm_i) begin
                    fast_fifo_rd_en <= 1'b0;
                    state <= pS_IDLE;
@@ -900,7 +901,9 @@ module fifo_top_husky_pro (
                     next_ddr_state = pS_DDR_IDLE;
                 else begin
                     next_ddr_state = pS_DDR_BYPASS;
-                    if (~preddr_fifo_empty && ~postddr_fifo_full && ~preddr_fifo_rd)
+                    // extra checks here to throttle the reads and ensure we don't overflow the FIFO; 
+                    // it's ok if we don't read back-to-back.
+                    if (~preddr_fifo_empty && ~postddr_fifo_full && ~preddr_fifo_rd_r && ~postddr_fifo_wr)
                         preddr_fifo_rd = 1'b1;
                 end
             end
@@ -1557,7 +1560,8 @@ ila_ddr3 U_ila_ddr3 (
         .probe27        (postddr_fifo_prog_full),// input wire [0:0]
         .probe28        (adc_top_app_addr),     // input wire [29:0]
         .probe29        (capture_go_ui),        // input wire [0:0]
-        .probe30        (init_calib_complete)   // input wire [0:0]
+        .probe30        (init_calib_complete),  // input wire [0:0]
+        .probe31        (error_flag)            // input wire [0:0]
     );
 
     ila_slow_fifo U_ila_slow_fifo (
@@ -1574,7 +1578,8 @@ ila_ddr3 U_ila_ddr3 (
         .probe9         (slow_read_count),      // input wire [3:0]
         .probe10        (stream_segment_available), // input wire [0:0]
         .probe11        (fast_fifo_read_mode),  // input wire [0:0]
-        .probe12        (fifo_read_data)        // input wire [7:0]
+        .probe12        (fifo_read_data),       // input wire [7:0]
+        .probe13        (error_flag)            // input wire [0:0]
     );
 
 `endif
