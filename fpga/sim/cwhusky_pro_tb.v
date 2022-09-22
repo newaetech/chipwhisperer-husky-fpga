@@ -132,7 +132,9 @@ module cwhusky_tb();
    reg i12BitReadCount;
    int trigger_gen_index;
    int segment_read_index;
-   int good_reads, bad_reads, errors, warnings, fifo_error;
+   int good_reads, bad_reads, errors, warnings;
+   reg fifo_error;
+   reg ddr_read_started;
    int seed;
 
    real prFIFO_SAMPLES;
@@ -179,6 +181,7 @@ module cwhusky_tb();
       $display("pNUM_SEGMENTS = %d", pNUM_SEGMENTS);
       $display("pSEGMENT_CYCLES = %d", pSEGMENT_CYCLES);
       $display("pSEGMENT_CYCLE_COUNTER_EN = %d", pSEGMENT_CYCLE_COUNTER_EN);
+      $display("pBYPASS_DDR = %d", pBYPASS_DDR);
       if ((pSLOW_ADC == 0) && (pFAST_ADC == 0) && (pNOM_ADC == 0)) begin
          chosen_clock = $urandom_range(0, 2);
          case (chosen_clock)
@@ -535,6 +538,11 @@ module cwhusky_tb();
    end
 
 
+initial begin
+    ddr_read_started = 0;
+    wait (U_dut.oadc.U_fifo.ddr_reading);
+    ddr_read_started = 1;
+end
 
    // read thread:
 initial begin
@@ -555,15 +563,17 @@ initial begin
          wait (stream_segment_available);
       end
       
-
       else begin
          #1 wait (trigger_done == 0);
          #1 wait (trigger_done);
          // wait for the last segment's samples to get captured:
          repeat((fifo_samples+2)*(pDOWNSAMPLE+1)) @(posedge clk_adc);
+         $display("waiting...");
+         if (pBYPASS_DDR == 0) begin
+             wait (ddr_read_started);
+             repeat (300) @(posedge clk_adc);
+         end
          repeat (pREAD_DELAY+offset) @(posedge clk_adc);
-         // for Pro: wait a bit more to ensure the DDR reads have begun. TODO: is there a better way or is this ok?
-         repeat (200) @(posedge clk_adc);
       end
 
       rw_lots_bytes(`ADCREAD_ADDR);
@@ -754,6 +764,7 @@ end
       if (!pERRORS_OK) begin
          errors += 1;
          $display("ERROR: internal FIFO at t = %t (error_stat = %d)", $time, U_dut.oadc.U_fifo.error_stat);
+         $display("SIMULATION FAILED (%0d errors)", errors);
          fifo_error = 1; // don't die right away - see initial block below
       end
    end

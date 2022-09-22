@@ -550,15 +550,19 @@ module fifo_top_husky_pro (
                 // 2. generate "filler reads" so that the last full 64-bit word of ADC samples can be formed
                 // 3. wait state so that we don't get back out of idle right away
                 // TODO: need extra conditions for DDR?
-                // TODO: this is assuming that fast FIFO is empty when we get here!
                 if ((fast_fifo_empty && (done_wait_count == 0)) || arm_i) begin
                    fast_fifo_rd_en <= 1'b0;
                    state <= pS_IDLE;
                 end
-                else if (fast_fifo_empty)
+                else if (fast_fifo_empty && (~preddr_fifo_full || filler_read))
+                   // logic for the filler_read condition above is that when we start the filler reads,
+                   // we know there will be only a single preddr FIFO write and so we no longer need to check on
+                   // it being full
                    done_wait_count <= done_wait_count - 1;
+
                 if (filler_read_needed && (done_wait_count < 6)) // TODO: "5" is just a placeholder; need to calculate correct value here!
                    filler_read <= 1'b1;
+
              end
 
           endcase
@@ -1336,8 +1340,7 @@ module fifo_top_husky_pro (
    ddr3_app_model #(
       .pDATA_WIDTH                         (32),
       .pADDR_WIDTH                         (30),
-      .pMASK_WIDTH                         (4),
-      .pMODEL_DEPTH                        (65536)
+      .pMASK_WIDTH                         (4)
    ) U_ddr3_model (
       .clk                                 (clk_usb             ),
       .reset                               (reset               ),

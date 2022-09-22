@@ -32,8 +32,7 @@ either expressed or implied, of NewAE Technology Inc.
 module ddr3_app_model #(
    parameter pDATA_WIDTH = 32,
    parameter pADDR_WIDTH = 30,
-   parameter pMASK_WIDTH = 4,
-   parameter pMODEL_DEPTH = 65536
+   parameter pMASK_WIDTH = 4
 )(
    input  wire                          clk,
    input  wire                          reset,
@@ -59,7 +58,12 @@ module ddr3_app_model #(
     assign init_calib_complete = 1'b1;
     assign app_wdf_rdy = 1'b1;
 
-    reg [pDATA_WIDTH*2-1:0] memory [0:pMODEL_DEPTH-1];
+`ifdef TINYDDR
+    reg [pDATA_WIDTH*2-1:0] memory [0:255];
+`else
+    reg [pDATA_WIDTH*2-1:0] memory [0:65535];
+`endif
+
     reg [pDATA_WIDTH-1:0] app_wdf_data_r;
 
     reg app_rdy_wr;
