@@ -141,6 +141,8 @@ module openadc_interface #(
    wire extclk_monitor_disabled;
    wire [31:0] extclk_limit;
 
+   wire ui_clk;
+
 
    //Divide clock by 2^24 for heartbeat LED
    //Divide clock by 2^23 for frequency measurement
@@ -204,6 +206,7 @@ module openadc_interface #(
    end
 
    wire freq_measure_adc;
+   wire freq_measure_ui;
    wire freq_measure_ext;
    wire freq_measure_back;
    cdc_pulse U_freq_measure_adc (
@@ -212,6 +215,14 @@ module openadc_interface #(
       .src_pulse     (freq_measure),
       .dst_clk       (ADC_clk_sample),
       .dst_pulse     (freq_measure_adc)
+   );
+
+   cdc_pulse U_freq_measure_ui (
+      .reset_i       (reset),
+      .src_clk       (clk_usb),
+      .src_pulse     (freq_measure),
+      .dst_clk       (ui_clk),
+      .dst_pulse     (freq_measure_ui)
    );
 
    cdc_pulse U_freq_measure_ext (
@@ -234,8 +245,10 @@ module openadc_interface #(
 
    reg [31:0] extclk_frequency_int;
    reg [31:0] adcclk_frequency_int;
+   reg [31:0] uiclk_frequency_int;
    reg [31:0] extclk_frequency;
    reg [31:0] adcclk_frequency;
+   reg [31:0] uiclk_frequency;
 
    always @(posedge DUT_CLK_i) begin
       if (freq_measure_ext) begin
@@ -270,6 +283,16 @@ module openadc_interface #(
       end 
       else begin
          adcclk_frequency_int <= adcclk_frequency_int + 32'd1;
+      end
+   end
+
+   always @(posedge ui_clk) begin
+      if (freq_measure_ui) begin
+         uiclk_frequency_int <= 32'd1;
+         uiclk_frequency <= uiclk_frequency_int;
+      end 
+      else begin
+         uiclk_frequency_int <= uiclk_frequency_int + 32'd1;
       end
    end
 
@@ -469,6 +492,7 @@ module openadc_interface #(
       .trigger_length               (trigger_length),
       .extclk_frequency             (extclk_frequency),
       .adcclk_frequency             (adcclk_frequency),
+      .uiclk_frequency              (uiclk_frequency),
       .presamples_o                 (presamples),
       .maxsamples_i                 (maxsamples_limit),
       .maxsamples_o                 (maxsamples),
@@ -635,6 +659,7 @@ module openadc_interface #(
           .temp_out                 (temp_out),
           .ADC_clk_fbp              (ADC_clk_fbp ),
           .ADC_clk_fbn              (ADC_clk_fbn ),
+          .ui_clk                   (ui_clk),
 
           .preddr_fifo_wr           (slow_fifo_wr),
           .postddr_fifo_rd          (slow_fifo_rd),

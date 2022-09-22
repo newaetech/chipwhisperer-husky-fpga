@@ -365,6 +365,9 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define REG_CW310_SPECIFIC      120
 `define FIFO_CONFIG             121
 
+// temporary, for CW310/Pro development:
+`define UIFREQ_ADDR             122
+
 `define REGISTER_VERSION 1
 
 `define TW_MAIN_REG_SELECT      2'b10

@@ -56,6 +56,7 @@ module reg_openadc #(
    /* Measurement of external clock frequency */
    input  wire [31:0]  extclk_frequency,
    input  wire [31:0]  adcclk_frequency,
+   input  wire [31:0]  uiclk_frequency,
 
    /* Interface to fifo/capture module */
    output reg  [15:0] num_segments,
@@ -192,6 +193,7 @@ module reg_openadc #(
                 `EXTCLK_MONITOR_STAT: reg_datao_reg = extclk_change;
                 `EXTCLK_CHANGE_LIMIT: reg_datao_reg = extclk_limit[reg_bytecnt*8 +: 8];
                 `ADC_TRIGGER_LEVEL: reg_datao_reg = trigger_adclevel[reg_bytecnt*8 +: 8];
+                `UIFREQ_ADDR: reg_datao_reg = uiclk_frequency[reg_bytecnt*8 +: 8]; 
                 default: reg_datao_reg = 0;
              endcase
           end

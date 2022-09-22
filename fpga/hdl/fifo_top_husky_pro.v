@@ -106,7 +106,7 @@ module fifo_top_husky_pro (
     // CW310-specific:
     input wire          ADC_clk_fbp,
     input wire          ADC_clk_fbn,
-
+    output wire         ui_clk,
 
     // for debug only:
     output reg          preddr_fifo_wr,
@@ -219,7 +219,6 @@ module fifo_top_husky_pro (
     reg                 adc_app_wdf_end;
     reg                 adc_app_wdf_wren;
 
-    wire                ui_clk;
     wire                ui_clk_sync_rst; // TODO: do we need this output?
     wire [31:0]         app_rd_data;
     reg  [31:0]         app_rd_data_r;
