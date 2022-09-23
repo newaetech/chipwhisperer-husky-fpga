@@ -540,7 +540,7 @@ module cwhusky_tb();
 
 initial begin
     ddr_read_started = 0;
-    wait (U_dut.oadc.U_fifo.ddr_reading);
+    wait (U_dut.oadc.U_ddr.ddr_reading);
     ddr_read_started = 1;
 end
 
@@ -760,7 +760,7 @@ end
 
 
    // monitor internal errors to help debug:
-   always @(posedge (U_dut.oadc.U_fifo.error_flag || U_dut.oadc.U_fifo.U_ddr3_model.dropped_read_request)) begin
+   always @(posedge (U_dut.oadc.U_fifo.error_flag || U_dut.oadc.U_ddr.U_ddr3_model.dropped_read_request)) begin
       if (!pERRORS_OK) begin
          errors += 1;
          $display("ERROR: internal FIFO at t = %t (error_stat = %d)", $time, U_dut.oadc.U_fifo.error_stat);

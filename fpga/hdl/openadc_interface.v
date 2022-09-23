@@ -580,6 +580,19 @@ module openadc_interface #(
 
 
    `ifdef PRO
+       wire         capture_go_adc;
+       wire         write_done_adc;
+       wire         preddr_fifo_rd;
+       wire [63:0]  preddr_fifo_dout;
+       wire         preddr_fifo_empty;
+       wire [63:0]  postddr_fifo_din;
+       wire         postddr_fifo_full;
+       wire         postddr_fifo_prog_full;
+       wire         postddr_fifo_wr;
+       wire         preddr_fifo_underflow;
+       wire         postddr_fifo_overflow;
+       wire         error_flag;
+
        fifo_top_husky_pro U_fifo (
           .reset                    (reset),
 
@@ -625,6 +638,45 @@ module openadc_interface #(
           .armed_and_ready          (armed_and_ready),
           .state                    (fifo_state),
 
+          .ui_clk                   (ui_clk),
+
+          // to DDR:
+          .capture_go_ui            (capture_go_adc         ),
+          .write_done_ui            (write_done_adc         ),
+          .preddr_fifo_rd           (preddr_fifo_rd         ),
+          .preddr_fifo_dout         (preddr_fifo_dout       ),
+          .preddr_fifo_empty        (preddr_fifo_empty      ),
+          .postddr_fifo_din         (postddr_fifo_din       ),
+          .postddr_fifo_full        (postddr_fifo_full      ),
+          .postddr_fifo_prog_full   (postddr_fifo_prog_full ),
+          .postddr_fifo_wr          (postddr_fifo_wr        ),
+
+          .ddr3_rwtest_en           (ddr3_rwtest_en),
+
+          .preddr_fifo_wr           (slow_fifo_wr),
+          .postddr_fifo_rd          (slow_fifo_rd),
+          .preddr_fifo_underflow    (preddr_fifo_underflow ),
+          .postddr_fifo_overflow    (postddr_fifo_overflow ),
+          .fifo_read_count          (fifo_read_count),
+          .fifo_read_count_error_freeze (fifo_read_count_error_freeze),
+          .fifo_rst                 (fifo_rst),
+          .debug                    (fifo_debug)
+       );
+
+       ddr U_ddr (
+          .reset                    (reset),
+
+          // ADC signals:
+          .capture_go_adc           (capture_go_adc         ),
+          .write_done_adc           (write_done_adc         ),
+          .preddr_fifo_rd           (preddr_fifo_rd         ),
+          .preddr_fifo_dout         (preddr_fifo_dout       ),
+          .preddr_fifo_empty        (preddr_fifo_empty      ),
+          .postddr_fifo_din         (postddr_fifo_din       ),
+          .postddr_fifo_full        (postddr_fifo_full      ),
+          .postddr_fifo_prog_full   (postddr_fifo_prog_full ),
+          .postddr_fifo_wr          (postddr_fifo_wr        ),
+
           .ddr3_addr                (ddr3_addr    ),
           .ddr3_ba                  (ddr3_ba      ),
           .ddr3_cas_n               (ddr3_cas_n   ),
@@ -656,18 +708,17 @@ module openadc_interface #(
           .ddr3_max_read_stall_count (ddr3_max_read_stall_count  ),
           .ddr3_max_write_stall_count(ddr3_max_write_stall_count ),
 
+          .preddr_fifo_underflow    (preddr_fifo_underflow ),
+          .postddr_fifo_overflow    (postddr_fifo_overflow ),
+          .error_flag               (error_flag            ),
+
           .temp_out                 (temp_out),
           .ADC_clk_fbp              (ADC_clk_fbp ),
           .ADC_clk_fbn              (ADC_clk_fbn ),
-          .ui_clk                   (ui_clk),
-
-          .preddr_fifo_wr           (slow_fifo_wr),
-          .postddr_fifo_rd          (slow_fifo_rd),
-          .fifo_read_count          (fifo_read_count),
-          .fifo_read_count_error_freeze (fifo_read_count_error_freeze),
-          .fifo_rst                 (fifo_rst),
-          .debug                    (fifo_debug)
+          .clk_usb                  (clk_usb),
+          .ui_clk                   (ui_clk)
        );
+
 
    `else
        fifo_top_husky U_fifo(
