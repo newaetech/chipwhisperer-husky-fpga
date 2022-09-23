@@ -752,8 +752,8 @@ module openadc_interface #(
           .fifo_overflow            (fifo_overflow),
           .stream_mode              (fifo_stream),
           .error_flag               (fifo_error_flag),
-          .error_stat               (fifo_error_stat),
-          .first_error_stat         (fifo_first_error_stat),
+          .error_stat               (fifo_error_stat[8:0]),
+          .first_error_stat         (fifo_first_error_stat[8:0]),
           .first_error_state        (fifo_first_error_state),
           .clear_fifo_errors        (clear_fifo_errors),
           .stream_segment_available (stream_segment_available),
@@ -773,6 +773,21 @@ module openadc_interface #(
           .fifo_rst                 (fifo_rst),
           .debug                    (fifo_debug)
        );
+
+       assign ddr3_test_pass = 0;
+       assign ddr3_test_fail = 0;
+       assign ddr3_stat = 0;
+       assign ddr3_test_iteration = 0;
+       assign ddr3_test_errors = 0;
+       assign ddr3_read_read = 0;
+       assign ddr3_read_idle = 0;
+       assign ddr3_write_write = 0;
+       assign ddr3_write_idle = 0;
+       assign ddr3_max_read_stall_count = 0;
+       assign ddr3_max_write_stall_count = 0;
+       assign fifo_error_stat[10:9] = 0;
+       assign fifo_first_error_stat[10:9] = 0;
+
    `endif
 
 
