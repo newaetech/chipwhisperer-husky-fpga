@@ -40,6 +40,13 @@ module ddr (
     input  wire         postddr_fifo_prog_full,
     output reg          postddr_fifo_wr,
 
+    input  wire         single_write,
+    input  wire         single_read,
+    input  wire [29:0]  single_address,
+    input  wire [63:0]  single_write_data,
+    output reg  [63:0]  single_read_data,
+    output wire         single_done,
+
     // DDR
     output wire [15:0]  ddr3_addr,
     output wire [2:0]   ddr3_ba,
@@ -71,6 +78,8 @@ module ddr (
     output wire [15:0]  ddr3_max_read_stall_count,
     output wire [15:0]  ddr3_max_write_stall_count,
     input  wire [11:0]  temp_out,
+
+    output reg  [2:0]   ddr_state,
 
     // debug only:
     input  wire         preddr_fifo_underflow,
@@ -113,6 +122,8 @@ module ddr (
     reg                 adc_app_wdf_end;
     reg                 adc_app_wdf_wren;
 
+    wire [31:0]         single_app_wdf_data;
+
     wire                ui_clk_sync_rst; // TODO: do we need this output?
     wire [31:0]         app_rd_data;
     reg  [31:0]         app_rd_data_r;
@@ -154,9 +165,10 @@ module ddr (
     assign app_addr     = (ddr3_rwtest_en)? rwtest_app_addr     : adc_app_addr;
     assign app_cmd      = (ddr3_rwtest_en)? rwtest_app_cmd      : adc_app_cmd;
     assign app_en       = (ddr3_rwtest_en)? rwtest_app_en       : adc_app_en;
-    assign app_wdf_data = (ddr3_rwtest_en)? rwtest_app_wdf_data : adc_app_wdf_data;
     assign app_wdf_end  = (ddr3_rwtest_en)? rwtest_app_wdf_end  : adc_app_wdf_end;
     assign app_wdf_wren = (ddr3_rwtest_en)? rwtest_app_wdf_wren : adc_app_wdf_wren;
+    assign app_wdf_data = (ddr3_rwtest_en)? rwtest_app_wdf_data :
+                          (single_write_ui)?single_app_wdf_data : adc_app_wdf_data;
 
     localparam pS_DDR_IDLE            = 3'd0;
     localparam pS_DDR_WRITE1          = 3'd1;
@@ -166,7 +178,7 @@ module ddr (
     localparam pS_DDR_READ2           = 3'd5;
     localparam pS_DDR_WAIT_WRITE      = 3'd6;
     localparam pS_DDR_BYPASS          = 3'd7;
-    reg [2:0] ddr_state, next_ddr_state;
+    reg [2:0] next_ddr_state;
 
     reg ddr_full_error; // TODO: store this
     reg ddr_write_data_done;
@@ -189,8 +201,40 @@ module ddr (
     assign adc_app_wdf_data = (ddr_state == pS_DDR_WRITE1)? preddr_fifo_dout[31:0] : 
                               (ddr_state == pS_DDR_WRITE2)? preddr_fifo_dout[63:32] : 32'b0;
 
+    assign single_app_wdf_data = (ddr_state == pS_DDR_WRITE1)? single_write_data[31:0] : 
+                                 (ddr_state == pS_DDR_WRITE2)? single_write_data[63:32] : 32'b0;
 
     reg                 preddr_fifo_rd_r;
+
+    (* ASYNC_REG = "TRUE" *) reg[1:0] single_write_pipe;
+    (* ASYNC_REG = "TRUE" *) reg[1:0] single_read_pipe;
+    reg single_write_ui;
+    reg single_write_ui_r;
+    reg single_read_ui;
+    reg single_read_ui_r;
+    
+    reg single_write_done;
+    reg single_read_done;
+    assign single_done = single_write_done || single_read_done;
+
+    always @(posedge ui_clk) begin
+        if (reset) begin
+            single_write_pipe <= 0;
+            single_read_pipe <= 0;
+            single_write_ui <= 0;
+            single_write_ui_r <= 0;
+            single_read_ui <= 0;
+            single_read_ui_r <= 0;
+        end
+        else begin
+            {single_write_ui_r, single_write_ui, single_write_pipe} <= {single_write_ui, single_write_pipe, single_write};
+            {single_read_ui_r, single_read_ui, single_read_pipe} <= {single_read_ui, single_read_pipe, single_read};
+        end
+    end
+
+    wire single_write_go = single_write_ui && ~single_write_ui_r;
+    wire single_read_go = single_read_ui && ~single_read_ui_r;
+
 
     // DDR FSM:
     always @(*) begin
@@ -202,18 +246,25 @@ module ddr (
         reset_app_address = 1'b0;
         preddr_fifo_rd = 1'b0;
         next_ddr_state = pS_DDR_IDLE;
+        single_write_done = 1'b0;
 
         case (ddr_state)
             pS_DDR_IDLE: begin
                 // TODO: instead of capture_go_adc, could we not use "any pre-ddr FIFO is not empty?"
                 // But then how would we deal with stuck states... maybe each front-end needs its own "capture go"
-                if (capture_go_adc && ~ddr3_rwtest_en) begin
-                    if (use_ddr && init_calib_complete) begin
-                        reset_app_address = 1'b1;
-                        next_ddr_state = pS_DDR_WAIT_WRITE;
-                    end
-                    else
+                if ((capture_go_adc || single_write_go || single_read_go) && ~ddr3_rwtest_en) begin
+                    if (~use_ddr)
                         next_ddr_state = pS_DDR_BYPASS;
+                    else if (init_calib_complete) begin
+                        if (single_write_ui)
+                            next_ddr_state = pS_DDR_WAIT_WRITE;
+                        else if (single_read_ui)
+                            next_ddr_state = pS_DDR_WAIT_READ;
+                        else begin // normal ADC storage case
+                            reset_app_address = 1'b1;
+                            next_ddr_state = pS_DDR_WAIT_WRITE;
+                        end
+                    end
                 end
                 else
                     next_ddr_state = pS_DDR_IDLE;
@@ -248,9 +299,15 @@ module ddr (
                     reset_app_address = 1'b1;
                     next_ddr_state = pS_DDR_WAIT_READ;
                 end
-                else if (app_rdy && app_wdf_rdy && ~preddr_fifo_empty) begin
-                    preddr_fifo_rd = 1'b1;
-                    next_ddr_state = pS_DDR_WRITE1;
+                else if (app_rdy && app_wdf_rdy) begin
+                    if (single_write_ui)
+                        next_ddr_state = pS_DDR_WRITE1;
+                    else if (~preddr_fifo_empty) begin
+                        preddr_fifo_rd = 1'b1;
+                        next_ddr_state = pS_DDR_WRITE1;
+                    end
+                    else
+                        next_ddr_state = pS_DDR_WAIT_WRITE;
                 end
                 else
                     next_ddr_state = pS_DDR_WAIT_WRITE;
@@ -271,7 +328,11 @@ module ddr (
                 adc_app_wdf_wren = 1'b1;
                 adc_app_wdf_end = 1'b1;
                 if (app_wdf_rdy) begin
-                    if (ddr_write_data_done) begin
+                    if (single_write_ui) begin
+                        next_ddr_state = pS_DDR_IDLE;
+                        single_write_done = 1'b1;
+                    end
+                    else if (ddr_write_data_done) begin
                         reset_app_address = 1'b1;
                         next_ddr_state = pS_DDR_WAIT_READ;
                     end
@@ -293,7 +354,7 @@ module ddr (
                 adc_app_en = 1'b0;
                 if (ddr3_rwtest_en || capture_go_adc)
                     next_ddr_state = pS_DDR_IDLE;
-                else if (app_rdy && ~postddr_fifo_prog_full)
+                else if (app_rdy && (~postddr_fifo_prog_full || single_read_ui))
                     next_ddr_state = pS_DDR_READ1;
                 else
                     next_ddr_state = pS_DDR_WAIT_READ;
@@ -311,7 +372,7 @@ module ddr (
 
             pS_DDR_READ2: begin
                 adc_app_en = 1'b0;
-                if (ddr_read_data_done)
+                if (ddr_read_data_done || single_read_ui)
                     next_ddr_state = pS_DDR_IDLE;
                 else if (app_rdy && ~postddr_fifo_prog_full)
                     next_ddr_state = pS_DDR_READ1;
@@ -337,13 +398,17 @@ module ddr (
             write_data_done_hold <= 0;
             preddr_fifo_rd_r <= 0;
             adc_top_app_addr <= 0;
+            single_read_done <= 0;
         end
 
         else begin
             ddr_state <= next_ddr_state;
             preddr_fifo_rd_r <= preddr_fifo_rd;
+            single_read_done <= 0;
             // TODO (later): clear mechanism for ddr_full_error
-            if (reset_app_address) begin
+            if (single_write_ui || single_read_ui)
+                adc_app_addr <= single_address;
+            else if (reset_app_address) begin
                 adc_app_addr <= 0;
                 if (ddr_state != pS_DDR_IDLE) begin
                     if (ddr_state == pS_DDR_WAIT_WRITE)
@@ -359,7 +424,16 @@ module ddr (
                     adc_app_addr <= adc_app_addr + pDDR_INC_ADDR;
             end
 
-            if (ddr3_rwtest_en)
+            if (single_read_ui && app_rd_data_valid) begin
+                if (app_rd_data_end) begin
+                    single_read_data[63:32] <= app_rd_data;
+                    single_read_done <= 1;
+                end
+                else
+                    single_read_data[31:0] <= app_rd_data;
+            end
+
+            if (ddr3_rwtest_en || single_write_ui || single_read_ui)
                 postddr_fifo_wr <= 1'b0;
 
             else if (use_ddr && app_rd_data_valid) begin
@@ -627,7 +701,10 @@ module ddr (
         .probe28        (adc_top_app_addr),     // input wire [29:0]
         .probe29        (capture_go_adc),       // input wire [0:0]
         .probe30        (init_calib_complete),  // input wire [0:0]
-        .probe31        (error_flag)            // input wire [0:0]
+        .probe31        (error_flag),           // input wire [0:0]
+        .probe32        (single_done),          // input wire [0:0]
+        .probe33        (single_write),         // input wire [0:0]
+        .probe34        (single_read)           // input wire [0:0]
     );
 
 `endif

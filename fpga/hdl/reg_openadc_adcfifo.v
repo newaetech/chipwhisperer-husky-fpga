@@ -27,6 +27,7 @@ module reg_openadc_adcfifo #(
 )(
    input  wire         reset_i,
    input  wire         clk_usb,
+   input  wire         ui_clk,
    input  wire [7:0]   reg_address,  // Address of register
    input  wire [pBYTECNT_SIZE-1:0]  reg_bytecnt,  // Current byte count
    input  wire [7:0]   reg_datai,    // Data to write
@@ -35,7 +36,7 @@ module reg_openadc_adcfifo #(
    input  wire         reg_write,    // Write flag
 
    /* ADC Fifo Interface */
-   input  wire [2:0]   fifo_state,
+   input  wire [6:0]   state,
    input  wire         fifo_empty,
    output wire         fifo_rd_en,
    output reg          low_res,
@@ -70,6 +71,13 @@ module reg_openadc_adcfifo #(
    input  wire [15:0]  I_ddr3_max_read_stall_count,
    input  wire [15:0]  I_ddr3_max_write_stall_count,
 
+   output reg          ddr_single_write,
+   output reg          ddr_single_read,
+   output reg  [29:0]  ddr_single_address,
+   output reg  [63:0]  ddr_single_write_data,
+   input  wire [63:0]  ddr_single_read_data,
+   input  wire         ddr_single_done,
+
    // for debug only:
    input  wire [31:0]  fifo_read_count,
    input  wire [31:0]  fifo_read_count_error_freeze
@@ -97,11 +105,13 @@ module reg_openadc_adcfifo #(
                                  I_ddr3_max_read_stall_count,   // 31:16
                                  I_ddr3_max_write_stall_count}; // 15:0
 
+   wire single_done_usb;
+
    always @(*) begin
       if (reg_read) begin
          case (reg_address)
             `FIFO_STAT:                 reg_datao_reg = fifo_stat[reg_bytecnt*8 +: 8];
-            `FIFO_STATE:                reg_datao_reg = {5'b0, fifo_state};
+            `FIFO_STATE:                reg_datao_reg = {1'b0, state};
             `FIFO_FIRST_ERROR:          reg_datao_reg = fifo_first_error_stat[reg_bytecnt*8 +: 8];
             `FIFO_FIRST_ERROR_STATE:    reg_datao_reg = {5'b0, fifo_first_error_state};
             `DEBUG_FIFO_READS:          reg_datao_reg = fifo_read_count[reg_bytecnt*8 +: 8];
@@ -120,6 +130,8 @@ module reg_openadc_adcfifo #(
             `REG_XO_EN:                 reg_datao_reg = {5'b0, I_vddr_pgood, O_vddr_enable, O_xo_en};
             `REG_DDR3_RW_STATS:         reg_datao_reg = ddr3_rw_stats[reg_bytecnt*8 +: 8];
             `FIFO_CONFIG:               reg_datao_reg = {7'b0, O_use_ddr};
+            `REG_DDR_SINGLE_RW_DATA:    reg_datao_reg = ddr_single_read_data[reg_bytecnt*8 +: 8];
+            `REG_DDR_SINGLE_RW_ADDR:    reg_datao_reg = {6'b0, ddr_single_read, ddr_single_write};
             default:                    reg_datao_reg = 0;
          endcase
       end
@@ -149,10 +161,37 @@ module reg_openadc_adcfifo #(
             `REG_DDR3_TEST_EN_STAT:     {O_ddr3_clear_fail, O_ddr3_rwtest_en} <= reg_datai[1:0];
             `REG_XO_EN:                 {O_vddr_enable, O_xo_en} <= reg_datai[1:0];
             `FIFO_CONFIG:               O_use_ddr <= reg_datai[0];
+            `REG_DDR_SINGLE_RW_DATA:    ddr_single_write_data[reg_bytecnt*8 +: 8] <= reg_datai;
+            `REG_DDR_SINGLE_RW_ADDR:    ddr_single_address[reg_bytecnt*8 +: 8] <= reg_datai;
             default: ;
          endcase
       end
    end
+
+   always @(posedge clk_usb) begin
+      if (reset) begin
+          ddr_single_write <= 1'b0;
+          ddr_single_read <= 1'b0;
+      end
+      else if (single_done_usb) begin
+          ddr_single_write <= 1'b0;
+          ddr_single_read <= 1'b0;
+      end
+      else if (reg_write && (reg_address == `REG_DDR_SINGLE_RW_ADDR) && (reg_bytecnt == 3)) begin
+          if (reg_datai[7])
+              ddr_single_write <= 1'b1;
+          else
+              ddr_single_read <= 1'b1;
+      end
+  end
+
+  cdc_pulse U_single_done_cdc (
+     .reset_i       (reset),
+     .src_clk       (ui_clk),
+     .src_pulse     (ddr_single_done),
+     .dst_clk       (clk_usb),
+     .dst_pulse     (single_done_usb)
+  );
 
    always @(posedge clk_usb) begin
       if (reset) begin

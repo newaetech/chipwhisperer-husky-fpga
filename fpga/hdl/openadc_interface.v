@@ -126,6 +126,14 @@ module openadc_interface #(
     wire       armed_and_ready;
     wire [2:0] fifo_state;
     wire       fifo_rst;
+    wire [2:0] ddr_state;
+
+    wire         single_write;
+    wire         single_read;
+    wire [29:0]  single_address;
+    wire [63:0]  single_write_data;
+    wire [63:0]  single_read_data;
+    wire         single_done;
 
     wire [6:0] ddr3_stat;
     wire       ddr3_test_pass;
@@ -519,13 +527,14 @@ module openadc_interface #(
    ) U_reg_openadc_adcfifo (
       .reset_i                          (reset),
       .clk_usb                          (clk_usb),
+      .ui_clk                           (ui_clk),
       .reg_address                      (reg_address), 
       .reg_bytecnt                      (reg_bytecnt), 
       .reg_datao                        (reg_datao_fifo), 
       .reg_datai                        (reg_datai), 
       .reg_read                         (reg_read), 
       .reg_write                        (reg_write), 
-      .fifo_state                       (fifo_state),
+      .state                            ({ddr_state, 1'b0, fifo_state}),
       .fifo_empty                       (fifo_empty),
       .fifo_rd_en                       (fifo_rd_en),
       .low_res                          (low_res),
@@ -541,6 +550,13 @@ module openadc_interface #(
       .no_underflow_errors              (no_underflow_errors),
       .clear_fifo_errors                (clear_fifo_errors),
       .capture_done                     (capture_done),
+
+      .ddr_single_write                 (single_write      ),
+      .ddr_single_read                  (single_read       ),
+      .ddr_single_address               (single_address    ),
+      .ddr_single_write_data            (single_write_data ),
+      .ddr_single_read_data             (single_read_data  ),
+      .ddr_single_done                  (single_done       ),
 
       .O_use_ddr                        (use_ddr                    ),
       .O_ddr3_rwtest_en                 (ddr3_rwtest_en             ),
@@ -699,6 +715,13 @@ module openadc_interface #(
           .ddr3_rwtest_en           (ddr3_rwtest_en),
           .use_ddr                  (use_ddr),
 
+          .single_write             (single_write      ),
+          .single_read              (single_read       ),
+          .single_address           (single_address    ),
+          .single_write_data        (single_write_data ),
+          .single_read_data         (single_read_data  ),
+          .single_done              (single_done       ),
+
           .ddr3_test_iteration      (ddr3_test_iteration        ),
           .ddr3_test_errors         (ddr3_test_errors           ),
           .ddr3_read_read           (ddr3_read_read             ),
@@ -711,6 +734,8 @@ module openadc_interface #(
           .preddr_fifo_underflow    (preddr_fifo_underflow ),
           .postddr_fifo_overflow    (postddr_fifo_overflow ),
           .error_flag               (error_flag            ),
+
+          .ddr_state                (ddr_state),
 
           .temp_out                 (temp_out),
           .ADC_clk_fbp              (ADC_clk_fbp ),
@@ -787,6 +812,9 @@ module openadc_interface #(
        assign ddr3_max_write_stall_count = 0;
        assign fifo_error_stat[10:9] = 0;
        assign fifo_first_error_stat[10:9] = 0;
+       assign ddr_state = 0;
+       assign single_read_data = 0;
+       assign single_done = 0;
 
    `endif
 

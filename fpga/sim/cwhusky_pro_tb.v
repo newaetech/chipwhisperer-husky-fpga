@@ -471,6 +471,43 @@ module cwhusky_tb();
       if (pBYPASS_DDR)
           write_1byte(`FIFO_CONFIG, 0);
 
+      /* test single DDR R/W:
+      rw_lots_bytes(`REG_DDR_SINGLE_RW_DATA);
+      write_next_byte((64'h12345678_a1b2c3d4 & 64'h0000_0000_0000_00FF));
+      write_next_byte((64'h12345678_a1b2c3d4 & 64'h0000_0000_0000_FF00)>>8);
+      write_next_byte((64'h12345678_a1b2c3d4 & 64'h0000_0000_00FF_0000)>>16);
+      write_next_byte((64'h12345678_a1b2c3d4 & 64'h0000_0000_FF00_0000)>>24);
+      write_next_byte((64'h12345678_a1b2c3d4 & 64'h0000_00FF_0000_0000)>>32);
+      write_next_byte((64'h12345678_a1b2c3d4 & 64'h0000_FF00_0000_0000)>>40);
+      write_next_byte((64'h12345678_a1b2c3d4 & 64'h00FF_0000_0000_0000)>>48);
+      write_next_byte((64'h12345678_a1b2c3d4 & 64'hFF00_0000_0000_0000)>>56);
+
+      rw_lots_bytes(`REG_DDR_SINGLE_RW_ADDR);
+      // use a low address that's covered by the memory model!
+      write_next_byte((32'h8000_0000 & 32'h0000_00FF));
+      write_next_byte((32'h8000_0000 & 32'h0000_FF00)>>8);
+      write_next_byte((32'h8000_0000 & 32'h00FF_0000)>>16);
+      write_next_byte((32'h8000_0000 & 32'hFF00_0000)>>24);
+
+      repeat (100) @(posedge clk_usb);
+      rw_lots_bytes(`REG_DDR_SINGLE_RW_ADDR);
+      write_next_byte((32'h0000_0000 & 32'h0000_00FF));
+      write_next_byte((32'h0000_0000 & 32'h0000_FF00)>>8);
+      write_next_byte((32'h0000_0000 & 32'h00FF_0000)>>16);
+      write_next_byte((32'h0000_0000 & 32'hFF00_0000)>>24);
+
+      repeat (500) @(posedge clk_usb);
+      rw_lots_bytes(`REG_DDR_SINGLE_RW_DATA);
+      read_next_byte(rdata);
+      read_next_byte(rdata);
+      read_next_byte(rdata);
+      read_next_byte(rdata);
+      read_next_byte(rdata);
+      read_next_byte(rdata);
+      read_next_byte(rdata);
+      read_next_byte(rdata);
+      */
+
       setup_done = 1;
 
    end
