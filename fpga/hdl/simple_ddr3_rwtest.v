@@ -47,12 +47,10 @@ module simple_ddr3_rwtest #(
    output reg  [pADDR_WIDTH-1:0]        error_addr,
    input  wire [7:0]                    ddrtest_incr,
    input  wire [pADDR_WIDTH-1:0]        ddrtest_stop,
-   output reg  [31:0]                   ddr_read_read,
-   output reg  [31:0]                   ddr_read_idle,
-   output reg  [31:0]                   ddr_write_write,
-   output reg  [31:0]                   ddr_write_idle,
-   output reg  [15:0]                   ddr_max_read_stall_count,
-   output reg  [15:0]                   ddr_max_write_stall_count,
+
+   output wire                          stat_reset,
+   output wire                          reading,
+   output wire                          writing,
 
    output reg  [pADDR_WIDTH-1:0]        app_addr,
    output wire [2:0]                    app_cmd,
@@ -97,19 +95,16 @@ reg load_lfsr;
 wire read_valid;
 reg write_valid;
 
-reg [15:0] read_stall_count;
-reg [15:0] write_stall_count;
-
 assign app_wdf_data = lfsr ^ app_addr;
 assign expected_payload = lfsr ^ verify_addr;
 
-wire writing = (state == pS_WRITE0) ||
-               (state == pS_WRITE1) ||
-               (state == pS_WRITE2);
-wire reading = (state == pS_READ0) ||
-               (state == pS_READ1) ||
-               (state == pS_READ2) ||
-               (state == pS_WAIT_READS_DONE);
+assign writing = (state == pS_WRITE0) ||
+                 (state == pS_WRITE1) ||
+                 (state == pS_WRITE2);
+assign reading = (state == pS_READ0) ||
+                 (state == pS_READ1) ||
+                 (state == pS_READ2) ||
+                 (state == pS_WAIT_READS_DONE);
 
 assign app_cmd = writing? CMD_WRITE : CMD_READ;
 
@@ -127,6 +122,8 @@ always @ (posedge clk) begin
         {active_r, active, active_pipe} <= {active, active_pipe, active_usb};
     end 
 end
+
+assign stat_reset = active && ~active_r;
 
 
 // FSM issues write command + data, read command:
@@ -273,14 +270,6 @@ always @ (posedge clk) begin
         error_addr <= 0;
         comp_error <= 1'b0;
         comp_good <= 1'b0;
-        ddr_read_read <= 0;
-        ddr_read_idle <= 0;
-        ddr_write_write <= 0;
-        ddr_write_idle <= 0;
-        read_stall_count <= 0;
-        write_stall_count <= 0;
-        ddr_max_read_stall_count <= 0;
-        ddr_max_write_stall_count <= 0;
     end
 
     else begin
@@ -334,51 +323,6 @@ always @ (posedge clk) begin
         else if (writing) begin
             comp_good <= 1'b0;
             comp_error <= 1'b0;
-        end
-
-        if (active && ~active_r) begin
-            ddr_read_read <= 0;
-            ddr_read_idle <= 0;
-            ddr_write_write <= 0;
-            ddr_write_idle <= 0;
-            read_stall_count <= 0;
-            write_stall_count <= 0;
-            ddr_max_read_stall_count <= 0;
-            ddr_max_write_stall_count <= 0;
-        end
-        else begin
-
-            if (reading) begin
-                if (app_rd_data_valid && (ddr_read_read < {32{1'b1}}))
-                    ddr_read_read <= ddr_read_read + 1;
-                else if (ddr_read_idle < {32{1'b1}})
-                    ddr_read_idle <= ddr_read_idle + 1;
-
-                if (app_rd_data_valid) begin
-                    read_stall_count <= 0;
-                    if (read_stall_count > ddr_max_read_stall_count)
-                        ddr_max_read_stall_count <= read_stall_count;
-                end
-                else
-                    read_stall_count <= read_stall_count + 1;
-
-            end
-
-            if (writing) begin
-                if (app_rdy && (ddr_write_write < {32{1'b1}}))
-                    ddr_write_write <= ddr_write_write + 1;
-                else if (ddr_write_idle < {32{1'b1}})
-                    ddr_write_idle <= ddr_write_idle + 1;
-
-                if (app_rdy) begin
-                    write_stall_count <= 0;
-                    if (write_stall_count > ddr_max_write_stall_count)
-                        ddr_max_write_stall_count <= write_stall_count;
-                end
-                else
-                    write_stall_count <= write_stall_count + 1;
-
-            end
         end
 
     end

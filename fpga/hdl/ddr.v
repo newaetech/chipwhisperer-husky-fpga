@@ -64,19 +64,19 @@ module ddr (
     output wire         ddr3_cs_n,
     output wire         ddr3_odt,
     output wire [6:0]   ddr3_stat,
-    output wire         ddr3_test_pass,
-    output wire         ddr3_test_fail,
-    input  wire         ddr3_test_clear_fail,
-    input  wire         ddr3_rwtest_en,
+    output wire         ddr_test_pass,
+    output wire         ddr_test_fail,
+    input  wire         ddr_test_clear_fail,
+    input  wire         ddr_rwtest_en,
     input  wire         use_ddr,           
-    output wire [15:0]  ddr3_test_iteration,
-    output wire [7:0]   ddr3_test_errors,
-    output wire [31:0]  ddr3_read_read,
-    output wire [31:0]  ddr3_read_idle,
-    output wire [31:0]  ddr3_write_write,
-    output wire [31:0]  ddr3_write_idle,
-    output wire [15:0]  ddr3_max_read_stall_count,
-    output wire [15:0]  ddr3_max_write_stall_count,
+    output wire [15:0]  ddr_test_iteration,
+    output wire [7:0]   ddr_test_errors,
+    output reg  [31:0]  ddr_read_read,
+    output reg  [31:0]  ddr_read_idle,
+    output reg  [31:0]  ddr_write_write,
+    output reg  [31:0]  ddr_write_idle,
+    output reg  [15:0]  ddr_max_read_stall_count,
+    output reg  [15:0]  ddr_max_write_stall_count,
     input  wire [11:0]  temp_out,
 
     output reg  [2:0]   ddr_state,
@@ -141,12 +141,12 @@ module ddr (
     wire  dbg_wrcal_err;
     wire  init_calib_complete;
 
-    wire [3:0] ddr3_test_state;
-    wire ddr3_test_comp_error;
-    wire ddr3_test_comp_good;
-    wire [31:0] ddr3_test_expected_data;
-    wire [29:0] ddr3_test_verify_addr;
-    wire [31:0] ddr3_test_lfsr;
+    wire [3:0] ddr_test_state;
+    wire ddr_test_comp_error;
+    wire ddr_test_comp_good;
+    wire [31:0] ddr_test_expected_data;
+    wire [29:0] ddr_test_verify_addr;
+    wire [31:0] ddr_test_lfsr;
 
     assign dbg_pi_phaselock_err = ddr3_ila_basic_w[6];
     assign dbg_pi_dqsfound_err  = ddr3_ila_basic_w[9];
@@ -162,12 +162,12 @@ module ddr (
                         init_calib_complete
                        };
 
-    assign app_addr     = (ddr3_rwtest_en)? rwtest_app_addr     : adc_app_addr;
-    assign app_cmd      = (ddr3_rwtest_en)? rwtest_app_cmd      : adc_app_cmd;
-    assign app_en       = (ddr3_rwtest_en)? rwtest_app_en       : adc_app_en;
-    assign app_wdf_end  = (ddr3_rwtest_en)? rwtest_app_wdf_end  : adc_app_wdf_end;
-    assign app_wdf_wren = (ddr3_rwtest_en)? rwtest_app_wdf_wren : adc_app_wdf_wren;
-    assign app_wdf_data = (ddr3_rwtest_en)? rwtest_app_wdf_data :
+    assign app_addr     = (ddr_rwtest_en)? rwtest_app_addr     : adc_app_addr;
+    assign app_cmd      = (ddr_rwtest_en)? rwtest_app_cmd      : adc_app_cmd;
+    assign app_en       = (ddr_rwtest_en)? rwtest_app_en       : adc_app_en;
+    assign app_wdf_end  = (ddr_rwtest_en)? rwtest_app_wdf_end  : adc_app_wdf_end;
+    assign app_wdf_wren = (ddr_rwtest_en)? rwtest_app_wdf_wren : adc_app_wdf_wren;
+    assign app_wdf_data = (ddr_rwtest_en)? rwtest_app_wdf_data :
                           (single_write_ui)?single_app_wdf_data : adc_app_wdf_data;
 
     localparam pS_DDR_IDLE            = 3'd0;
@@ -252,7 +252,7 @@ module ddr (
             pS_DDR_IDLE: begin
                 // TODO: instead of capture_go_adc, could we not use "any pre-ddr FIFO is not empty?"
                 // But then how would we deal with stuck states... maybe each front-end needs its own "capture go"
-                if ((capture_go_adc || single_write_go || single_read_go) && ~ddr3_rwtest_en) begin
+                if ((capture_go_adc || single_write_go || single_read_go) && ~ddr_rwtest_en) begin
                     if (~use_ddr)
                         next_ddr_state = pS_DDR_BYPASS;
                     else if (init_calib_complete) begin
@@ -352,7 +352,7 @@ module ddr (
 
             pS_DDR_WAIT_READ: begin
                 adc_app_en = 1'b0;
-                if (ddr3_rwtest_en || capture_go_adc)
+                if (ddr_rwtest_en || capture_go_adc)
                     next_ddr_state = pS_DDR_IDLE;
                 else if (app_rdy && (~postddr_fifo_prog_full || single_read_ui))
                     next_ddr_state = pS_DDR_READ1;
@@ -433,7 +433,7 @@ module ddr (
                     single_read_data[31:0] <= app_rd_data;
             end
 
-            if (ddr3_rwtest_en || single_write_ui || single_read_ui)
+            if (ddr_rwtest_en || single_write_ui || single_read_ui)
                 postddr_fifo_wr <= 1'b0;
 
             else if (use_ddr && app_rd_data_valid) begin
@@ -469,6 +469,82 @@ module ddr (
 
         end
 
+    end
+
+reg [15:0] read_stall_count;
+reg [15:0] write_stall_count;
+wire rw_stat_reset;
+wire rw_reading;
+wire rw_writing;
+
+wire stat_reading = (ddr_rwtest_en)? rw_reading : (ddr_reading && ~postddr_fifo_prog_full);
+wire stat_writing = (ddr_rwtest_en)? rw_writing : (ddr_writing && ~preddr_fifo_empty);
+wire stat_reset = (ddr_rwtest_en)? rw_stat_reset : capture_go_adc;
+
+
+    // collect DDR R/W statistics:
+    always @ (posedge ui_clk) begin
+        if (reset) begin
+            ddr_read_read <= 0;
+            ddr_read_idle <= 0;
+            ddr_write_write <= 0;
+            ddr_write_idle <= 0;
+            read_stall_count <= 0;
+            write_stall_count <= 0;
+            ddr_max_read_stall_count <= 0;
+            ddr_max_write_stall_count <= 0;
+        end
+
+        else begin
+            if (stat_reset) begin
+                ddr_read_read <= 0;
+                ddr_read_idle <= 0;
+                ddr_write_write <= 0;
+                ddr_write_idle <= 0;
+                read_stall_count <= 0;
+                write_stall_count <= 0;
+                ddr_max_read_stall_count <= 0;
+                ddr_max_write_stall_count <= 0;
+            end
+            else begin
+
+                if (stat_reading) begin
+                    // note that in "mission mode", if we get throttled at all by the postddr FIFO,
+                    // every stop and restart of reading will lead to a lot of idle cycles due to the
+                    // lag between the first read request and the first read response
+                    if (app_rd_data_valid && (ddr_read_read < {32{1'b1}}))
+                        ddr_read_read <= ddr_read_read + 1;
+                    else if (ddr_read_idle < {32{1'b1}})
+                        ddr_read_idle <= ddr_read_idle + 1;
+
+                    if (app_rd_data_valid) begin
+                        read_stall_count <= 0;
+                        if (read_stall_count > ddr_max_read_stall_count)
+                            ddr_max_read_stall_count <= read_stall_count;
+                    end
+                    else
+                        read_stall_count <= read_stall_count + 1;
+
+                end
+
+                if (stat_writing) begin
+                    if (app_rdy && (ddr_write_write < {32{1'b1}}))
+                        ddr_write_write <= ddr_write_write + 1;
+                    else if (ddr_write_idle < {32{1'b1}})
+                        ddr_write_idle <= ddr_write_idle + 1;
+
+                    if (app_rdy) begin
+                        write_stall_count <= 0;
+                        if (write_stall_count > ddr_max_write_stall_count)
+                            ddr_max_write_stall_count <= write_stall_count;
+                    end
+                    else
+                        write_stall_count <= write_stall_count + 1;
+
+                end
+            end
+
+        end
     end
 
 
@@ -597,24 +673,20 @@ module ddr (
    ) U_simple_ddr3_rwtest (
       .clk                                 (ui_clk              ),
       .reset                               (reset               ),
-      .active_usb                          (ddr3_rwtest_en      ),
+      .active_usb                          (ddr_rwtest_en      ),
       .init_calib_complete                 (init_calib_complete ),
-      .pass                                (ddr3_test_pass      ),
-      .fail                                (ddr3_test_fail      ),
-      .clear_fail                          (ddr3_test_clear_fail),
+      .pass                                (ddr_test_pass      ),
+      .fail                                (ddr_test_fail      ),
+      .clear_fail                          (ddr_test_clear_fail),
 
-      .iteration                           (ddr3_test_iteration ),
-      .errors                              (ddr3_test_errors    ),
+      .iteration                           (ddr_test_iteration ),
+      .errors                              (ddr_test_errors    ),
       .error_addr                          (                    ),
       .ddrtest_incr                        (pDDR_INC_ADDR       ),
       .ddrtest_stop                        (pDDR_MAX_ADDR       ),
-
-      .ddr_read_read                       (ddr3_read_read       ),
-      .ddr_read_idle                       (ddr3_read_idle       ),
-      .ddr_write_write                     (ddr3_write_write     ),
-      .ddr_write_idle                      (ddr3_write_idle      ),
-      .ddr_max_read_stall_count            (ddr3_max_read_stall_count ),
-      .ddr_max_write_stall_count           (ddr3_max_write_stall_count),
+      .stat_reset                          (rw_stat_reset       ),
+      .reading                             (rw_reading          ),
+      .writing                             (rw_writing          ),
 
       .app_addr                            (rwtest_app_addr     ),
       .app_cmd                             (rwtest_app_cmd      ),
@@ -630,12 +702,12 @@ module ddr (
       .app_wdf_rdy                         (app_wdf_rdy         ),
 
       // debug only:
-      .state                               (ddr3_test_state         ),
-      .comp_error                          (ddr3_test_comp_error    ),
-      .comp_good                           (ddr3_test_comp_good     ),
-      .expected_payload                    (ddr3_test_expected_data ),
-      .verify_addr                         (ddr3_test_verify_addr   ),
-      .lfsr                                (ddr3_test_lfsr          )
+      .state                               (ddr_test_state         ),
+      .comp_error                          (ddr_test_comp_error    ),
+      .comp_good                           (ddr_test_comp_good     ),
+      .expected_payload                    (ddr_test_expected_data ),
+      .verify_addr                         (ddr_test_verify_addr   ),
+      .lfsr                                (ddr_test_lfsr          )
    );
 
 
@@ -643,10 +715,10 @@ module ddr (
 `ifdef ILA_DDR3
     ila_ddr3 U_ila_ddr3 (
         .clk            (ui_clk             ),      // input wire clk
-        .probe0         (ddr3_rwtest_en     ),      // input wire [0:0] 
+        .probe0         (ddr_rwtest_en      ),      // input wire [0:0] 
         .probe1         (init_calib_complete),      // input wire [0:0] 
-        .probe2         (ddr3_test_pass     ),      // input wire [0:0] 
-        .probe3         (ddr3_test_fail     ),      // input wire [0:0] 
+        .probe2         (ddr_test_pass      ),      // input wire [0:0] 
+        .probe3         (ddr_test_fail      ),      // input wire [0:0] 
         .probe4         (app_addr           ),      // input wire [29:0]
         .probe5         (app_cmd            ),      // input wire [2:0] 
         .probe6         (app_en             ),      // input wire [0:0] 
@@ -659,13 +731,13 @@ module ddr (
         .probe13        (app_rd_data_valid  ),      // input wire [0:0] 
         .probe14        (app_rdy            ),      // input wire [0:0] 
         .probe15        (app_wdf_rdy        ),      // input wire [0:0] 
-        .probe16        (ddr3_test_state    ),      // input wire [3:0] 
-        .probe17        (ddr3_test_iteration),      // input wire [15:0]
-        .probe18        (ddr3_test_comp_error ),    // input wire [0:0] 
-        .probe19        (ddr3_test_comp_good  ),    // input wire [0:0] 
-        .probe20        (ddr3_test_expected_data),  // input wire [31:0]
-        .probe21        (ddr3_test_verify_addr),    // input wire [29:0]
-        .probe22        (ddr3_test_lfsr     )       // input wire [31:0]
+        .probe16        (ddr_test_state     ),      // input wire [3:0] 
+        .probe17        (ddr_test_iteration ),      // input wire [15:0]
+        .probe18        (ddr_test_comp_error ),     // input wire [0:0] 
+        .probe19        (ddr_test_comp_good  ),     // input wire [0:0] 
+        .probe20        (ddr_test_expected_data),   // input wire [31:0]
+        .probe21        (ddr_test_verify_addr),     // input wire [29:0]
+        .probe22        (ddr_test_lfsr     )        // input wire [31:0]
     );
 
     ila_ui_fifo U_ila_ui_fifo (
@@ -690,7 +762,7 @@ module ddr (
         .probe17        (app_rdy),              // input wire [0:0]
         .probe18        (app_wdf_rdy),          // input wire [0:0]
         .probe19        (ddr_state),            // input wire [2:0]
-        .probe20        (ddr3_rwtest_en),       // input wire [0:0]
+        .probe20        (ddr_rwtest_en),        // input wire [0:0]
         .probe21        (reset_app_address),    // input wire [0:0]
         .probe22        (incr_app_address),     // input wire [0:0]
         .probe23        (ddr_write_data_done),  // input wire [0:0]
@@ -705,6 +777,30 @@ module ddr (
         .probe32        (single_done),          // input wire [0:0]
         .probe33        (single_write),         // input wire [0:0]
         .probe34        (single_read)           // input wire [0:0]
+    );
+
+`endif
+
+`ifdef ILA_DDR_STATS
+    ila_ddr_stats U_ila_ddr_stats (
+        .clk            (ui_clk),                       // input wire clk
+        .probe0         (ddr_read_read),                // input wire [31:0]
+        .probe1         (ddr_read_idle),                // input wire [31:0]
+        .probe2         (ddr_write_write),              // input wire [31:0]
+        .probe3         (ddr_write_idle),               // input wire [31:0]
+        .probe4         (read_stall_count),             // input wire [15:0]
+        .probe5         (write_stall_count),            // input wire [15:0]
+        .probe6         (ddr_max_read_stall_count),     // input wire [15:0]
+        .probe7         (ddr_max_write_stall_count),    // input wire [15:0]
+        .probe8         (ddr_state),                    // input wire [2:0]
+        .probe9         (stat_reading),                 // input wire [0:0]
+        .probe10        (stat_writing),                 // input wire [0:0]
+        .probe11        (app_rd_data_valid),            // input wire [0:0]
+        .probe12        (app_rdy),                      // input wire [7:0]
+        .probe13        (ddr_reading),                  // input wire [0:0]
+        .probe14        (ddr_writing),                  // input wire [0:0]
+        .probe15        (postddr_fifo_prog_full),       // input wire [0:0]
+        .probe16        (preddr_fifo_empty)             // input wire [0:0]
     );
 
 `endif

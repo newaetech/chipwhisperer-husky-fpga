@@ -135,11 +135,11 @@ module openadc_interface #(
     wire [63:0]  single_read_data;
     wire         single_done;
 
-    wire [6:0] ddr3_stat;
-    wire       ddr3_test_pass;
-    wire       ddr3_test_fail;
-    wire       ddr3_test_clear_fail;
-    wire       ddr3_rwtest_en;
+    wire [6:0] ddr_stat;
+    wire       ddr_test_pass;
+    wire       ddr_test_fail;
+    wire       ddr_test_clear_fail;
+    wire       ddr_rwtest_en;
     wire       use_ddr;
 
     assign reset_o = reset;
@@ -423,14 +423,14 @@ module openadc_interface #(
    wire [7:0] underflow_count;
    wire no_underflow_errors;
 
-   wire [15:0]  ddr3_test_iteration;
-   wire [7:0]   ddr3_test_errors;
-   wire [31:0]  ddr3_read_read;
-   wire [31:0]  ddr3_read_idle;
-   wire [31:0]  ddr3_write_write;
-   wire [31:0]  ddr3_write_idle;
-   wire [15:0]  ddr3_max_read_stall_count;
-   wire [15:0]  ddr3_max_write_stall_count;
+   wire [15:0]  ddr_test_iteration;
+   wire [7:0]   ddr_test_errors;
+   wire [31:0]  ddr_read_read;
+   wire [31:0]  ddr_read_idle;
+   wire [31:0]  ddr_write_write;
+   wire [31:0]  ddr_write_idle;
+   wire [15:0]  ddr_max_read_stall_count;
+   wire [15:0]  ddr_max_write_stall_count;
 
    assign reg_datao = reg_datao_oadc | reg_datao_fifo | reg_datao_sad | reg_datao_edge;
 
@@ -559,22 +559,22 @@ module openadc_interface #(
       .ddr_single_done                  (single_done       ),
 
       .O_use_ddr                        (use_ddr                    ),
-      .O_ddr3_rwtest_en                 (ddr3_rwtest_en             ),
+      .O_ddr3_rwtest_en                 (ddr_rwtest_en             ),
       .O_xo_en                          (O_xo_en                    ),
       .O_vddr_enable                    (O_vddr_enable              ),
       .I_vddr_pgood                     (I_vddr_pgood               ),
-      .I_ddr3_pass                      (ddr3_test_pass             ),
-      .I_ddr3_fail                      (ddr3_test_fail             ),
-      .O_ddr3_clear_fail                (ddr3_test_clear_fail       ),
-      .I_ddr3_stat                      (ddr3_stat                  ),
-      .I_ddr3_iteration                 (ddr3_test_iteration        ),
-      .I_ddr3_errors                    (ddr3_test_errors           ),
-      .I_ddr3_read_read                 (ddr3_read_read             ),
-      .I_ddr3_read_idle                 (ddr3_read_idle             ),
-      .I_ddr3_write_write               (ddr3_write_write           ),
-      .I_ddr3_write_idle                (ddr3_write_idle            ),
-      .I_ddr3_max_read_stall_count      (ddr3_max_read_stall_count  ),
-      .I_ddr3_max_write_stall_count     (ddr3_max_write_stall_count )
+      .I_ddr3_pass                      (ddr_test_pass             ),
+      .I_ddr3_fail                      (ddr_test_fail             ),
+      .O_ddr3_clear_fail                (ddr_test_clear_fail       ),
+      .I_ddr3_stat                      (ddr_stat                  ),
+      .I_ddr3_iteration                 (ddr_test_iteration        ),
+      .I_ddr3_errors                    (ddr_test_errors           ),
+      .I_ddr3_read_read                 (ddr_read_read             ),
+      .I_ddr3_read_idle                 (ddr_read_idle             ),
+      .I_ddr3_write_write               (ddr_write_write           ),
+      .I_ddr3_write_idle                (ddr_write_idle            ),
+      .I_ddr3_max_read_stall_count      (ddr_max_read_stall_count  ),
+      .I_ddr3_max_write_stall_count     (ddr_max_write_stall_count )
 
    );
 
@@ -667,7 +667,7 @@ module openadc_interface #(
           .postddr_fifo_prog_full   (postddr_fifo_prog_full ),
           .postddr_fifo_wr          (postddr_fifo_wr        ),
 
-          .ddr3_rwtest_en           (ddr3_rwtest_en),
+          .ddr_rwtest_en            (ddr_rwtest_en),
 
           .preddr_fifo_wr           (slow_fifo_wr),
           .postddr_fifo_rd          (slow_fifo_rd),
@@ -708,11 +708,11 @@ module openadc_interface #(
           .ddr3_dm                  (ddr3_dm      ),
           .ddr3_cs_n                (ddr3_cs_n    ),
           .ddr3_odt                 (ddr3_odt     ),
-          .ddr3_stat                (ddr3_stat    ),
-          .ddr3_test_pass           (ddr3_test_pass    ),
-          .ddr3_test_fail           (ddr3_test_fail    ),
-          .ddr3_test_clear_fail     (ddr3_test_clear_fail),
-          .ddr3_rwtest_en           (ddr3_rwtest_en),
+          .ddr3_stat                (ddr_stat    ),
+          .ddr_test_pass            (ddr_test_pass    ),
+          .ddr_test_fail            (ddr_test_fail    ),
+          .ddr_test_clear_fail      (ddr_test_clear_fail),
+          .ddr_rwtest_en            (ddr_rwtest_en),
           .use_ddr                  (use_ddr),
 
           .single_write             (single_write      ),
@@ -722,14 +722,14 @@ module openadc_interface #(
           .single_read_data         (single_read_data  ),
           .single_done              (single_done       ),
 
-          .ddr3_test_iteration      (ddr3_test_iteration        ),
-          .ddr3_test_errors         (ddr3_test_errors           ),
-          .ddr3_read_read           (ddr3_read_read             ),
-          .ddr3_read_idle           (ddr3_read_idle             ),
-          .ddr3_write_write         (ddr3_write_write           ),
-          .ddr3_write_idle          (ddr3_write_idle            ),
-          .ddr3_max_read_stall_count (ddr3_max_read_stall_count  ),
-          .ddr3_max_write_stall_count(ddr3_max_write_stall_count ),
+          .ddr_test_iteration       (ddr_test_iteration        ),
+          .ddr_test_errors          (ddr_test_errors           ),
+          .ddr_read_read            (ddr_read_read             ),
+          .ddr_read_idle            (ddr_read_idle             ),
+          .ddr_write_write          (ddr_write_write           ),
+          .ddr_write_idle           (ddr_write_idle            ),
+          .ddr_max_read_stall_count (ddr_max_read_stall_count  ),
+          .ddr_max_write_stall_count(ddr_max_write_stall_count ),
 
           .preddr_fifo_underflow    (preddr_fifo_underflow ),
           .postddr_fifo_overflow    (postddr_fifo_overflow ),
@@ -799,17 +799,17 @@ module openadc_interface #(
           .debug                    (fifo_debug)
        );
 
-       assign ddr3_test_pass = 0;
-       assign ddr3_test_fail = 0;
-       assign ddr3_stat = 0;
-       assign ddr3_test_iteration = 0;
-       assign ddr3_test_errors = 0;
-       assign ddr3_read_read = 0;
-       assign ddr3_read_idle = 0;
-       assign ddr3_write_write = 0;
-       assign ddr3_write_idle = 0;
-       assign ddr3_max_read_stall_count = 0;
-       assign ddr3_max_write_stall_count = 0;
+       assign ddr_test_pass = 0;
+       assign ddr_test_fail = 0;
+       assign ddr_stat = 0;
+       assign ddr_test_iteration = 0;
+       assign ddr_test_errors = 0;
+       assign ddr_read_read = 0;
+       assign ddr_read_idle = 0;
+       assign ddr_write_write = 0;
+       assign ddr_write_idle = 0;
+       assign ddr_max_read_stall_count = 0;
+       assign ddr_max_write_stall_count = 0;
        assign fifo_error_stat[10:9] = 0;
        assign fifo_first_error_stat[10:9] = 0;
        assign ddr_state = 0;

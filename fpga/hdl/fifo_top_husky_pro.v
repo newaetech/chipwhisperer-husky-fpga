@@ -84,7 +84,7 @@ module fifo_top_husky_pro (
     output wire         postddr_fifo_prog_full,
     input  wire         postddr_fifo_wr,
 
-    input  wire         ddr3_rwtest_en,
+    input  wire         ddr_rwtest_en,
 
     // for debug only:
     output reg          preddr_fifo_wr,
@@ -342,7 +342,7 @@ module fifo_top_husky_pro (
                 else
                    downsample_error <= 1'b0;
 
-                if (armed_and_ready && ~adc_capture_stop && ~ddr3_rwtest_en) begin
+                if (armed_and_ready && ~adc_capture_stop && ~ddr_rwtest_en) begin
                    if (presample_i > 0) begin
                       fsm_fast_wr_en <= 1'b1;
                       state <= pS_PRESAMP_FILLING;
