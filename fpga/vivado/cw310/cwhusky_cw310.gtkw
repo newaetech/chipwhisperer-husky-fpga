@@ -437,18 +437,18 @@ cwhusky_tb.U_dut.oadc.U_fifo.adc_sample_counter[3:0]
 @800200
 -POSTDDR FIFO
 @28
-cwhusky_tb.U_dut.oadc.U_fifo.postddr_fifo_wr
+cwhusky_tb.U_dut.oadc.U_ddr.postddr_fifo_wr
 @22
-cwhusky_tb.U_dut.oadc.U_fifo.postddr_fifo_din[63:0]
+cwhusky_tb.U_dut.oadc.U_ddr.postddr_fifo_din[63:0]
 @28
-cwhusky_tb.U_dut.oadc.U_fifo.postddr_fifo_rd
+cwhusky_tb.U_dut.oadc.U_ddr.postddr_fifo_rd
 @22
-cwhusky_tb.U_dut.oadc.U_fifo.postddr_fifo_dout[63:0]
+cwhusky_tb.U_dut.oadc.U_ddr.postddr_fifo_dout[63:0]
 @28
-cwhusky_tb.U_dut.oadc.U_fifo.postddr_fifo_full
-cwhusky_tb.U_dut.oadc.U_fifo.postddr_fifo_empty
-cwhusky_tb.U_dut.oadc.U_fifo.postddr_fifo_overflow
-cwhusky_tb.U_dut.oadc.U_fifo.postddr_fifo_underflow
+cwhusky_tb.U_dut.oadc.U_ddr.postddr_fifo_full
+cwhusky_tb.U_dut.oadc.U_ddr.postddr_fifo_empty
+cwhusky_tb.U_dut.oadc.U_ddr.postddr_fifo_overflow
+cwhusky_tb.U_dut.oadc.U_ddr.postddr_fifo_underflow
 @1000200
 -POSTDDR FIFO
 @200

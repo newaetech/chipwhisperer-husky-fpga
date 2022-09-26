@@ -94,7 +94,6 @@ module sad #(
                 `SAD_STATUS: reg_datao = {4'b0, fifo_not_empty_error, fifo_overflow_sticky, fifo_underflow_sticky, triggered};
                 `SAD_BITS_PER_SAMPLE: reg_datao = pBITS_PER_SAMPLE;
                 `SAD_REF_SAMPLES: reg_datao = pREF_SAMPLES;
-                `SAD_MAX_DEV: reg_datao = maxdev[reg_bytecnt*8 +: 8];
                 `SAD_MULTIPLE_TRIGGERS: reg_datao = {7'b0, multiple_triggers};
                 `ifdef SAD_DEBUG
                     `SAD_DEBUG_TRIGGER_INDEX: reg_datao = trigger_index[reg_bytecnt*8 +: 8];
@@ -113,7 +112,6 @@ module sad #(
             refsamples <= 0;
             threshold <= 0;
             clear_status_r <= 0;
-            maxdev <= 0;
             multiple_triggers <= 0;
         end 
         else begin
@@ -122,7 +120,6 @@ module sad #(
                 case (reg_address)
                     `SAD_REFERENCE: refsamples[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_THRESHOLD: threshold[reg_bytecnt*8 +: 8] <= reg_datai;
-                    `SAD_MAX_DEV: maxdev[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_MULTIPLE_TRIGGERS: multiple_triggers <= reg_datai[0];
                     default: ;
                 endcase
@@ -258,6 +255,8 @@ module sad #(
                     // that sad_counter as "dirty" has scrolled off. "dirty" counters will not cause a trigger.
                     // However in practice this doesn't seem to yield better results (there is still jitter in
                     // SAD-captured traces). Leaving it here, disabled by default, in case it's useful later.
+                    // This needs a maxdev value to be programmed. That register has been eliminated to
+                    // save address space.
                     if (pDIRTY_ENABLED) begin
                         if (dirty[i] && counter_counter[i] == dirty_counter[i])
                             dirty[i] <= 1'b0;

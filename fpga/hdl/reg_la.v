@@ -528,14 +528,13 @@ module reg_la #(
       if (reg_read) begin
          case (reg_address)
              `LA_CAPTURE_GROUP: reg_datao_reg = {5'b0, capture_group_reg};
-             `LA_STATUS:        reg_datao_reg = {6'b0, capturing, observer_locked};
+             `LA_ENABLED:       reg_datao_reg = {5'b0, capturing, observer_locked, reg_enabled};
              `LA_CLOCK_SOURCE:  reg_datao_reg = {6'b0, clock_source_reg};
              `LA_TRIGGER_SOURCE:reg_datao_reg = {2'b0, trigger_source_reg};
              `LA_POWERDOWN:     reg_datao_reg = {7'b0, observer_powerdown};
              `LA_CAPTURE_DEPTH: reg_datao_reg = capture_depth[reg_bytecnt*8 +: 8];
              `LA_DOWNSAMPLE:    reg_datao_reg = downsample[reg_bytecnt*8 +: 8];
              `LA_ARM:           reg_datao_reg = reg_arm;
-             `LA_ENABLED:       reg_datao_reg = reg_enabled;
              `LA_SOURCE_FREQ:   reg_datao_reg = frequency[reg_bytecnt*8 +: 8];
              default:           reg_datao_reg = 0;
          endcase

@@ -109,6 +109,13 @@ tests.append(dict(name  = 'noddr_pro',
              BYPASS_DDR = 1,
              description = 'Use TINYFIFO to reach maximum FIFO capacity.'))
 
+tests.append(dict(name  = 'ddr_rwtest_pro',
+             frequency = 20,
+             DDR_TEST = 1,
+             DDR_TEST_LOOPS = [1,3],
+             TIMEOUT_CYCLES=200000,
+             description = 'Run the built-in DDR R/W test.'))
+
 
 tests.append(dict(name  = 'quick_stream',
              frequency = 1,

@@ -51,6 +51,7 @@ module reg_openadc_adcfifo #(
    input  wire [7:0]   underflow_count,
    output reg          no_underflow_errors,
    input  wire         capture_done,
+   output reg          O_data_source_select,
 
    // DDR3 (Pro) stuff:
    output reg          O_use_ddr,
@@ -106,14 +107,21 @@ module reg_openadc_adcfifo #(
                                  I_ddr3_max_write_stall_count}; // 15:0
 
    wire single_done_usb;
+   wire [23:0] fifo_first_error_combined;
+   assign fifo_first_error_combined[23:16] = {5'b0, fifo_first_error_state};
+   assign fifo_first_error_combined[15:0] = {5'b0, fifo_first_error_stat};
+
+   wire [23:0] ddr3_stats;
+   assign ddr3_stats[23:16] = I_ddr3_errors;
+   assign ddr3_stats[15:8]  = {6'b0, I_ddr3_fail, I_ddr3_pass};
+   assign ddr3_stats[7:0]   = {1'b0, I_ddr3_stat};
 
    always @(*) begin
       if (reg_read) begin
          case (reg_address)
             `FIFO_STAT:                 reg_datao_reg = fifo_stat[reg_bytecnt*8 +: 8];
             `FIFO_STATE:                reg_datao_reg = {1'b0, state};
-            `FIFO_FIRST_ERROR:          reg_datao_reg = fifo_first_error_stat[reg_bytecnt*8 +: 8];
-            `FIFO_FIRST_ERROR_STATE:    reg_datao_reg = {5'b0, fifo_first_error_state};
+            `FIFO_FIRST_ERROR:          reg_datao_reg = fifo_first_error_combined[reg_bytecnt*8 +: 8];
             `DEBUG_FIFO_READS:          reg_datao_reg = fifo_read_count[reg_bytecnt*8 +: 8];
             `DEBUG_FIFO_READS_FREEZE:   reg_datao_reg = fifo_read_count_error_freeze[reg_bytecnt*8 +: 8];
             `STREAM_SEGMENT_THRESHOLD:  reg_datao_reg = stream_segment_threshold[reg_bytecnt*8 +: 8];
@@ -123,13 +131,11 @@ module reg_openadc_adcfifo #(
             `CAPTURE_DONE:              reg_datao_reg = {7'b0, capture_done};
 
             // DDR stuff for Pro:
-            `REG_DDR3_STAT:             reg_datao_reg = {1'b0, I_ddr3_stat};
-            `REG_DDR3_TEST_EN_STAT:     reg_datao_reg = {6'b0, I_ddr3_fail, I_ddr3_pass};
+            `REG_DDR3_STAT:             reg_datao_reg = ddr3_stats[reg_bytecnt*8 +: 8];
             `REG_DDR3_TEST_LOOPS:       reg_datao_reg = I_ddr3_iteration[reg_bytecnt*8 +: 8];
-            `REG_DDR3_TEST_ERRORS:      reg_datao_reg = I_ddr3_errors;
             `REG_XO_EN:                 reg_datao_reg = {5'b0, I_vddr_pgood, O_vddr_enable, O_xo_en};
             `REG_DDR3_RW_STATS:         reg_datao_reg = ddr3_rw_stats[reg_bytecnt*8 +: 8];
-            `FIFO_CONFIG:               reg_datao_reg = {7'b0, O_use_ddr};
+            `FIFO_CONFIG:               reg_datao_reg = {6'b0, O_data_source_select, O_use_ddr};
             `REG_DDR_SINGLE_RW_DATA:    reg_datao_reg = ddr_single_read_data[reg_bytecnt*8 +: 8];
             `REG_DDR_SINGLE_RW_ADDR:    reg_datao_reg = {6'b0, ddr_single_read, ddr_single_write};
             default:                    reg_datao_reg = 0;
@@ -151,6 +157,7 @@ module reg_openadc_adcfifo #(
          O_vddr_enable <= 1'b0;
          O_xo_en <= 1'b0;
          O_use_ddr <= 1'b1;
+         O_data_source_select <= 1; // default to ADC
       end 
       else if (reg_write) begin
          case (reg_address)
@@ -158,9 +165,9 @@ module reg_openadc_adcfifo #(
             `STREAM_SEGMENT_THRESHOLD:  stream_segment_threshold[reg_bytecnt*8 +: 8] <= reg_datai; 
             `FIFO_STAT:                 clear_fifo_errors <= reg_datai[0];
             `FIFO_NO_UNDERFLOW_ERROR:   no_underflow_errors <= reg_datai[0];
-            `REG_DDR3_TEST_EN_STAT:     {O_ddr3_clear_fail, O_ddr3_rwtest_en} <= reg_datai[1:0];
+            `REG_DDR3_STAT:             {O_ddr3_clear_fail, O_ddr3_rwtest_en} <= reg_datai[1:0];
             `REG_XO_EN:                 {O_vddr_enable, O_xo_en} <= reg_datai[1:0];
-            `FIFO_CONFIG:               O_use_ddr <= reg_datai[0];
+            `FIFO_CONFIG:               {O_data_source_select, O_use_ddr} <= reg_datai[1:0];
             `REG_DDR_SINGLE_RW_DATA:    ddr_single_write_data[reg_bytecnt*8 +: 8] <= reg_datai;
             `REG_DDR_SINGLE_RW_ADDR:    ddr_single_address[reg_bytecnt*8 +: 8] <= reg_datai;
             default: ;

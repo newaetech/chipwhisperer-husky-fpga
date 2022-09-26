@@ -53,7 +53,6 @@ module fifo_top_husky_pro (
     input  wire         clear_fifo_errors,
     input  wire         no_clip_errors,
     input  wire         no_gain_errors,
-    input  wire         clip_test,
     output reg [7:0]    underflow_count,
     output reg          capture_done,
     output reg          armed_and_ready,
@@ -244,8 +243,6 @@ module fifo_top_husky_pro (
             //  TODO: just condition on "ADC fifo out when triggered" sort of thing
             else if (preddr_fifo_wr && (fast_fifo_dout[11:0]  == {12{1'b1}} || fast_fifo_dout[11:0]  == {12{1'b0}}) )
                 clip_error <= 1'b1;
-            else if (clip_test)
-                clip_error <= adc_datain == {12{1'b1}} || adc_datain == {12{1'b0}};
 
             if (no_gain_errors || clear_fifo_errors_adc)
                 gain_too_low <= 1'b0;

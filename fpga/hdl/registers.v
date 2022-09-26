@@ -253,7 +253,6 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define ADC_TRIGGER_LEVEL       21
 `define CLOCKGLITCH_OFFSET      25
 `define OFFSET_ADDR             26
-`define DATA_SOURCE_SELECT      27
 `define RESET                   28
 `define ADC_LOW_RES             29
 
@@ -299,7 +298,6 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 
 `define LA_DRP_ADDR             68
 `define LA_DRP_DATA             69
-`define LA_STATUS               70
 `define LA_CLOCK_SOURCE         71
 `define LA_TRIGGER_SOURCE       72
 `define LA_POWERDOWN            73
@@ -316,11 +314,7 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define CG2_DRP_RESET           80
 `define DRP_RESET               81
 
-`define EXTCLK_CHANGE_LIMIT     82
-`define EXTCLK_MONITOR_DISABLED 83
-`define EXTCLK_MONITOR_STAT     84
-
-`define CLIP_TEST               85
+`define EXTCLK_MONITOR          82
 
 `define USERIO_CW_DRIVEN        86
 `define USERIO_DEBUG_DRIVEN     87
@@ -331,7 +325,6 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define CAPTURE_DONE            89
 
 `define FIFO_FIRST_ERROR        90
-`define FIFO_FIRST_ERROR_STATE  91
 
 `define SEGMENT_CYCLE_COUNTER_EN 92
 
@@ -346,7 +339,6 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define SAD_STATUS              102
 `define SAD_BITS_PER_SAMPLE     103
 `define SAD_REF_SAMPLES         104
-`define SAD_MAX_DEV             105
 `define SAD_MULTIPLE_TRIGGERS   106
 `define SAD_DEBUG_TRIGGER_INDEX 107
 `define SAD_DEBUG_FIFO_RD       108
@@ -357,10 +349,8 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 
 `define REG_DDR3_STAT           114
 `define REG_DDR3_TEST_LOOPS     115
-`define REG_DDR3_TEST_ERRORS    116
 `define REG_XO_EN               117
 `define REG_DDR3_RW_STATS       118
-`define REG_DDR3_TEST_EN_STAT   119
 
 `define REG_CW310_SPECIFIC      120
 `define FIFO_CONFIG             121
@@ -370,6 +360,31 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 
 `define REG_DDR_SINGLE_RW_ADDR  123
 `define REG_DDR_SINGLE_RW_DATA  124
+
+// list of holes in the register address space (to be used for new features):
+//`define UNUSED_ADDRESS 12
+//`define UNUSED_ADDRESS 13
+//`define UNUSED_ADDRESS 14
+//`define UNUSED_ADDRESS 18
+//`define UNUSED_ADDRESS 19
+//`define UNUSED_ADDRESS 22
+//`define UNUSED_ADDRESS 23
+//`define UNUSED_ADDRESS 24
+//`define UNUSED_ADDRESS 27
+//`define UNUSED_ADDRESS 54
+//`define UNUSED_ADDRESS 56
+//`define UNUSED_ADDRESS 57
+//`define UNUSED_ADDRESS 58
+//`define UNUSED_ADDRESS 60
+//`define UNUSED_ADDRESS 61
+//`define UNUSED_ADDRESS 70
+//`define UNUSED_ADDRESS 83
+//`define UNUSED_ADDRESS 84
+//`define UNUSED_ADDRESS 85
+//`define UNUSED_ADDRESS 91
+//`define UNUSED_ADDRESS 105
+//`define UNUSED_ADDRESS 116
+//`define UNUSED_ADDRESS 119
 
 `define REGISTER_VERSION 1
 

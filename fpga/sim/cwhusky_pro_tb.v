@@ -217,7 +217,10 @@ module cwhusky_tb();
 
       #(pCLK_USB_PERIOD*1000);
 
-      write_1byte(`DATA_SOURCE_SELECT, 8'h0);
+      if (pBYPASS_DDR)
+         write_1byte(`FIFO_CONFIG, 8'h0); // this also clears the bit which controls the use of ramp pattern
+      else
+         write_1byte(`FIFO_CONFIG, 8'h1); // (as above)
       if (pADC_LOW_RES)
          write_1byte(`ADC_LOW_RES, 3);
       else
@@ -467,9 +470,12 @@ module cwhusky_tb();
       */
 
       if (pDDR_TEST)
-          write_1byte(`REG_DDR3_TEST_EN_STAT, 1);
-      if (pBYPASS_DDR)
-          write_1byte(`FIFO_CONFIG, 0);
+          write_1byte(`REG_DDR3_STAT, 1);
+      if (pBYPASS_DDR) begin
+          read_1byte(`FIFO_CONFIG, rdata);
+          rdata[0] = 1'b0;
+          write_1byte(`FIFO_CONFIG, rdata);
+      end
 
       /* test single DDR R/W:
       rw_lots_bytes(`REG_DDR_SINGLE_RW_DATA);
@@ -757,7 +763,7 @@ end
    initial begin
        if (pDDR_TEST) begin
            wait (setup_done);
-           force U_dut.oadc.U_fifo.U_simple_ddr3_rwtest.ddrtest_stop = 32'h0000_3ff8;
+           force U_dut.oadc.U_ddr.U_simple_ddr3_rwtest.ddrtest_stop = 32'h0000_3ff8;
            repeat(100) @(posedge clk_usb);
            ddr_loops = 0;
            while (ddr_loops < pDDR_TEST_LOOPS) begin
@@ -765,15 +771,17 @@ end
                repeat(1000) @(posedge clk_usb);
            end
            // check for errors:
-           read_1byte(`REG_DDR3_TEST_ERRORS, ddr_loops);
-           if (ddr_loops > 0) begin
-               errors += 1;
-               $display("ERROR: %d DDR errors", ddr_loops);
-           end
-           read_1byte(`REG_DDR3_TEST_EN_STAT, ddr_loops);
+           rw_lots_bytes(`REG_DDR3_STAT);
+           read_next_byte(ddr_loops);
+           read_next_byte(ddr_loops);
            if (ddr_loops != 1) begin
                errors += 1;
                $display("ERROR: DDR stat = %d", ddr_loops);
+           end
+           read_next_byte(ddr_loops);
+           if (ddr_loops > 0) begin
+               errors += 1;
+               $display("ERROR: %d DDR errors", ddr_loops);
            end
 
            if (errors)
