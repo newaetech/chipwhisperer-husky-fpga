@@ -4,6 +4,6 @@
 `define HW_VER 0
 `define SYSTEM_CLK 96000000
 `define XADC_EN
-//`define LOGIC_ANALYZER
+`define LOGIC_ANALYZER
 `define USERIO_DEBUG
 `define TRACE

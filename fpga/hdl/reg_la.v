@@ -196,6 +196,9 @@ module reg_la #(
                                               (~trigger_source_reg[5] && (trigger_source_reg[3:0] == 4'b1_110))? userio6 ^ trigger_source_reg[4] :
                                               (~trigger_source_reg[5] && (trigger_source_reg[3:0] == 4'b1_111))? userio7 ^ trigger_source_reg[4] : 1'b0);
 
+`ifdef CW310
+    assign observer_clk = source_clk;
+`else
    `ifndef __ICARUS__
       wire observer_clkfb;
       wire observer_clk_prebuf;
@@ -276,6 +279,7 @@ module reg_la #(
       assign observer_clk = source_clk;
 
    `endif // __ICARUS__
+`endif // CW310
 
    reg_mmcm_drp #(
       .pBYTECNT_SIZE    (pBYTECNT_SIZE),

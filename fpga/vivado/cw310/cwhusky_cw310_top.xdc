@@ -32,6 +32,10 @@ set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets reg_clockglitch/mux1
 #set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets U_trace_top/fe_clk]
 #set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets reg_la/observer_clk_prebuf]
 
+set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets ADC_clk_fb]
+set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets reg_la/observer_clk]
+set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets U_trace_top/fe_clk]
+
 set_case_analysis 1 [get_pins reg_clockglitch/sourceclk_mux1/S]
 set_case_analysis 0 [get_pins reg_clockglitch/sourceclk_mux2/S]
 
@@ -87,7 +91,7 @@ set_clock_groups -asynchronous \
                  -group [get_clocks glitch_mmcm2_clk_out*]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks observer_clk*] \
+                 -group [get_clocks {observer_clk* pll_clk_x2}] \
                  -group [get_clocks {clk_usb target_hs1} ]
 
 set_clock_groups -asynchronous \
@@ -99,7 +103,7 @@ set_clock_groups -asynchronous \
                  -group [get_clocks glitch_mmcm1_clk_out*]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks observer_clk*] \
+                 -group [get_clocks {observer_clk* pll_clk_x2}] \
                  -group [get_clocks glitch_mmcm2_clk_out*]
 
 set_clock_groups -asynchronous \
@@ -108,7 +112,7 @@ set_clock_groups -asynchronous \
 
 set_clock_groups -asynchronous \
                  -group [get_clocks TRACECLOCK ] \
-                 -group [get_clocks {clk_usb observer_clk* target_hs1 fe_clk}]
+                 -group [get_clocks {clk_usb observer_clk* target_hs1 fe_clk pll_clk_x2}]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks fe_clk ] \
@@ -120,7 +124,7 @@ set_clock_groups -asynchronous \
 
 set_clock_groups -asynchronous \
                  -group [get_clocks {trace_clk_selected trace_clk_shifted}] \
-                 -group [get_clocks {clk_usb observer_clk*}]
+                 -group [get_clocks {clk_usb observer_clk* pll_clk_x2}]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks trace_clk_shifted] \
