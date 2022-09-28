@@ -7,6 +7,7 @@ cwhusky_cw310_top.v
 ../../hdl/reg_openadc_adcfifo.v
 ../../hdl/fifo_top_husky_pro.v
 ../../hdl/ddr.v
+../../hdl/preddr_18to64_converter.v
 ../../hdl/simple_ddr3_rwtest.v
 ../../hdl/registers.v
 ../../hdl/setup.v
@@ -44,6 +45,7 @@ cwhusky_cw310_top.v
 ../../sim/vivado/tiny_post_ddr_slow_fifo_sim_netlist.v
 ../../sim/vivado/sad_fifo_sim_netlist.v
 ../../sim/vivado/ddr_model_fifo_sim_netlist.v
+../../sim/vivado/pre_ddr_generic_fifo_sim_netlist.v
 -y/tools/Xilinx/Vivado/2020.2/ids_lite/ISE/verilog/src/unisims/
 ../../beh/ddr3_app_model.v
 

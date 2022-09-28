@@ -634,6 +634,8 @@ module cwhusky_top(
         .glitch_trigger_manual_sourceclock (glitch_trigger_manual_sourceclock),
         .glitch_trigger         (glitch_trigger),
         .capture_active         (capture_active),
+        .capture_start          (), // unused
+        .capture_done           (), // unused
 
         .fifo_wr                (la_fifo_wr),
         .fifo_wr_data           (la_wr_data),

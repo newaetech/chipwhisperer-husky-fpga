@@ -7,6 +7,7 @@ cwhusky_cw310_top.v
 ../../hdl/reg_openadc_adcfifo.v
 ../../hdl/fifo_top_husky_pro.v
 ../../hdl/ddr.v
+../../hdl/preddr_18to64_converter.v
 ../../hdl/simple_ddr3_rwtest.v
 ../../hdl/registers.v
 ../../hdl/setup.v

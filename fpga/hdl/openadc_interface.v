@@ -90,6 +90,21 @@ module openadc_interface #(
     output wire                         ddr3_odt,
     input  wire [11:0]                  temp_out,
 
+    // for LA and trace in Pro:
+`ifdef PRO
+    output wire                         ui_clk,
+    output wire                         preddr_trace_rd,
+    input  wire [63:0]                  preddr_trace_data,
+    input  wire                         preddr_trace_empty,
+    output wire                         preddr_la_rd,
+    input  wire [63:0]                  preddr_la_data,
+    input  wire                         preddr_la_empty,
+    input  wire                         capture_go_trace,
+    input  wire                         capture_go_la,
+    input  wire                         write_done_trace,
+    input  wire                         write_done_la,
+`endif
+
     // CW310-specific:
     input wire                          ADC_clk_fbp,
     input wire                          ADC_clk_fbn,
@@ -147,8 +162,6 @@ module openadc_interface #(
    reg extclk_change_usb;
    wire extclk_monitor_disabled;
    wire [31:0] extclk_limit;
-
-   wire ui_clk;
 
 
    //Divide clock by 2^24 for heartbeat LED
@@ -596,10 +609,10 @@ module openadc_interface #(
    `ifdef PRO
        wire         capture_go_adc;
        wire         write_done_adc;
-       wire         preddr_fifo_rd;
-       wire [63:0]  preddr_fifo_dout;
-       wire         preddr_fifo_empty;
-       wire         preddr_fifo_underflow;
+       wire         preddr_adc_fifo_rd;
+       wire [63:0]  preddr_adc_fifo_dout;
+       wire         preddr_adc_fifo_empty;
+       wire         preddr_adc_fifo_underflow;
        wire         postddr_fifo_overflow;
        wire         postddr_fifo_underflow_masked;
        wire         error_flag;
@@ -646,9 +659,9 @@ module openadc_interface #(
           // to DDR:
           .capture_go_ui            (capture_go_adc         ),
           .write_done_ui            (write_done_adc         ),
-          .preddr_fifo_rd           (preddr_fifo_rd         ),
-          .preddr_fifo_dout         (preddr_fifo_dout       ),
-          .preddr_fifo_empty        (preddr_fifo_empty      ),
+          .preddr_fifo_rd           (preddr_adc_fifo_rd     ),
+          .preddr_fifo_dout         (preddr_adc_fifo_dout   ),
+          .preddr_fifo_empty        (preddr_adc_fifo_empty  ),
 
           .ddr_rwtest_en            (ddr_rwtest_en),
 
@@ -656,7 +669,7 @@ module openadc_interface #(
           .postddr_fifo_underflow_masked (postddr_fifo_underflow_masked),
 
           .preddr_fifo_wr           (slow_fifo_wr),
-          .preddr_fifo_underflow    (preddr_fifo_underflow ),
+          .preddr_fifo_underflow    (preddr_adc_fifo_underflow ),
           .fifo_rst                 (fifo_rst),
           .fifo_rst_start_r         (fifo_rst_start_r),
           .reset_done               (reset_done),
@@ -688,9 +701,21 @@ module openadc_interface #(
           // ADC signals:
           .capture_go_adc           (capture_go_adc         ),
           .write_done_adc           (write_done_adc         ),
-          .preddr_fifo_rd           (preddr_fifo_rd         ),
-          .preddr_fifo_dout         (preddr_fifo_dout       ),
-          .preddr_fifo_empty        (preddr_fifo_empty      ),
+          .preddr_adc_fifo_rd       (preddr_adc_fifo_rd     ),
+          .preddr_adc_fifo_dout     (preddr_adc_fifo_dout   ),
+          .preddr_adc_fifo_empty    (preddr_adc_fifo_empty  ),
+
+          .capture_go_la            (capture_go_la     ),
+          .write_done_la            (write_done_la     ),
+          .preddr_la_fifo_rd        (preddr_la_rd      ),
+          .preddr_la_fifo_dout      (preddr_la_data    ),
+          .preddr_la_fifo_empty     (preddr_la_empty   ),
+
+          .capture_go_trace         (capture_go_trace  ),
+          .write_done_trace         (write_done_trace  ),
+          .preddr_trace_fifo_rd     (preddr_trace_rd   ),
+          .preddr_trace_fifo_dout   (preddr_trace_data ),
+          .preddr_trace_fifo_empty  (preddr_trace_empty),
 
           .ddr3_addr                (ddr3_addr    ),
           .ddr3_ba                  (ddr3_ba      ),
@@ -732,7 +757,7 @@ module openadc_interface #(
 
           .postddr_fifo_overflow    (postddr_fifo_overflow),
           .postddr_fifo_underflow_masked (postddr_fifo_underflow_masked),
-          .preddr_fifo_underflow    (preddr_fifo_underflow ),
+          .preddr_adc_fifo_underflow(preddr_adc_fifo_underflow ),
           .error_flag               (error_flag            ),
 
           .ddr_state                (ddr_state),

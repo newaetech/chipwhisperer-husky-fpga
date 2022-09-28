@@ -319,6 +319,19 @@ module cwhusky_cw310_top(
 
    wire           cmd_arm_usb;
 
+   wire           la_capture_start;
+   wire           la_capture_done;
+   wire           trace_capture_start;
+   wire           trace_capture_done;
+
+   wire           preddr_trace_rd;
+   wire           [63:0] preddr_trace_data;
+   wire           preddr_trace_empty;
+   wire           preddr_la_rd;
+   wire           [63:0] preddr_la_data;
+   wire           preddr_la_empty;
+   wire           ui_clk;
+
    assign USB_SPARE0 = enable_avrprog? 1'bz : stream_segment_available;
 
    usb_reg_main #(
@@ -499,6 +512,20 @@ module cwhusky_cw310_top(
         .ddr3_dm                (ddr3_dm       ),
         .ddr3_cs_n              (ddr3_cs_n     ),
         .ddr3_odt               (ddr3_odt      ),
+`ifdef PRO
+        .ui_clk                 (ui_clk             ),
+        .preddr_trace_rd        (preddr_trace_rd    ),
+        .preddr_trace_data      (preddr_trace_data  ),
+        .preddr_trace_empty     (preddr_trace_empty ),
+        .preddr_la_rd           (preddr_la_rd       ),
+        .preddr_la_data         (preddr_la_data     ),
+        .preddr_la_empty        (preddr_la_empty    ),
+        .write_done_la          (la_capture_done    ),
+        .write_done_trace       (trace_capture_done ),
+        .capture_go_la          (la_capture_start   ),
+        .capture_go_trace       (trace_capture_start),
+`endif
+
 
         // CW310-specific:
         .ADC_clk_fbp            (ADC_clk_fbp ),
@@ -722,6 +749,8 @@ module cwhusky_cw310_top(
         .glitch_trigger_manual_sourceclock (glitch_trigger_manual_sourceclock),
         .glitch_trigger         (glitch_trigger),
         .capture_active         (capture_active),
+        .capture_start          (la_capture_start),
+        .capture_done           (la_capture_done),
 
         .fifo_wr                (la_fifo_wr),
         .fifo_wr_data           (la_wr_data),
@@ -1036,6 +1065,8 @@ module cwhusky_cw310_top(
           .arm_usb                      (trace_arm_usb),
           .arm_fe                       (trace_arm_fe),
           .capturing                    (),
+          .capture_start                (trace_capture_start),
+          .capture_done                 (trace_capture_done),
 
           .fifo_full                    (fifo_full),
           .fifo_overflow_blocked        (fifo_overflow_blocked),
@@ -1075,6 +1106,10 @@ module cwhusky_cw310_top(
 
    `endif
 
+`ifndef PRO
+   // On Husky, a FIFO is shared by LOGIC_ANALYZER and TRACE.
+   // There are no other ifdef's around it, as per the note above in the
+   // LOGIC_ANALYZER block.
    // fifo_source_sel controls FIFO acccess.
    // 0: trace
    // 1: LA
@@ -1102,33 +1137,62 @@ module cwhusky_cw310_top(
    assign fifo_clear_write_flags = trace_arm_fe || la_clear_write_flags;
 
    `ifndef NOFIFO // for clean compilation
-   // NOTE: this FIFO is shared by LOGIC_ANALYZER and TRACE.
-   // There are no other ifdef's around it, as per the note above in the
-   // LOGIC_ANALYZER block.
-   fifo U_fifo (
-      .reset_i                  (reg_rst),
-      .cwusb_clk                (clk_usb_buf),
-      .fe_clk                   (fifo_wr_clk),
+       fifo U_fifo (
+          .reset_i                  (reg_rst),
+          .cwusb_clk                (clk_usb_buf),
+          .fe_clk                   (fifo_wr_clk),
 
-      .O_fifo_full              (fifo_full),
-      .O_fifo_overflow_blocked  (fifo_overflow_blocked),
-      .I_data                   (fifo_in_data),
-      .I_wr                     (fifo_wr),
+          .O_fifo_full              (fifo_full),
+          .O_fifo_overflow_blocked  (fifo_overflow_blocked),
+          .I_data                   (fifo_in_data),
+          .I_wr                     (fifo_wr),
 
-      .I_fifo_read              (fifo_read),
-      .I_fifo_flush             (fifo_flush),
-      .I_clear_read_flags       (fifo_clear_read_flags),
-      .I_clear_write_flags      (fifo_clear_write_flags),
-      .I_clear_errors           (clear_errors),
+          .I_fifo_read              (fifo_read),
+          .I_fifo_flush             (fifo_flush),
+          .I_clear_read_flags       (fifo_clear_read_flags),
+          .I_clear_write_flags      (fifo_clear_write_flags),
+          .I_clear_errors           (clear_errors),
 
-      .O_data                   (fifo_out_data),
-      .O_fifo_status            (fifo_status),
-      .O_fifo_empty             (fifo_empty),
-      .O_error_flag             (trace_fifo_error_flag),
+          .O_data                   (fifo_out_data),
+          .O_fifo_status            (fifo_status),
+          .O_fifo_empty             (fifo_empty),
+          .O_error_flag             (trace_fifo_error_flag),
 
-      .I_custom_fifo_stat_flag  (synchronized)      
-   );
+          .I_custom_fifo_stat_flag  (synchronized)      
+       );
    `endif
+
+`else
+    // On Husky-Pro, there are separate TRACE and LOGIC_ANALYZER FIFOs.
+    // However capture data needs to get converted to 64-bit width because
+    // that's what DDR needs.
+    preddr_18to64_converter U_trace_converter (
+        .reset                  (reg_rst),
+        .wr_clk                 (fe_clk),
+        .rd_clk                 (ui_clk),
+        .capture_start          (trace_capture_start),
+        .I_fifo_flush           (fifo_flush),
+        .I_data                 (trace_wr_data),
+        .I_wr                   (trace_fifo_wr),
+        .fifo_rd                (preddr_trace_rd),
+        .fifo_dout              (preddr_trace_data),
+        .fifo_empty             (preddr_trace_empty)
+    );
+
+    preddr_18to64_converter U_la_converter (
+        .reset                  (reg_rst),
+        .wr_clk                 (observer_clk),
+        .rd_clk                 (ui_clk),
+        .capture_start          (la_capture_start),
+        .I_fifo_flush           (fifo_flush),
+        .I_data                 (la_wr_data),
+        .I_wr                   (la_fifo_wr),
+        .fifo_rd                (preddr_la_rd),
+        .fifo_dout              (preddr_la_data),
+        .fifo_empty             (preddr_la_empty)
+    );
+
+`endif
 
 `ifdef ILA_SHARED_FIFO
     ila_shared_fifo U_ila_shared_fifo (

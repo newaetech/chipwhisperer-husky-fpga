@@ -43,13 +43,25 @@ module ddr (
     input wire  [31:0]  max_samples_i,
 
     // ADC
-    input  wire         capture_go_adc,
-    input  wire         write_done_adc,
-    
-    // TODO: rename this to something ADC-specific
-    output reg          preddr_fifo_rd,
-    input  wire [63:0]  preddr_fifo_dout,
-    input  wire         preddr_fifo_empty,
+    input  wire         capture_go_adc, // TODO: CDC on these!
+    input  wire         write_done_adc, // TODO: CDC on these!
+    output wire         preddr_adc_fifo_rd,
+    input  wire [63:0]  preddr_adc_fifo_dout,
+    input  wire         preddr_adc_fifo_empty,
+
+    // LA
+    input  wire         capture_go_la, // TODO: CDC on these!
+    input  wire         write_done_la, // TODO: CDC on these!
+    output wire         preddr_la_fifo_rd,
+    input  wire [63:0]  preddr_la_fifo_dout,
+    input  wire         preddr_la_fifo_empty,
+
+    // trace
+    input  wire         capture_go_trace,
+    input  wire         write_done_trace,
+    output wire         preddr_trace_fifo_rd,
+    input  wire [63:0]  preddr_trace_fifo_dout,
+    input  wire         preddr_trace_fifo_empty,
 
     input  wire         single_write,
     input  wire         single_read,
@@ -100,7 +112,7 @@ module ddr (
     output reg          postddr_fifo_underflow_masked,
 
     // debug only:
-    input  wire         preddr_fifo_underflow,
+    input  wire         preddr_adc_fifo_underflow,
     input  wire         error_flag,
     output reg  [31:0]  fifo_read_count,
     output reg  [31:0]  fifo_read_count_error_freeze,
@@ -197,7 +209,7 @@ module ddr (
     localparam pS_DDR_READ1           = 3'd4;
     localparam pS_DDR_READ2           = 3'd5;
     localparam pS_DDR_WAIT_WRITE      = 3'd6;
-    localparam pS_DDR_BYPASS          = 3'd7;
+    localparam pS_DDR_ADC_BYPASS      = 3'd7;
     reg [2:0] next_ddr_state;
 
     reg ddr_full_error; // TODO: store this
@@ -218,8 +230,8 @@ module ddr (
 
     assign adc_app_cmd = (ddr_writing)? CMD_WRITE : CMD_READ;
 
-    assign adc_app_wdf_data = (ddr_state == pS_DDR_WRITE1)? preddr_fifo_dout[31:0] : 
-                              (ddr_state == pS_DDR_WRITE2)? preddr_fifo_dout[63:32] : 32'b0;
+    assign adc_app_wdf_data = (ddr_state == pS_DDR_WRITE1)? preddr_adc_fifo_dout[31:0] : 
+                              (ddr_state == pS_DDR_WRITE2)? preddr_adc_fifo_dout[63:32] : 32'b0;
 
     assign single_app_wdf_data = (ddr_state == pS_DDR_WRITE1)? single_write_data[31:0] : 
                                  (ddr_state == pS_DDR_WRITE2)? single_write_data[63:32] : 32'b0;
@@ -461,7 +473,7 @@ module ddr (
                 // But then how would we deal with stuck states... maybe each front-end needs its own "capture go"
                 if ((capture_go_adc || single_write_go || single_read_go) && ~ddr_rwtest_en) begin
                     if (~use_ddr)
-                        next_ddr_state = pS_DDR_BYPASS;
+                        next_ddr_state = pS_DDR_ADC_BYPASS;
                     else if (init_calib_complete) begin
                         if (single_write_ui)
                             next_ddr_state = pS_DDR_WAIT_WRITE;
@@ -477,14 +489,14 @@ module ddr (
                     next_ddr_state = pS_DDR_IDLE;
             end
 
-            pS_DDR_BYPASS: begin
+            pS_DDR_ADC_BYPASS: begin
                 if (use_ddr)
                     next_ddr_state = pS_DDR_IDLE;
                 else begin
-                    next_ddr_state = pS_DDR_BYPASS;
+                    next_ddr_state = pS_DDR_ADC_BYPASS;
                     // extra checks here to throttle the reads and ensure we don't overflow the FIFO; 
                     // it's ok if we don't read back-to-back.
-                    if (~preddr_fifo_empty && ~postddr_fifo_full && ~preddr_fifo_rd_r && ~postddr_fifo_wr)
+                    if (~preddr_adc_fifo_empty && ~postddr_fifo_full && ~preddr_fifo_rd_r && ~postddr_fifo_wr)
                         preddr_fifo_rd = 1'b1;
                 end
             end
@@ -500,6 +512,8 @@ module ddr (
                 // slower than read clock). We keep it simple by CDC'ing going
                 // from pS_DONE to pS_IDLE, then waiting for the preddr FIFO to
                 // go empty.
+                // This is also where we arbitrate between the different
+                // preddr sources.
                 if (capture_go_adc)
                     next_ddr_state = pS_DDR_IDLE;
                 else if (ddr_write_data_done) begin
@@ -509,7 +523,7 @@ module ddr (
                 else if (app_rdy && app_wdf_rdy) begin
                     if (single_write_ui)
                         next_ddr_state = pS_DDR_WRITE1;
-                    else if (~preddr_fifo_empty) begin
+                    else if (~preddr_any_fifo_empty_r) begin // wait extra cycle for selection mux to switch
                         preddr_fifo_rd = 1'b1;
                         next_ddr_state = pS_DDR_WRITE1;
                     end
@@ -545,7 +559,7 @@ module ddr (
                     end
                     else begin
                         incr_app_address = 1'b1;
-                        if (app_rdy && ~preddr_fifo_empty) begin
+                        if (app_rdy && ~preddr_chosen_fifo_empty) begin
                             preddr_fifo_rd = 1'b1;
                             next_ddr_state = pS_DDR_WRITE1;
                         end
@@ -594,6 +608,26 @@ module ddr (
         endcase
     end
 
+    // NEW:
+    reg preddr_any_fifo_empty_r;
+    reg [1:0] source_select;
+    localparam pADC_SOURCE = 2'b00;
+    localparam pLA_SOURCE = 2'b01;
+    localparam pTRACE_SOURCE = 2'b10;
+    wire preddr_any_fifo_empty = preddr_adc_fifo_empty &&
+                                 preddr_la_fifo_empty &&
+                                 preddr_trace_fifo_empty; 
+    wire preddr_chosen_fifo_empty = (source_select == pADC_SOURCE)? preddr_adc_fifo_empty :
+                                    (source_select == pLA_SOURCE)?  preddr_la_fifo_empty :
+                                                                    preddr_la_fifo_empty;
+    reg preddr_fifo_rd;
+    assign preddr_adc_fifo_rd   = preddr_fifo_rd && (source_select == pADC_SOURCE);
+    assign preddr_la_fifo_rd    = preddr_fifo_rd && (source_select == pLA_SOURCE);
+    assign preddr_trace_fifo_rd = preddr_fifo_rd && (source_select == pTRACE_SOURCE);
+    wire [63:0] preddr_fifo_dout = (source_select == pADC_SOURCE)? preddr_adc_fifo_dout :
+                                   (source_select == pLA_SOURCE)?  preddr_la_fifo_dout :
+                                                                   preddr_la_fifo_dout;
+
     // DDR FSM sequential control logic and slow FIFO writes:
     always @(posedge ui_clk) begin
         if (reset) begin
@@ -606,11 +640,14 @@ module ddr (
             preddr_fifo_rd_r <= 0;
             adc_top_app_addr <= 0;
             single_read_done <= 0;
+            preddr_any_fifo_empty_r <= 0;
+            source_select <= pADC_SOURCE;
         end
 
         else begin
             ddr_state <= next_ddr_state;
             preddr_fifo_rd_r <= preddr_fifo_rd;
+            preddr_any_fifo_empty_r <= preddr_any_fifo_empty;
             single_read_done <= 0;
             // TODO (later): clear mechanism for ddr_full_error
             if (single_write_ui || single_read_ui)
@@ -663,6 +700,9 @@ module ddr (
             else
                 postddr_fifo_wr <= 1'b0;
 
+            //TODO: update done condition to account for other sources,
+            //including cases where they are not active! Don't forget to CDC
+            //those other source inputs.
             if (ddr_state == pS_DDR_IDLE) begin
                 write_data_done_hold <= 1'b0;
                 ddr_write_data_done <= 1'b0;
@@ -670,8 +710,20 @@ module ddr (
             else begin
                 if (write_done_adc)
                     write_data_done_hold <= 1'b1;
-                if (preddr_fifo_empty && write_data_done_hold)
+                if (preddr_chosen_fifo_empty && write_data_done_hold)
                     ddr_write_data_done <= 1'b1;
+            end
+
+            // arbitrate between the 3 input sources:
+            // (very simple arbitration: assume that all sources go idle at
+            // some point, to allow others their turn)
+            if ((ddr_state == pS_DDR_WAIT_WRITE) && ~preddr_chosen_fifo_empty) begin
+                if (~preddr_adc_fifo_empty)
+                    source_select <= pADC_SOURCE;
+                else if (~preddr_la_fifo_empty)
+                    source_select <= pLA_SOURCE;
+                else if (~preddr_trace_fifo_empty)
+                    source_select <= pTRACE_SOURCE;
             end
 
         end
@@ -694,7 +746,7 @@ wire rw_reading;
 wire rw_writing;
 
 wire stat_reading = (ddr_rwtest_en)? rw_reading : (ddr_reading && ~postddr_fifo_prog_full);
-wire stat_writing = (ddr_rwtest_en)? rw_writing : (ddr_writing && ~preddr_fifo_empty);
+wire stat_writing = (ddr_rwtest_en)? rw_writing : (ddr_writing && ~preddr_chosen_fifo_empty);
 wire stat_reset = (ddr_rwtest_en)? rw_stat_reset : capture_go_adc;
 
 
@@ -997,10 +1049,10 @@ wire stat_reset = (ddr_rwtest_en)? rw_stat_reset : capture_go_adc;
 
     ila_ui_fifo U_ila_ui_fifo (
         .clk            (ui_clk),               // input wire clk
-        .probe0         (preddr_fifo_rd),       // input wire [0:0]
-        .probe1         (preddr_fifo_dout),     // input wire [63:0]
-        .probe2         (preddr_fifo_empty),    // input wire [0:0]
-        .probe3         (preddr_fifo_underflow),// input wire [0:0]
+        .probe0         (preddr_adc_fifo_rd),   // input wire [0:0]
+        .probe1         (preddr_adc_fifo_dout), // input wire [63:0]
+        .probe2         (preddr_adc_fifo_empty),// input wire [0:0]
+        .probe3         (preddr_adc_fifo_underflow),// input wire [0:0]
         .probe4         (postddr_fifo_wr),      // input wire [0:0]
         .probe5         (postddr_fifo_din),     // input wire [63:0]
         .probe6         (postddr_fifo_full),    // input wire [0:0]
@@ -1055,7 +1107,7 @@ wire stat_reset = (ddr_rwtest_en)? rw_stat_reset : capture_go_adc;
         .probe13        (ddr_reading),                  // input wire [0:0]
         .probe14        (ddr_writing),                  // input wire [0:0]
         .probe15        (postddr_fifo_prog_full),       // input wire [0:0]
-        .probe16        (preddr_fifo_empty)             // input wire [0:0]
+        .probe16        (preddr_adc_fifo_empty)         // input wire [0:0]
     );
 `endif
 

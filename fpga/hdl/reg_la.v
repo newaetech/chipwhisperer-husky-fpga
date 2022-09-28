@@ -77,6 +77,8 @@ module reg_la #(
    input  wire         glitch_trigger_manual_sourceclock,
    input  wire         glitch_trigger,
    input  wire         capture_active,
+   output wire         capture_start,
+   output wire         capture_done,
 
    output reg          fifo_wr,
    output wire [17:0]  fifo_wr_data,
@@ -326,6 +328,7 @@ module reg_la #(
    // Do the capture.
    reg [15:0] capture_count;
    reg capturing;
+   reg capturing_r;
    wire capturing_usb_pulse;
    reg [1:0] capture0_reg;
    reg [1:0] capture1_reg;
@@ -348,6 +351,9 @@ module reg_la #(
    reg capture8_source;
 
    reg ticktock;
+
+   assign capture_start = capturing && ~capturing_r;
+   assign capture_done = capturing_r && ~capturing;
 
    //always @(*) begin
    always @(posedge observer_clk) begin
@@ -444,6 +450,7 @@ module reg_la #(
       if (reset) begin
          capture_count <= 0;
          capturing <= 1'b0;
+         capturing_r <= 1'b0;
          capture0_reg <= 2'b0;
          capture1_reg <= 2'b0;
          capture2_reg <= 2'b0;
@@ -458,6 +465,7 @@ module reg_la #(
       end
 
       else begin
+         capturing_r <= capturing;
          if (capture_go) begin
             capture_count <= 0;
             capturing <= 1'b1;

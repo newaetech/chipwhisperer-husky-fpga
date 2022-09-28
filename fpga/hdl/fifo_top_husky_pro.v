@@ -587,7 +587,7 @@ module fifo_top_husky_pro (
     reg [1:0] wide_word_count;
     reg wide_word_valid;
     reg [71:0] wide_word_shifter;
-    reg [3:0] adc_sample_counter;
+    reg [3:0] adc_sample_counter; // TODO: too wide
 
     always @(posedge adc_sampleclk) begin
         if (reset) begin
@@ -609,7 +609,7 @@ module fifo_top_husky_pro (
                 adc_sample_counter <= 0;
             end
             else if ((fast_fifo_rd || filler_read) && (state != pS_PRESAMP_FILLING) && (state != pS_PRESAMP_FULL)) begin
-                wide_word_shifter <= {wide_word_shifter[63:0], fast_fifo_dout};
+                wide_word_shifter <= {wide_word_shifter[63:0], fast_fifo_dout}; // TODO: 63:0 is wrong!
                 if ( ((wide_word_count == 0) && (adc_sample_counter == 5)) ||
                      ((wide_word_count == 1) && (adc_sample_counter == 4)) ||
                      ((wide_word_count == 2) && (adc_sample_counter == 4)) ) begin
