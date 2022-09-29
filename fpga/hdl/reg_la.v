@@ -36,6 +36,7 @@ module reg_la #(
    input  wire         reg_write,    // Write flag
 
    input  wire         I_trace_en,
+   output wire         O_enabled,
    input  wire         target_clk,      // HS1 or AUX
    input  wire         pll_fpga_clk,
    output wire         observer_clk,
@@ -119,6 +120,7 @@ module reg_la #(
 
     assign fifo_clear_write_flags = arm_r2;
     assign fifo_clear_read_flags = reg_arm;
+    assign O_enabled = reg_enabled;
 
 `ifdef __ICARUS__
    assign source_clk = (I_trace_en) ?                trace_fe_clk :
@@ -351,6 +353,7 @@ module reg_la #(
    reg capture8_source;
 
    reg ticktock;
+   reg [8:0] ramp_pattern;
 
    assign capture_start = capturing && ~capturing_r;
    assign capture_done = capturing_r && ~capturing;
@@ -430,6 +433,17 @@ module reg_la #(
                capture8_source <= trace_debug[8];
            end
 
+           6: begin
+               capture0_source <= ramp_pattern[0];
+               capture1_source <= ramp_pattern[1];
+               capture2_source <= ramp_pattern[2];
+               capture3_source <= ramp_pattern[3];
+               capture4_source <= ramp_pattern[4];
+               capture5_source <= ramp_pattern[5];
+               capture6_source <= ramp_pattern[6];
+               capture7_source <= ramp_pattern[7];
+               capture8_source <= ramp_pattern[8];
+           end
 
            default: begin
                capture0_source <= 1'b1;
@@ -462,6 +476,7 @@ module reg_la #(
          capture8_reg <= 2'b0;
          ticktock <= 1'b0;
          fifo_wr <= 1'b0;
+         ramp_pattern <= 9'b0;
       end
 
       else begin
@@ -497,9 +512,37 @@ module reg_la #(
 
          else
              fifo_wr <= 1'b0;
+
+         if (capture_go)
+            ramp_pattern <= 9'h1a0;
+         else
+            ramp_pattern <= ramp_pattern + 1;
+
       end
    end
 
+`ifdef __ICARUS__
+   // for easier visualization / validation of ramp pattern:
+   assign fifo_wr_data = {capture8_reg[1], 
+                          capture7_reg[1], 
+                          capture6_reg[1], 
+                          capture5_reg[1], 
+                          capture4_reg[1], 
+                          capture3_reg[1], 
+                          capture2_reg[1], 
+                          capture1_reg[1], 
+                          capture0_reg[1],
+                          capture8_reg[0], 
+                          capture7_reg[0], 
+                          capture6_reg[0], 
+                          capture5_reg[0], 
+                          capture4_reg[0], 
+                          capture3_reg[0], 
+                          capture2_reg[0], 
+                          capture1_reg[0], 
+                          capture0_reg[0]};
+
+`else
    assign fifo_wr_data = {capture8_reg, 
                           capture7_reg, 
                           capture6_reg, 
@@ -509,6 +552,7 @@ module reg_la #(
                           capture2_reg, 
                           capture1_reg, 
                           capture0_reg};
+`endif
 
    //Counter for downsampling (NOT proper decimation)
    reg [15:0] downsample_ctr;

@@ -104,6 +104,7 @@ module openadc_interface #(
     input  wire                         write_done_trace,
     input  wire                         write_done_la,
 `endif
+    output wire                         fifo_rst,
 
     // CW310-specific:
     input wire                          ADC_clk_fbp,
@@ -139,7 +140,7 @@ module openadc_interface #(
     wire       capture_done;
     wire       armed_and_ready;
     wire [2:0] fifo_state;
-    wire       fifo_rst;
+    //wire       fifo_rst;
     wire [2:0] ddr_state;
 
     wire         single_write;
@@ -148,6 +149,8 @@ module openadc_interface #(
     wire [63:0]  single_write_data;
     wire [63:0]  single_read_data;
     wire         single_done;
+    wire [29:0]  ddr_la_start_address;
+    wire [29:0]  ddr_trace_start_address;
 
     wire [6:0] ddr_stat;
     wire       ddr_test_pass;
@@ -568,6 +571,8 @@ module openadc_interface #(
       .ddr_single_write_data            (single_write_data ),
       .ddr_single_read_data             (single_read_data  ),
       .ddr_single_done                  (single_done       ),
+      .ddr_la_start_address             (ddr_la_start_address    ),
+      .ddr_trace_start_address          (ddr_trace_start_address ),
 
       .O_use_ddr                        (use_ddr                    ),
       .O_ddr3_rwtest_en                 (ddr_rwtest_en             ),
@@ -745,6 +750,8 @@ module openadc_interface #(
           .single_write_data        (single_write_data ),
           .single_read_data         (single_read_data  ),
           .single_done              (single_done       ),
+          .ddr_la_start_address     (ddr_la_start_address    ),
+          .ddr_trace_start_address  (ddr_trace_start_address ),
 
           .ddr_test_iteration       (ddr_test_iteration        ),
           .ddr_test_errors          (ddr_test_errors           ),

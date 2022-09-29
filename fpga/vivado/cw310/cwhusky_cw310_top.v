@@ -323,6 +323,7 @@ module cwhusky_cw310_top(
    wire           la_capture_done;
    wire           trace_capture_start;
    wire           trace_capture_done;
+   wire           fifo_rst;
 
    wire           preddr_trace_rd;
    wire           [63:0] preddr_trace_data;
@@ -440,6 +441,7 @@ module cwhusky_cw310_top(
    wire cw_led_cap;
    wire cw_led_armed;
    wire trace_en;
+   wire la_enabled;
    wire trace_capture_on;
    wire [7:0] trace_userio_dir;
    wire freq_measure;
@@ -525,6 +527,7 @@ module cwhusky_cw310_top(
         .capture_go_la          (la_capture_start   ),
         .capture_go_trace       (trace_capture_start),
 `endif
+        .fifo_rst               (fifo_rst           ),
 
 
         // CW310-specific:
@@ -715,6 +718,7 @@ module cwhusky_cw310_top(
         .observer_locked        (observer_locked),
         .mmcm_shutdown          (xadc_error_flag),
         .I_trace_en             (trace_en),
+        .O_enabled              (la_enabled),             
         .freq_measure           (freq_measure),
 
         .glitchclk              (glitchclk),
@@ -1168,8 +1172,10 @@ module cwhusky_cw310_top(
     // that's what DDR needs.
     preddr_18to64_converter U_trace_converter (
         .reset                  (reg_rst),
+        .fifo_rst               (fifo_rst),
         .wr_clk                 (fe_clk),
         .rd_clk                 (ui_clk),
+        .enabled                (trace_en),
         .capture_start          (trace_capture_start),
         .I_fifo_flush           (fifo_flush),
         .I_data                 (trace_wr_data),
@@ -1181,8 +1187,10 @@ module cwhusky_cw310_top(
 
     preddr_18to64_converter U_la_converter (
         .reset                  (reg_rst),
+        .fifo_rst               (fifo_rst),
         .wr_clk                 (observer_clk),
         .rd_clk                 (ui_clk),
+        .enabled                (la_enabled),
         .capture_start          (la_capture_start),
         .I_fifo_flush           (fifo_flush),
         .I_data                 (la_wr_data),

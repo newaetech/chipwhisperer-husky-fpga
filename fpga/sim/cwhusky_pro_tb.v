@@ -445,27 +445,31 @@ module cwhusky_tb();
       */
 
      /* manually test LA capture
-      write_1byte(`RESET, 8'd1);
-      write_1byte(`RESET, 8'd0);
+      //write_1byte(`RESET, 8'd1);
+      //write_1byte(`RESET, 8'd0);
       rdata[7:6] = `TW_TRACE_REG_SELECT;
       rdata[5:0] = `REG_TRACE_EN;
       write_1byte(rdata, 8'd0);
-      write_1byte(`LA_CLOCK_SOURCE, 8'd1);
+      //rdata[5:0] = `REG_FE_CLOCK_SEL;
+      //write_1byte(rdata, 8'd2); // USB clock
+      //write_1byte(`LA_CLOCK_SOURCE, 8'd0); // target clock
+      write_1byte(`LA_CLOCK_SOURCE, 8'd1); // USB clock
+      write_1byte(`LA_ENABLED, 8'd1);
       write_1byte(`LA_ARM, 8'd1);
 
       rw_lots_bytes(`LA_CAPTURE_DEPTH);
-      write_next_byte((20 & 32'h0000_00FF));
-      write_next_byte((20 & 32'h0000_FF00)>>8);
+      write_next_byte((128 & 32'h0000_00FF));
+      write_next_byte((128 & 32'h0000_FF00)>>8);
 
-      write_1byte(`LA_CAPTURE_GROUP, 8'd1);
-      write_1byte(`LA_DOWNSAMPLE, 8'd1);
+      write_1byte(`LA_CAPTURE_GROUP, 8'd6);
+      write_1byte(`LA_DOWNSAMPLE, 8'd0);
       write_1byte(`LA_MANUAL_CAPTURE, 8'd1);
       #(pCLK_USB_PERIOD * 10);
       write_1byte(`LA_MANUAL_CAPTURE, 8'd0);
-      for (i = 0; i < 10; i = i + 1) begin
-          target_io4_reg <= ~target_io4_reg;
-          repeat(20) @(posedge clk_adc);
-      end
+      //for (i = 0; i < 10; i = i + 1) begin
+      //    target_io4_reg <= ~target_io4_reg;
+      //    repeat(20) @(posedge clk_adc);
+      //end
       #(pCLK_USB_PERIOD * 200);
       */
 
@@ -809,6 +813,17 @@ end
       if (!pERRORS_OK) begin
          errors += 1;
          $display("ERROR: internal FIFO at t = %t (error_stat = %d)", $time, U_dut.oadc.U_fifo.error_stat);
+         if (U_dut.oadc.U_fifo.error_stat[10]) $display("(preddr_fifo_overflow)");
+         if (U_dut.oadc.U_fifo.error_stat[9] ) $display("(preddr_fifo_underflow)");
+         if (U_dut.oadc.U_fifo.error_stat[8] ) $display("(gain_error)");
+         if (U_dut.oadc.U_fifo.error_stat[7] ) $display("(segment_error)");
+         if (U_dut.oadc.U_fifo.error_stat[6] ) $display("(downsample_error)");
+         if (U_dut.oadc.U_fifo.error_stat[5] ) $display("(clip_error)");
+         if (U_dut.oadc.U_fifo.error_stat[4] ) $display("(presamp_error)");
+         if (U_dut.oadc.U_fifo.error_stat[3] ) $display("(fast_fifo_overflow");
+         if (U_dut.oadc.U_fifo.error_stat[2] ) $display("(fast_fifo_underflow)");
+         if (U_dut.oadc.U_fifo.error_stat[1] ) $display("(postddr_fifo_overflow)");
+         if (U_dut.oadc.U_fifo.error_stat[0] ) $display("(postddr_fifo_underflow_masked)");
          $display("SIMULATION FAILED (%0d errors)", errors);
          fifo_error = 1; // don't die right away - see initial block below
       end

@@ -78,6 +78,8 @@ module reg_openadc_adcfifo #(
    output reg  [63:0]  ddr_single_write_data,
    input  wire [63:0]  ddr_single_read_data,
    input  wire         ddr_single_done,
+   output reg  [29:0]  ddr_la_start_address,
+   output reg  [29:0]  ddr_trace_start_address,
 
    // for debug only:
    input  wire [31:0]  fifo_read_count,
@@ -138,6 +140,8 @@ module reg_openadc_adcfifo #(
             `FIFO_CONFIG:               reg_datao_reg = {6'b0, O_data_source_select, O_use_ddr};
             `REG_DDR_SINGLE_RW_DATA:    reg_datao_reg = ddr_single_read_data[reg_bytecnt*8 +: 8];
             `REG_DDR_SINGLE_RW_ADDR:    reg_datao_reg = {6'b0, ddr_single_read, ddr_single_write};
+            `REG_DDR_LA_START_ADDR:     reg_datao_reg = ddr_la_start_address[reg_bytecnt*8 +: 8];
+            `REG_DDR_TRACE_START_ADDR:  reg_datao_reg = ddr_trace_start_address[reg_bytecnt*8 +: 8];
             default:                    reg_datao_reg = 0;
          endcase
       end
@@ -158,6 +162,14 @@ module reg_openadc_adcfifo #(
          O_xo_en <= 1'b0;
          O_use_ddr <= 1'b1;
          O_data_source_select <= 1; // default to ADC
+         `ifdef __ICARUS__
+             // use different defaults, due to the smaller DDR address space in simulation
+             ddr_la_start_address    <= 29'h0100_0000;
+             ddr_trace_start_address <= 29'h0800_0000;
+         `else
+             ddr_la_start_address    <= 29'h0100_0000;
+             ddr_trace_start_address <= 29'h0800_0000;
+         `endif
       end 
       else if (reg_write) begin
          case (reg_address)
@@ -170,6 +182,8 @@ module reg_openadc_adcfifo #(
             `FIFO_CONFIG:               {O_data_source_select, O_use_ddr} <= reg_datai[1:0];
             `REG_DDR_SINGLE_RW_DATA:    ddr_single_write_data[reg_bytecnt*8 +: 8] <= reg_datai;
             `REG_DDR_SINGLE_RW_ADDR:    ddr_single_address[reg_bytecnt*8 +: 8] <= reg_datai;
+            `REG_DDR_LA_START_ADDR:     ddr_la_start_address[reg_bytecnt*8 +: 8] <= reg_datai;
+            `REG_DDR_TRACE_START_ADDR:  ddr_trace_start_address[reg_bytecnt*8 +: 8] <= reg_datai;
             default: ;
          endcase
       end

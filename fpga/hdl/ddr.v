@@ -43,8 +43,8 @@ module ddr (
     input wire  [31:0]  max_samples_i,
 
     // ADC
-    input  wire         capture_go_adc, // TODO: CDC on these!
-    input  wire         write_done_adc, // TODO: CDC on these!
+    input  wire         capture_go_adc,
+    input  wire         write_done_adc,
     output wire         preddr_adc_fifo_rd,
     input  wire [63:0]  preddr_adc_fifo_dout,
     input  wire         preddr_adc_fifo_empty,
@@ -57,8 +57,8 @@ module ddr (
     input  wire         preddr_la_fifo_empty,
 
     // trace
-    input  wire         capture_go_trace,
-    input  wire         write_done_trace,
+    input  wire         capture_go_trace, // TODO: CDC on these!
+    input  wire         write_done_trace, // TODO: CDC on these!
     output wire         preddr_trace_fifo_rd,
     input  wire [63:0]  preddr_trace_fifo_dout,
     input  wire         preddr_trace_fifo_empty,
@@ -69,6 +69,9 @@ module ddr (
     input  wire [63:0]  single_write_data,
     output reg  [63:0]  single_read_data,
     output wire         single_done,
+
+    input  wire [29:0]  ddr_la_start_address,
+    input  wire [29:0]  ddr_trace_start_address,
 
     // DDR
     output wire [15:0]  ddr3_addr,
@@ -147,12 +150,15 @@ module ddr (
     wire                rwtest_app_wdf_end;
     wire                rwtest_app_wdf_wren;
 
+    wire [29:0]         main_app_addr;
     reg  [29:0]         adc_app_addr;
-    wire [2:0]          adc_app_cmd;
-    reg                 adc_app_en;
-    wire [31:0]         adc_app_wdf_data;
-    reg                 adc_app_wdf_end;
-    reg                 adc_app_wdf_wren;
+    reg  [29:0]         la_app_addr;
+    reg  [29:0]         trace_app_addr;
+    wire [2:0]          main_app_cmd;
+    reg                 main_app_en;
+    wire [31:0]         main_app_wdf_data;
+    reg                 main_app_wdf_end;
+    reg                 main_app_wdf_wren;
 
     wire [31:0]         single_app_wdf_data;
 
@@ -194,13 +200,17 @@ module ddr (
                         init_calib_complete
                        };
 
-    assign app_addr     = (ddr_rwtest_en)? rwtest_app_addr     : adc_app_addr;
-    assign app_cmd      = (ddr_rwtest_en)? rwtest_app_cmd      : adc_app_cmd;
-    assign app_en       = (ddr_rwtest_en)? rwtest_app_en       : adc_app_en;
-    assign app_wdf_end  = (ddr_rwtest_en)? rwtest_app_wdf_end  : adc_app_wdf_end;
-    assign app_wdf_wren = (ddr_rwtest_en)? rwtest_app_wdf_wren : adc_app_wdf_wren;
+    assign app_addr     = (ddr_rwtest_en)? rwtest_app_addr     : main_app_addr;
+    assign app_cmd      = (ddr_rwtest_en)? rwtest_app_cmd      : main_app_cmd;
+    assign app_en       = (ddr_rwtest_en)? rwtest_app_en       : main_app_en;
+    assign app_wdf_end  = (ddr_rwtest_en)? rwtest_app_wdf_end  : main_app_wdf_end;
+    assign app_wdf_wren = (ddr_rwtest_en)? rwtest_app_wdf_wren : main_app_wdf_wren;
     assign app_wdf_data = (ddr_rwtest_en)? rwtest_app_wdf_data :
-                          (single_write_ui)?single_app_wdf_data : adc_app_wdf_data;
+                          (single_write_ui)?single_app_wdf_data : main_app_wdf_data;
+
+    assign main_app_addr  = (source_select == pADC_SOURCE)? adc_app_addr :
+                            (source_select == pLA_SOURCE)?  la_app_addr :
+                                                            trace_app_addr;
 
     localparam pS_DDR_IDLE            = 3'd0;
     localparam pS_DDR_WRITE1          = 3'd1;
@@ -210,12 +220,12 @@ module ddr (
     localparam pS_DDR_READ2           = 3'd5;
     localparam pS_DDR_WAIT_WRITE      = 3'd6;
     localparam pS_DDR_ADC_BYPASS      = 3'd7;
-    reg [2:0] next_ddr_state;
+    reg [2:0] next_ddr_state, ddr_state_r; // TODO: trim size
 
     reg ddr_full_error; // TODO: store this
     reg ddr_write_data_done;
     reg write_data_done_hold;
-    wire ddr_read_data_done = (adc_top_app_addr == adc_app_addr);
+    wire ddr_read_data_done = (adc_top_app_addr == main_app_addr);
     reg incr_app_address;
 
     reg reset_app_address;
@@ -228,10 +238,10 @@ module ddr (
                        (ddr_state == pS_DDR_READ1) ||
                        (ddr_state == pS_DDR_READ2);
 
-    assign adc_app_cmd = (ddr_writing)? CMD_WRITE : CMD_READ;
+    assign main_app_cmd = (ddr_writing)? CMD_WRITE : CMD_READ;
 
-    assign adc_app_wdf_data = (ddr_state == pS_DDR_WRITE1)? preddr_adc_fifo_dout[31:0] : 
-                              (ddr_state == pS_DDR_WRITE2)? preddr_adc_fifo_dout[63:32] : 32'b0;
+    assign main_app_wdf_data = (ddr_state == pS_DDR_WRITE1)? preddr_adc_fifo_dout[31:0] : 
+                               (ddr_state == pS_DDR_WRITE2)? preddr_adc_fifo_dout[63:32] : 32'b0;
 
     assign single_app_wdf_data = (ddr_state == pS_DDR_WRITE1)? single_write_data[31:0] : 
                                  (ddr_state == pS_DDR_WRITE2)? single_write_data[63:32] : 32'b0;
@@ -458,9 +468,9 @@ module ddr (
     // DDR FSM:
     always @(*) begin
         // defaults:
-        adc_app_en = 1'b0;
-        adc_app_wdf_wren = 1'b0;
-        adc_app_wdf_end = 1'b0;
+        main_app_en = 1'b0;
+        main_app_wdf_wren = 1'b0;
+        main_app_wdf_end = 1'b0;
         incr_app_address = 1'b0;
         reset_app_address = 1'b0;
         preddr_fifo_rd = 1'b0;
@@ -523,7 +533,7 @@ module ddr (
                 else if (app_rdy && app_wdf_rdy) begin
                     if (single_write_ui)
                         next_ddr_state = pS_DDR_WRITE1;
-                    else if (~preddr_any_fifo_empty_r) begin // wait extra cycle for selection mux to switch
+                    else if (~preddr_any_fifo_empty_r && (ddr_state_r == pS_DDR_WAIT_WRITE)) begin // wait extra cycle for selection mux to switch
                         preddr_fifo_rd = 1'b1;
                         next_ddr_state = pS_DDR_WRITE1;
                     end
@@ -535,9 +545,9 @@ module ddr (
             end
 
             pS_DDR_WRITE1: begin
-                adc_app_en = 1'b1;
-                adc_app_wdf_wren = 1'b1;
-                adc_app_wdf_end = 1'b0;
+                main_app_en = 1'b1;
+                main_app_wdf_wren = 1'b1;
+                main_app_wdf_end = 1'b0;
                 if (app_rdy && app_wdf_rdy)
                     next_ddr_state = pS_DDR_WRITE2;
                 else
@@ -545,9 +555,9 @@ module ddr (
             end
 
             pS_DDR_WRITE2: begin
-                adc_app_en = 1'b0;
-                adc_app_wdf_wren = 1'b1;
-                adc_app_wdf_end = 1'b1;
+                main_app_en = 1'b0;
+                main_app_wdf_wren = 1'b1;
+                main_app_wdf_end = 1'b1;
                 if (app_wdf_rdy) begin
                     if (single_write_ui) begin
                         next_ddr_state = pS_DDR_IDLE;
@@ -572,7 +582,7 @@ module ddr (
             end
 
             pS_DDR_WAIT_READ: begin
-                adc_app_en = 1'b0;
+                main_app_en = 1'b0;
                 if (ddr_rwtest_en || capture_go_adc)
                     next_ddr_state = pS_DDR_IDLE;
                 else if (app_rdy && (~postddr_fifo_prog_full || single_read_ui))
@@ -582,7 +592,7 @@ module ddr (
             end
 
             pS_DDR_READ1: begin
-                adc_app_en = 1'b1;
+                main_app_en = 1'b1;
                 if (app_rdy) begin
                     incr_app_address = 1'b1;
                     next_ddr_state = pS_DDR_READ2;
@@ -592,7 +602,7 @@ module ddr (
             end
 
             pS_DDR_READ2: begin
-                adc_app_en = 1'b0;
+                main_app_en = 1'b0;
                 if (ddr_read_data_done || single_read_ui)
                     next_ddr_state = pS_DDR_IDLE;
                 else if (app_rdy && ~postddr_fifo_prog_full)
@@ -632,7 +642,10 @@ module ddr (
     always @(posedge ui_clk) begin
         if (reset) begin
             ddr_state <= pS_DDR_IDLE;
+            ddr_state_r <= pS_DDR_IDLE;
             adc_app_addr <= 0;
+            la_app_addr <= 0;
+            trace_app_addr <= 0;
             ddr_full_error <= 0;
             postddr_fifo_wr <= 0;
             ddr_write_data_done <= 0;
@@ -646,14 +659,17 @@ module ddr (
 
         else begin
             ddr_state <= next_ddr_state;
+            ddr_state_r <= ddr_state;
             preddr_fifo_rd_r <= preddr_fifo_rd;
             preddr_any_fifo_empty_r <= preddr_any_fifo_empty;
             single_read_done <= 0;
             // TODO (later): clear mechanism for ddr_full_error
             if (single_write_ui || single_read_ui)
-                adc_app_addr <= single_address;
+                adc_app_addr <= single_address; // TODO: ensure this address is used in single R/W mode
             else if (reset_app_address) begin
                 adc_app_addr <= 0;
+                la_app_addr <= ddr_la_start_address;
+                trace_app_addr <= ddr_trace_start_address;
                 if (ddr_state != pS_DDR_IDLE) begin
                     if (ddr_state == pS_DDR_WAIT_WRITE)
                         adc_top_app_addr <= adc_app_addr;
@@ -662,10 +678,16 @@ module ddr (
                 end
             end
             else if (incr_app_address) begin
-                if (adc_app_addr == pDDR_MAX_ADDR)
+                if (main_app_addr == pDDR_MAX_ADDR)
                     ddr_full_error <= 1'b1;
-                else
-                    adc_app_addr <= adc_app_addr + pDDR_INC_ADDR;
+                else begin
+                    if (source_select == pADC_SOURCE) 
+                        adc_app_addr <= adc_app_addr + pDDR_INC_ADDR;
+                    else if (source_select == pLA_SOURCE) 
+                        la_app_addr <= la_app_addr + pDDR_INC_ADDR;
+                    else
+                        trace_app_addr <= trace_app_addr + pDDR_INC_ADDR;
+                end
             end
 
             if (single_read_ui && app_rd_data_valid) begin
@@ -717,7 +739,7 @@ module ddr (
             // arbitrate between the 3 input sources:
             // (very simple arbitration: assume that all sources go idle at
             // some point, to allow others their turn)
-            if ((ddr_state == pS_DDR_WAIT_WRITE) && ~preddr_chosen_fifo_empty) begin
+            if ((ddr_state == pS_DDR_WAIT_WRITE) && ~preddr_any_fifo_empty) begin
                 if (~preddr_adc_fifo_empty)
                     source_select <= pADC_SOURCE;
                 else if (~preddr_la_fifo_empty)
