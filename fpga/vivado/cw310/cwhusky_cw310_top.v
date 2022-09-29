@@ -310,6 +310,7 @@ module cwhusky_cw310_top(
    wire           fifo_clear_read_flags;
    wire           fifo_clear_write_flags;
 
+   wire           la_4bit_mode;
    wire           trace_fifo_wr;
    wire           la_fifo_wr;
    wire [17:0]    trace_wr_data;
@@ -720,6 +721,7 @@ module cwhusky_cw310_top(
         .I_trace_en             (trace_en),
         .O_enabled              (la_enabled),             
         .freq_measure           (freq_measure),
+        .O_4bit_mode            (la_4bit_mode),
 
         .glitchclk              (glitchclk),
         .glitch_mmcm1_clk_out   (glitch_mmcm1_clk_out),
@@ -1180,6 +1182,7 @@ module cwhusky_cw310_top(
         .I_fifo_flush           (fifo_flush),
         .I_data                 (trace_wr_data),
         .I_wr                   (trace_fifo_wr),
+        .I_4bit_mode            (1'b0),
         .fifo_rd                (preddr_trace_rd),
         .fifo_dout              (preddr_trace_data),
         .fifo_empty             (preddr_trace_empty)
@@ -1195,6 +1198,7 @@ module cwhusky_cw310_top(
         .I_fifo_flush           (fifo_flush),
         .I_data                 (la_wr_data),
         .I_wr                   (la_fifo_wr),
+        .I_4bit_mode            (la_4bit_mode),
         .fifo_rd                (preddr_la_rd),
         .fifo_dout              (preddr_la_data),
         .fifo_empty             (preddr_la_empty)

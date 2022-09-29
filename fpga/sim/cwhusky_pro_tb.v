@@ -444,7 +444,7 @@ module cwhusky_tb();
       $display("YYY %h", rdata);
       */
 
-     /* manually test LA capture
+     // manually test LA capture
       //write_1byte(`RESET, 8'd1);
       //write_1byte(`RESET, 8'd0);
       rdata[7:6] = `TW_TRACE_REG_SELECT;
@@ -461,7 +461,7 @@ module cwhusky_tb();
       write_next_byte((128 & 32'h0000_00FF));
       write_next_byte((128 & 32'h0000_FF00)>>8);
 
-      write_1byte(`LA_CAPTURE_GROUP, 8'd6);
+      write_1byte(`LA_CAPTURE_GROUP, 8'h86); // group 6 in 4-bit capture mode
       write_1byte(`LA_DOWNSAMPLE, 8'd0);
       write_1byte(`LA_MANUAL_CAPTURE, 8'd1);
       #(pCLK_USB_PERIOD * 10);
@@ -471,7 +471,7 @@ module cwhusky_tb();
       //    repeat(20) @(posedge clk_adc);
       //end
       #(pCLK_USB_PERIOD * 200);
-      */
+      //
 
       if (pDDR_TEST)
           write_1byte(`REG_DDR3_STAT, 1);

@@ -34,6 +34,7 @@ module preddr_18to64_converter (
     input wire          I_fifo_flush,
     input wire [17:0]   I_data,
     input wire          I_wr,
+    input wire          I_4bit_mode,
 
     input  wire         fifo_rd,
     output wire [63:0]  fifo_dout,
@@ -82,41 +83,63 @@ module preddr_18to64_converter (
                     sample_counter <= 0;
                 end
                 else if (I_wr) begin
-                    wide_word_shifter <= {wide_word_shifter[71:0], I_data};
-                    if ( ((wide_word_count == 0) && (sample_counter == 4)) ||
-                         ((wide_word_count == 1) && (sample_counter == 4)) ||
-                         ((wide_word_count == 2) && (sample_counter == 3)) ||
-                         ((wide_word_count == 3) && (sample_counter == 4)) ||
-                         ((wide_word_count == 4) && (sample_counter == 3)) ||
-                         ((wide_word_count == 5) && (sample_counter == 4)) ||
-                         ((wide_word_count == 6) && (sample_counter == 3)) ||
-                         ((wide_word_count == 7) && (sample_counter == 4)) ||
-                         ((wide_word_count == 8) && (sample_counter == 4)) ) begin
-                        wide_word_valid <= 1'b1;
-                        sample_counter <= 1;        // reset to 1 instead of 0 to make the above conditions work
-                                                    // in light of the fact that the very first valid word requires
-                                                    // an extra read to fill up wide_word_shifter
-                        if (wide_word_count < 8)
-                            wide_word_count <= wide_word_count + 1;
-                        else
-                            wide_word_count <= 0;
+                    if (I_4bit_mode) begin
+                        wide_word_shifter <= {wide_word_shifter[55:0], I_data[7:0]};
+                        if (sample_counter == 7) begin
+                            wide_word_valid <= 1'b1;
+                            sample_counter <= 0;
+                        end
+                        else begin
+                            wide_word_valid <= 0;
+                            sample_counter <= sample_counter + 1;
+                        end
                     end
-                    else begin
-                        wide_word_valid <= 0;
-                        sample_counter <= sample_counter + 1;
+
+                    else begin // 18-bit capture
+                        wide_word_shifter <= {wide_word_shifter[71:0], I_data};
+                        if ( ((wide_word_count == 0) && (sample_counter == 4)) ||
+                             ((wide_word_count == 1) && (sample_counter == 4)) ||
+                             ((wide_word_count == 2) && (sample_counter == 3)) ||
+                             ((wide_word_count == 3) && (sample_counter == 4)) ||
+                             ((wide_word_count == 4) && (sample_counter == 3)) ||
+                             ((wide_word_count == 5) && (sample_counter == 4)) ||
+                             ((wide_word_count == 6) && (sample_counter == 3)) ||
+                             ((wide_word_count == 7) && (sample_counter == 4)) ||
+                             ((wide_word_count == 8) && (sample_counter == 4)) ) begin
+                            wide_word_valid <= 1'b1;
+                            sample_counter <= 1;        // reset to 1 instead of 0 to make the above conditions work
+                                                        // in light of the fact that the very first valid word requires
+                                                        // an extra read to fill up wide_word_shifter
+                            if (wide_word_count < 8)
+                                wide_word_count <= wide_word_count + 1;
+                            else
+                                wide_word_count <= 0;
+                        end
+                        else begin
+                            wide_word_valid <= 0;
+                            sample_counter <= sample_counter + 1;
+                        end
                     end
+
+
                 end
 
-                if (wide_word_valid)
-                    fifo_din <= (wide_word_count == 1)? wide_word_shifter[89:26] :
-                                (wide_word_count == 2)? wide_word_shifter[79:16] :
-                                (wide_word_count == 3)? wide_word_shifter[87:24] :
-                                (wide_word_count == 4)? wide_word_shifter[77:14] :
-                                (wide_word_count == 5)? wide_word_shifter[85:22] :
-                                (wide_word_count == 6)? wide_word_shifter[75:12] :
-                                (wide_word_count == 7)? wide_word_shifter[83:20] :
-                                (wide_word_count == 8)? wide_word_shifter[73:10] :
-                                                        wide_word_shifter[81:18] ;
+                if (wide_word_valid) begin
+                    if (I_4bit_mode)
+                        fifo_din <= wide_word_shifter[63:0];
+
+                    else
+                        fifo_din <= (wide_word_count == 1)? wide_word_shifter[89:26] :
+                                    (wide_word_count == 2)? wide_word_shifter[79:16] :
+                                    (wide_word_count == 3)? wide_word_shifter[87:24] :
+                                    (wide_word_count == 4)? wide_word_shifter[77:14] :
+                                    (wide_word_count == 5)? wide_word_shifter[85:22] :
+                                    (wide_word_count == 6)? wide_word_shifter[75:12] :
+                                    (wide_word_count == 7)? wide_word_shifter[83:20] :
+                                    (wide_word_count == 8)? wide_word_shifter[73:10] :
+                                                            wide_word_shifter[81:18] ;
+
+                end
             end
 
             else begin

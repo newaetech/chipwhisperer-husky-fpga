@@ -42,6 +42,7 @@ module reg_la #(
    output wire         observer_clk,
    output wire         observer_locked,
    input  wire         freq_measure,
+   output reg          O_4bit_mode,
 
    input  wire         mmcm_shutdown, // triggered by XADC error
 
@@ -102,7 +103,7 @@ module reg_la #(
 
     reg [1:0] clock_source_reg;
     reg [5:0] trigger_source_reg;
-    reg [2:0] capture_group_reg;
+    reg [6:0] capture_group_reg;
     reg observer_powerdown;
     reg manual_capture;
     reg [15:0] downsample;
@@ -583,7 +584,7 @@ module reg_la #(
    always @(*) begin
       if (reg_read) begin
          case (reg_address)
-             `LA_CAPTURE_GROUP: reg_datao_reg = {5'b0, capture_group_reg};
+             `LA_CAPTURE_GROUP: reg_datao_reg = {1'b0, capture_group_reg};
              `LA_ENABLED:       reg_datao_reg = {5'b0, capturing, observer_locked, reg_enabled};
              `LA_CLOCK_SOURCE:  reg_datao_reg = {6'b0, clock_source_reg};
              `LA_TRIGGER_SOURCE:reg_datao_reg = {2'b0, trigger_source_reg};
@@ -609,13 +610,14 @@ module reg_la #(
          downsample <= 0;
          reg_arm <= 0;
          reg_enabled <= 0;
+         O_4bit_mode <= 0;
       end 
 
       else if (reg_write) begin
          case (reg_address)
              `LA_CLOCK_SOURCE:  clock_source_reg <= reg_datai[1:0];
              `LA_TRIGGER_SOURCE:trigger_source_reg <= reg_datai[5:0];
-             `LA_CAPTURE_GROUP: capture_group_reg <= reg_datai[2:0];
+             `LA_CAPTURE_GROUP: {O_4bit_mode, capture_group_reg} <= reg_datai;
              `LA_POWERDOWN:     observer_powerdown <= reg_datai[0];
              `LA_ENABLED:       reg_enabled <= reg_datai[0];
              `LA_CAPTURE_DEPTH: capture_depth[reg_bytecnt*8 +: 8] <= reg_datai;
