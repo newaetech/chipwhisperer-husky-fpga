@@ -707,6 +707,19 @@ initial begin
       $display("Done reading.");
       $display("Good reads: %d", good_reads);
       $display("Bad reads: %d", bad_reads);
+
+      /* now read the LA data:
+      write_1byte(`REG_DDR_START_READ, 8'd1); // USB clock
+      repeat(100) @(posedge clk_usb);   // CRITICAL: postddr FIFO must not be empty! 
+                                        // while writing REG_DDR_START_READ above kicks off filling the postddr FIFO,
+                                        // there is a lag for the first DDR reads to come in.
+      rw_lots_bytes(`ADCREAD_ADDR);
+      for (i = 0; i < 64; i += 1) begin
+          read_next_byte(rdata);
+          $display("LA read byte: %2x", rdata);
+      end
+      */
+
       if (errors)
          $display("SIMULATION FAILED (%0d errors)", errors);
       else

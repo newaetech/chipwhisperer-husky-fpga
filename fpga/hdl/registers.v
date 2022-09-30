@@ -362,6 +362,7 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define REG_DDR_SINGLE_RW_DATA  124
 `define REG_DDR_LA_START_ADDR   116
 `define REG_DDR_TRACE_START_ADDR 119
+`define REG_DDR_START_READ      105
 
 // list of holes in the register address space (to be used for new features):
 //`define UNUSED_ADDRESS 12
@@ -384,7 +385,6 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 //`define UNUSED_ADDRESS 84
 //`define UNUSED_ADDRESS 85
 //`define UNUSED_ADDRESS 91
-//`define UNUSED_ADDRESS 105
 //`define UNUSED_ADDRESS 125
 //`define UNUSED_ADDRESS 126
 //`define UNUSED_ADDRESS 127

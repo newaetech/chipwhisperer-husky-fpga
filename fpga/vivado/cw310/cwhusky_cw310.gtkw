@@ -1,23 +1,25 @@
 [*]
 [*] GTKWave Analyzer v3.3.86 (w)1999-2017 BSI
-[*] Wed Sep 28 18:32:08 2022
+[*] Fri Sep 30 16:23:02 2022
 [*]
 [dumpfile] "/home/jpnewae/git/cw_husky/fpga/vivado/cw310/results/cwhusky_tb.fst"
-[dumpfile_mtime] "Wed Sep 28 18:30:36 2022"
-[dumpfile_size] 649293
+[dumpfile_mtime] "Fri Sep 30 16:22:04 2022"
+[dumpfile_size] 713777
 [savefile] "/home/jpnewae/git/cw_husky/fpga/vivado/cw310/cwhusky_cw310.gtkw"
-[timestart] 71667700
+[timestart] 70490000
 [size] 3781 2098
 [pos] -1 -1
-*-14.952053 71795000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-19.181366 74175000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] cwhusky_tb.
 [treeopen] cwhusky_tb.U_dut.
+[treeopen] cwhusky_tb.U_dut.oadc.
 [treeopen] cwhusky_tb.U_dut.oadc.U_ddr.
+[treeopen] cwhusky_tb.U_dut.oadc.U_ddr.U_ddr3_model.
 [treeopen] cwhusky_tb.U_dut.reg_la.
 [treeopen] cwhusky_tb.U_dut.U_la_converter.
 [treeopen] cwhusky_tb.U_dut.U_trace_converter.
 [sst_width] 503
-[signals_width] 526
+[signals_width] 752
 [sst_expanded] 1
 [sst_vpaned_height] 906
 @c00200
@@ -115,7 +117,7 @@ cwhusky_tb.U_dut.oadc.U_fifo.first_error_state[2:0]
 -FIFO FSM
 @1401200
 -fast FIFO
-@c00200
+@800200
 -DDR
 @28
 cwhusky_tb.U_dut.oadc.U_ddr.use_ddr
@@ -135,11 +137,12 @@ cwhusky_tb.U_dut.oadc.U_ddr.ddr_state[2:0]
 @28
 cwhusky_tb.U_dut.oadc.U_ddr.app_cmd[2:0]
 cwhusky_tb.U_dut.oadc.U_ddr.rwtest_app_cmd[2:0]
-cwhusky_tb.U_dut.oadc.U_ddr.adc_app_cmd[2:0]
 @22
 cwhusky_tb.U_dut.oadc.U_ddr.U_ddr3_model.app_addr[29:0]
+cwhusky_tb.U_dut.oadc.U_ddr.adc_app_addr[29:0]
+cwhusky_tb.U_dut.oadc.U_ddr.la_app_addr[29:0]
+cwhusky_tb.U_dut.oadc.U_ddr.ddr_la_start_address[29:0]
 @28
-cwhusky_tb.U_dut.oadc.U_ddr.adc_app_en
 cwhusky_tb.U_dut.oadc.U_ddr.ddr_writing
 cwhusky_tb.U_dut.oadc.U_ddr.ddr_reading
 cwhusky_tb.U_dut.oadc.U_fifo.write_done_adc
@@ -282,21 +285,21 @@ cwhusky_tb.U_dut.oadc.U_ddr.U_simple_ddr3_rwtest.expected_payload[31:0]
 cwhusky_tb.U_dut.oadc.U_ddr.U_simple_ddr3_rwtest.app_rd_data_valid
 @1401200
 -ddr_test
-@c00200
+@800200
 -ddr_model
 @28
 cwhusky_tb.U_dut.oadc.U_ddr.U_ddr3_model.app_rdy
 cwhusky_tb.U_dut.oadc.U_ddr.U_ddr3_model.app_cmd[2:0]
 cwhusky_tb.U_dut.oadc.U_ddr.U_ddr3_model.dropped_read_request
-@800200
+@c00200
 -write
 @28
 cwhusky_tb.U_dut.oadc.U_ddr.U_ddr3_model.app_rdy_wr
 cwhusky_tb.U_dut.oadc.U_ddr.U_ddr3_model.app_en
 cwhusky_tb.U_dut.oadc.U_ddr.U_ddr3_model.app_wdf_end
-@1000200
+@1401200
 -write
-@800200
+@c00200
 -read
 @28
 cwhusky_tb.U_dut.oadc.U_ddr.U_ddr3_model.read_allowed
@@ -305,9 +308,9 @@ cwhusky_tb.U_dut.oadc.U_ddr.U_ddr3_model.app_rd_data_valid
 cwhusky_tb.U_dut.oadc.U_ddr.U_ddr3_model.app_rd_data_end
 @22
 cwhusky_tb.U_dut.oadc.U_ddr.U_ddr3_model.app_rd_data[31:0]
-@1000200
+@1401200
 -read
-@800200
+@c00201
 -FIFO
 @28
 cwhusky_tb.U_dut.oadc.U_ddr.U_ddr3_model.fifo_wr
@@ -321,9 +324,9 @@ cwhusky_tb.U_dut.oadc.U_ddr.U_ddr3_model.fifo_out[63:0]
 cwhusky_tb.U_dut.oadc.U_ddr.U_ddr3_model.dropped_read_request
 cwhusky_tb.U_dut.oadc.U_ddr.U_ddr3_model.fifo_overflow
 cwhusky_tb.U_dut.oadc.U_ddr.U_ddr3_model.fifo_underflow
-@1000200
+@1401201
 -FIFO
-@c00200
+@800200
 -memory
 @c00022
 cwhusky_tb.U_dut.oadc.U_ddr.U_ddr3_model.memory0[63:0]
@@ -398,7 +401,9 @@ cwhusky_tb.U_dut.oadc.U_ddr.U_ddr3_model.memory0[63:0]
 cwhusky_tb.U_dut.oadc.U_ddr.U_ddr3_model.memory1[63:0]
 cwhusky_tb.U_dut.oadc.U_ddr.U_ddr3_model.memory2[63:0]
 cwhusky_tb.U_dut.oadc.U_ddr.U_ddr3_model.memory3[63:0]
-@1401200
+cwhusky_tb.U_dut.oadc.U_ddr.U_ddr3_model.memory8192[63:0]
+cwhusky_tb.U_dut.oadc.U_ddr.U_ddr3_model.memory8193[63:0]
+@1000200
 -memory
 -ddr_model
 -DDR
@@ -477,7 +482,7 @@ cwhusky_tb.U_dut.reg_la.ramp_pattern[8:0]
 (8)cwhusky_tb.U_dut.reg_la.ramp_pattern[8:0]
 @1401200
 -group_end
-@c00023
+@c00022
 cwhusky_tb.U_dut.reg_la.fifo_wr_data[17:0]
 @28
 (0)cwhusky_tb.U_dut.reg_la.fifo_wr_data[17:0]
@@ -498,7 +503,7 @@ cwhusky_tb.U_dut.reg_la.fifo_wr_data[17:0]
 (15)cwhusky_tb.U_dut.reg_la.fifo_wr_data[17:0]
 (16)cwhusky_tb.U_dut.reg_la.fifo_wr_data[17:0]
 (17)cwhusky_tb.U_dut.reg_la.fifo_wr_data[17:0]
-@1401201
+@1401200
 -group_end
 @800200
 -preddr
@@ -527,7 +532,13 @@ cwhusky_tb.U_dut.U_la_converter.I_data[17:0]
 (17)cwhusky_tb.U_dut.U_la_converter.I_data[17:0]
 @1401200
 -group_end
+@22
+cwhusky_tb.U_dut.U_la_converter.wide_word_shifter[89:0]
+cwhusky_tb.U_dut.U_la_converter.wider_word_shifter_debug[159:0]
+@24
+cwhusky_tb.U_dut.U_la_converter.sample_counter[2:0]
 @28
+cwhusky_tb.U_dut.U_la_converter.wide_word_valid
 cwhusky_tb.U_dut.U_la_converter.fifo_wr
 @22
 cwhusky_tb.U_dut.U_la_converter.fifo_din[63:0]

@@ -77,9 +77,12 @@ module reg_openadc_adcfifo #(
    output reg  [29:0]  ddr_single_address,
    output reg  [63:0]  ddr_single_write_data,
    input  wire [63:0]  ddr_single_read_data,
-   input  wire         ddr_single_done,
+   input  wire         ddr_done,
    output reg  [29:0]  ddr_la_start_address,
    output reg  [29:0]  ddr_trace_start_address,
+   output reg          ddr_start_la_read,
+   output reg          ddr_start_trace_read,
+   output reg          ddr_start_adc_read,
 
    // for debug only:
    input  wire [31:0]  fifo_read_count,
@@ -108,7 +111,7 @@ module reg_openadc_adcfifo #(
                                  I_ddr3_max_read_stall_count,   // 31:16
                                  I_ddr3_max_write_stall_count}; // 15:0
 
-   wire single_done_usb;
+   wire ddr_done_usb;
    wire [23:0] fifo_first_error_combined;
    assign fifo_first_error_combined[23:16] = {5'b0, fifo_first_error_state};
    assign fifo_first_error_combined[15:0] = {5'b0, fifo_first_error_stat};
@@ -142,6 +145,7 @@ module reg_openadc_adcfifo #(
             `REG_DDR_SINGLE_RW_ADDR:    reg_datao_reg = {6'b0, ddr_single_read, ddr_single_write};
             `REG_DDR_LA_START_ADDR:     reg_datao_reg = ddr_la_start_address[reg_bytecnt*8 +: 8];
             `REG_DDR_TRACE_START_ADDR:  reg_datao_reg = ddr_trace_start_address[reg_bytecnt*8 +: 8];
+            `REG_DDR_START_READ:        reg_datao_reg = {5'b0, ddr_start_adc_read, ddr_start_trace_read, ddr_start_la_read};
             default:                    reg_datao_reg = 0;
          endcase
       end
@@ -164,11 +168,11 @@ module reg_openadc_adcfifo #(
          O_data_source_select <= 1; // default to ADC
          `ifdef __ICARUS__
              // use different defaults, due to the smaller DDR address space in simulation
-             ddr_la_start_address    <= 29'h0100_0000;
-             ddr_trace_start_address <= 29'h0800_0000;
+             ddr_la_start_address    <= 29'h0001_0000;
+             ddr_trace_start_address <= 29'h0008_0000;
          `else
-             ddr_la_start_address    <= 29'h0100_0000;
-             ddr_trace_start_address <= 29'h0800_0000;
+             ddr_la_start_address    <= 29'h1000_0000;
+             ddr_trace_start_address <= 29'h8000_0000;
          `endif
       end 
       else if (reg_write) begin
@@ -189,12 +193,29 @@ module reg_openadc_adcfifo #(
       end
    end
 
+   // REG_DDR_START_READ register is special:
+   always @(posedge clk_usb) begin
+      if (reset) begin
+         ddr_start_adc_read <= 1'b0;
+         ddr_start_trace_read <= 1'b0;
+         ddr_start_la_read <= 1'b0;
+      end 
+      else if (ddr_done_usb) begin
+          ddr_start_adc_read <= 1'b0;
+          ddr_start_trace_read <= 1'b0;
+          ddr_start_la_read <= 1'b0;
+      end
+      else if (reg_write && (reg_address == `REG_DDR_START_READ))
+          {ddr_start_adc_read, ddr_start_trace_read, ddr_start_la_read} <= reg_datai[2:0];
+   end
+
+
    always @(posedge clk_usb) begin
       if (reset) begin
           ddr_single_write <= 1'b0;
           ddr_single_read <= 1'b0;
       end
-      else if (single_done_usb) begin
+      else if (ddr_done_usb) begin
           ddr_single_write <= 1'b0;
           ddr_single_read <= 1'b0;
       end
@@ -209,9 +230,9 @@ module reg_openadc_adcfifo #(
   cdc_pulse U_single_done_cdc (
      .reset_i       (reset),
      .src_clk       (ui_clk),
-     .src_pulse     (ddr_single_done),
+     .src_pulse     (ddr_done),
      .dst_clk       (clk_usb),
-     .dst_pulse     (single_done_usb)
+     .dst_pulse     (ddr_done_usb)
   );
 
    always @(posedge clk_usb) begin

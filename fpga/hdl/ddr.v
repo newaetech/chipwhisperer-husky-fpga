@@ -68,10 +68,14 @@ module ddr (
     input  wire [29:0]  single_address,
     input  wire [63:0]  single_write_data,
     output reg  [63:0]  single_read_data,
-    output wire         single_done,
+    output wire         ddr_done,
 
     input  wire [29:0]  ddr_la_start_address,
     input  wire [29:0]  ddr_trace_start_address,
+
+    input  wire         ddr_start_la_read,
+    input  wire         ddr_start_trace_read,
+    input  wire         ddr_start_adc_read,
 
     // DDR
     output wire [15:0]  ddr3_addr,
@@ -157,6 +161,7 @@ module ddr (
     wire [2:0]          main_app_cmd;
     reg                 main_app_en;
     wire [31:0]         main_app_wdf_data;
+    wire [63:0]         preddr_wdata;
     reg                 main_app_wdf_end;
     reg                 main_app_wdf_wren;
 
@@ -240,8 +245,11 @@ module ddr (
 
     assign main_app_cmd = (ddr_writing)? CMD_WRITE : CMD_READ;
 
-    assign main_app_wdf_data = (ddr_state == pS_DDR_WRITE1)? preddr_adc_fifo_dout[31:0] : 
-                               (ddr_state == pS_DDR_WRITE2)? preddr_adc_fifo_dout[63:32] : 32'b0;
+    assign main_app_wdf_data = (ddr_state == pS_DDR_WRITE1)? preddr_wdata[31:0] : preddr_wdata[63:32];
+
+    assign preddr_wdata = (source_select == pADC_SOURCE)? preddr_adc_fifo_dout :
+                          (source_select == pLA_SOURCE)?  preddr_la_fifo_dout :
+                                                          preddr_trace_fifo_dout;
 
     assign single_app_wdf_data = (ddr_state == pS_DDR_WRITE1)? single_write_data[31:0] : 
                                  (ddr_state == pS_DDR_WRITE2)? single_write_data[63:32] : 32'b0;
@@ -257,7 +265,7 @@ module ddr (
     
     reg single_write_done;
     reg single_read_done;
-    assign single_done = single_write_done || single_read_done;
+    assign ddr_done = single_write_done || single_read_done || ddr_read_data_done;
 
     reg  [63:0]         postddr_fifo_din;
     wire                postddr_fifo_full;
@@ -281,6 +289,16 @@ module ddr (
     reg slow_fifo_rd_slow;
     wire slow_fifo_rd_fast;
     reg [3:0] slow_read_count;
+
+    reg ddr_start_la_read_r;
+    reg ddr_start_trace_read_r;
+    reg ddr_start_adc_read_r;
+    wire start_adc_read_ui_pulse;
+    wire start_la_read_ui_pulse;
+    wire start_trace_read_ui_pulse;
+    wire start_adc_read_usb_pulse;
+    wire start_la_read_usb_pulse;
+    wire start_trace_read_usb_pulse;
 
     ////////////////////////////
     // Post-DDR FIFO read logic:
@@ -377,7 +395,7 @@ module ddr (
 
     // Read slow FIFO: TODO!
     always @(posedge clk_usb) begin
-       if (reset || ~reset_done) begin
+       if (reset || ~reset_done || start_adc_read_usb_pulse || start_la_read_usb_pulse || start_trace_read_usb_pulse) begin
           slow_read_count <= 0;
           slow_fifo_rd_slow <= 1'b0;
        end
@@ -427,7 +445,7 @@ module ddr (
     end
     // register the FIFO output to help meet timing
     always @(posedge clk_usb) begin
-        if (fifo_rst) begin
+        if (fifo_rst || start_adc_read_usb_pulse || start_la_read_usb_pulse || start_trace_read_usb_pulse) begin
             first_read <= 1'b0;
             first_read_done <= 1'b0;
         end
@@ -481,7 +499,13 @@ module ddr (
             pS_DDR_IDLE: begin
                 // TODO: instead of capture_go_adc, could we not use "any pre-ddr FIFO is not empty?"
                 // But then how would we deal with stuck states... maybe each front-end needs its own "capture go"
-                if ((capture_go_adc || single_write_go || single_read_go) && ~ddr_rwtest_en) begin
+                if ((capture_go_adc || 
+                     start_adc_read_ui_pulse ||
+                     start_la_read_ui_pulse ||
+                     start_trace_read_ui_pulse ||
+                     single_write_go || 
+                     single_read_go) && 
+                    ~ddr_rwtest_en) begin
                     if (~use_ddr)
                         next_ddr_state = pS_DDR_ADC_BYPASS;
                     else if (init_calib_complete) begin
@@ -489,7 +513,11 @@ module ddr (
                             next_ddr_state = pS_DDR_WAIT_WRITE;
                         else if (single_read_ui)
                             next_ddr_state = pS_DDR_WAIT_READ;
-                        else begin // normal ADC storage case
+                        else if (start_adc_read_ui_pulse || start_la_read_ui_pulse || start_trace_read_ui_pulse) begin
+                            reset_app_address = 1'b1;
+                            next_ddr_state = pS_DDR_WAIT_READ;
+                        end
+                        else begin // normal ADC write-to-read case
                             reset_app_address = 1'b1;
                             next_ddr_state = pS_DDR_WAIT_WRITE;
                         end
@@ -506,6 +534,7 @@ module ddr (
                     next_ddr_state = pS_DDR_ADC_BYPASS;
                     // extra checks here to throttle the reads and ensure we don't overflow the FIFO; 
                     // it's ok if we don't read back-to-back.
+                    // TODO: handle reading LA and trace FIFOs here
                     if (~preddr_adc_fifo_empty && ~postddr_fifo_full && ~preddr_fifo_rd_r && ~postddr_fifo_wr)
                         preddr_fifo_rd = 1'b1;
                 end
@@ -736,7 +765,7 @@ module ddr (
                     ddr_write_data_done <= 1'b1;
             end
 
-            // arbitrate between the 3 input sources:
+            // arbitrate DDR writing between the 3 input sources:
             // (very simple arbitration: assume that all sources go idle at
             // some point, to allow others their turn)
             if ((ddr_state == pS_DDR_WAIT_WRITE) && ~preddr_any_fifo_empty) begin
@@ -747,10 +776,58 @@ module ddr (
                 else if (~preddr_trace_fifo_empty)
                     source_select <= pTRACE_SOURCE;
             end
+            else if (ddr_state == pS_DDR_IDLE) begin
+                if (start_adc_read_ui_pulse)
+                    source_select <= pADC_SOURCE;
+                else if (start_la_read_ui_pulse)
+                    source_select <= pLA_SOURCE;
+                else if (start_trace_read_ui_pulse)
+                    source_select <= pTRACE_SOURCE;
+            end
 
         end
 
     end
+
+    always @(posedge clk_usb) begin
+        if (reset) begin
+            ddr_start_la_read_r <= 1'b0;
+            ddr_start_trace_read_r <= 1'b0;
+            ddr_start_adc_read_r <= 1'b0;
+        end
+        else begin
+            ddr_start_la_read_r    <= ddr_start_la_read;
+            ddr_start_trace_read_r <= ddr_start_trace_read;
+            ddr_start_adc_read_r   <= ddr_start_adc_read;
+        end
+    end
+    assign start_adc_read_usb_pulse = ddr_start_adc_read && ~ddr_start_adc_read_r;
+    assign start_la_read_usb_pulse = ddr_start_la_read && ~ddr_start_la_read_r;
+    assign start_trace_read_usb_pulse = ddr_start_trace_read && ~ddr_start_trace_read_r;
+
+    cdc_pulse U_start_adc_read_cdc (
+        .reset_i       (reset),
+        .src_clk       (clk_usb),
+        .src_pulse     (start_adc_read_usb_pulse),
+        .dst_clk       (ui_clk),
+        .dst_pulse     (start_adc_read_ui_pulse)
+    );
+    cdc_pulse U_start_la_read_cdc (
+        .reset_i       (reset),
+        .src_clk       (clk_usb),
+        .src_pulse     (start_la_read_usb_pulse),
+        .dst_clk       (ui_clk),
+        .dst_pulse     (start_la_read_ui_pulse)
+    );
+    cdc_pulse U_start_trace_read_cdc (
+        .reset_i       (reset),
+        .src_clk       (clk_usb),
+        .src_pulse     (start_trace_read_usb_pulse),
+        .dst_clk       (ui_clk),
+        .dst_pulse     (start_trace_read_ui_pulse)
+    );
+
+
 
     // make overflow sticky:
     always @(posedge ui_clk) begin
@@ -1103,7 +1180,7 @@ wire stat_reset = (ddr_rwtest_en)? rw_stat_reset : capture_go_adc;
         .probe29        (capture_go_adc),       // input wire [0:0]
         .probe30        (init_calib_complete),  // input wire [0:0]
         .probe31        (error_flag),           // input wire [0:0]
-        .probe32        (single_done),          // input wire [0:0]
+        .probe32        (ddr_done),             // input wire [0:0]
         .probe33        (single_write),         // input wire [0:0]
         .probe34        (single_read)           // input wire [0:0]
     );
