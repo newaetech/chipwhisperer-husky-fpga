@@ -77,7 +77,8 @@ module reg_openadc_adcfifo #(
    output reg  [29:0]  ddr_single_address,
    output reg  [63:0]  ddr_single_write_data,
    input  wire [63:0]  ddr_single_read_data,
-   input  wire         ddr_done,
+   input  wire         ddr_read_data_done,
+   input  wire         ddr_single_done,
    output reg  [29:0]  ddr_la_start_address,
    output reg  [29:0]  ddr_trace_start_address,
    output reg          ddr_start_la_read,
@@ -111,7 +112,9 @@ module reg_openadc_adcfifo #(
                                  I_ddr3_max_read_stall_count,   // 31:16
                                  I_ddr3_max_write_stall_count}; // 15:0
 
-   wire ddr_done_usb;
+   wire ddr_single_done_usb;
+   wire ddr_read_data_done_usb;
+
    wire [23:0] fifo_first_error_combined;
    assign fifo_first_error_combined[23:16] = {5'b0, fifo_first_error_state};
    assign fifo_first_error_combined[15:0] = {5'b0, fifo_first_error_stat};
@@ -200,7 +203,7 @@ module reg_openadc_adcfifo #(
          ddr_start_trace_read <= 1'b0;
          ddr_start_la_read <= 1'b0;
       end 
-      else if (ddr_done_usb) begin
+      else if (ddr_read_data_done_usb) begin
           ddr_start_adc_read <= 1'b0;
           ddr_start_trace_read <= 1'b0;
           ddr_start_la_read <= 1'b0;
@@ -215,7 +218,7 @@ module reg_openadc_adcfifo #(
           ddr_single_write <= 1'b0;
           ddr_single_read <= 1'b0;
       end
-      else if (ddr_done_usb) begin
+      else if (ddr_single_done_usb) begin
           ddr_single_write <= 1'b0;
           ddr_single_read <= 1'b0;
       end
@@ -230,10 +233,19 @@ module reg_openadc_adcfifo #(
   cdc_pulse U_single_done_cdc (
      .reset_i       (reset),
      .src_clk       (ui_clk),
-     .src_pulse     (ddr_done),
+     .src_pulse     (ddr_single_done),
      .dst_clk       (clk_usb),
-     .dst_pulse     (ddr_done_usb)
+     .dst_pulse     (ddr_single_done_usb)
   );
+
+  cdc_pulse U_read_done_cdc (
+     .reset_i       (reset),
+     .src_clk       (ui_clk),
+     .src_pulse     (ddr_read_data_done),
+     .dst_clk       (clk_usb),
+     .dst_pulse     (ddr_read_data_done_usb)
+  );
+
 
    always @(posedge clk_usb) begin
       if (reset) begin

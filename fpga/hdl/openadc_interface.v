@@ -148,13 +148,13 @@ module openadc_interface #(
     wire [29:0]  single_address;
     wire [63:0]  single_write_data;
     wire [63:0]  single_read_data;
-    wire         ddr_done;
+    wire         ddr_read_data_done;
     wire [29:0]  ddr_la_start_address;
     wire [29:0]  ddr_trace_start_address;
     wire         ddr_start_la_read;
     wire         ddr_start_trace_read;
     wire         ddr_start_adc_read;
-    wire         ddr_read_data_done;
+    wire         ddr_single_done;
 
 
     wire [6:0] ddr_stat;
@@ -575,7 +575,8 @@ module openadc_interface #(
       .ddr_single_address               (single_address    ),
       .ddr_single_write_data            (single_write_data ),
       .ddr_single_read_data             (single_read_data  ),
-      .ddr_done                         (ddr_done          ),
+      .ddr_read_data_done               (ddr_read_data_done),
+      .ddr_single_done                  (ddr_single_done   ),
       .ddr_la_start_address             (ddr_la_start_address    ),
       .ddr_trace_start_address          (ddr_trace_start_address ),
       .ddr_start_la_read                (ddr_start_la_read    ),
@@ -757,7 +758,8 @@ module openadc_interface #(
           .single_address           (single_address    ),
           .single_write_data        (single_write_data ),
           .single_read_data         (single_read_data  ),
-          .ddr_done                 (ddr_done          ),
+          .ddr_read_data_done       (ddr_read_data_done),
+          .ddr_single_done          (ddr_single_done   ),
           .ddr_la_start_address     (ddr_la_start_address    ),
           .ddr_trace_start_address  (ddr_trace_start_address ),
 
@@ -862,7 +864,8 @@ module openadc_interface #(
        assign fifo_first_error_stat[10:9] = 0;
        assign ddr_state = 0;
        assign single_read_data = 0;
-       assign ddr_done = 0;
+       assign ddr_read_data_done = 0;
+       assign ddr_single_done = 0;
 
    `endif
 

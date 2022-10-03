@@ -53,13 +53,13 @@
     <Option Name="WTVcsLaunchSim" Val="0"/>
     <Option Name="WTRivieraLaunchSim" Val="0"/>
     <Option Name="WTActivehdlLaunchSim" Val="0"/>
-    <Option Name="WTXSimExportSim" Val="175"/>
-    <Option Name="WTModelSimExportSim" Val="175"/>
-    <Option Name="WTQuestaExportSim" Val="175"/>
-    <Option Name="WTIesExportSim" Val="175"/>
-    <Option Name="WTVcsExportSim" Val="175"/>
-    <Option Name="WTRivieraExportSim" Val="175"/>
-    <Option Name="WTActivehdlExportSim" Val="175"/>
+    <Option Name="WTXSimExportSim" Val="176"/>
+    <Option Name="WTModelSimExportSim" Val="176"/>
+    <Option Name="WTQuestaExportSim" Val="176"/>
+    <Option Name="WTIesExportSim" Val="176"/>
+    <Option Name="WTVcsExportSim" Val="176"/>
+    <Option Name="WTRivieraExportSim" Val="176"/>
+    <Option Name="WTActivehdlExportSim" Val="176"/>
     <Option Name="GenerateIPUpgradeLog" Val="TRUE"/>
     <Option Name="XSimRadix" Val="hex"/>
     <Option Name="XSimTimeUnit" Val="ns"/>
@@ -336,6 +336,13 @@
         </FileInfo>
       </File>
       <File Path="$PPRDIR/../../hdl/ddr.v">
+        <FileInfo>
+          <Attr Name="UsedIn" Val="synthesis"/>
+          <Attr Name="UsedIn" Val="implementation"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+      </File>
+      <File Path="$PPRDIR/../../hdl/preddr_18to64_converter.v">
         <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="implementation"/>
@@ -1255,6 +1262,25 @@
         <Define Name="ILA_DDR3"/>
       </Config>
     </FileSet>
+    <FileSet Name="pre_ddr_generic_fifo" Type="BlockSrcs" RelSrcDir="$PSRCDIR/pre_ddr_generic_fifo">
+      <File Path="$PSRCDIR/sources_1/ip/pre_ddr_generic_fifo/pre_ddr_generic_fifo.xci">
+        <FileInfo>
+          <Attr Name="UsedIn" Val="synthesis"/>
+          <Attr Name="UsedIn" Val="implementation"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+      </File>
+      <Config>
+        <Option Name="TopModule" Val="pre_ddr_generic_fifo"/>
+        <Option Name="VerilogDir" Val="$PPRDIR/../../tracewhisperer/hdl"/>
+        <Option Name="VerilogDir" Val="$PPRDIR/../../hdl"/>
+        <Option Name="UseBlackboxStub" Val="1"/>
+        <Define Name="CW310"/>
+        <Define Name="PRO"/>
+        <Define Name="ILA_DDR3"/>
+        <Define Name="ILA_HUSKY_FIFO"/>
+      </Config>
+    </FileSet>
   </FileSets>
   <Simulators>
     <Simulator Name="XSim">
@@ -1751,6 +1777,18 @@
     <Run Id="ila_ddr_stats_synth_1" Type="Ft3:Synth" SrcSet="ila_ddr_stats" Part="xc7k160tfbg676-1" ConstrsSet="ila_ddr_stats" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/ila_ddr_stats_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_ddr_stats_synth_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
+        <Step Id="synth_design"/>
+      </Strategy>
+      <GeneratedRun Dir="$PRUNDIR" File="gen_run.xml"/>
+      <ReportStrategy Name="Vivado Synthesis Default Reports" Flow="Vivado Synthesis 2020"/>
+      <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
+      <RQSFiles/>
+    </Run>
+    <Run Id="pre_ddr_generic_fifo_synth_1" Type="Ft3:Synth" SrcSet="pre_ddr_generic_fifo" Part="xc7k160tfbg676-1" ConstrsSet="pre_ddr_generic_fifo" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/pre_ddr_generic_fifo_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/pre_ddr_generic_fifo_synth_1">
+      <Strategy Version="1" Minor="2">
+        <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020">
+          <Desc>Vivado Synthesis Defaults</Desc>
+        </StratHandle>
         <Step Id="synth_design"/>
       </Strategy>
       <GeneratedRun Dir="$PRUNDIR" File="gen_run.xml"/>
@@ -2558,6 +2596,25 @@
     <Run Id="ila_ddr_stats_impl_1" Type="Ft2:EntireDesign" Part="xc7k160tfbg676-1" ConstrsSet="ila_ddr_stats" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="ila_ddr_stats_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/ila_ddr_stats_impl_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020"/>
+        <Step Id="init_design"/>
+        <Step Id="opt_design"/>
+        <Step Id="power_opt_design"/>
+        <Step Id="place_design"/>
+        <Step Id="post_place_power_opt_design"/>
+        <Step Id="phys_opt_design"/>
+        <Step Id="route_design"/>
+        <Step Id="post_route_phys_opt_design"/>
+        <Step Id="write_bitstream"/>
+      </Strategy>
+      <ReportStrategy Name="Vivado Implementation Default Reports" Flow="Vivado Implementation 2020"/>
+      <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
+      <RQSFiles/>
+    </Run>
+    <Run Id="pre_ddr_generic_fifo_impl_1" Type="Ft2:EntireDesign" Part="xc7k160tfbg676-1" ConstrsSet="pre_ddr_generic_fifo" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" SynthRun="pre_ddr_generic_fifo_synth_1" IncludeInArchive="false" GenFullBitstream="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/pre_ddr_generic_fifo_impl_1">
+      <Strategy Version="1" Minor="2">
+        <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020">
+          <Desc>Default settings for Implementation.</Desc>
+        </StratHandle>
         <Step Id="init_design"/>
         <Step Id="opt_design"/>
         <Step Id="power_opt_design"/>

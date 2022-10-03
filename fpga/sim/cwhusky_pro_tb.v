@@ -445,6 +445,7 @@ module cwhusky_tb();
       */
 
      // manually test LA capture
+  if (pBYPASS_DDR == 0) begin // TODO: LA capture doesn't work yet when DDR is bypassed
       //write_1byte(`RESET, 8'd1);
       //write_1byte(`RESET, 8'd0);
       rdata[7:6] = `TW_TRACE_REG_SELECT;
@@ -472,6 +473,7 @@ module cwhusky_tb();
       //end
       #(pCLK_USB_PERIOD * 200);
       //
+  end
 
       if (pDDR_TEST)
           write_1byte(`REG_DDR3_STAT, 1);
@@ -481,7 +483,8 @@ module cwhusky_tb();
           write_1byte(`FIFO_CONFIG, rdata);
       end
 
-      /* test single DDR R/W:
+      // test single DDR R/W:
+  if (pBYPASS_DDR == 0) begin // TODO: doesn't work yet when DDR is bypassed
       rw_lots_bytes(`REG_DDR_SINGLE_RW_DATA);
       write_next_byte((64'h12345678_a1b2c3d4 & 64'h0000_0000_0000_00FF));
       write_next_byte((64'h12345678_a1b2c3d4 & 64'h0000_0000_0000_FF00)>>8);
@@ -516,7 +519,8 @@ module cwhusky_tb();
       read_next_byte(rdata);
       read_next_byte(rdata);
       read_next_byte(rdata);
-      */
+      //
+  end
 
       setup_done = 1;
 
@@ -587,6 +591,7 @@ module cwhusky_tb();
 
 initial begin
     ddr_read_started = 0;
+    wait (setup_done);
     wait (U_dut.oadc.U_ddr.ddr_reading);
     ddr_read_started = 1;
 end

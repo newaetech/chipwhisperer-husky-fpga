@@ -68,7 +68,8 @@ module ddr (
     input  wire [29:0]  single_address,
     input  wire [63:0]  single_write_data,
     output reg  [63:0]  single_read_data,
-    output wire         ddr_done,
+    output wire         ddr_read_data_done,
+    output wire         ddr_single_done,
 
     input  wire [29:0]  ddr_la_start_address,
     input  wire [29:0]  ddr_trace_start_address,
@@ -225,12 +226,12 @@ module ddr (
     localparam pS_DDR_READ2           = 3'd5;
     localparam pS_DDR_WAIT_WRITE      = 3'd6;
     localparam pS_DDR_ADC_BYPASS      = 3'd7;
-    reg [2:0] next_ddr_state, ddr_state_r; // TODO: trim size
+    reg [2:0] next_ddr_state, ddr_state_r; // TODO-later: trim size
 
     reg ddr_full_error; // TODO: store this
     reg ddr_write_data_done;
     reg write_data_done_hold;
-    wire ddr_read_data_done = (adc_top_app_addr == main_app_addr);
+    assign ddr_read_data_done = (adc_top_app_addr == main_app_addr);
     reg incr_app_address;
 
     reg reset_app_address;
@@ -251,8 +252,7 @@ module ddr (
                           (source_select == pLA_SOURCE)?  preddr_la_fifo_dout :
                                                           preddr_trace_fifo_dout;
 
-    assign single_app_wdf_data = (ddr_state == pS_DDR_WRITE1)? single_write_data[31:0] : 
-                                 (ddr_state == pS_DDR_WRITE2)? single_write_data[63:32] : 32'b0;
+    assign single_app_wdf_data = (ddr_state == pS_DDR_WRITE1)? single_write_data[31:0] : single_write_data[63:32];
 
     reg                 preddr_fifo_rd_r;
 
@@ -265,7 +265,7 @@ module ddr (
     
     reg single_write_done;
     reg single_read_done;
-    assign ddr_done = single_write_done || single_read_done || ddr_read_data_done;
+    assign ddr_single_done = single_write_done || single_read_done;
 
     reg  [63:0]         postddr_fifo_din;
     wire                postddr_fifo_full;
@@ -694,7 +694,7 @@ module ddr (
             single_read_done <= 0;
             // TODO (later): clear mechanism for ddr_full_error
             if (single_write_ui || single_read_ui)
-                adc_app_addr <= single_address; // TODO: ensure this address is used in single R/W mode
+                adc_app_addr <= single_address;
             else if (reset_app_address) begin
                 adc_app_addr <= 0;
                 la_app_addr <= ddr_la_start_address;
@@ -768,7 +768,9 @@ module ddr (
             // arbitrate DDR writing between the 3 input sources:
             // (very simple arbitration: assume that all sources go idle at
             // some point, to allow others their turn)
-            if ((ddr_state == pS_DDR_WAIT_WRITE) && ~preddr_any_fifo_empty) begin
+            if (single_write_go || single_read_go)
+                source_select <= pADC_SOURCE;
+            else if ((ddr_state == pS_DDR_WAIT_WRITE) && ~preddr_any_fifo_empty) begin
                 if (~preddr_adc_fifo_empty)
                     source_select <= pADC_SOURCE;
                 else if (~preddr_la_fifo_empty)
@@ -1180,7 +1182,7 @@ wire stat_reset = (ddr_rwtest_en)? rw_stat_reset : capture_go_adc;
         .probe29        (capture_go_adc),       // input wire [0:0]
         .probe30        (init_calib_complete),  // input wire [0:0]
         .probe31        (error_flag),           // input wire [0:0]
-        .probe32        (ddr_done),             // input wire [0:0]
+        .probe32        (ddr_single_done),      // input wire [0:0]
         .probe33        (single_write),         // input wire [0:0]
         .probe34        (single_read)           // input wire [0:0]
     );
