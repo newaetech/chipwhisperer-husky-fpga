@@ -133,7 +133,7 @@ module ddr (
 
 );
 
-    parameter pDDR_INC_ADDR = 8'd8;
+    parameter pDDR_INC_ADDR = 30'd8;
     parameter pDDR_MAX_ADDR = 30'h1FFF_FFF8;
     parameter pMAX_UNDERFLOWS = 3;
 

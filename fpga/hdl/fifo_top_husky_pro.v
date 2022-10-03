@@ -337,7 +337,7 @@ module fifo_top_husky_pro (
                 end
                 else if (presamp_done) begin
                    segment_cycle_counter <= 0;
-                   sample_counter <= presample_i;
+                   sample_counter <= {17'b0, presample_i};
                    state <= pS_TRIGGERED;
                 end
                 if (fast_fifo_wr)
@@ -587,7 +587,7 @@ module fifo_top_husky_pro (
     reg [1:0] wide_word_count;
     reg wide_word_valid;
     reg [71:0] wide_word_shifter;
-    reg [3:0] adc_sample_counter; // TODO: too wide
+    reg [2:0] adc_sample_counter;
 
     always @(posedge adc_sampleclk) begin
         if (reset) begin
@@ -609,7 +609,7 @@ module fifo_top_husky_pro (
                 adc_sample_counter <= 0;
             end
             else if ((fast_fifo_rd || filler_read) && (state != pS_PRESAMP_FILLING) && (state != pS_PRESAMP_FULL)) begin
-                wide_word_shifter <= {wide_word_shifter[63:0], fast_fifo_dout}; // TODO: 63:0 is wrong!
+                wide_word_shifter <= {wide_word_shifter[59:0], fast_fifo_dout};
                 if ( ((wide_word_count == 0) && (adc_sample_counter == 5)) ||
                      ((wide_word_count == 1) && (adc_sample_counter == 4)) ||
                      ((wide_word_count == 2) && (adc_sample_counter == 4)) ) begin
@@ -758,7 +758,7 @@ module fifo_top_husky_pro (
         .probe17        (filler_read),          // input wire [0:0]  probe17
         .probe18        (filler_write),         // input wire [0:0]  probe18
         .probe19        (write_done_adc),       // input wire [0:0]  probe19
-        .probe20        (adc_sample_counter),   // input wire [3:0]  probe20
+        .probe20        (adc_sample_counter),   // input wire [2:0]  probe20
         .probe21        (wide_word_valid),      // input wire [0:0]  probe21
         .probe22        (wide_word_shifter),    // input wire [71:0] probe22
         .probe23        (filler_read_needed),   // input wire [0:0]  probe23

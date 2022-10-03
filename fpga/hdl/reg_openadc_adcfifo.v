@@ -171,11 +171,11 @@ module reg_openadc_adcfifo #(
          O_data_source_select <= 1; // default to ADC
          `ifdef __ICARUS__
              // use different defaults, due to the smaller DDR address space in simulation
-             ddr_la_start_address    <= 29'h0001_0000;
-             ddr_trace_start_address <= 29'h0008_0000;
+             ddr_la_start_address    <= 30'h0001_0000;
+             ddr_trace_start_address <= 30'h0008_0000;
          `else
-             ddr_la_start_address    <= 29'h1000_0000;
-             ddr_trace_start_address <= 29'h8000_0000;
+             ddr_la_start_address    <= 30'h1000_0000;
+             ddr_trace_start_address <= 30'h8000_0000;
          `endif
       end 
       else if (reg_write) begin

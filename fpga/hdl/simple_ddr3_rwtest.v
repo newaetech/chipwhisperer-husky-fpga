@@ -45,7 +45,7 @@ module simple_ddr3_rwtest #(
    output reg  [15:0]                   iteration,
    output reg  [7:0]                    errors,
    output reg  [pADDR_WIDTH-1:0]        error_addr,
-   input  wire [7:0]                    ddrtest_incr,
+   input  wire [pADDR_WIDTH-1:0]        ddrtest_incr,
    input  wire [pADDR_WIDTH-1:0]        ddrtest_stop,
 
    output wire                          stat_reset,
@@ -95,8 +95,8 @@ reg load_lfsr;
 wire read_valid;
 reg write_valid;
 
-assign app_wdf_data = lfsr ^ app_addr;
-assign expected_payload = lfsr ^ verify_addr;
+assign app_wdf_data = lfsr ^ {2'b0, app_addr};
+assign expected_payload = lfsr ^ {2'b0, verify_addr};
 
 assign writing = (state == pS_WRITE0) ||
                  (state == pS_WRITE1) ||

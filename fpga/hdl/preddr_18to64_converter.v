@@ -84,7 +84,7 @@ module preddr_18to64_converter (
                 end
                 else if (I_wr) begin
                     if (I_4bit_mode) begin
-                        wide_word_shifter <= {wide_word_shifter[55:0], I_data[7:0]};
+                        wide_word_shifter <= {wide_word_shifter[81:0], I_data[7:0]};
                         if (sample_counter == 7) begin
                             wide_word_valid <= 1'b1;
                             sample_counter <= 0;
