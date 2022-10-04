@@ -79,6 +79,7 @@ module reg_openadc_adcfifo #(
    input  wire [63:0]  ddr_single_read_data,
    input  wire         ddr_read_data_done,
    input  wire         ddr_single_done,
+   input  wire         ddr_write_data_done,
    output reg  [29:0]  ddr_la_start_address,
    output reg  [29:0]  ddr_trace_start_address,
    output reg          ddr_start_la_read,
@@ -148,7 +149,7 @@ module reg_openadc_adcfifo #(
             `REG_DDR_SINGLE_RW_ADDR:    reg_datao_reg = {6'b0, ddr_single_read, ddr_single_write};
             `REG_DDR_LA_START_ADDR:     reg_datao_reg = ddr_la_start_address[reg_bytecnt*8 +: 8];
             `REG_DDR_TRACE_START_ADDR:  reg_datao_reg = ddr_trace_start_address[reg_bytecnt*8 +: 8];
-            `REG_DDR_START_READ:        reg_datao_reg = {5'b0, ddr_start_adc_read, ddr_start_trace_read, ddr_start_la_read};
+            `REG_DDR_START_READ:        reg_datao_reg = {ddr_write_data_done, 4'b0, ddr_start_trace_read, ddr_start_la_read, ddr_start_adc_read };
             default:                    reg_datao_reg = 0;
          endcase
       end
@@ -209,7 +210,7 @@ module reg_openadc_adcfifo #(
           ddr_start_la_read <= 1'b0;
       end
       else if (reg_write && (reg_address == `REG_DDR_START_READ))
-          {ddr_start_adc_read, ddr_start_trace_read, ddr_start_la_read} <= reg_datai[2:0];
+          {ddr_start_trace_read, ddr_start_la_read, ddr_start_adc_read} <= reg_datai[2:0];
    end
 
 

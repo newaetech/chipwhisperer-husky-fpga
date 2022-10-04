@@ -155,7 +155,7 @@ module openadc_interface #(
     wire         ddr_start_trace_read;
     wire         ddr_start_adc_read;
     wire         ddr_single_done;
-
+    wire         ddr_write_data_done;
 
     wire [6:0] ddr_stat;
     wire       ddr_test_pass;
@@ -577,6 +577,7 @@ module openadc_interface #(
       .ddr_single_read_data             (single_read_data  ),
       .ddr_read_data_done               (ddr_read_data_done),
       .ddr_single_done                  (ddr_single_done   ),
+      .ddr_write_data_done              (ddr_write_data_done ),
       .ddr_la_start_address             (ddr_la_start_address    ),
       .ddr_trace_start_address          (ddr_trace_start_address ),
       .ddr_start_la_read                (ddr_start_la_read    ),
@@ -672,7 +673,7 @@ module openadc_interface #(
 
           // to DDR:
           .capture_go_ui            (capture_go_adc         ),
-          .write_done_ui            (write_done_adc         ),
+          .write_done_out           (write_done_adc         ),
           .preddr_fifo_rd           (preddr_adc_fifo_rd     ),
           .preddr_fifo_dout         (preddr_adc_fifo_dout   ),
           .preddr_fifo_empty        (preddr_adc_fifo_empty  ),
@@ -760,6 +761,7 @@ module openadc_interface #(
           .single_read_data         (single_read_data  ),
           .ddr_read_data_done       (ddr_read_data_done),
           .ddr_single_done          (ddr_single_done   ),
+          .ddr_write_data_done      (ddr_write_data_done ),
           .ddr_la_start_address     (ddr_la_start_address    ),
           .ddr_trace_start_address  (ddr_trace_start_address ),
 
@@ -866,6 +868,7 @@ module openadc_interface #(
        assign single_read_data = 0;
        assign ddr_read_data_done = 0;
        assign ddr_single_done = 0;
+       assign ddr_write_data_done = 0;
 
    `endif
 

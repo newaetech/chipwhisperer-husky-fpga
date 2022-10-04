@@ -31,6 +31,7 @@ module preddr_18to64_converter (
     input wire          rd_clk,
     input wire          enabled,
     input wire          capture_start,
+    input wire          capture_done,
     input wire          I_fifo_flush,
     input wire [17:0]   I_data,
     input wire          I_wr,
@@ -38,7 +39,8 @@ module preddr_18to64_converter (
 
     input  wire         fifo_rd,
     output wire [63:0]  fifo_dout,
-    output wire         fifo_empty
+    output wire         fifo_empty,
+    output reg          capture_done_out
 );
 
 
@@ -52,6 +54,8 @@ module preddr_18to64_converter (
     reg [63:0] fifo_din;
     reg fifo_wr;
     wire fifo_empty_raw;
+    wire capture_done_rd;
+    reg done_hold;
 
     // TODO: report these somewhere
     wire fifo_full;
@@ -152,6 +156,33 @@ module preddr_18to64_converter (
             end
         end
     end
+
+    always @(posedge rd_clk) begin
+        if (reset) begin
+            done_hold <= 1'b0;
+            capture_done_out <= 1'b0;
+        end
+        else begin
+            // The capture_done pulse activates a hold signal; then when the FIFO
+            // goes empty, we know we are done:
+            if (capture_done_rd)
+                done_hold <= 1'b1;
+            if (capture_done_out)
+                capture_done_out <= 1'b0;
+            else if (done_hold && fifo_empty_raw) begin
+                capture_done_out <= 1'b1;
+                done_hold <= 1'b0;
+            end
+        end
+    end
+
+    cdc_pulse U_done (
+        .reset_i       (reset),
+        .src_clk       (wr_clk),
+        .src_pulse     (capture_done),
+        .dst_clk       (rd_clk),
+        .dst_pulse     (capture_done_rd)
+    );
 
     // debug only: give each 9-bit "word" 16 bits, so we can follow the data
     wire [159:0] wider_word_shifter_debug;

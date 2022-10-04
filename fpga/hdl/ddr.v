@@ -51,7 +51,7 @@ module ddr (
 
     // LA
     input  wire         capture_go_la, // TODO: CDC on these!
-    input  wire         write_done_la, // TODO: CDC on these!
+    input  wire         write_done_la,
     output wire         preddr_la_fifo_rd,
     input  wire [63:0]  preddr_la_fifo_dout,
     input  wire         preddr_la_fifo_empty,
@@ -70,6 +70,7 @@ module ddr (
     output reg  [63:0]  single_read_data,
     output wire         ddr_read_data_done,
     output wire         ddr_single_done,
+    output reg          ddr_write_data_done,
 
     input  wire [29:0]  ddr_la_start_address,
     input  wire [29:0]  ddr_trace_start_address,
@@ -229,14 +230,13 @@ module ddr (
     reg [2:0] next_ddr_state, ddr_state_r; // TODO-later: trim size
 
     reg ddr_full_error; // TODO: store this
-    reg ddr_write_data_done;
-    reg write_data_done_hold;
-    assign ddr_read_data_done = (adc_top_app_addr == main_app_addr);
+    assign ddr_read_data_done = ((adc_top_app_addr == main_app_addr) && ddr_reading);
     reg incr_app_address;
 
     reg reset_app_address;
     reg [29:0] adc_top_app_addr;
 
+    reg ddr_writing_r;
     wire ddr_writing = (ddr_state == pS_DDR_WAIT_WRITE) ||
                        (ddr_state == pS_DDR_WRITE1) ||
                        (ddr_state == pS_DDR_WRITE2);
@@ -293,6 +293,7 @@ module ddr (
     reg ddr_start_la_read_r;
     reg ddr_start_trace_read_r;
     reg ddr_start_adc_read_r;
+    wire start_read_ui_pulse;
     wire start_adc_read_ui_pulse;
     wire start_la_read_ui_pulse;
     wire start_trace_read_ui_pulse;
@@ -393,7 +394,7 @@ module ddr (
       end
    end
 
-    // Read slow FIFO: TODO!
+    // Read slow FIFO: TODO! (some parts haven't been updated yet)
     always @(posedge clk_usb) begin
        if (reset || ~reset_done || start_adc_read_usb_pulse || start_la_read_usb_pulse || start_trace_read_usb_pulse) begin
           slow_read_count <= 0;
@@ -479,6 +480,8 @@ module ddr (
     wire single_write_go = single_write_ui && ~single_write_ui_r;
     wire single_read_go = single_read_ui && ~single_read_ui_r;
 
+    assign start_read_ui_pulse = start_adc_read_ui_pulse || start_la_read_ui_pulse || start_trace_read_ui_pulse;
+
     ////////////
     // DDR logic
     ////////////
@@ -499,13 +502,7 @@ module ddr (
             pS_DDR_IDLE: begin
                 // TODO: instead of capture_go_adc, could we not use "any pre-ddr FIFO is not empty?"
                 // But then how would we deal with stuck states... maybe each front-end needs its own "capture go"
-                if ((capture_go_adc || 
-                     start_adc_read_ui_pulse ||
-                     start_la_read_ui_pulse ||
-                     start_trace_read_ui_pulse ||
-                     single_write_go || 
-                     single_read_go) && 
-                    ~ddr_rwtest_en) begin
+                if ((~preddr_all_fifo_empty || start_read_ui_pulse || single_write_go || single_read_go) && ~ddr_rwtest_en) begin
                     if (~use_ddr)
                         next_ddr_state = pS_DDR_ADC_BYPASS;
                     else if (init_calib_complete) begin
@@ -513,7 +510,7 @@ module ddr (
                             next_ddr_state = pS_DDR_WAIT_WRITE;
                         else if (single_read_ui)
                             next_ddr_state = pS_DDR_WAIT_READ;
-                        else if (start_adc_read_ui_pulse || start_la_read_ui_pulse || start_trace_read_ui_pulse) begin
+                        else if (start_read_ui_pulse) begin
                             reset_app_address = 1'b1;
                             next_ddr_state = pS_DDR_WAIT_READ;
                         end
@@ -553,16 +550,17 @@ module ddr (
                 // go empty.
                 // This is also where we arbitrate between the different
                 // preddr sources.
-                if (capture_go_adc)
+                if (capture_go_adc) // TODO- other sources? necessary?
                     next_ddr_state = pS_DDR_IDLE;
-                else if (ddr_write_data_done) begin
+                // ddr_state_r check because ddr_write_data_done goes low one cycle after getting here:
+                else if (ddr_write_data_done && ~single_write_ui && (ddr_state_r == pS_DDR_WAIT_WRITE)) begin 
                     reset_app_address = 1'b1;
-                    next_ddr_state = pS_DDR_WAIT_READ;
+                    next_ddr_state = pS_DDR_IDLE;
                 end
                 else if (app_rdy && app_wdf_rdy) begin
                     if (single_write_ui)
                         next_ddr_state = pS_DDR_WRITE1;
-                    else if (~preddr_any_fifo_empty_r && (ddr_state_r == pS_DDR_WAIT_WRITE)) begin // wait extra cycle for selection mux to switch
+                    else if (~preddr_all_fifo_empty_r && (ddr_state_r == pS_DDR_WAIT_WRITE)) begin // wait extra cycle for selection mux to switch
                         preddr_fifo_rd = 1'b1;
                         next_ddr_state = pS_DDR_WRITE1;
                     end
@@ -594,7 +592,7 @@ module ddr (
                     end
                     else if (ddr_write_data_done) begin
                         reset_app_address = 1'b1;
-                        next_ddr_state = pS_DDR_WAIT_READ;
+                        next_ddr_state = pS_DDR_IDLE;
                     end
                     else begin
                         incr_app_address = 1'b1;
@@ -612,7 +610,7 @@ module ddr (
 
             pS_DDR_WAIT_READ: begin
                 main_app_en = 1'b0;
-                if (ddr_rwtest_en || capture_go_adc)
+                if (ddr_rwtest_en || capture_go_adc) // TODO- other sources? necessary?
                     next_ddr_state = pS_DDR_IDLE;
                 else if (app_rdy && (~postddr_fifo_prog_full || single_read_ui))
                     next_ddr_state = pS_DDR_READ1;
@@ -648,12 +646,16 @@ module ddr (
     end
 
     // NEW:
-    reg preddr_any_fifo_empty_r;
+    reg preddr_all_fifo_empty_r;
     reg [1:0] source_select;
+    reg active_source_adc;
+    reg active_source_la;
+    reg active_source_trace;
+    wire [2:0] active_sources = {active_source_trace, active_source_la, active_source_adc};
     localparam pADC_SOURCE = 2'b00;
     localparam pLA_SOURCE = 2'b01;
     localparam pTRACE_SOURCE = 2'b10;
-    wire preddr_any_fifo_empty = preddr_adc_fifo_empty &&
+    wire preddr_all_fifo_empty = preddr_adc_fifo_empty &&
                                  preddr_la_fifo_empty &&
                                  preddr_trace_fifo_empty; 
     wire preddr_chosen_fifo_empty = (source_select == pADC_SOURCE)? preddr_adc_fifo_empty :
@@ -677,20 +679,24 @@ module ddr (
             trace_app_addr <= 0;
             ddr_full_error <= 0;
             postddr_fifo_wr <= 0;
-            ddr_write_data_done <= 0;
-            write_data_done_hold <= 0;
             preddr_fifo_rd_r <= 0;
             adc_top_app_addr <= 0;
             single_read_done <= 0;
-            preddr_any_fifo_empty_r <= 0;
+            preddr_all_fifo_empty_r <= 0;
             source_select <= pADC_SOURCE;
+            active_source_adc <= 0;
+            active_source_la <= 0;
+            active_source_trace <= 0;
+            ddr_write_data_done <= 0;
+            ddr_writing_r <= 0;
         end
 
         else begin
             ddr_state <= next_ddr_state;
             ddr_state_r <= ddr_state;
             preddr_fifo_rd_r <= preddr_fifo_rd;
-            preddr_any_fifo_empty_r <= preddr_any_fifo_empty;
+            preddr_all_fifo_empty_r <= preddr_all_fifo_empty;
+            ddr_writing_r <= ddr_writing;
             single_read_done <= 0;
             // TODO (later): clear mechanism for ddr_full_error
             if (single_write_ui || single_read_ui)
@@ -751,26 +757,12 @@ module ddr (
             else
                 postddr_fifo_wr <= 1'b0;
 
-            //TODO: update done condition to account for other sources,
-            //including cases where they are not active! Don't forget to CDC
-            //those other source inputs.
-            if (ddr_state == pS_DDR_IDLE) begin
-                write_data_done_hold <= 1'b0;
-                ddr_write_data_done <= 1'b0;
-            end
-            else begin
-                if (write_done_adc)
-                    write_data_done_hold <= 1'b1;
-                if (preddr_chosen_fifo_empty && write_data_done_hold)
-                    ddr_write_data_done <= 1'b1;
-            end
-
             // arbitrate DDR writing between the 3 input sources:
             // (very simple arbitration: assume that all sources go idle at
             // some point, to allow others their turn)
             if (single_write_go || single_read_go)
                 source_select <= pADC_SOURCE;
-            else if ((ddr_state == pS_DDR_WAIT_WRITE) && ~preddr_any_fifo_empty) begin
+            else if ((ddr_state == pS_DDR_WAIT_WRITE) && ~preddr_all_fifo_empty) begin
                 if (~preddr_adc_fifo_empty)
                     source_select <= pADC_SOURCE;
                 else if (~preddr_la_fifo_empty)
@@ -786,6 +778,38 @@ module ddr (
                 else if (start_trace_read_ui_pulse)
                     source_select <= pTRACE_SOURCE;
             end
+
+            // Track active sources, to know when DDR FSM is done writing.
+            // write_done_* refers to whether the associated front-end has
+            // finished writing to its input FIFO, whereas ddr_write_data_done
+            // (below) refers to whether the data from all active front-ends
+            // has been written to DDR.
+            if (write_done_adc)
+                active_source_adc <= 1'b0;
+            else if (capture_go_adc)
+                active_source_adc <= 1'b1;
+
+            if (write_done_la)
+                active_source_la <= 1'b0;
+            else if (capture_go_la)
+                active_source_la <= 1'b1;
+
+            if (write_done_trace)
+                active_source_trace <= 1'b0;
+            else if (capture_go_trace)
+                active_source_trace <= 1'b1;
+
+            // This signal is tricky to get right. It's crucial that it not
+            // remain stuck high after it's set. To be clear, the intent is:
+            // 1. Clear when a write or read begins.
+            // 2. Set when in a write state and there are no more active sources.
+            if (~use_ddr)
+                // would never go high when bypassing DDR, so in case this status bit gets polled in a blocking fashion, set it:
+                ddr_write_data_done <= 1'b1;
+            else if (start_read_ui_pulse || (ddr_writing && ~ddr_writing_r))
+                ddr_write_data_done <= 1'b0;
+            else if (ddr_writing && (active_sources == 3'b000))
+                ddr_write_data_done <= 1'b1;
 
         end
 
@@ -1184,7 +1208,11 @@ wire stat_reset = (ddr_rwtest_en)? rw_stat_reset : capture_go_adc;
         .probe31        (error_flag),           // input wire [0:0]
         .probe32        (ddr_single_done),      // input wire [0:0]
         .probe33        (single_write),         // input wire [0:0]
-        .probe34        (single_read)           // input wire [0:0]
+        .probe34        (single_read),          // input wire [0:0]
+        .probe35        (active_sources),       // input wire [2:0]
+        .probe36        (preddr_all_fifo_empty),// input wire [0:0]
+        .probe37        (write_done_adc),       // input wire [0:0]
+        .probe38        (start_read_ui_pulse)   // input wire [0:0]
     );
 
 `endif

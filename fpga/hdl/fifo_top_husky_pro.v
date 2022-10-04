@@ -61,7 +61,7 @@ module fifo_top_husky_pro (
     // to/from DDR:
     input  wire         ui_clk,
     output wire         capture_go_ui,
-    output wire         write_done_ui,
+    output reg          write_done_out,
     input  wire         preddr_fifo_rd,
     output wire [63:0]  preddr_fifo_dout,
     output wire         preddr_fifo_empty,
@@ -123,6 +123,9 @@ module fifo_top_husky_pro (
     wire                clear_fifo_errors_adc;
 
     reg                 fifo_rst_pre;
+
+    wire                write_done_ui;
+    reg                 done_hold;
 
     assign fifo_overflow = fast_fifo_overflow_reg || preddr_fifo_overflow_reg;
 
@@ -661,6 +664,24 @@ module fifo_top_husky_pro (
        .dst_pulse     (capture_go_ui)
     );
 
+    always @(posedge ui_clk) begin
+        if (reset) begin
+            done_hold <= 1'b0;
+            write_done_out <= 1'b0;
+        end
+        else begin
+            // The write_done pulse activates a hold signal; then when the FIFO
+            // goes empty, we know we are done:
+            if (write_done_ui)
+                done_hold <= 1'b1;
+            if (write_done_out)
+                write_done_out <= 1'b0;
+            else if (done_hold && preddr_fifo_empty) begin
+                write_done_out <= 1'b1;
+                done_hold <= 1'b0;
+            end
+        end
+    end
 
     assign fast_fifo_rd = fast_fifo_presample_drain || (fast_fifo_rd_en && !preddr_fifo_full && !fast_fifo_empty);
 

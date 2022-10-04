@@ -116,7 +116,7 @@ set_clock_groups -asynchronous \
 
 set_clock_groups -asynchronous \
                  -group [get_clocks fe_clk ] \
-                 -group [get_clocks {clk_usb observer_clk* ADC_clk_fb pll_clk_x2}]
+                 -group [get_clocks {clk_usb observer_clk* ADC_clk_fb pll_clk_x2 clk_pll_i}]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks {fe_clk ADC_clk_fb pll_clk_x2} ] \

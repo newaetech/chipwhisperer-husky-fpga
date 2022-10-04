@@ -127,6 +127,8 @@ module cwhusky_tb();
    int signed_sample;
    reg  setup_done;
    reg  trigger_done;
+   reg  trigger_event;
+   reg  trigger2_done;
    reg  target_io4_reg;
    int i, j, k;
    reg i12BitReadCount;
@@ -541,6 +543,8 @@ module cwhusky_tb();
    reg [7:0] settings = 0;
    initial begin
       trigger_done = 0;
+      trigger2_done = 0;
+      trigger_event = 0;
       #1 wait (setup_done);
       for (trigger_gen_index = 0; trigger_gen_index < pNUM_SEGMENTS; trigger_gen_index += 1) begin
 
@@ -558,6 +562,7 @@ module cwhusky_tb();
                write_1byte(`SETTINGS_ADDR, settings);
                target_io4_reg = 1'b1;
             end
+            trigger_event = 1'b1;
          end
          else if (pSEGMENT_CYCLE_COUNTER_EN == 0)
             target_io4_reg = 1'b1;
@@ -586,6 +591,29 @@ module cwhusky_tb();
          end
       end
       trigger_done = 1;
+
+      /* rough 2nd ADC capture:
+      repeat (5000) @(posedge clk_adc);
+      write_1byte(`SETTINGS_ADDR, 0);
+      repeat (20) @(posedge clk_usb);
+      settings[3] = 1'b1; // keep arm bit set
+      settings[4] = pSTREAM;
+      settings[2] = 1'b1; // high trigger polarity
+      if (pTRIGGER_NOW) begin
+         settings[3] = 1'b1; // arm
+         settings[6] = 1'b1; // trigger now
+         write_1byte(`SETTINGS_ADDR, settings);
+         glitches_done = 1'b1; // glitch stuff won't happen with TRIGGER_NOW so don't wait for it
+      end
+      else begin
+         write_1byte(`SETTINGS_ADDR, settings);
+         repeat (1000) @(posedge clk_adc);
+         target_io4_reg = 1'b1;
+      end
+      repeat (500) @(posedge clk_adc);
+      trigger2_done = 1;
+      */
+
    end
 
 
@@ -596,7 +624,7 @@ initial begin
     ddr_read_started = 1;
 end
 
-   // read thread:
+// read thread:
 initial begin
   if (pDDR_TEST == 0) begin
       good_reads = 0;
@@ -616,15 +644,22 @@ initial begin
       end
       
       else begin
-         #1 wait (trigger_done == 0);
-         #1 wait (trigger_done);
+         // ugh this is messy... replaced trigger_done by trigger_event for
+         // Pro, but that will likely break segmented testcases?
+         #1 wait (trigger_event == 0);
+         #1 wait (trigger_event);
          // wait for the last segment's samples to get captured:
-         repeat((fifo_samples+2)*(pDOWNSAMPLE+1)) @(posedge clk_adc);
-         $display("waiting...");
+         $display("waiting 1...");
          if (pBYPASS_DDR == 0) begin
+             wait (U_dut.oadc.U_ddr.ddr_write_data_done == 1'b0);
+             wait (U_dut.oadc.U_ddr.ddr_write_data_done == 1'b1);
+             write_1byte(`REG_DDR_START_READ, 8'd1);
+             $display("waiting 2...");
              wait (ddr_read_started);
              repeat (300) @(posedge clk_adc);
          end
+         else // bypass DDR case
+             repeat((fifo_samples+2)*(pDOWNSAMPLE+1)) @(posedge clk_adc);
          repeat (pREAD_DELAY+offset) @(posedge clk_adc);
       end
 
@@ -714,7 +749,7 @@ initial begin
       $display("Bad reads: %d", bad_reads);
 
       /* now read the LA data:
-      write_1byte(`REG_DDR_START_READ, 8'd1); // USB clock
+      write_1byte(`REG_DDR_START_READ, 8'd2);
       repeat(100) @(posedge clk_usb);   // CRITICAL: postddr FIFO must not be empty! 
                                         // while writing REG_DDR_START_READ above kicks off filling the postddr FIFO,
                                         // there is a lag for the first DDR reads to come in.
@@ -729,6 +764,7 @@ initial begin
          $display("SIMULATION FAILED (%0d errors)", errors);
       else
          $display("Simulation passed (%0d warnings)", warnings);
+      //wait(trigger2_done);
       $finish;
    end
 end
