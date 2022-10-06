@@ -302,7 +302,7 @@ module cwhusky_cw310_top(
    wire           clear_errors;
    wire [17:0]    fifo_out_data;
    wire [5:0]     fifo_status;
-   wire           fifo_empty;
+   wire           shared_fifo_empty;
    wire           trace_fifo_error_flag;
    wire           synchronized;
    wire           la_clear_read_flags;
@@ -760,7 +760,7 @@ module cwhusky_cw310_top(
         .fifo_wr                (la_fifo_wr),
         .fifo_wr_data           (la_wr_data),
         .fifo_flush             (la_fifo_flush),
-        .fifo_empty             (fifo_empty),
+        .fifo_empty             (preddr_la_empty),
         .fifo_clear_read_flags  (la_clear_read_flags),
         .fifo_clear_write_flags (la_clear_write_flags)
    );
@@ -1084,7 +1084,7 @@ module cwhusky_cw310_top(
                                                
           .fifo_out_data                (fifo_out_data),
           .fifo_status                  (fifo_status),
-          .fifo_empty                   (fifo_empty),
+          .fifo_empty                   (preddr_trace_empty),
           .fifo_error_flag              (trace_fifo_error_flag),
 
           .trace_debug                  (trace_debug),
@@ -1160,12 +1160,15 @@ module cwhusky_cw310_top(
 
           .O_data                   (fifo_out_data),
           .O_fifo_status            (fifo_status),
-          .O_fifo_empty             (fifo_empty),
+          .O_fifo_empty             (shared_fifo_empty),
           .O_error_flag             (trace_fifo_error_flag),
 
           .I_custom_fifo_stat_flag  (synchronized)      
        );
    `endif
+
+   assign preddr_trace_empty = shared_fifo_empty;
+   assign preddr_la_empty = shared_fifo_empty;
 
 `else
     // On Husky-Pro, there are separate TRACE and LOGIC_ANALYZER FIFOs.
