@@ -439,8 +439,6 @@ module fifo_top_husky_pro (
    reg clear_fifo_errors_r2;
    assign clear_fifo_errors_adc = clear_fifo_errors_r2;
 
-   //purposefully longer to provide some margin since flushing is kicked off
-   //in USB domain but the result is used in ADC domain
    (* ASYNC_REG = "TRUE" *) reg[1:0] flushing_adc_pipe; 
    reg flushing_adc;
 

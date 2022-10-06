@@ -205,6 +205,7 @@ module cwhusky_tb();
 
       // manually reset with new register:
       write_1byte(`RESET, 8'h1);
+      #(pCLK_USB_PERIOD*20);
       write_1byte(`RESET, 8'h0);
 
       #(pCLK_USB_PERIOD*1000);

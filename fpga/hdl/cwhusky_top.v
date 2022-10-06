@@ -526,6 +526,8 @@ module cwhusky_top(
         .trace_exists           (trace_exists),
         .la_exists              (la_exists),
 
+        .cw310_adc_clk_sel      (), // CW310 only
+
         .trigger_o              (ext_trigger),
         .trig_glitch_o          (TRIG_GLITCHOUT)
    );
@@ -600,6 +602,8 @@ module cwhusky_top(
         .observer_locked        (observer_locked),
         .mmcm_shutdown          (xadc_error_flag),
         .I_trace_en             (trace_en),
+        .O_enabled              (), // PRO only
+        .O_4bit_mode            (), // TODO!
         .freq_measure           (freq_measure),
 
         .glitchclk              (glitchclk),
@@ -834,6 +838,7 @@ module cwhusky_top(
           .reg_datai        (write_data), 
           .reg_read         (reg_read), 
           .reg_write        (reg_write), 
+          .O_xadc_temp_out  (), // PRO only
           .xadc_error       (xadc_error_flag)
        ); 
 
@@ -935,6 +940,8 @@ module cwhusky_top(
           .arm_usb                      (trace_arm_usb),
           .arm_fe                       (trace_arm_fe),
           .capturing                    (),
+          .capture_start                (),  // PRO only
+          .capture_done                 (),  // PRO only
 
           .fifo_full                    (fifo_full),
           .fifo_overflow_blocked        (fifo_overflow_blocked),

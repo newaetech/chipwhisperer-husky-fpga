@@ -244,14 +244,6 @@ module openadc_interface #(
       .dst_pulse     (freq_measure_adc)
    );
 
-   cdc_pulse U_freq_measure_ui (
-      .reset_i       (reset),
-      .src_clk       (clk_usb),
-      .src_pulse     (freq_measure),
-      .dst_clk       (ui_clk),
-      .dst_pulse     (freq_measure_ui)
-   );
-
    cdc_pulse U_freq_measure_ext (
       .reset_i       (reset),
       .src_clk       (clk_usb),
@@ -272,10 +264,8 @@ module openadc_interface #(
 
    reg [31:0] extclk_frequency_int;
    reg [31:0] adcclk_frequency_int;
-   reg [31:0] uiclk_frequency_int;
    reg [31:0] extclk_frequency;
    reg [31:0] adcclk_frequency;
-   reg [31:0] uiclk_frequency;
 
    always @(posedge DUT_CLK_i) begin
       if (freq_measure_ext) begin
@@ -313,6 +303,9 @@ module openadc_interface #(
       end
    end
 
+`ifdef PRO
+   reg [31:0] uiclk_frequency_int;
+   reg [31:0] uiclk_frequency;
    always @(posedge ui_clk) begin
       if (freq_measure_ui) begin
          uiclk_frequency_int <= 32'd1;
@@ -322,6 +315,17 @@ module openadc_interface #(
          uiclk_frequency_int <= uiclk_frequency_int + 32'd1;
       end
    end
+   cdc_pulse U_freq_measure_ui (
+      .reset_i       (reset),
+      .src_clk       (clk_usb),
+      .src_pulse     (freq_measure),
+      .dst_clk       (ui_clk),
+      .dst_pulse     (freq_measure_ui)
+   );
+`else
+   wire [31:0] uiclk_frequency = 32'b0;
+`endif // PRO
+
 
 
    reg [11:0] ADC_data_tofifo_pre;
@@ -537,6 +541,10 @@ module openadc_interface #(
       .extclk_monitor_disabled      (extclk_monitor_disabled),
       .extclk_limit                 (extclk_limit)
    );
+
+`ifndef PRO
+    wire ui_clk = 1'b0;
+`endif
 
    reg_openadc_adcfifo #(
       .pBYTECNT_SIZE    (pBYTECNT_SIZE)
