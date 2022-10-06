@@ -58,7 +58,7 @@ module ddr (
 
     // trace
     input  wire         capture_go_trace, // TODO: CDC on these!
-    input  wire         write_done_trace, // TODO: CDC on these!
+    input  wire         write_done_trace,
     output wire         preddr_trace_fifo_rd,
     input  wire [63:0]  preddr_trace_fifo_dout,
     input  wire         preddr_trace_fifo_empty,
@@ -114,11 +114,10 @@ module ddr (
     output reg  [2:0]   ddr_state,
 
     output reg          fifo_overflow_ddr,
-    input  wire         fifo_rst,
-    input  wire         fifo_rst_start_r,
-    input  wire         reset_done,
+    input  wire         arm_pulse_usb,
     output wire         postddr_fifo_overflow,
     output reg          postddr_fifo_underflow_masked,
+    input  wire         flushing,
 
     // debug only:
     input  wire         preddr_adc_fifo_underflow,
@@ -301,6 +300,8 @@ module ddr (
     wire start_la_read_usb_pulse;
     wire start_trace_read_usb_pulse;
 
+    wire arm_pulse_ui;
+
     ////////////////////////////
     // Post-DDR FIFO read logic:
     ////////////////////////////
@@ -319,14 +320,14 @@ module ddr (
        end
        else begin
           // Xilinx FIFO asserts "underflow" for a single cycle only:
-          if (fifo_rst_start_r)
+          if (arm_pulse_usb)
              postddr_fifo_underflow_sticky <= 0;
           else if (postddr_fifo_underflow)
              postddr_fifo_underflow_sticky <= 1;
 
           // SAM3U likes to read multiples of 4 bytes, so we don't flag an
           // underflow unless we observe at least 3 underflow reads
-          if (fifo_rst_start_r)
+          if (arm_pulse_usb)
              postddr_fifo_underflow_count <= 0;
           else if (postddr_fifo_underflow && postddr_fifo_underflow_count < pMAX_UNDERFLOWS)
              postddr_fifo_underflow_count <= postddr_fifo_underflow_count + 1;
@@ -336,7 +337,7 @@ module ddr (
 
    // for debug: count FIFO reads
    always @(posedge clk_usb) begin
-      if (fifo_rst) begin
+      if (arm_pulse_usb) begin
          fifo_read_count <= 0;
          fifo_read_count_error_freeze <= 0;
       end
@@ -355,9 +356,18 @@ module ddr (
       .dst_pulse     (read_update_usb)
    );
 
+   cdc_pulse U_arm_pulse_cdc (
+      .reset_i       (reset),
+      .src_clk       (clk_usb),
+      .src_pulse     (arm_pulse_usb),
+      .dst_clk       (ui_clk),
+      .dst_pulse     (arm_pulse_ui)
+   );
+
+
    // track how many FIFO entries (roughly) are available to be read; tricky because of two clock domains!
    always @(posedge ui_clk) begin
-      if (fifo_rst) begin
+      if (arm_pulse_ui) begin
          write_count <= 0;
          write_count_to_usb <= 0;
          read_update <= 1'b0;
@@ -378,7 +388,7 @@ module ddr (
    end
 
    always @(posedge clk_usb) begin
-      if (fifo_rst) begin
+      if (arm_pulse_usb) begin
          read_count <= 0;
          stream_segment_available <= 1'b0;
       end
@@ -396,7 +406,7 @@ module ddr (
 
     // Read slow FIFO: TODO! (some parts haven't been updated yet)
     always @(posedge clk_usb) begin
-       if (reset || ~reset_done || start_adc_read_usb_pulse || start_la_read_usb_pulse || start_trace_read_usb_pulse) begin
+       if (reset || arm_pulse_usb || start_adc_read_usb_pulse || start_la_read_usb_pulse || start_trace_read_usb_pulse) begin
           slow_read_count <= 0;
           slow_fifo_rd_slow <= 1'b0;
        end
@@ -429,7 +439,8 @@ module ddr (
     end
 
     assign slow_fifo_rd_fast = fifo_read_fifoen && (low_res? (slow_read_count == 2) : ((slow_read_count == 3) || (slow_read_count == 8))); // TODO!
-    assign postddr_fifo_rd = (fast_fifo_read_mode)? slow_fifo_rd_fast : slow_fifo_rd_slow;
+    assign postddr_fifo_rd = (flushing && ~postddr_fifo_empty) || 
+                             ((fast_fifo_read_mode)? slow_fifo_rd_fast : slow_fifo_rd_slow);
 
     reg [7:0] fifo_read_data_pre;
     always @(*) begin
@@ -446,7 +457,7 @@ module ddr (
     end
     // register the FIFO output to help meet timing
     always @(posedge clk_usb) begin
-        if (fifo_rst || start_adc_read_usb_pulse || start_la_read_usb_pulse || start_trace_read_usb_pulse) begin
+        if (arm_pulse_usb || start_adc_read_usb_pulse || start_la_read_usb_pulse || start_trace_read_usb_pulse) begin
             first_read <= 1'b0;
             first_read_done <= 1'b0;
         end
@@ -857,7 +868,7 @@ module ddr (
 
     // make overflow sticky:
     always @(posedge ui_clk) begin
-       if (fifo_rst)
+       if (arm_pulse_ui)
           fifo_overflow_ddr <= 1'b0;
        else if (postddr_fifo_overflow)
           fifo_overflow_ddr <= 1'b1;
@@ -1110,7 +1121,7 @@ wire stat_reset = (ddr_rwtest_en)? rw_stat_reset : capture_go_adc;
     `elsif TINYFIFO
        //for faster corner case simulation
        tiny_post_ddr_slow_fifo U_post_ddr_slow_fifo (
-          .rst          (fifo_rst),
+          .rst          (reset),
           .wr_clk       (ui_clk),
           .rd_clk       (clk_usb),
           .din          (postddr_fifo_din),
@@ -1127,7 +1138,7 @@ wire stat_reset = (ddr_rwtest_en)? rw_stat_reset : capture_go_adc;
     `else
        //normal case
        post_ddr_slow_fifo U_post_ddr_slow_fifo (
-          .rst          (fifo_rst),
+          .rst          (reset),
           .wr_clk       (ui_clk),
           .rd_clk       (clk_usb),
           .din          (postddr_fifo_din),
@@ -1248,8 +1259,8 @@ wire stat_reset = (ddr_rwtest_en)? rw_stat_reset : capture_go_adc;
         .probe2         (postddr_fifo_rd),      // input wire [0:0]
         .probe3         (postddr_fifo_empty),   // input wire [0:0]
         .probe4         (postddr_fifo_underflow),// input wire [0:0]
-        .probe5         (fifo_rst),             // input wire [0:0]
-        .probe6         (reset_done),           // input wire [0:0]
+        .probe5         (1'b0),                 // input wire [0:0]
+        .probe6         (arm_pulse_usb),        // input wire [0:0]
         .probe7         (slow_fifo_rd_fast),    // input wire [0:0]
         .probe8         (fifo_read_fifoen),     // input wire [0:0]
         .probe9         (slow_read_count),      // input wire [3:0]

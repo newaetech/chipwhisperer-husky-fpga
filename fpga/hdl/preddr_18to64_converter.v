@@ -26,7 +26,6 @@ Author: Jean-Pierre Thibault <jpthibault@newae.com>
 
 module preddr_18to64_converter (
     input wire          reset,
-    input wire          fifo_rst,
     input wire          wr_clk,
     input wire          rd_clk,
     input wire          enabled,
@@ -52,7 +51,7 @@ module preddr_18to64_converter (
     reg [89:0] wide_word_shifter;
     reg [2:0] sample_counter;
     reg [63:0] fifo_din;
-    reg fifo_wr;
+    reg fifo_wr = 1'b0;
     wire fifo_empty_raw;
     wire capture_done_rd;
     reg done_hold;
@@ -203,7 +202,7 @@ module preddr_18to64_converter (
     // TODO: need to indicate "write_done_adc" equivalent
 `else
     pre_ddr_generic_fifo U_pre_ddr_fifo (
-       .rst          (fifo_rst),
+       .rst          (reset),
        .wr_clk       (wr_clk),
        .rd_clk       (rd_clk),
        .din          (fifo_din),

@@ -108,7 +108,7 @@ module reg_openadc #(
 
    //Register definitions
    reg [7:0]  registers_gain;
-   reg [7:0]  registers_settings;
+   reg [7:0]  registers_settings = 8'b0010_0100;
    reg [63:0]  registers_echo;
    reg [15:0] registers_downsample;
    reg [31:0] registers_advclocksettings;
@@ -121,7 +121,7 @@ module reg_openadc #(
    wire [47:0] version_data;
    wire [31:0] system_frequency = 32'd`SYSTEM_CLK;
    wire [31:0] buildtime;
-   reg new_reset;
+   reg new_reset = 1'b0;
 
    assign version_data[47:16] = 32'b0;
    assign version_data[15:11] = 5'd`HW_TYPE;

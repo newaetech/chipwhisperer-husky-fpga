@@ -104,7 +104,6 @@ module openadc_interface #(
     input  wire                         write_done_trace,
     input  wire                         write_done_la,
 `endif
-    output wire                         fifo_rst,
 
     // CW310-specific:
     input wire                          ADC_clk_fbp,
@@ -140,8 +139,8 @@ module openadc_interface #(
     wire       capture_done;
     wire       armed_and_ready;
     wire [2:0] fifo_state;
-    //wire       fifo_rst;
     wire [2:0] ddr_state;
+    wire       flushing;
 
     wire         single_write;
     wire         single_read;
@@ -367,7 +366,6 @@ module openadc_interface #(
       .capture_done_i       (adc_capture_done),
       .armed_and_ready      (armed_and_ready),
 
-      .fifo_rst             (fifo_rst),
       .cmd_arm_usb          (cmd_arm_usb),
       .la_debug             (la_debug)
    );
@@ -632,8 +630,7 @@ module openadc_interface #(
        wire         postddr_fifo_underflow_masked;
        wire         error_flag;
        wire         fifo_overflow_noddr;
-       wire         fifo_rst_start_r;
-       wire         reset_done;
+       wire         arm_pulse_usb;
 
        fifo_top_husky_pro U_fifo (
           .reset                    (reset),
@@ -671,23 +668,26 @@ module openadc_interface #(
 
           .ui_clk                   (ui_clk),
 
+          .preddr_trace_empty       (preddr_trace_empty),
+          .preddr_la_empty          (preddr_la_empty),
+
           // to DDR:
           .capture_go_ui            (capture_go_adc         ),
           .write_done_out           (write_done_adc         ),
-          .preddr_fifo_rd           (preddr_adc_fifo_rd     ),
+          .I_preddr_fifo_rd         (preddr_adc_fifo_rd     ),
           .preddr_fifo_dout         (preddr_adc_fifo_dout   ),
           .preddr_fifo_empty        (preddr_adc_fifo_empty  ),
 
           .ddr_rwtest_en            (ddr_rwtest_en),
 
+          .postddr_fifo_empty       (fifo_empty),
           .postddr_fifo_overflow    (postddr_fifo_overflow),
           .postddr_fifo_underflow_masked (postddr_fifo_underflow_masked),
+          .flushing                 (flushing),
 
           .preddr_fifo_wr           (slow_fifo_wr),
           .preddr_fifo_underflow    (preddr_adc_fifo_underflow ),
-          .fifo_rst                 (fifo_rst),
-          .fifo_rst_start_r         (fifo_rst_start_r),
-          .reset_done               (reset_done),
+          .arm_pulse_usb            (arm_pulse_usb),
           .debug                    (fifo_debug)
        );
 
@@ -709,9 +709,7 @@ module openadc_interface #(
           .stream_mode              (fifo_stream),
           .no_underflow_errors      (no_underflow_errors),
           .max_samples_i            (maxsamples),
-          .fifo_rst                 (fifo_rst),
-          .fifo_rst_start_r         (fifo_rst_start_r),
-          .reset_done               (reset_done),
+          .arm_pulse_usb            (arm_pulse_usb),
 
           // ADC signals:
           .capture_go_adc           (capture_go_adc         ),
@@ -783,6 +781,7 @@ module openadc_interface #(
           .postddr_fifo_underflow_masked (postddr_fifo_underflow_masked),
           .preddr_adc_fifo_underflow(preddr_adc_fifo_underflow ),
           .error_flag               (error_flag            ),
+          .flushing                 (flushing),
 
           .ddr_state                (ddr_state),
 
@@ -847,7 +846,6 @@ module openadc_interface #(
           .slow_fifo_rd             (slow_fifo_rd),
           .fifo_read_count          (fifo_read_count),
           .fifo_read_count_error_freeze (fifo_read_count_error_freeze),
-          .fifo_rst                 (fifo_rst),
           .debug                    (fifo_debug)
        );
 

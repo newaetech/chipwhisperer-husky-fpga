@@ -326,7 +326,6 @@ module cwhusky_cw310_top(
    wire           trace_capture_start;
    wire           trace_capture_done;
    wire           trace_capture_done_ui;
-   wire           fifo_rst;
 
    wire           preddr_trace_rd;
    wire           [63:0] preddr_trace_data;
@@ -530,8 +529,6 @@ module cwhusky_cw310_top(
         .capture_go_la          (la_capture_start   ),
         .capture_go_trace       (trace_capture_start),
 `endif
-        .fifo_rst               (fifo_rst           ),
-
 
         // CW310-specific:
         .ADC_clk_fbp            (ADC_clk_fbp ),
@@ -1176,14 +1173,13 @@ module cwhusky_cw310_top(
     // that's what DDR needs.
     preddr_18to64_converter U_trace_converter (
         .reset                  (reg_rst),
-        .fifo_rst               (fifo_rst),
         .wr_clk                 (fe_clk),
         .rd_clk                 (ui_clk),
         .enabled                (trace_en),
         .capture_start          (trace_capture_start),
         .capture_done           (trace_capture_done),
         .capture_done_out       (trace_capture_done_ui),
-        .I_fifo_flush           (fifo_flush),
+        .I_fifo_flush           (trace_fifo_flush),
         .I_data                 (trace_wr_data),
         .I_wr                   (trace_fifo_wr),
         .I_4bit_mode            (1'b0),
@@ -1194,14 +1190,13 @@ module cwhusky_cw310_top(
 
     preddr_18to64_converter U_la_converter (
         .reset                  (reg_rst),
-        .fifo_rst               (fifo_rst),
         .wr_clk                 (observer_clk),
         .rd_clk                 (ui_clk),
         .enabled                (la_enabled),
         .capture_start          (la_capture_start),
         .capture_done           (la_capture_done),
         .capture_done_out       (la_capture_done_ui),
-        .I_fifo_flush           (fifo_flush),
+        .I_fifo_flush           (la_fifo_flush),
         .I_data                 (la_wr_data),
         .I_wr                   (la_fifo_wr),
         .I_4bit_mode            (la_4bit_mode),

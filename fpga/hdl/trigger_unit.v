@@ -44,7 +44,6 @@ module trigger_unit(
     input wire               capture_done_i,       //1 = capture done
     input wire               armed_and_ready,
 
-    input wire               fifo_rst,             // for debug only
     input wire               cmd_arm_usb,          // for debug only
     output wire [8:0]        la_debug              // for debug only
     );
@@ -195,7 +194,7 @@ module trigger_unit(
           .probe7         (arm_i),                // input wire [0:0]  probe7 
           .probe8         (capture_go_start),     // input wire [0:0]  probe8 
           .probe9         (capture_go_o),         // input wire [0:0]  probe9 
-          .probe10        (fifo_rst)              // input wire [0:0]  probe10
+          .probe10        (1'b0)                  // input wire [0:0]  probe10
        );
    `endif
 
