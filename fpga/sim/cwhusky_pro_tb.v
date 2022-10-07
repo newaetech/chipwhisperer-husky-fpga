@@ -749,7 +749,7 @@ initial begin
       $display("Good reads: %d", good_reads);
       $display("Bad reads: %d", bad_reads);
 
-      /* now read the LA data:
+      /* now read the LA data and check it:
       write_1byte(`REG_DDR_START_READ, 8'd2);
       repeat(100) @(posedge clk_usb);   // CRITICAL: postddr FIFO must not be empty! 
                                         // while writing REG_DDR_START_READ above kicks off filling the postddr FIFO,
@@ -758,6 +758,11 @@ initial begin
       for (i = 0; i < 64; i += 1) begin
           read_next_byte(rdata);
           $display("LA read byte: %2x", rdata);
+          // primitive error checking
+          if (((8'ha1 + (2*i)) % 256) != rdata) begin
+              $display("ERROR on LA read");
+              errors += 1;
+          end
       end
       */
 

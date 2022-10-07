@@ -266,6 +266,9 @@ module ddr (
     reg single_read_done;
     assign ddr_single_done = single_write_done || single_read_done;
 
+    reg read_started;
+    reg pre_read_flush;
+
     reg  [63:0]         postddr_fifo_din;
     wire                postddr_fifo_full;
     wire                postddr_fifo_prog_full;
@@ -364,6 +367,29 @@ module ddr (
       .dst_pulse     (arm_pulse_ui)
    );
 
+    (* ASYNC_REG = "TRUE" *) reg[1:0] postddr_fifo_empty_ui_pipe;
+    reg postddr_fifo_empty_ui;
+    always @(posedge ui_clk) begin
+        if (reset) begin
+            postddr_fifo_empty_ui <= 0;
+            postddr_fifo_empty_ui_pipe <= 0;
+        end
+        else begin
+            {postddr_fifo_empty_ui, postddr_fifo_empty_ui_pipe} <= {postddr_fifo_empty_ui_pipe, postddr_fifo_empty};
+        end
+    end
+
+    (* ASYNC_REG = "TRUE" *) reg[1:0] pre_read_flush_usb_pipe;
+    reg pre_read_flush_usb;
+    always @(posedge clk_usb) begin
+        if (reset) begin
+            pre_read_flush_usb <= 0;
+            pre_read_flush_usb_pipe <= 0;
+        end
+        else begin
+            {pre_read_flush_usb, pre_read_flush_usb_pipe} <= {pre_read_flush_usb_pipe, pre_read_flush};
+        end
+    end
 
    // track how many FIFO entries (roughly) are available to be read; tricky because of two clock domains!
    always @(posedge ui_clk) begin
@@ -439,7 +465,7 @@ module ddr (
     end
 
     assign slow_fifo_rd_fast = fifo_read_fifoen && (low_res? (slow_read_count == 2) : ((slow_read_count == 3) || (slow_read_count == 8))); // TODO!
-    assign postddr_fifo_rd = (flushing && ~postddr_fifo_empty) || 
+    assign postddr_fifo_rd = ((flushing || pre_read_flush_usb) && ~postddr_fifo_empty) || 
                              ((fast_fifo_read_mode)? slow_fifo_rd_fast : slow_fifo_rd_slow);
 
     reg [7:0] fifo_read_data_pre;
@@ -455,7 +481,28 @@ module ddr (
        else
           fifo_read_data_pre = postddr_fifo_dout[(7-slow_read_count)*8 +: 8];
     end
-    // register the FIFO output to help meet timing
+
+    // Register the FIFO output to help meet timing.
+    // FIFO is first-word-fall-through, so the intent of "first_read" is to
+    // register the FIFO output as soon as it's available, prior to executing
+    // a FIFO read.
+    // Originally "first_read" was triggered by the FIFO being not empty, but
+    // in some cases the FIFO isn't empty when the read command is issued (the
+    // FIFO gets flushed in this case), so instead we explicitely look at
+    // read_started
+
+    (* ASYNC_REG = "TRUE" *) reg[1:0] read_started_usb_pipe;
+    reg read_started_usb;
+    always @(posedge clk_usb) begin
+        if (reset) begin
+            read_started_usb <= 0;
+            read_started_usb_pipe <= 0;
+        end
+        else begin
+            {read_started_usb, read_started_usb_pipe} <= {read_started_usb_pipe, read_started};
+        end
+    end
+
     always @(posedge clk_usb) begin
         if (arm_pulse_usb || start_adc_read_usb_pulse || start_la_read_usb_pulse || start_trace_read_usb_pulse) begin
             first_read <= 1'b0;
@@ -465,12 +512,14 @@ module ddr (
             first_read <= 1'b0;
             first_read_done <= 1'b1;
         end
-        else if (!postddr_fifo_empty && !first_read_done) begin
+        // Note that when bypassing DDR, we don't bother with the read_started logic; it's assumed that
+        // FIFOs are already empty prior to starting a read when DDR is bypassed . This may or may not
+        // hold, but that's ok since DDR bypass is just for debugging.
+        else if (!postddr_fifo_empty && (read_started_usb || ~use_ddr) && !first_read_done) begin
             first_read <= 1'b1;
         end
 
         if (fifo_read_fifoen || first_read) fifo_read_data <= fifo_read_data_pre;
-
     end
 
     always @(posedge ui_clk) begin
@@ -508,6 +557,7 @@ module ddr (
         preddr_fifo_rd = 1'b0;
         next_ddr_state = pS_DDR_IDLE;
         single_write_done = 1'b0;
+        pre_read_flush = 1'b0;
 
         case (ddr_state)
             pS_DDR_IDLE: begin
@@ -623,6 +673,10 @@ module ddr (
                 main_app_en = 1'b0;
                 if (ddr_rwtest_en || capture_go_adc) // TODO- other sources? necessary?
                     next_ddr_state = pS_DDR_IDLE;
+                else if (~postddr_fifo_empty_ui && ~read_started && ~single_read_ui) begin
+                    pre_read_flush = 1'b1;
+                    next_ddr_state = pS_DDR_WAIT_READ;
+                end
                 else if (app_rdy && (~postddr_fifo_prog_full || single_read_ui))
                     next_ddr_state = pS_DDR_READ1;
                 else
@@ -700,6 +754,7 @@ module ddr (
             active_source_trace <= 0;
             ddr_write_data_done <= 0;
             ddr_writing_r <= 0;
+            read_started <= 1'b0;
         end
 
         else begin
@@ -821,6 +876,11 @@ module ddr (
                 ddr_write_data_done <= 1'b0;
             else if (ddr_writing && (active_sources == 3'b000))
                 ddr_write_data_done <= 1'b1;
+
+            if (start_read_ui_pulse)
+                read_started <= 1'b0;
+            else if (ddr_state == pS_DDR_READ1)
+                read_started <= 1'b1;
 
         end
 
