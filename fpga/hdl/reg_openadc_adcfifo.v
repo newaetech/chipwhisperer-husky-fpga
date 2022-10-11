@@ -43,8 +43,8 @@ module reg_openadc_adcfifo #(
    output reg          low_res_lsb,
    output reg          fast_fifo_read_mode,
    output reg  [16:0]  stream_segment_threshold,
-   input  wire [10:0]  fifo_error_stat,
-   input  wire [10:0]  fifo_first_error_stat,
+   input  wire [11:0]  fifo_error_stat,
+   input  wire [11:0]  fifo_first_error_stat,
    input  wire [2:0]   fifo_first_error_state,
    output reg          clear_fifo_errors,
 
@@ -104,7 +104,7 @@ module reg_openadc_adcfifo #(
    reg [7:0] reg_datao_reg;
    assign reg_datao = reg_datao_reg;
 
-   wire [11:0] fifo_stat = {fifo_empty, fifo_error_stat};
+   wire [12:0] fifo_stat = {fifo_empty, fifo_error_stat};
 
    wire [159:0] ddr3_rw_stats = {I_ddr3_read_read,              // 159:128
                                  I_ddr3_read_idle,              // 127:96
@@ -118,7 +118,7 @@ module reg_openadc_adcfifo #(
 
    wire [23:0] fifo_first_error_combined;
    assign fifo_first_error_combined[23:16] = {5'b0, fifo_first_error_state};
-   assign fifo_first_error_combined[15:0] = {5'b0, fifo_first_error_stat};
+   assign fifo_first_error_combined[15:0] = {4'b0, fifo_first_error_stat};
 
    wire [23:0] ddr3_stats;
    assign ddr3_stats[23:16] = I_ddr3_errors;

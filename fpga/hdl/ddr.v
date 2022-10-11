@@ -117,6 +117,7 @@ module ddr (
     input  wire         arm_pulse_usb,
     output wire         postddr_fifo_overflow,
     output reg          postddr_fifo_underflow_masked,
+    output reg          reading_too_soon_error,
     input  wire         flushing,
 
     // debug only:
@@ -933,6 +934,15 @@ module ddr (
        else if (postddr_fifo_overflow)
           fifo_overflow_ddr <= 1'b1;
     end
+
+    // detect "reading too soon" separately from general underflow errors:
+    always @(posedge clk_usb) begin
+       if (arm_pulse_usb)
+          reading_too_soon_error <= 1'b0;
+       else if (fifo_read_fifoen && ((ddr_state == pS_DDR_WAIT_READ) && pre_read_flush))
+          reading_too_soon_error <= 1'b1;
+    end
+
 
 
 reg [15:0] read_stall_count;

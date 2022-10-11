@@ -47,8 +47,8 @@ module fifo_top_husky_pro (
 
     output wire         fifo_overflow, //If overflow happens (bad during stream mode)
     output reg          error_flag,
-    output reg [10:0]   error_stat,
-    output reg [10:0]   first_error_stat,
+    output reg [11:0]   error_stat,
+    output reg [11:0]   first_error_stat,
     output reg [2:0]    first_error_state,
     input  wire         clear_fifo_errors,
     input  wire         no_clip_errors,
@@ -70,6 +70,7 @@ module fifo_top_husky_pro (
     input  wire         postddr_fifo_empty,
     input  wire         postddr_fifo_overflow,
     input  wire         postddr_fifo_underflow_masked,
+    input  wire         reading_too_soon_error,
 
     output wire         arm_pulse_usb,
 
@@ -524,9 +525,10 @@ module fifo_top_husky_pro (
     reg arm_usb_r;
     assign arm_pulse_usb = arm_usb && ~arm_usb_r;
 
-    function [10:0] error_bits (input [10:0] current_error);
+    function [11:0] error_bits (input [11:0] current_error);
        begin
           error_bits = current_error;
+          if (reading_too_soon_error)        error_bits[11] = 1'b1;
           if (preddr_fifo_overflow)          error_bits[10] = 1'b1;
           if (preddr_fifo_underflow)         error_bits[9]  = 1'b1;
           if (gain_error)                    error_bits[8]  = 1'b1;
@@ -562,7 +564,7 @@ module fifo_top_husky_pro (
           else begin
              if (gain_error || segment_error || downsample_error || clip_error || presamp_error || 
                  fast_fifo_overflow || fast_fifo_underflow || postddr_fifo_overflow || postddr_fifo_underflow_masked || 
-                 preddr_fifo_overflow || preddr_fifo_underflow) begin
+                 preddr_fifo_overflow || preddr_fifo_underflow || reading_too_soon_error) begin
                 error_flag <= 1;
                 if (!error_flag) begin
                    first_error_stat <= error_bits(first_error_stat);
@@ -781,7 +783,7 @@ module fifo_top_husky_pro (
         .probe12        (preddr_fifo_wr),       // input wire [0:0]  probe12
         .probe13        (preddr_fifo_full),     // input wire [0:0]  probe13
         .probe14        (preddr_fifo_overflow), // input wire [0:0]  probe14
-        .probe15        (error_stat),           // input wire [10:0] probe15
+        .probe15        (error_stat),           // input wire [11:0] probe15
         .probe16        (error_flag),           // input wire [0:0]  probe16
         .probe17        (filler_read),          // input wire [0:0]  probe17
         .probe18        (filler_write),         // input wire [0:0]  probe18
