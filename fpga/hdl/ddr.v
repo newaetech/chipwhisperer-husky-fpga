@@ -312,9 +312,13 @@ module ddr (
 
     always @(*) begin
        if (stream_mode)
+          // TODO: is this still relevant?
           postddr_fifo_underflow_masked = postddr_fifo_underflow && (read_count < max_samples_i) && ~no_underflow_errors;
        else
-          postddr_fifo_underflow_masked = postddr_fifo_underflow && ~no_underflow_errors && (postddr_fifo_underflow_count == pMAX_UNDERFLOWS);
+          // fifo_read_fifoen check catches a case where while postddr_fifo_underflow doesn't occur, the read is still too
+          // soon in that slow_read_count will get messed up
+          postddr_fifo_underflow_masked = ~no_underflow_errors && ( (postddr_fifo_underflow && (postddr_fifo_underflow_count == pMAX_UNDERFLOWS)) ||
+                                                                    (fifo_read_fifoen && postddr_fifo_empty) );
     end
 
     always @(posedge clk_usb) begin
@@ -1329,7 +1333,7 @@ wire stat_reset = (ddr_rwtest_en)? rw_stat_reset : capture_go_adc;
         .probe2         (postddr_fifo_rd),      // input wire [0:0]
         .probe3         (postddr_fifo_empty),   // input wire [0:0]
         .probe4         (postddr_fifo_underflow),// input wire [0:0]
-        .probe5         (1'b0),                 // input wire [0:0]
+        .probe5         (flushing),             // input wire [0:0]
         .probe6         (arm_pulse_usb),        // input wire [0:0]
         .probe7         (slow_fifo_rd_fast),    // input wire [0:0]
         .probe8         (fifo_read_fifoen),     // input wire [0:0]
@@ -1337,7 +1341,8 @@ wire stat_reset = (ddr_rwtest_en)? rw_stat_reset : capture_go_adc;
         .probe10        (stream_segment_available), // input wire [0:0]
         .probe11        (fast_fifo_read_mode),  // input wire [0:0]
         .probe12        (fifo_read_data),       // input wire [7:0]
-        .probe13        (error_flag)            // input wire [0:0]
+        .probe13        (error_flag),           // input wire [0:0]
+        .probe14        (pre_read_flush_usb)    // input wire [0:0]
     );
 `endif
 
