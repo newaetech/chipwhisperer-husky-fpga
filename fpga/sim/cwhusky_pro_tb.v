@@ -593,7 +593,7 @@ module cwhusky_tb();
       end
       trigger_done = 1;
 
-      // rough 2nd ADC capture:
+      /* rough 2nd ADC capture:
       repeat (5000) @(posedge clk_adc);
       write_1byte(`SETTINGS_ADDR, 0);
       repeat (20) @(posedge clk_usb);
@@ -613,7 +613,7 @@ module cwhusky_tb();
       end
       repeat (500) @(posedge clk_adc);
       trigger2_done = 1;
-      //
+      */
 
    end
 
@@ -635,7 +635,7 @@ initial begin
       // Figure out the total number of samples to read.
       // It's the total number of samples, accounting for segments, rounded up to a multiple of 3.
       //samples_to_read = $ceil(prFIFO_SAMPLES*pNUM_SEGMENTS/3)*3;
-      samples_to_read = prFIFO_SAMPLES*pNUM_SEGMENTS-10;
+      samples_to_read = prFIFO_SAMPLES*pNUM_SEGMENTS;
 
       if (pSTREAM) begin
          wait (setup_done);
@@ -771,9 +771,10 @@ initial begin
       else
          $display("Simulation passed (%0d warnings)", warnings);
 
+     /* rough check on 2nd capture:
       wait(trigger2_done);
       write_1byte(`REG_DDR_START_READ, 8'd1);
-      repeat(100) @(posedge clk_usb);
+      //repeat(100) @(posedge clk_usb);
       rw_lots_bytes(`ADCREAD_ADDR);
       $display("XXX samples_to_read: %d", samples_to_read);
       segment_read_index = 0;
@@ -782,6 +783,7 @@ initial begin
          read_next_sample(sample);
          $display("Read %h", sample);
       end
+     */
 
       $finish;
    end
