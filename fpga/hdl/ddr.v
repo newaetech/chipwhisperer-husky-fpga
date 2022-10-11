@@ -230,6 +230,7 @@ module ddr (
     reg [2:0] next_ddr_state, ddr_state_r; // TODO-later: trim size
 
     reg ddr_full_error; // TODO: store this
+    // TODO: flag error if arm event occurs when we are not idle
     assign ddr_read_data_done = ((adc_top_app_addr == main_app_addr) && ddr_reading);
     reg incr_app_address;
 
@@ -269,6 +270,7 @@ module ddr (
 
     reg read_started;
     reg pre_read_flush;
+    reg arm_event;
 
     reg  [63:0]         postddr_fifo_din;
     wire                postddr_fifo_full;
@@ -318,7 +320,7 @@ module ddr (
           // fifo_read_fifoen check catches a case where while postddr_fifo_underflow doesn't occur, the read is still too
           // soon in that slow_read_count will get messed up
           postddr_fifo_underflow_masked = ~no_underflow_errors && ( (postddr_fifo_underflow && (postddr_fifo_underflow_count == pMAX_UNDERFLOWS)) ||
-                                                                    (fifo_read_fifoen && postddr_fifo_empty) );
+                                                                    (fifo_read_fifoen && postddr_fifo_empty && ~first_read_done) );
     end
 
     always @(posedge clk_usb) begin
@@ -616,7 +618,7 @@ module ddr (
                 // go empty.
                 // This is also where we arbitrate between the different
                 // preddr sources.
-                if (capture_go_adc) // TODO- other sources? necessary?
+                if (capture_go_adc || arm_event) // TODO- other sources?
                     next_ddr_state = pS_DDR_IDLE;
                 // ddr_state_r check because ddr_write_data_done goes low one cycle after getting here:
                 else if (ddr_write_data_done && ~single_write_ui && (ddr_state_r == pS_DDR_WAIT_WRITE)) begin 
@@ -676,7 +678,7 @@ module ddr (
 
             pS_DDR_WAIT_READ: begin
                 main_app_en = 1'b0;
-                if (ddr_rwtest_en || capture_go_adc) // TODO- other sources? necessary?
+                if (ddr_rwtest_en || capture_go_adc || arm_event) // TODO- other sources?
                     next_ddr_state = pS_DDR_IDLE;
                 else if (~postddr_fifo_empty_ui && ~read_started && ~single_read_ui) begin
                     pre_read_flush = 1'b1;
@@ -760,6 +762,7 @@ module ddr (
             ddr_write_data_done <= 0;
             ddr_writing_r <= 0;
             read_started <= 1'b0;
+            arm_event <= 0;
         end
 
         else begin
@@ -886,6 +889,14 @@ module ddr (
                 read_started <= 1'b0;
             else if (ddr_state == pS_DDR_READ1)
                 read_started <= 1'b1;
+
+            // To catch arm pulse even if we're busy; this is used to abort an active DDR read or write activity
+            // if the scope is re-armed prior to the DDR process's normal conclusion. This can arise if the user
+            // does a long capture but doesn't read the full capture.
+            if (arm_pulse_ui)
+                arm_event <= 1'b1;
+            else if (ddr_state == pS_DDR_IDLE)
+                arm_event <= 1'b0;
 
         end
 
