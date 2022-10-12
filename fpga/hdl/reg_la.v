@@ -83,7 +83,7 @@ module reg_la #(
    output wire         capture_done,
 
    output reg          fifo_wr,
-   output wire [17:0]  fifo_wr_data,
+   output reg  [17:0]  fifo_wr_data,
    output reg          fifo_flush,
    input  wire         fifo_empty,
    output wire         fifo_clear_write_flags,
@@ -522,38 +522,39 @@ module reg_la #(
       end
    end
 
-`ifdef __ICARUS__
-   // for easier visualization / validation of ramp pattern:
-   assign fifo_wr_data = {capture8_reg[1], 
-                          capture7_reg[1], 
-                          capture6_reg[1], 
-                          capture5_reg[1], 
-                          capture4_reg[1], 
-                          capture3_reg[1], 
-                          capture2_reg[1], 
-                          capture1_reg[1], 
-                          capture0_reg[1],
-                          capture8_reg[0], 
-                          capture7_reg[0], 
-                          capture6_reg[0], 
-                          capture5_reg[0], 
-                          capture4_reg[0], 
-                          capture3_reg[0], 
-                          capture2_reg[0], 
-                          capture1_reg[0], 
-                          capture0_reg[0]};
-
-`else
-   assign fifo_wr_data = {capture8_reg, 
-                          capture7_reg, 
-                          capture6_reg, 
-                          capture5_reg, 
-                          capture4_reg, 
-                          capture3_reg, 
-                          capture2_reg, 
-                          capture1_reg, 
-                          capture0_reg};
-`endif
+   always @(*) begin
+       if (capture_group_reg == 6)
+           // for easier visualization / validation of ramp pattern;
+           // if this makes timing closure harder, remove it!
+           fifo_wr_data = {capture8_reg[1], 
+                           capture7_reg[1], 
+                           capture6_reg[1], 
+                           capture5_reg[1], 
+                           capture4_reg[1], 
+                           capture3_reg[1], 
+                           capture2_reg[1], 
+                           capture1_reg[1], 
+                           capture0_reg[1],
+                           capture8_reg[0], 
+                           capture7_reg[0], 
+                           capture6_reg[0], 
+                           capture5_reg[0], 
+                           capture4_reg[0], 
+                           capture3_reg[0], 
+                           capture2_reg[0], 
+                           capture1_reg[0], 
+                           capture0_reg[0]};
+       else
+           fifo_wr_data = {capture8_reg, 
+                           capture7_reg, 
+                           capture6_reg, 
+                           capture5_reg, 
+                           capture4_reg, 
+                           capture3_reg, 
+                           capture2_reg, 
+                           capture1_reg, 
+                           capture0_reg};
+   end
 
    //Counter for downsampling (NOT proper decimation)
    reg [15:0] downsample_ctr;

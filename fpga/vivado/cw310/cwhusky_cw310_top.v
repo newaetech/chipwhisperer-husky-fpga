@@ -321,9 +321,11 @@ module cwhusky_cw310_top(
    wire           cmd_arm_usb;
 
    wire           la_capture_start;
+   wire           la_capture_start_ui;
    wire           la_capture_done;
    wire           la_capture_done_ui;
    wire           trace_capture_start;
+   wire           trace_capture_start_ui;
    wire           trace_capture_done;
    wire           trace_capture_done_ui;
 
@@ -526,8 +528,8 @@ module cwhusky_cw310_top(
         .preddr_la_empty        (preddr_la_empty    ),
         .write_done_la          (la_capture_done_ui ),
         .write_done_trace       (trace_capture_done_ui ),
-        .capture_go_la          (la_capture_start   ),
-        .capture_go_trace       (trace_capture_start),
+        .capture_go_la          (la_capture_start_ui   ),
+        .capture_go_trace       (trace_capture_start_ui),
 `endif
 
         // CW310-specific:
@@ -1182,6 +1184,7 @@ module cwhusky_cw310_top(
         .capture_start          (trace_capture_start),
         .capture_done           (trace_capture_done),
         .capture_done_out       (trace_capture_done_ui),
+        .capture_start_out      (trace_capture_start_ui),
         .I_fifo_flush           (trace_fifo_flush),
         .I_data                 (trace_wr_data),
         .I_wr                   (trace_fifo_wr),
@@ -1199,6 +1202,7 @@ module cwhusky_cw310_top(
         .capture_start          (la_capture_start),
         .capture_done           (la_capture_done),
         .capture_done_out       (la_capture_done_ui),
+        .capture_start_out      (la_capture_start_ui),
         .I_fifo_flush           (la_fifo_flush),
         .I_data                 (la_wr_data),
         .I_wr                   (la_fifo_wr),

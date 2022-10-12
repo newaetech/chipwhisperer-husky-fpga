@@ -764,14 +764,37 @@ initial begin
               errors += 1;
           end
       end
+
+      // and do *another* LA capture:
+      write_1byte(`LA_ARM, 8'd0);
+      write_1byte(`LA_ARM, 8'd1);
+      write_1byte(`LA_MANUAL_CAPTURE, 8'd1);
+      #(pCLK_USB_PERIOD * 10);
+      write_1byte(`LA_MANUAL_CAPTURE, 8'd0);
+      #(pCLK_USB_PERIOD * 2000);
+      write_1byte(`REG_DDR_START_READ, 8'd2);
+      repeat(100) @(posedge clk_usb);   // CRITICAL: postddr FIFO must not be empty! 
+                                        // while writing REG_DDR_START_READ above kicks off filling the postddr FIFO,
+                                        // there is a lag for the first DDR reads to come in.
+      rw_lots_bytes(`ADCREAD_ADDR);
+      for (i = 0; i < 64; i += 1) begin
+          read_next_byte(rdata);
+          $display("LA read byte: %2x", rdata);
+          // primitive error checking
+          if (((8'ha1 + (2*i)) % 256) != rdata) begin
+              $display("ERROR on LA read");
+              errors += 1;
+          end
+      end
       */
+
 
       if (errors)
          $display("SIMULATION FAILED (%0d errors)", errors);
       else
          $display("Simulation passed (%0d warnings)", warnings);
 
-     /* rough check on 2nd capture:
+     /* rough check on 2nd ADC capture:
       wait(trigger2_done);
       write_1byte(`REG_DDR_START_READ, 8'd1);
       //repeat(100) @(posedge clk_usb);

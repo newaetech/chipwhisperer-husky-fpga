@@ -39,7 +39,8 @@ module preddr_18to64_converter (
     input  wire         fifo_rd,
     output wire [63:0]  fifo_dout,
     output wire         fifo_empty,
-    output reg          capture_done_out
+    output reg          capture_done_out,
+    output wire         capture_start_out
 );
 
 
@@ -183,6 +184,15 @@ module preddr_18to64_converter (
         .dst_pulse     (capture_done_rd)
     );
 
+    cdc_pulse U_capture_start_cdc (
+        .reset_i       (reset),
+        .src_clk       (wr_clk),
+        .src_pulse     (capture_start),
+        .dst_clk       (rd_clk),
+        .dst_pulse     (capture_start_out)
+    );
+
+
     // debug only: give each 9-bit "word" 16 bits, so we can follow the data
     wire [159:0] wider_word_shifter_debug;
     assign wider_word_shifter_debug[159:144] = {7'b0, wide_word_shifter[89:81]};
@@ -215,6 +225,28 @@ module preddr_18to64_converter (
        .underflow    (fifo_underflow)
     );
 `endif // NOFIFO
+
+`ifdef ILA_PREDDR_CONVERTER
+    ila_preddr_converter U_preddr_converted (
+        .clk            (wr_clk),               // input wire clk
+        .probe0         (reset),                // input wire [0:0]  
+        .probe1         (fifo_wr),              // input wire [0:0]  
+        .probe2         (fifo_din),             // input wire [63:0] 
+        .probe3         (fifo_full),            // input wire [0:0]  
+        .probe4         (fifo_empty_raw),       // input wire [0:0]  
+        .probe5         (fifo_overflow),        // input wire [0:0]  
+        .probe6         (fifo_underflow),       // input wire [0:0]  
+        .probe7         (wide_word_valid),      // input wire [0:0]  
+        .probe8         (wide_word_shifter),    // input wire [89:0] 
+        .probe9         (wide_word_count),      // input wire [3:0]  
+        .probe10        (sample_counter),       // input wire [2:0] 
+        .probe11        (capture_start),        // input wire [0:0]  
+        .probe12        (I_data),               // input wire [17:0]  
+        .probe13        (capture_done),         // input wire [0:0]  
+        .probe14        (I_wr),                 // input wire [0:0]  
+        .probe15        (I_4bit_mode)           // input wire [0:0]  
+    );
+`endif
 
 
 endmodule

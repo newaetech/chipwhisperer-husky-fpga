@@ -35,6 +35,7 @@ set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets reg_clockglitch/mux1
 set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets ADC_clk_fb]
 set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets reg_la/observer_clk]
 set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets U_trace_top/fe_clk]
+set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets U_trace_top/src_clk]
 
 set_case_analysis 1 [get_pins reg_clockglitch/sourceclk_mux1/S]
 set_case_analysis 0 [get_pins reg_clockglitch/sourceclk_mux2/S]
