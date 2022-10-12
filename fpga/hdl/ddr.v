@@ -313,6 +313,7 @@ module ddr (
     wire start_trace_read_usb_pulse;
 
     wire arm_pulse_ui;
+    wire first_read_pulse_ui;
 
     ////////////////////////////
     // Post-DDR FIFO read logic:
@@ -554,6 +555,15 @@ module ddr (
     wire single_read_go = single_read_ui && ~single_read_ui_r;
 
     assign start_read_ui_pulse = start_adc_read_ui_pulse || start_la_read_ui_pulse || start_trace_read_ui_pulse;
+
+    cdc_pulse U_first_read_cdc (
+        .reset_i       (reset),
+        .src_clk       (clk_usb),
+        .src_pulse     (first_read),
+        .dst_clk       (ui_clk),
+        .dst_pulse     (first_read_pulse_ui)
+    );
+
 
     ////////////
     // DDR logic
@@ -903,7 +913,7 @@ module ddr (
             else if (ddr_writing && (active_sources == 3'b000))
                 ddr_write_data_done <= 1'b1;
 
-            if (start_read_ui_pulse)
+            if (start_read_ui_pulse || first_read_pulse_ui)
                 read_started <= 1'b0;
             else if (ddr_state == pS_DDR_READ1)
                 read_started <= 1'b1;
