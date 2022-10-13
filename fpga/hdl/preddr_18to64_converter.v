@@ -102,13 +102,13 @@ module preddr_18to64_converter (
                     else begin // 18-bit capture
                         wide_word_shifter <= {wide_word_shifter[71:0], I_data};
                         if ( ((wide_word_count == 0) && (sample_counter == 4)) ||
-                             ((wide_word_count == 1) && (sample_counter == 4)) ||
-                             ((wide_word_count == 2) && (sample_counter == 3)) ||
-                             ((wide_word_count == 3) && (sample_counter == 4)) ||
-                             ((wide_word_count == 4) && (sample_counter == 3)) ||
-                             ((wide_word_count == 5) && (sample_counter == 4)) ||
-                             ((wide_word_count == 6) && (sample_counter == 3)) ||
-                             ((wide_word_count == 7) && (sample_counter == 4)) ||
+                             ((wide_word_count == 1) && (sample_counter == 3)) ||
+                             ((wide_word_count == 2) && (sample_counter == 4)) ||
+                             ((wide_word_count == 3) && (sample_counter == 3)) ||
+                             ((wide_word_count == 4) && (sample_counter == 4)) ||
+                             ((wide_word_count == 5) && (sample_counter == 3)) ||
+                             ((wide_word_count == 6) && (sample_counter == 4)) ||
+                             ((wide_word_count == 7) && (sample_counter == 3)) ||
                              ((wide_word_count == 8) && (sample_counter == 4)) ) begin
                             wide_word_valid <= 1'b1;
                             sample_counter <= 1;        // reset to 1 instead of 0 to make the above conditions work
