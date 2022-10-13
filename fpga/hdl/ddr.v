@@ -395,13 +395,15 @@ module ddr (
 
     (* ASYNC_REG = "TRUE" *) reg[1:0] pre_read_flush_usb_pipe;
     reg pre_read_flush_usb;
+    reg pre_read_flush_usb_r;
     always @(posedge clk_usb) begin
         if (reset) begin
             pre_read_flush_usb <= 0;
+            pre_read_flush_usb_r <= 0;
             pre_read_flush_usb_pipe <= 0;
         end
         else begin
-            {pre_read_flush_usb, pre_read_flush_usb_pipe} <= {pre_read_flush_usb_pipe, pre_read_flush};
+            {pre_read_flush_usb_r, pre_read_flush_usb, pre_read_flush_usb_pipe} <= {pre_read_flush_usb, pre_read_flush_usb_pipe, pre_read_flush};
         end
     end
 
@@ -518,7 +520,12 @@ module ddr (
     end
 
     always @(posedge clk_usb) begin
-        if (arm_pulse_usb || start_adc_read_usb_pulse || start_la_read_usb_pulse || start_trace_read_usb_pulse) begin
+        // if ~postddr_fifo_empty when one of those events occur, we don't
+        // want to clear first_read_done yet, because there are conditions
+        // where we may falsely set first_read (too early); by waiting instead
+        // for the postddr flush to be done, we avoid those scenarios.
+        if ( ((arm_pulse_usb || start_adc_read_usb_pulse || start_la_read_usb_pulse || start_trace_read_usb_pulse) && postddr_fifo_empty) ||
+             (pre_read_flush_usb_r && ~pre_read_flush_usb) ) begin
             first_read <= 1'b0;
             first_read_done <= 1'b0;
         end
@@ -682,7 +689,7 @@ module ddr (
 
             pS_DDR_WAIT_READ: begin
                 main_app_en = 1'b0;
-                if (ddr_rwtest_en || capture_go_any || arm_event)
+                if (ddr_rwtest_en || capture_go_any || arm_event || ddr_read_change)
                     next_ddr_state = pS_DDR_IDLE;
                 else if (~postddr_fifo_empty_ui && ~read_started && ~single_read_ui) begin
                     pre_read_flush = 1'b1;
@@ -746,6 +753,39 @@ module ddr (
                                                                    preddr_la_fifo_dout;
 
     reg capture_go_any;
+
+    wire [2:0] ddr_active_read = {ddr_start_trace_read_ui, ddr_start_la_read_ui, ddr_start_adc_read_ui};
+    reg  [2:0] ddr_active_read_r;
+    reg  ddr_read_change;
+
+    reg ddr_start_adc_read_ui;
+    reg ddr_start_la_read_ui;
+    reg ddr_start_trace_read_ui;
+    (* ASYNC_REG = "TRUE" *) reg[1:0] ddr_start_adc_read_ui_pipe;
+    (* ASYNC_REG = "TRUE" *) reg[1:0] ddr_start_la_read_ui_pipe;
+    (* ASYNC_REG = "TRUE" *) reg[1:0] ddr_start_trace_read_ui_pipe;
+
+    always @(posedge ui_clk) begin
+        if (reset) begin
+            ddr_start_adc_read_ui <= 0;
+            ddr_start_la_read_ui <= 0;
+            ddr_start_trace_read_ui <= 0;
+            ddr_start_adc_read_ui_pipe <= 0;
+            ddr_start_la_read_ui_pipe <= 0;
+            ddr_start_trace_read_ui_pipe <= 0;
+            ddr_active_read_r <= 0;
+        end
+        else begin
+            ddr_active_read_r <= ddr_active_read;
+            {ddr_start_adc_read_ui, ddr_start_adc_read_ui_pipe} <= {ddr_start_adc_read_ui_pipe, ddr_start_adc_read};
+            {ddr_start_la_read_ui, ddr_start_la_read_ui_pipe} <= {ddr_start_la_read_ui_pipe, ddr_start_la_read};
+            {ddr_start_trace_read_ui, ddr_start_trace_read_ui_pipe} <= {ddr_start_trace_read_ui_pipe, ddr_start_trace_read};
+            if (ddr_active_read != ddr_active_read_r)
+                ddr_read_change <= 1'b1;
+            else if (ddr_state == pS_DDR_IDLE)
+                ddr_read_change <= 1'b0;
+        end
+    end
 
     // DDR FSM sequential control logic and slow FIFO writes:
     always @(posedge ui_clk) begin
