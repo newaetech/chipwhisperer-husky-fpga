@@ -91,7 +91,7 @@ module reg_la #(
 );
 
 
-    reg  [15:0] capture_depth;
+    reg  [31:0] capture_depth;
     wire [6:0] drp_observer_addr;
     wire [15:0] drp_observer_din;
     wire [15:0] drp_observer_dout;
@@ -329,7 +329,7 @@ module reg_la #(
    wire capture_go = capture_go_r & ~capture_go_r2 & ~capturing & armed;
 
    // Do the capture.
-   reg [15:0] capture_count;
+   reg [31:0] capture_count;
    reg capturing;
    reg capturing_r;
    wire capturing_usb_pulse;
@@ -684,7 +684,7 @@ module reg_la #(
        .probe6         (reg_arm),              // input wire [0:0]  probe6 
        .probe7         (capture_go_async),     // input wire [0:0]  probe7 
        .probe8         (capture_go),           // input wire [0:0]  probe8 
-       .probe9         (capture_count),        // input wire [15:0] probe9 
+       .probe9         (capture_count[15:0]),  // input wire [15:0] probe9 
        .probe10        (capturing)             // input wire [0:0]  probe10
     );
 `endif
