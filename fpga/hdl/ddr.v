@@ -319,6 +319,9 @@ module ddr (
     // Post-DDR FIFO read logic:
     ////////////////////////////
 
+    wire fresh_start_usb = arm_pulse_usb || start_adc_read_usb_pulse || start_la_read_usb_pulse || start_trace_read_usb_pulse;
+    wire fresh_start_ui;
+
     always @(*) begin
        if (stream_mode)
           // TODO: is this still relevant?
@@ -337,14 +340,14 @@ module ddr (
        end
        else begin
           // Xilinx FIFO asserts "underflow" for a single cycle only:
-          if (arm_pulse_usb)
+          if (fresh_start_usb)
              postddr_fifo_underflow_sticky <= 0;
           else if (postddr_fifo_underflow)
              postddr_fifo_underflow_sticky <= 1;
 
           // SAM3U likes to read multiples of 4 bytes, so we don't flag an
           // underflow unless we observe at least 3 underflow reads
-          if (arm_pulse_usb)
+          if (fresh_start_usb)
              postddr_fifo_underflow_count <= 0;
           else if (postddr_fifo_underflow && postddr_fifo_underflow_count < pMAX_UNDERFLOWS)
              postddr_fifo_underflow_count <= postddr_fifo_underflow_count + 1;
@@ -354,7 +357,7 @@ module ddr (
 
    // for debug: count FIFO reads
    always @(posedge clk_usb) begin
-      if (arm_pulse_usb) begin
+      if (fresh_start_usb) begin
          fifo_read_count <= 0;
          fifo_read_count_error_freeze <= 0;
       end
@@ -380,6 +383,15 @@ module ddr (
       .dst_clk       (ui_clk),
       .dst_pulse     (arm_pulse_ui)
    );
+
+   cdc_pulse U_fresh_start_cdc (
+      .reset_i       (reset),
+      .src_clk       (clk_usb),
+      .src_pulse     (fresh_start_usb),
+      .dst_clk       (ui_clk),
+      .dst_pulse     (fresh_start_ui)
+   );
+
 
     (* ASYNC_REG = "TRUE" *) reg[1:0] postddr_fifo_empty_ui_pipe;
     reg postddr_fifo_empty_ui;
@@ -409,7 +421,7 @@ module ddr (
 
    // track how many FIFO entries (roughly) are available to be read; tricky because of two clock domains!
    always @(posedge ui_clk) begin
-      if (arm_pulse_ui) begin
+      if (fresh_start_ui) begin
          write_count <= 0;
          write_count_to_usb <= 0;
          read_update <= 1'b0;
@@ -429,6 +441,7 @@ module ddr (
       end
    end
 
+   // TODO: still need this?
    always @(posedge clk_usb) begin
       if (arm_pulse_usb) begin
          read_count <= 0;
@@ -448,7 +461,7 @@ module ddr (
 
     // Read slow FIFO: TODO! (some parts haven't been updated yet)
     always @(posedge clk_usb) begin
-       if (reset || arm_pulse_usb || start_adc_read_usb_pulse || start_la_read_usb_pulse || start_trace_read_usb_pulse) begin
+       if (reset || fresh_start_usb) begin
           slow_read_count <= 0;
           slow_fifo_rd_slow <= 1'b0;
        end
@@ -524,7 +537,7 @@ module ddr (
         // want to clear first_read_done yet, because there are conditions
         // where we may falsely set first_read (too early); by waiting instead
         // for the postddr flush to be done, we avoid those scenarios.
-        if ( ((arm_pulse_usb || start_adc_read_usb_pulse || start_la_read_usb_pulse || start_trace_read_usb_pulse) && postddr_fifo_empty) ||
+        if ( (fresh_start_usb && postddr_fifo_empty) ||
              (pre_read_flush_usb_r && ~pre_read_flush_usb) ) begin
             first_read <= 1'b0;
             first_read_done <= 1'b0;
@@ -961,7 +974,7 @@ module ddr (
             // To catch arm pulse even if we're busy; this is used to abort an active DDR read or write activity
             // if the scope is re-armed prior to the DDR process's normal conclusion. This can arise if the user
             // does a long capture but doesn't read the full capture.
-            if (arm_pulse_ui)
+            if (arm_pulse_ui) // TODO: what about non-ADC sources?
                 arm_event <= 1'b1;
             else if (ddr_state == pS_DDR_IDLE)
                 arm_event <= 1'b0;
@@ -1016,7 +1029,7 @@ module ddr (
 
     // make overflow sticky:
     always @(posedge ui_clk) begin
-       if (arm_pulse_ui)
+       if (fresh_start_ui)
           fifo_overflow_ddr <= 1'b0;
        else if (postddr_fifo_overflow)
           fifo_overflow_ddr <= 1'b1;
@@ -1024,7 +1037,7 @@ module ddr (
 
     // detect "reading too soon" separately from general underflow errors:
     always @(posedge clk_usb) begin
-       if (arm_pulse_usb)
+       if (fresh_start_usb)
           reading_too_soon_error <= 1'b0;
        else if (fifo_read_fifoen && ((ddr_state == pS_DDR_WAIT_READ) && pre_read_flush))
           reading_too_soon_error <= 1'b1;
