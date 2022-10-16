@@ -56,6 +56,9 @@ module preddr_18to64_converter (
     wire fifo_empty_raw;
     wire capture_done_rd;
     reg done_hold;
+    reg fifo_empty_raw_r;
+    reg capture_done_r;
+    reg capture_done_r2;
 
     // TODO: report these somewhere
     wire fifo_full;
@@ -75,9 +78,12 @@ module preddr_18to64_converter (
             sample_counter <= 0;
             fifo_din <= 0;
             fifo_wr <= 0;
+            capture_done_r <= 0;
+            capture_done_r2 <= 0;
         end
         else begin
             wide_word_valid_r <= wide_word_valid;
+            {capture_done_r2, capture_done_r} <= {capture_done_r, capture_done};
             if (enabled) begin
                 fifo_wr <= wide_word_valid && ~wide_word_valid_r;
                 if (capture_start) begin
@@ -161,15 +167,17 @@ module preddr_18to64_converter (
         if (reset) begin
             done_hold <= 1'b0;
             capture_done_out <= 1'b0;
+            fifo_empty_raw_r <= 1'b0;
         end
         else begin
             // The capture_done pulse activates a hold signal; then when the FIFO
             // goes empty, we know we are done:
+            fifo_empty_raw_r <= fifo_empty_raw;
             if (capture_done_rd)
                 done_hold <= 1'b1;
-            if (capture_done_out)
+            else if (capture_done_out)
                 capture_done_out <= 1'b0;
-            else if (done_hold && fifo_empty_raw) begin
+            else if (done_hold && fifo_empty_raw && fifo_empty_raw_r) begin
                 capture_done_out <= 1'b1;
                 done_hold <= 1'b0;
             end
@@ -179,7 +187,7 @@ module preddr_18to64_converter (
     cdc_pulse U_done (
         .reset_i       (reset),
         .src_clk       (wr_clk),
-        .src_pulse     (capture_done),
+        .src_pulse     (capture_done_r2),
         .dst_clk       (rd_clk),
         .dst_pulse     (capture_done_rd)
     );
@@ -227,7 +235,7 @@ module preddr_18to64_converter (
 `endif // NOFIFO
 
 `ifdef ILA_PREDDR_CONVERTER
-    ila_preddr_converter U_preddr_converted (
+    ila_preddr_converter U_preddr_converter (
         .clk            (wr_clk),               // input wire clk
         .probe0         (reset),                // input wire [0:0]  
         .probe1         (fifo_wr),              // input wire [0:0]  
@@ -246,6 +254,20 @@ module preddr_18to64_converter (
         .probe14        (I_wr),                 // input wire [0:0]  
         .probe15        (I_4bit_mode)           // input wire [0:0]  
     );
+
+    ila_preddr_converter_rd U_preddr_converter_rd (
+        .clk            (rd_clk),               // input wire clk
+        .probe0         (reset),                // input wire [0:0]  
+        .probe1         (fifo_rd),              // input wire [0:0]  
+        .probe2         (fifo_dout),            // input wire [63:0] 
+        .probe3         (fifo_empty_raw),       // input wire [0:0]  
+        .probe4         (capture_done_out),     // input wire [0:0]  
+        .probe5         (capture_start_out),    // input wire [0:0]  
+        .probe6         (fifo_underflow),       // input wire [0:0]  
+        .probe7         (done_hold),            // input wire [0:0]  
+        .probe8         (capture_done_rd)       // input wire [0:0]  
+    );
+
 `endif
 
 

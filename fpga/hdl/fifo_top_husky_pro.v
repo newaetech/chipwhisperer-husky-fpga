@@ -678,7 +678,7 @@ module fifo_top_husky_pro (
             // goes empty, we know we are done:
             if (write_done_ui)
                 done_hold <= 1'b1;
-            if (write_done_out)
+            else if (write_done_out)
                 write_done_out <= 1'b0;
             else if (done_hold && preddr_fifo_empty) begin
                 write_done_out <= 1'b1;

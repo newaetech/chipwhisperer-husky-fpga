@@ -1395,7 +1395,11 @@ wire stat_reset = (ddr_rwtest_en)? rw_stat_reset : capture_go_adc;
         .probe37        (write_done_adc),       // input wire [0:0]
         .probe38        (start_read_ui_pulse),  // input wire [0:0]
         .probe39        (write_done_la),        // input wire [0:0]
-        .probe40        (capture_go_la)         // input wire [0:0]
+        .probe40        (capture_go_la),        // input wire [0:0]
+        .probe41        (preddr_la_fifo_rd),    // input wire [0:0]
+        .probe42        (write_done_trace),     // input wire [0:0]
+        .probe43        (capture_go_trace),     // input wire [0:0]
+        .probe44        (preddr_trace_fifo_rd)  // input wire [0:0]
     );
 
 `endif
