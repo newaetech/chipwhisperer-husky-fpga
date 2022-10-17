@@ -966,6 +966,13 @@ module ddr (
             else if (ddr_writing && (active_sources == 3'b000))
                 ddr_write_data_done <= 1'b1;
 
+            //TODO: first_read_pulse_ui can cause failures if it results in
+            //read_started going back low when FSM is in pS_DDR_WAIT_READ
+            //state (it will trigger a flush). It also generally causes
+            //read_started to pulse low a second time on every read cycle.
+            //Need to figure out a better solution but reluctant to do so
+            //without a simulation testbench which covers all the corners
+            //here.
             if (start_read_ui_pulse || first_read_pulse_ui)
                 read_started <= 1'b0;
             else if (ddr_state == pS_DDR_READ1)
@@ -1399,7 +1406,11 @@ wire stat_reset = (ddr_rwtest_en)? rw_stat_reset : capture_go_adc;
         .probe41        (preddr_la_fifo_rd),    // input wire [0:0]
         .probe42        (write_done_trace),     // input wire [0:0]
         .probe43        (capture_go_trace),     // input wire [0:0]
-        .probe44        (preddr_trace_fifo_rd)  // input wire [0:0]
+        .probe44        (preddr_trace_fifo_rd), // input wire [0:0]
+        .probe45        (postddr_fifo_underflow_sticky),
+        .probe46        (postddr_fifo_empty_ui),           
+        .probe47        (read_started),                    
+        .probe48        (pre_read_flush)                   
     );
 
 `endif
@@ -1444,7 +1455,11 @@ wire stat_reset = (ddr_rwtest_en)? rw_stat_reset : capture_go_adc;
         .probe11        (fast_fifo_read_mode),  // input wire [0:0]
         .probe12        (fifo_read_data),       // input wire [7:0]
         .probe13        (error_flag),           // input wire [0:0]
-        .probe14        (pre_read_flush_usb)    // input wire [0:0]
+        .probe14        (pre_read_flush_usb),   // input wire [0:0]
+        .probe15        (first_read),           // input wire [0:0]
+        .probe16        (first_read_done),      // input wire [0:0]
+        .probe17        (read_started_usb),     // input wire [0:0]
+        .probe18        (fresh_start_usb)       // input wire [0:0]
     );
 `endif
 
