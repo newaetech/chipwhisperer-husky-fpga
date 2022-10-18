@@ -1046,7 +1046,7 @@ module ddr (
     always @(posedge clk_usb) begin
        if (fresh_start_usb)
           reading_too_soon_error <= 1'b0;
-       else if (fifo_read_fifoen && ((ddr_state == pS_DDR_WAIT_READ) && pre_read_flush))
+       else if (fifo_read_fifoen && ((ddr_state == pS_DDR_WAIT_READ) && pre_read_flush_usb))
           reading_too_soon_error <= 1'b1;
     end
 
