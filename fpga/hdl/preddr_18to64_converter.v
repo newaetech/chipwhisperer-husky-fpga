@@ -169,7 +169,7 @@ module preddr_18to64_converter (
             capture_done_out <= 1'b0;
             fifo_empty_raw_r <= 1'b0;
         end
-        else begin
+        else if (enabled) begin
             // The capture_done pulse activates a hold signal; then when the FIFO
             // goes empty, we know we are done:
             fifo_empty_raw_r <= fifo_empty_raw;
@@ -181,6 +181,11 @@ module preddr_18to64_converter (
                 capture_done_out <= 1'b1;
                 done_hold <= 1'b0;
             end
+        end
+        else begin
+            done_hold <= 1'b0;
+            capture_done_out <= 1'b0;
+            fifo_empty_raw_r <= 1'b0;
         end
     end
 
@@ -195,7 +200,7 @@ module preddr_18to64_converter (
     cdc_pulse U_capture_start_cdc (
         .reset_i       (reset),
         .src_clk       (wr_clk),
-        .src_pulse     (capture_start),
+        .src_pulse     (capture_start && enabled),
         .dst_clk       (rd_clk),
         .dst_pulse     (capture_start_out)
     );
