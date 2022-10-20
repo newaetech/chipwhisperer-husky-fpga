@@ -1,0 +1,89 @@
+# This file is public domain, it can be freely copied without restrictions.
+# SPDX-License-Identifier: CC0-1.0
+
+# Makefile
+
+# defaults
+SIM ?= icarus
+TOPLEVEL_LANG ?= verilog
+DUMP = 0
+
+VERILOG_SOURCES += $(PWD)/../vivado/cw310/cwhusky_cw310_cocowrapper.v
+VERILOG_SOURCES += $(PWD)/../vivado/cw310/cwhusky_cw310_top.v
+VERILOG_SOURCES += $(PWD)/../hdl/clockglitch_a7.v
+VERILOG_SOURCES += $(PWD)/../hdl/mmcm_phaseshift_interface.v
+VERILOG_SOURCES += $(PWD)/../hdl/includes.v
+VERILOG_SOURCES += $(PWD)/../hdl/reg_chipwhisperer.v
+VERILOG_SOURCES += $(PWD)/../hdl/reg_openadc.v
+VERILOG_SOURCES += $(PWD)/../hdl/reg_openadc_adcfifo.v
+VERILOG_SOURCES += $(PWD)/../hdl/fifo_top_husky_pro.v
+VERILOG_SOURCES += $(PWD)/../hdl/ddr.v
+VERILOG_SOURCES += $(PWD)/../hdl/preddr_18to64_converter.v
+VERILOG_SOURCES += $(PWD)/../hdl/simple_ddr3_rwtest.v
+VERILOG_SOURCES += $(PWD)/../hdl/registers.v
+VERILOG_SOURCES += $(PWD)/../hdl/setup.v
+VERILOG_SOURCES += $(PWD)/../hdl/trigger_resync.v
+VERILOG_SOURCES += $(PWD)/../hdl/trigger_unit.v
+VERILOG_SOURCES += $(PWD)/../hdl/usb_reg_main.v
+VERILOG_SOURCES += $(PWD)/../hdl/reg_clockglitch.v
+VERILOG_SOURCES += $(PWD)/../hdl/openadc_interface.v
+VERILOG_SOURCES += $(PWD)/../hdl/clock_managment_advanced.v
+VERILOG_SOURCES += $(PWD)/../hdl/cdc_pulse.v
+VERILOG_SOURCES += $(PWD)/../hdl/reg_husky_adc.v
+VERILOG_SOURCES += $(PWD)/../hdl/reg_mmcm_drp.v
+VERILOG_SOURCES += $(PWD)/../hdl/xadc.v
+VERILOG_SOURCES += $(PWD)/../hdl/slow_debug.v
+VERILOG_SOURCES += $(PWD)/../hdl/reg_la.v
+VERILOG_SOURCES += $(PWD)/../hdl/userio.v
+VERILOG_SOURCES += $(PWD)/../hdl/sad.v
+VERILOG_SOURCES += $(PWD)/../hdl/edge_trigger.v
+VERILOG_SOURCES += $(PWD)/../tracewhisperer/hdl/trace_top.v
+VERILOG_SOURCES += $(PWD)/../tracewhisperer/hdl/reg_trace.v
+VERILOG_SOURCES += $(PWD)/../tracewhisperer/hdl/fe_capture_trace.v
+VERILOG_SOURCES += $(PWD)/../tracewhisperer/hdl/cdc_bus.v
+VERILOG_SOURCES += $(PWD)/../tracewhisperer/hdl/uart_core.v
+VERILOG_SOURCES += $(PWD)/../tracewhisperer/hdl/simple_trigger.v
+VERILOG_SOURCES += $(PWD)/../tracewhisperer/phywhisperer-common/hardware/hdl/fe_capture_main.v
+VERILOG_SOURCES += $(PWD)/../tracewhisperer/phywhisperer-common/hardware/hdl/reg_main.v
+VERILOG_SOURCES += $(PWD)/../tracewhisperer/phywhisperer-common/hardware/hdl/pw_trigger.v
+VERILOG_SOURCES += $(PWD)/../beh/ddr3_app_model.v
+VERILOG_SOURCES += $(PWD)/../tracewhisperer/sim/vivado/fifo_generator_0_sim_netlist.v
+VERILOG_SOURCES += $(PWD)/../tracewhisperer/sim/vivado/fifo_generator_tiny_sim_netlist.v
+VERILOG_SOURCES += $(PWD)/../tracewhisperer/phywhisperer-common/hardware/hdl/fifo.v
+VERILOG_SOURCES += $(PWD)/vivado/adc_fast_fifo_sim_netlist.v
+VERILOG_SOURCES += $(PWD)/vivado/pre_ddr_slow_fifo_sim_netlist.v
+VERILOG_SOURCES += $(PWD)/vivado/post_ddr_slow_fifo_sim_netlist.v
+VERILOG_SOURCES += $(PWD)/vivado/tiny_adc_fast_fifo_sim_netlist.v
+VERILOG_SOURCES += $(PWD)/vivado/tiny_post_ddr_slow_fifo_sim_netlist.v
+VERILOG_SOURCES += $(PWD)/vivado/sad_fifo_sim_netlist.v
+VERILOG_SOURCES += $(PWD)/vivado/ddr_model_fifo_sim_netlist.v
+VERILOG_SOURCES += $(PWD)/vivado/pre_ddr_generic_fifo_sim_netlist.v
+
+COMPILE_ARGS += -DNOMIG
+COMPILE_ARGS += -DCW310
+COMPILE_ARGS += -DPRO
+#COMPILE_ARGS += -DNOFIFO
+COMPILE_ARGS += -DTRACE
+COMPILE_ARGS += -DTINYFIFO
+COMPILE_ARGS += -DREGULARDDR
+COMPILE_ARGS += -P cwhusky_cw310_cocowrapper.pDUMP=$(DUMP)
+
+COMPILE_ARGS += -I../hdl
+COMPILE_ARGS += -I../tracewhisperer/hdl
+COMPILE_ARGS += -y/tools/Xilinx/Vivado/2020.2/ids_lite/ISE/verilog/src/unisims/
+COMPILE_ARGS += -s glbl
+
+PLUSARGS += -fst
+
+# TOPLEVEL is the name of the toplevel module in your Verilog or VHDL file
+#TOPLEVEL = cwhusky_cw310_top
+TOPLEVEL = cwhusky_cw310_cocowrapper
+
+# MODULE is the basename of the Python test file
+MODULE = test_husky
+
+# available to python as cocotb.plusargs['indelay']:
+#PLUSARGS += +indelay=3
+
+# include cocotb's make rules to take care of the simulator setup
+include $(shell cocotb-config --makefiles)/Makefile.sim
