@@ -17,12 +17,12 @@ class Registers(object):
         await ClockCycles(self.dut.clk_usb, 3)
 
 
-    async def write(self, address, data, size=1):
+    async def write(self, address, data):
         await self.lock.acquire()
         try:
             await self.setup_rw_address(address)
-            for i in range(size):
-                self.dut.USB_Data.value = data & 0xff
+            for i in range(len(data)):
+                self.dut.USB_Data.value = data[i]
                 self.dut.USB_WRn.value = 0
                 await ClockCycles(self.dut.clk_usb, 1)
                 self.dut.USB_WRn.value = 1
@@ -30,23 +30,21 @@ class Registers(object):
                 await ClockCycles(self.dut.clk_usb, 1)
                 self.dut.USB_CEn.value = 1
                 await ClockCycles(self.dut.clk_usb, 2)
-                data = data >> 8
                 self.dut.USB_Addr_Bytecount.value = self.dut.USB_Addr_Bytecount.value + 1
         finally:
             self.dut.w.value = 0
             self.lock.release()
 
     async def read(self, address, size=1):
+        data = []
         await self.lock.acquire()
         try:
             await self.setup_rw_address(address)
-            data = 0
             for i in range(size):
-                rdata = await self.read_next_byte()
-                data |= rdata << (8*i)
+                data.append(await self.read_next_byte())
         finally:
             self.lock.release()
-        return data
+        return bytearray(data)
 
     async def read_next_byte(self):
         self.dut.USB_RDn.value = 0
@@ -57,6 +55,7 @@ class Registers(object):
         rdata = self.dut.USB_Data.value
         self.dut.USB_RDn.value = 1
         await ClockCycles(self.dut.clk_usb, 1)
+        await ClockCycles(self.dut.clk_usb, 2) # TODO: extra cycles here are to accomodate CW310
         self.dut.USB_Addr_Bytecount.value = self.dut.USB_Addr_Bytecount.value + 1
         return rdata
 
@@ -81,5 +80,12 @@ class Registers(object):
 
     async def read_samples_done(self):
         self.lock.release()
+
+    def to_bytes(self, data, size):
+        return list(int.to_bytes(data, length=size, byteorder='little'))
+
+    def from_bytes(self, data):
+        return int.from_bytes(data, byteorder='little')
+
 
 
