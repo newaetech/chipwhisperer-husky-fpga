@@ -462,10 +462,13 @@ module cwhusky_tb();
       write_1byte(`LA_ARM, 8'd1);
 
       rw_lots_bytes(`LA_CAPTURE_DEPTH);
-      write_next_byte((128 & 32'h0000_00FF));
-      write_next_byte((128 & 32'h0000_FF00)>>8);
+      write_next_byte((320 & 32'h0000_00FF));
+      write_next_byte((320 & 32'h0000_FF00)>>8);
+      write_next_byte((320 & 32'h00FF_0000)>>16);
+      write_next_byte((320 & 32'hFF00_0000)>>24);
 
       write_1byte(`LA_CAPTURE_GROUP, 8'h86); // group 6 in 4-bit capture mode
+      //write_1byte(`LA_CAPTURE_GROUP, 8'h06); // group 6 in 9-bit capture mode
       write_1byte(`LA_DOWNSAMPLE, 8'd0);
       write_1byte(`LA_MANUAL_CAPTURE, 8'd1);
       #(pCLK_USB_PERIOD * 10);
@@ -474,7 +477,7 @@ module cwhusky_tb();
       //    target_io4_reg <= ~target_io4_reg;
       //    repeat(20) @(posedge clk_adc);
       //end
-      #(pCLK_USB_PERIOD * 200);
+      #(pCLK_USB_PERIOD * 600);
       //
   end
 
@@ -636,6 +639,7 @@ initial begin
       // It's the total number of samples, accounting for segments, rounded up to a multiple of 3.
       //samples_to_read = $ceil(prFIFO_SAMPLES*pNUM_SEGMENTS/3)*3;
       samples_to_read = prFIFO_SAMPLES*pNUM_SEGMENTS;
+      //samples_to_read = 30;
 
       if (pSTREAM) begin
          wait (setup_done);
@@ -751,16 +755,17 @@ initial begin
 
       /* now read the LA data and check it:
       write_1byte(`REG_DDR_START_READ, 8'd2);
-      repeat(100) @(posedge clk_usb);   // CRITICAL: postddr FIFO must not be empty! 
+      repeat(500) @(posedge clk_usb);   // CRITICAL: postddr FIFO must not be empty! 
                                         // while writing REG_DDR_START_READ above kicks off filling the postddr FIFO,
                                         // there is a lag for the first DDR reads to come in.
       rw_lots_bytes(`ADCREAD_ADDR);
-      for (i = 0; i < 64; i += 1) begin
+      for (i = 0; i < 160; i += 1) begin
           read_next_byte(rdata);
           $display("LA read byte: %2x", rdata);
           // primitive error checking
-          if (((8'ha1 + (2*i)) % 256) != rdata) begin
-              $display("ERROR on LA read");
+          expected =  (8'ha1 + (2*i)) % 256;
+          if (expected != rdata) begin
+              $display("ERROR on LA read: expected %h, got %h", expected, rdata);
               errors += 1;
           end
       end
@@ -777,7 +782,7 @@ initial begin
                                         // while writing REG_DDR_START_READ above kicks off filling the postddr FIFO,
                                         // there is a lag for the first DDR reads to come in.
       rw_lots_bytes(`ADCREAD_ADDR);
-      for (i = 0; i < 64; i += 1) begin
+      for (i = 0; i < 160; i += 1) begin
           read_next_byte(rdata);
           $display("LA read byte: %2x", rdata);
           // primitive error checking
@@ -811,6 +816,9 @@ initial begin
       $finish;
    end
 end
+
+always @(posedge U_dut.U_la_converter.fifo_wr)
+    $display("XXX %x", U_dut.U_la_converter.fifo_din);
 
 
    // check glitch output thread:
