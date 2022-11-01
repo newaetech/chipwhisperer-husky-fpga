@@ -65,6 +65,9 @@ module reg_chipwhisperer #(
    /* Clock Sources */
    input  wire        pll_fpga_clk,
    input  wire        glitchclk,
+   input  wire        glitch_mmcm1_clk_out,
+   input  wire        adc_sample_clk,
+   input  wire        trace_fe_clk,
 
    /* GPIO Pins & Routing */
    inout  wire        targetio1_io,
@@ -101,8 +104,10 @@ module reg_chipwhisperer #(
    input  wire                     userio_clk,
 
    /* Main trigger connections */
-   output wire        trigger_o,        // Trigger signal to capture system
-   output wire        trig_glitch_o,    // trig/glitch MCX 
+   output wire        trigger_capture,  // Trigger signal to capture system
+   output wire        trigger_glitch,   // Trigger signal to glitch system
+   output wire        trigger_trace,    // Trigger signal to trace
+   output wire        trig_glitch_o_mcx,// trig/glitch MCX 
 
    input  wire        trace_exists,
    input  wire        la_exists
@@ -355,6 +360,19 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
    assign targetio_highz = reg_targetpower_off;
 
+   wire trigger_advio_glitch;
+   wire trigger_sad_glitch;
+   wire trigger_decodedio_glitch;
+   wire trigger_trace_glitch;
+   wire trigger_adc_glitch;
+   wire trigger_edge_glitch;
+   wire trigger_advio_trace;
+   wire trigger_sad_trace;
+   wire trigger_decodedio_trace;
+   wire trigger_trace_trace;
+   wire trigger_adc_trace;
+   wire trigger_edge_trace;
+
    wire trigger_and;
    wire trigger_or;
    wire trigger_ext;
@@ -394,22 +412,76 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
                          (registers_cwtrigsrc[7:6] == 2'b10) ? (~trigger_and) :
                          1'b0;
 
-   wire trigger;
-   assign trigger = (registers_cwtrigmod[2:0] == 3'b000) ? trigger_ext :
-                    (registers_cwtrigmod[2:0] == 3'b001) ? trigger_advio_i : 
-                    (registers_cwtrigmod[2:0] == 3'b010) ? trigger_sad_i :
-                    (registers_cwtrigmod[2:0] == 3'b011) ? trigger_decodedio_i :
-                    (registers_cwtrigmod[2:0] == 3'b100) ? trigger_trace_i :
-                    (registers_cwtrigmod[2:0] == 3'b101) ? trigger_adc_i :
-                    (registers_cwtrigmod[2:0] == 3'b110) ? trigger_edge_i : 1'b0;
+   assign trigger_capture = (registers_cwtrigmod[2:0] == 3'b000) ? trigger_ext :
+                            (registers_cwtrigmod[2:0] == 3'b001) ? trigger_advio_i : 
+                            (registers_cwtrigmod[2:0] == 3'b010) ? trigger_sad_i :
+                            (registers_cwtrigmod[2:0] == 3'b011) ? trigger_decodedio_i :
+                            (registers_cwtrigmod[2:0] == 3'b100) ? trigger_trace_i :
+                            (registers_cwtrigmod[2:0] == 3'b101) ? trigger_adc_i :
+                            (registers_cwtrigmod[2:0] == 3'b110) ? trigger_edge_i : 1'b0;
+
+   assign trigger_glitch  = (registers_cwtrigmod[2:0] == 3'b000) ? trigger_ext :
+                            (registers_cwtrigmod[2:0] == 3'b001) ? trigger_advio_glitch : 
+                            (registers_cwtrigmod[2:0] == 3'b010) ? trigger_sad_glitch :
+                            (registers_cwtrigmod[2:0] == 3'b011) ? trigger_decodedio_glitch :
+                            (registers_cwtrigmod[2:0] == 3'b100) ? trigger_trace_glitch :
+                            (registers_cwtrigmod[2:0] == 3'b101) ? trigger_adc_glitch :
+                            (registers_cwtrigmod[2:0] == 3'b110) ? trigger_edge_glitch : 1'b0;
+
+   assign trigger_trace   = (registers_cwtrigmod[2:0] == 3'b000) ? trigger_ext :
+                            (registers_cwtrigmod[2:0] == 3'b001) ? trigger_advio_trace : 
+                            (registers_cwtrigmod[2:0] == 3'b010) ? trigger_sad_trace :
+                            (registers_cwtrigmod[2:0] == 3'b011) ? trigger_decodedio_trace :
+                            (registers_cwtrigmod[2:0] == 3'b100) ? trigger_trace_trace :
+                            (registers_cwtrigmod[2:0] == 3'b101) ? trigger_adc_trace :
+                            (registers_cwtrigmod[2:0] == 3'b110) ? trigger_edge_trace : 1'b0;
+
+   trigger_pulse_cdc #(
+       .pWIDTH (6)
+   ) U_trigger_pulse_glitch (
+       .reset_i       (reset),
+       .src_clk       (adc_sample_clk),
+       .dst_clk       (glitch_mmcm1_clk_out),
+       .trigger_src   ({trigger_advio_i,
+                        trigger_sad_i,
+                        trigger_decodedio_i,
+                        trigger_trace_i,
+                        trigger_adc_i,
+                        trigger_edge_i}),
+       .trigger_dst   ({trigger_advio_glitch,
+                        trigger_sad_glitch,
+                        trigger_decodedio_glitch,
+                        trigger_trace_glitch,
+                        trigger_adc_glitch,
+                        trigger_edge_glitch})
+   );
+
+   trigger_pulse_cdc #(
+       .pWIDTH (6)
+   ) U_trigger_pulse_trace (
+       .reset_i       (reset),
+       .src_clk       (adc_sample_clk),
+       .dst_clk       (trace_fe_clk),
+       .trigger_src   ({trigger_advio_i,
+                        trigger_sad_i,
+                        trigger_decodedio_i,
+                        trigger_trace_i,
+                        trigger_adc_i,
+                        trigger_edge_i}),
+       .trigger_dst   ({trigger_advio_trace,
+                        trigger_sad_trace,
+                        trigger_decodedio_trace,
+                        trigger_trace_trace,
+                        trigger_adc_trace,
+                        trigger_edge_trace})
+   );
 
    assign decodeio_active = (registers_cwtrigmod[2:0] == 3'b011);
    assign sad_active = (registers_cwtrigmod[2:0] == 3'b010);
    assign edge_trigger_active = (registers_cwtrigmod[2:0] == 3'b110);
    assign trigger_ext_o = trigger_ext;
 
-   assign trigger_o = trigger;
-   assign trig_glitch_o = registers_cwauxio[1] ? glitchclk : trigger_o;
+   assign trig_glitch_o_mcx = registers_cwauxio[1] ? glitchclk : trigger_capture;
 
 
 /* IO Routing */
