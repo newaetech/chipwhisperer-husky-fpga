@@ -42,7 +42,8 @@ module edge_trigger #(
     input  wire         reg_read,     // Read flag
     input  wire         reg_write,    // Write flag
 
-    output wire         trigger
+    output wire         trigger,
+    output wire [7:0]   debug
 );
 
     reg [15:0] reg_edge_trigger_count;
@@ -111,6 +112,13 @@ module edge_trigger #(
 
     assign trigger = triggered && ~triggered_r;
 
+    assign debug = {edge_counter[1:0],  // 6:7
+                    running,            // 5
+                    armed_and_ready,    // 4
+                    triggered,          // 3
+                    trigger_in_r[1],    // 2
+                    trigger_in_r[0],    // 1
+                    trigger_in};        // 0
 
 endmodule
 `default_nettype wire
