@@ -31,7 +31,6 @@ module trigger_resync #(
    input  wire                          reset,
    input  wire                          fsm_reset,
    input  wire                          clk_usb, // for debug only
-   input  wire                          source_clk,
    input  wire                          glitch_mmcm1_clk_out,
    input  wire                          ext_single_mode,
    input  wire                          oneshot,
@@ -45,7 +44,8 @@ module trigger_resync #(
    input  wire                          glitch_go, // caution: synchronous to negedge of MMCM1 clock
    input  wire                          easy_done_exit,
    output wire                          idle,
-   output wire [1:0]                    fsm_state
+   output wire [1:0]                    fsm_state,
+   output wire [7:0]                    debug
 );
 
    reg async_trigger = 1'b0;
@@ -65,6 +65,14 @@ module trigger_resync #(
 
    assign idle = (state == pS_IDLE);
 
+   assign debug = {glitch_condition,    // 7
+                   oneshot,             // 6
+                   done,                // 5
+                   state,               // 4:3
+                   async_trigger,       // 2
+                   exttrigger_resync,   // 1
+                   exttrig};            // 0
+
    // See note in clockglitch_a7.v explaining why negedges are used!
 
    `ifdef ASYNC_TRIGGER
@@ -83,18 +91,11 @@ module trigger_resync #(
        end
 
    `else
-       // if incoming trigger is a single cycle, depending on scope.glitch.offset we could miss it, so let's try to prevent that:
-       reg exttrig_r_sourceclk;
-       wire exttrig_extended = exttrig_r_sourceclk || exttrig;
-
-       always @(posedge source_clk)
-          exttrig_r_sourceclk <= exttrig;
-
        always @(negedge glitch_mmcm1_clk_out) begin
-          exttrig_r <= exttrig_extended;
+          exttrig_r <= exttrig;
           offset_r <= offset;
           // important: don't start FSM if glitches aren't going to be generated (otherwise it'll get stuck in DONE)
-          if ((exttrig_extended == 1'b1) && (ext_single_mode? oneshot : 1'b1))
+          if ((exttrig == 1'b1) && (ext_single_mode? oneshot : 1'b1))
              async_trigger <= 1'b1;
           else if (done)
              async_trigger <= 1'b0;

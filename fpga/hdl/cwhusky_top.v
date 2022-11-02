@@ -185,6 +185,7 @@ module cwhusky_top(
    wire [7:0] edge_trigger_debug;
    wire [7:0] clockglitch_debug1;
    wire [7:0] clockglitch_debug2;
+   wire [7:0] clockglitch_debug3;
 
    wire flash_pattern;
 
@@ -332,7 +333,10 @@ module cwhusky_top(
                                  (userio_fpga_debug_select == 4'b0101)?  clockglitch_debug2 :
                                  (userio_fpga_debug_select == 4'b0110)?  usb_debug1 :
                                  (userio_fpga_debug_select == 4'b0111)?  usb_debug2 : 
-                                 (userio_fpga_debug_select == 4'b1000)?  usb_debug3 : edge_trigger_debug;
+                                 (userio_fpga_debug_select == 4'b1000)?  usb_debug3 :
+                                 (userio_fpga_debug_select == 4'b1001)?  edge_trigger_debug :
+                                 (userio_fpga_debug_select == 4'b1010)?  {cmd_arm_usb, clockglitch_debug3[6:0]} : 8'b0;
+                                 //(userio_fpga_debug_select == 4'b1010)?  clockglitch_debug3 : 8'b0;
 
    `else
       assign userio_debug_data[7:0] = 8'bz;
@@ -560,7 +564,8 @@ module cwhusky_top(
         .glitch_trigger_manual_sourceclock (glitch_trigger_manual_sourceclock),
         .led_glitch     (led_glitch),
         .debug1         (clockglitch_debug1),
-        .debug2         (clockglitch_debug2)
+        .debug2         (clockglitch_debug2),
+        .debug3         (clockglitch_debug3)
    );
 
    `ifdef LOGIC_ANALYZER

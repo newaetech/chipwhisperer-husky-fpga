@@ -63,7 +63,8 @@ module reg_clockglitch #(
 
    output reg          led_glitch,
    output wire [7:0]   debug1,
-   output wire [7:0]   debug2
+   output wire [7:0]   debug2,
+   output wire [7:0]   debug3
 );
 
 
@@ -350,7 +351,6 @@ module reg_clockglitch #(
       .reset                (reset),
       .fsm_reset            (fsm_reset),
       .clk_usb              (clk_usb),
-      .source_clk           (sourceclk),
       .glitch_mmcm1_clk_out (glitch_mmcm1_clk_out),
       .ext_single_mode      (ext_single_mode),
       .oneshot              (oneshot),
@@ -364,7 +364,8 @@ module reg_clockglitch #(
       .glitch_done_count    (glitch_done_count),
       .easy_done_exit       (easy_done_exit),
       .idle                 (trigger_resync_idle),
-      .fsm_state            (trigger_resync_state)
+      .fsm_state            (trigger_resync_state),
+      .debug                (debug3)            
    );
 
  /* Glitch Hardware */
