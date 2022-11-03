@@ -80,6 +80,8 @@ module trigger_resync #(
        // ambiguous clock" error. Or maybe we could get rid of the posedge exttrig
        // argument...
        // NOTE: ASYNC_TRIGGER option is untested!
+       // Here be dragons... (async_trigger isn't synchronous to the logic
+       // which uses it downstream)
        always @(negedge glitch_mmcm1_clk_out or posedge exttrig) begin
           exttrig_r <= exttrig;
           offset_r <= offset;

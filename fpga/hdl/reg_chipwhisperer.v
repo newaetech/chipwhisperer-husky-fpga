@@ -373,10 +373,12 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    wire trigger_adc_trace;
    wire trigger_edge_trace;
 
+   wire trigger_ext_glitch_pulse;
+
    wire trigger_and;
    wire trigger_or;
    wire trigger_ext;
-   
+
    assign trigger_and = ((registers_cwtrigsrc[0]  & auxio)          | ~registers_cwtrigsrc[0]) &
                         ((registers_cwtrigsrc[1]  & trigger_nrst_i) | ~registers_cwtrigsrc[1]) &
                         ((registers_cwtrigsrc[2]  & trigger_io1_i)  | ~registers_cwtrigsrc[2]) &
@@ -420,7 +422,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
                             (registers_cwtrigmod[2:0] == 3'b101) ? trigger_adc_i :
                             (registers_cwtrigmod[2:0] == 3'b110) ? trigger_edge_i : 1'b0;
 
-   assign trigger_glitch  = (registers_cwtrigmod[2:0] == 3'b000) ? trigger_ext :
+   assign trigger_glitch  = (registers_cwtrigmod[2:0] == 3'b000) ? trigger_ext_glitch_pulse :
                             (registers_cwtrigmod[2:0] == 3'b001) ? trigger_advio_glitch : 
                             (registers_cwtrigmod[2:0] == 3'b010) ? trigger_sad_glitch :
                             (registers_cwtrigmod[2:0] == 3'b011) ? trigger_decodedio_glitch :
@@ -475,6 +477,18 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
                         trigger_adc_trace,
                         trigger_edge_trace})
    );
+
+   // Here we get a bit creative to miminize glitch latency when triggering
+   // from trigger_ext. In CW-lite/pro, this signal was sampled
+   // asynchronously, but we want to avoid that here. Moreover we need to
+   // glitch only on the rising edge of trigger_ext. So we do this to avoid
+   // adding latency:
+   (* ASYNC_REG = "TRUE" *) reg trigger_ext_pipe;
+   reg trigger_ext_r;
+   always @(negedge glitch_mmcm1_clk_out)
+       {trigger_ext_r, trigger_ext_pipe} <= {trigger_ext_pipe, trigger_ext};
+   assign trigger_ext_glitch_pulse = trigger_ext & ~trigger_ext_r;
+
 
    assign decodeio_active = (registers_cwtrigmod[2:0] == 3'b011);
    assign sad_active = (registers_cwtrigmod[2:0] == 3'b010);
