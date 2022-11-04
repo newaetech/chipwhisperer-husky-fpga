@@ -1,5 +1,5 @@
 import cocotb
-from cocotb.triggers import RisingEdge, FallingEdge, Timer, ClockCycles
+from cocotb.triggers import RisingEdge, FallingEdge, Timer, ClockCycles, Join
 from cocotb.clock import Clock
 from cocotb.queue import Queue
 #from cocotb.regression import TestFactory
@@ -7,6 +7,49 @@ import random
 import math
 from cw310_registers import Registers
 import numpy as np
+
+class ADCTest(object):
+    def __init__(self, dut, harness, registers, num_captures=5):
+        self.clk = dut.clk_usb
+        self.dut = dut
+        self.harness = harness
+        self.registers = registers
+        self.num_captures = num_captures
+        self._coro = None
+        self.checker = CaptureRead(dut, harness)
+
+    def start(self) -> None:
+        """Start monitor"""
+        if self._coro is not None:
+            raise RuntimeError("Capture already started")
+        self._coro = cocotb.start_soon(self._run())
+        self.checker.start()
+
+    def stop(self) -> None:
+        """Stop monitor"""
+        if self._coro is None:
+            raise RuntimeError("Capture never started")
+        self._coro.kill()
+        self._coro = None
+
+    async def done(self) -> None:
+        await Join(self._coro)
+
+    async def _run(self) -> None:
+        for cap in range(self.num_captures):
+            samples = random.randint(300, 600)
+            await self.registers.write(16, self.registers.to_bytes(samples, 4))
+            await self.trigger_now()
+            await ClockCycles(self.clk, random.randint(0,1000)) # allow other jobs to sneak in here
+            self.checker.jobs.put_nowait({"samples": samples, "bits_per_sample": 12})
+            result = await self.checker.results.get()
+            assert result['errors'] == 0
+
+    async def trigger_now(self) -> None:
+        await self.registers.write(1, [0x24])
+        await self.registers.write(1, [0x0c])
+        await self.registers.write(1, [0x4c])
+
 
 class CaptureRead(object):
     def __init__(self, dut, harness):
@@ -225,21 +268,11 @@ async def basic_capture(dut, samples=301, bits_per_sample=12, timeout_time=10000
         samples = int(cocotb.plusargs['samples'])
     registers = Registers(dut)
     harness = Harness(dut, registers)
-    checker = CaptureRead(dut, harness)
+    adctest = ADCTest(dut, harness, registers, num_captures=3)
     dut.target_io4.value = 0
-    checker.start()
     await harness.reset()
     await registers.write(121, [1]) # use DDR and set ADC ramp mode
-
-    for i in range(3):
-        samples = random.randint(300, 600)
-        await registers.write(16, registers.to_bytes(samples, 4))
-        await registers.write(1, [0x24])
-        await registers.write(1, [0x0c])
-        await registers.write(1, [0x4c])
-
-        checker.jobs.put_nowait({"samples": samples, "bits_per_sample": 12})
-        result = await checker.results.get()
-        assert result['errors'] == 0
+    adctest.start()
+    await adctest.done()
 
 
