@@ -614,7 +614,9 @@ module cwhusky_top(
         .userio6                (USERIO_D[6]),
         .userio7                (USERIO_D[7]),
         .userio_clk             (USERIO_CLK),
+        .trigger_glitch         (trigger_glitch),
 
+        .clockglitch_debug      (clockglitch_debug3),
         .tu_la_debug            (tu_la_debug),
         .trace_data             (trace_data_sdr),
         .trace_debug            (trace_debug),
