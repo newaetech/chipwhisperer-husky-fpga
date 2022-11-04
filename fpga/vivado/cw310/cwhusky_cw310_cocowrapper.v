@@ -134,7 +134,16 @@ module cwhusky_cw310_cocowrapper(
     input  wire [31:0]  w,
 
     //output wire         TRIG_GLITCHOUT, //trigger/glitch out MCX
-    inout  wire         AUXIO // AUX I/O MCX
+    inout  wire         AUXIO, // AUX I/O MCX
+
+    // cocotb testbench stuff:
+    input  wire         adc_reading,
+    input  wire         la_reading,
+    input  wire         trace_reading,
+
+    input  wire [7:0]   adc_job,
+    input  wire [7:0]   la_job,
+    input  wire [7:0]   trace_job
 );
 
 

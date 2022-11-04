@@ -37,6 +37,10 @@ class ADCTest(object):
 
     async def _run(self) -> None:
         for cap in range(self.num_captures):
+            if self.dut.adc_job.value == cocotb.binary.BinaryValue("xxxxxxxx"):
+                self.dut.adc_job.value = 0
+            else:
+                self.dut.adc_job.value = self.dut.adc_job.value + 1
             samples = random.randint(300, 600)
             await self.registers.write(16, self.registers.to_bytes(samples, 4))
             await self.trigger_now()
@@ -122,6 +126,7 @@ class CaptureRead(object):
             dut._log.error("Unsupported! (yet)")
         bytes_read = 0
         bytes_remaining = bytes_to_read
+        self.dut.adc_reading.value = 1
         while (bytes_read < bytes_to_read):
             #new_bytes = list(target.fpga_read(3, min(bytes_remaining, 128)))
             new_bytes = list(await self.harness.registers.read(3, min(bytes_remaining, 64)))
@@ -132,6 +137,7 @@ class CaptureRead(object):
                 raw = new_bytes
             bytes_read += len(new_bytes)
             bytes_remaining -= len(new_bytes)
+        self.harness.dut.adc_reading.value = 0
         return raw
 
 
@@ -184,6 +190,17 @@ class Harness(object):
         usb_clock_thread = cocotb.start_soon(Clock(dut.clk_usb, 10, units="ns").start())
         adc_clock_thread = cocotb.start_soon(Clock(dut.PLL_CLK1, adc_period, units="ns").start())
         # TODO: initialize all DUT input values
+
+    async def initialize_dut(self):
+        self.dut.target_io4.value = 0
+        self.dut.adc_reading.value = 0
+        self.dut.la_reading.value = 0
+        self.dut.trace_reading.value = 0
+        #self.dut.adc_job.value = 0
+        self.dut.adc_job.value = cocotb.binary.BinaryValue("xxxxxxxx")
+        self.dut.la_job.value = cocotb.binary.BinaryValue("xxxxxxxx")
+        self.dut.trace_job.value = cocotb.binary.BinaryValue("xxxxxxxx")
+        await self.reset()
 
     async def reset(self):
         await self.registers.write(28, [1])
@@ -268,9 +285,8 @@ async def basic_capture(dut, samples=301, bits_per_sample=12, timeout_time=10000
         samples = int(cocotb.plusargs['samples'])
     registers = Registers(dut)
     harness = Harness(dut, registers)
-    adctest = ADCTest(dut, harness, registers, num_captures=3)
-    dut.target_io4.value = 0
-    await harness.reset()
+    adctest = ADCTest(dut, harness, registers, num_captures=2)
+    await harness.initialize_dut()
     await registers.write(121, [1]) # use DDR and set ADC ramp mode
     adctest.start()
     await adctest.done()
