@@ -5,6 +5,7 @@ import subprocess
 import random
 import re
 import time
+import os
 from tqdm import tqdm
 
 parser = argparse.ArgumentParser()
@@ -13,8 +14,10 @@ group.add_argument("--runs", type=int, help="Number of iterations.", default=1)
 group.add_argument("--test", help="Testcase to run")
 parser.add_argument("--seed", type=int, help="Seed to use when running a single test with --test.")
 parser.add_argument("--tests", help="Run all tests whose name contains TESTS", default='')
+parser.add_argument("--exclude", help="Exclude tests whose name contains TESTS", default='')
 parser.add_argument("--list", help="List available tests.", action='store_true')
 parser.add_argument("--dump", help="Enable waveform dumping.", action='store_true')
+parser.add_argument("--proc", type=int, help="Maximum number of parallel jobs to dispatch.", default=32)
 args = parser.parse_args()
 
 # Define testcases:
@@ -349,6 +352,7 @@ pass_regex = re.compile(r'^Simulation passed \((\d+) warnings')
 fail_regex = re.compile(r'^SIMULATION FAILED \((\d+) errors')
 seed_regex = re.compile(r'^Running with pSEED=(\d+)$')
 test_regex = re.compile(args.tests)
+exclude_regex = re.compile(args.exclude)
 
 # Check once that compile passes:
 outfile = open('regress.out', 'w')
@@ -362,11 +366,16 @@ for compile_target in ['compile', 'sad_nofifo', 'compile_edge']:
 # Run tests:
 start_time = int(time.time())
 processes = []
+jobs_to_submit = []
+exefiles = []
 
-print("Dispatching jobs... ", end='')
+print("Building list of jobs... ", end='')
 for test in tests:
    if args.tests:
       if test_regex.search(test['name']) == None:
+          continue
+   if args.exclude:
+      if exclude_regex.search(test['name']) != None:
           continue
 
    for i in range(args.runs):
@@ -410,18 +419,31 @@ for test in tests:
 
       # run:
       if run_test:
-         #print("Running: %s" % makeargs)
-         p = subprocess.Popen(makeargs, stdout=outfile, stderr=outfile)
-         processes.append((p,logfile,seed))
+         jobs_to_submit.append((makeargs, logfile, outfile, seed))
+         exefiles.append(exefile)
 
-num_processes = len(processes)
-print("done. %d tests running." % num_processes)
+num_processes = len(jobs_to_submit)
+print("done. %d tests to run." % num_processes)
 
 warns = []
 fails = []
 
-pbar       = tqdm(total=len(processes), desc='Tests finished')
-pbarpassed = tqdm(total=len(processes), desc='Tests passing ')
+pbar_dispatched = tqdm(total=len(jobs_to_submit), desc='Tests dispatched')
+pbar_finished   = tqdm(total=len(jobs_to_submit), desc='Tests finished ')
+pbar_passed     = tqdm(total=len(jobs_to_submit), desc='Tests passing  ')
+
+# submit first batch of jobs (up to args.proc):
+if args.proc > len(jobs_to_submit):
+    num_first_batch = len(jobs_to_submit)
+else:
+    num_first_batch = args.proc
+for i in range(num_first_batch):
+    makeargs, logfile, outfile, seed = jobs_to_submit.pop()
+    p = subprocess.Popen(makeargs, stdout=outfile, stderr=outfile)
+    processes.append((p,logfile,seed))
+
+pbar_dispatched.update(num_first_batch)
+pbar_dispatched.refresh()
 
 oldfinished = 0
 finished = 0
@@ -440,21 +462,28 @@ while len(processes):
                 fail_count += 1
                 fails.append("%s: %d errors (seed=%d)" % (l, errors, s))
             processes.remove((p,l,s))
+            if len(jobs_to_submit) > 0:
+                makeargs, logfile, outfile, seed = jobs_to_submit.pop()
+                p = subprocess.Popen(makeargs, stdout=outfile, stderr=outfile)
+                processes.append((p,logfile,seed))
+                pbar_dispatched.update(1)
+                pbar_dispatched.refresh()
 
-    pbar.update(finished - oldfinished)
-    pbarpassed.update(pass_count - oldpass_count)
+    pbar_finished.update(finished - oldfinished)
+    pbar_passed.update(pass_count - oldpass_count)
     oldfinished = finished
     oldpass_count = pass_count
     time.sleep(1)
-pbar.close()
-pbarpassed.close()
+
+pbar_dispatched.close()
+pbar_finished.close()
+pbar_passed.close()
 
 # just to be sure:
 #exit_codes = [p.wait() for p,l,s in processes]
 
 # sanity check:
 assert num_processes == pass_count + fail_count, "pass=%d, fail=%d" % (pass_count, fail_count)
-
 
 # Summarize results:
 print('\n*** RESULTS SUMMARY ***')
@@ -467,4 +496,10 @@ if fails:
     for f in fails:
         print(f)
 
+# clean up .vvp files:
+for v in exefiles:
+    try:
+        os.remove(v)
+    except OSError as e:
+        print("Error removing %s: %s" % (v, e))
 

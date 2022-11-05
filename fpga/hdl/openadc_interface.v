@@ -72,7 +72,8 @@ module openadc_interface #(
     output wire                         slow_fifo_wr,
     output wire                         slow_fifo_rd,
     output wire [8:0]                   la_debug,
-    output wire [7:0]                   fifo_debug
+    output wire [7:0]                   fifo_debug,
+    output wire [7:0]                   edge_trigger_debug
 
 );
 
@@ -398,7 +399,8 @@ module openadc_interface #(
        .reg_datao               (reg_datao_edge),
        .reg_read                (reg_read     ),
        .reg_write               (reg_write    ),
-       .trigger                 (trigger_edge_counter )
+       .trigger                 (trigger_edge_counter),
+       .debug                   (edge_trigger_debug)
    );
 
    reg_openadc #(

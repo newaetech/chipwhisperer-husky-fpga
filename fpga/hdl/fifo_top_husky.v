@@ -156,14 +156,6 @@ module fifo_top_husky(
        end
     end
 
-    always @(posedge adc_sampleclk) begin
-       if (fifo_rst)
-          fast_fifo_overflow_reg <= 1'b0;
-       else if (fast_fifo_overflow)
-          fast_fifo_overflow_reg <= 1'b1;
-    end
-
-
     assign fifo_read_fifoempty = slow_fifo_empty;
 
     //Counter for downsampling (NOT proper decimation)

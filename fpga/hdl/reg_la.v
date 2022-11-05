@@ -66,7 +66,9 @@ module reg_la #(
    input  wire         userio6,
    input  wire         userio7,
    input  wire         userio_clk,
+   input  wire         trigger_glitch,
 
+   input  wire [7:0]   clockglitch_debug,
    input  wire [8:0]   tu_la_debug,
 
    input  wire [7:0]   trace_data,
@@ -183,6 +185,7 @@ module reg_la #(
                                                (trigger_source_reg == 6'b000_100)? glitch_trigger :
                                                (trigger_source_reg == 6'b000_101)? tu_la_debug[0] : 
                                                (trigger_source_reg == 6'b000_110)? tu_la_debug[1] :
+                                               (trigger_source_reg == 6'b000_111)? trigger_glitch : 
                                                (trigger_source_reg[5] && (trigger_source_reg[1:0] == 2'b00))? io1 ^ trigger_source_reg[3] :
                                                (trigger_source_reg[5] && (trigger_source_reg[1:0] == 2'b01))? io2 ^ trigger_source_reg[3] :
                                                (trigger_source_reg[5] && (trigger_source_reg[1:0] == 2'b10))? io3 ^ trigger_source_reg[3] :
@@ -420,6 +423,17 @@ module reg_la #(
                capture8_source <= trace_debug[8];
            end
 
+           6: begin
+               capture0_source <= clockglitch_debug[0];
+               capture1_source <= clockglitch_debug[1];
+               capture2_source <= clockglitch_debug[2];
+               capture3_source <= clockglitch_debug[3];
+               capture4_source <= clockglitch_debug[4];
+               capture5_source <= clockglitch_debug[5];
+               capture6_source <= clockglitch_debug[6];
+               capture7_source <= clockglitch_debug[7];
+               capture8_source <= hs2;
+           end
 
            default: begin
                capture0_source <= 1'b1;
