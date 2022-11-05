@@ -56,30 +56,8 @@ class Registers(object):
         self.dut.USB_RDn.value = 1
         await ClockCycles(self.dut.clk_usb, 1)
         await ClockCycles(self.dut.clk_usb, 2) # TODO: extra cycles here are to accomodate CW310
-        self.dut.USB_Addr_Bytecount.value = self.dut.USB_Addr_Bytecount.value + 1
+        self.dut.USB_Addr_Bytecount.value = (self.dut.USB_Addr_Bytecount.value + 1) % 128
         return rdata
-
-    async def read_next_sample(self, lowres):
-        if lowres:
-            sample = await self.read_next_byte()
-        else:
-            if not self.i12BitReadCount:
-                rdata_r = await self.read_next_byte();
-                rdata = await self.read_next_byte();
-                self.rdata_r = rdata
-                sample = (rdata_r << 4) + (rdata >> 4)
-            else:
-                rdata = await self.read_next_byte();
-                sample = ((self.rdata_r[3:0] & 0x0f) << 8) + rdata
-            self.i12BitReadCount = not self.i12BitReadCount
-        return sample
-
-    async def read_samples_init(self):
-        await self.lock.acquire()
-        await self.setup_rw_address(3)
-
-    async def read_samples_done(self):
-        self.lock.release()
 
     def to_bytes(self, data, size):
         return list(int.to_bytes(data, length=size, byteorder='little'))

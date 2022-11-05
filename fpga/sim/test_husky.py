@@ -127,16 +127,7 @@ class CaptureRead(object):
         bytes_read = 0
         bytes_remaining = bytes_to_read
         self.dut.adc_reading.value = 1
-        while (bytes_read < bytes_to_read):
-            #new_bytes = list(target.fpga_read(3, min(bytes_remaining, 128)))
-            new_bytes = list(await self.harness.registers.read(3, min(bytes_remaining, 64)))
-            #dut._log.info('Reading %d bytes' % len(new_bytes))
-            if bytes_read > 0:
-                raw.extend(new_bytes)
-            else:
-                raw = new_bytes
-            bytes_read += len(new_bytes)
-            bytes_remaining -= len(new_bytes)
+        raw = list(await self.harness.registers.read(3, bytes_remaining))
         self.harness.dut.adc_reading.value = 0
         return raw
 
@@ -285,7 +276,7 @@ async def basic_capture(dut, samples=301, bits_per_sample=12, timeout_time=10000
         samples = int(cocotb.plusargs['samples'])
     registers = Registers(dut)
     harness = Harness(dut, registers)
-    adctest = ADCTest(dut, harness, registers, num_captures=2)
+    adctest = ADCTest(dut, harness, registers, num_captures=3)
     await harness.initialize_dut()
     await registers.write(121, [1]) # use DDR and set ADC ramp mode
     adctest.start()
