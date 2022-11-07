@@ -8,46 +8,167 @@ import math
 from cw310_registers import Registers
 import numpy as np
 
-class ADCTest(object):
-    def __init__(self, dut, harness, registers, num_captures=5):
+
+class GenericTest(object):
+    def __init__(self, dut, harness, registers, num_captures):
         self.clk = dut.clk_usb
         self.dut = dut
         self.harness = harness
         self.registers = registers
         self.num_captures = num_captures
+        self.checker = None
+        self.dut_job_signal = None
         self._coro = None
-        self.checker = CaptureRead(dut, harness)
+        self.dispatch_id = 0
 
     def start(self) -> None:
-        """Start monitor"""
+        """Start test thread"""
         if self._coro is not None:
             raise RuntimeError("Capture already started")
         self._coro = cocotb.start_soon(self._run())
+        if self.checker is None:
+            raise RuntimeError("checker not defined")
         self.checker.start()
 
     def stop(self) -> None:
-        """Stop monitor"""
+        """Stop test thread"""
         if self._coro is None:
             raise RuntimeError("Capture never started")
         self._coro.kill()
         self._coro = None
 
+    def _increment_dut_job(self) -> None:
+        """increment DUT job index, so it can be see in waveform"""
+        if self.dut_job_signal is None:
+            raise RuntimeError("DUT job not defined")
+        if self.dut_job_signal.value == cocotb.binary.BinaryValue("xxxxxxxx"):
+            self.dut_job_signal.value = 0
+        else:
+            self.dut_job_signal.value = self.dut_job_signal.value + 1
+
     async def done(self) -> None:
+        """ wait for _run() to complete """
         await Join(self._coro)
 
+    async def _job_setup(self) -> dict:
+        """ Generate and program properties of the job that will be run.
+        Dictionary of values which will be passed to the corresponding
+        checker(GenericCapture) instance.
+        """
+        self.dut._log.error("This must be implemented in child class.")
+
+    async def _dispatch_delay(self) -> None:
+        """ Allow for a delay between the job being dispatched and the
+        corresponding checker(GenericCapture) instance being notified of it.
+        """
+        self.dut._log.error("This must be implemented in child class.")
+
+    async def _trigger(self) -> None:
+        """ Trigger the DUT capture.
+        """
+        self.dut._log.error("This must be implemented in child class.")
+
     async def _run(self) -> None:
+        """ Main run loop. """
+        self.dut_job_signal.value = cocotb.binary.BinaryValue("xxxxxxxx")
         for cap in range(self.num_captures):
-            if self.dut.adc_job.value == cocotb.binary.BinaryValue("xxxxxxxx"):
-                self.dut.adc_job.value = 0
-            else:
-                self.dut.adc_job.value = self.dut.adc_job.value + 1
-            samples = random.randint(300, 600)
-            await self.registers.write(16, self.registers.to_bytes(samples, 4))
-            await self.trigger_now()
-            await ClockCycles(self.clk, random.randint(0,1000)) # allow other jobs to sneak in here
-            self.checker.jobs.put_nowait({"samples": samples, "bits_per_sample": 12})
+            self._increment_dut_job()
+            job = await self._job_setup()
+            await self._trigger()
+            await self._dispatch_delay()
+            self.dut._log.info("Dispatching job number %d: %s" % (self.dispatch_id, job))
+            self.checker.jobs.put_nowait(job)
             result = await self.checker.results.get()
             assert result['errors'] == 0
+            self.dispatch_id += 1
+
+
+
+class GenericCapture(object):
+    def __init__(self, dut, harness, dut_reading_signal):
+        self.clk = dut.clk_usb
+        self.dut = dut
+        self.harness = harness
+        self.dut_reading_signal = dut_reading_signal
+        self.jobs = Queue()
+        self.results = Queue()
+        self._coro = None
+        self.job_id = 0
+
+    def start(self) -> None:
+        """Start capture thread"""
+        if self._coro is not None:
+            raise RuntimeError("Capture already started")
+        self._coro = cocotb.start_soon(self._run())
+
+    def stop(self) -> None:
+        """Stop capture thread"""
+        if self._coro is None:
+            raise RuntimeError("Capture never started")
+        self._coro.kill()
+        self._coro = None
+
+    async def _pre_read_wait(self, job) -> None:
+        """ Wait time after job is received. Intended to be used to account for
+        the DUT to process the job, before we can go obtain the job result.
+        """
+        self.dut._log.error("This must be implemented in child class.")
+
+    async def _initiate_read(self) -> None:
+        """ Set up the read and ensure that data is available to be read.
+        """
+        self.dut._log.error("This must be implemented in child class.")
+
+    async def _read_samples(self, job) -> list:
+        """ Read all the samples from DUT. Should return actual samples, not
+        raw read data (e.g. a list of 12-bit samples, not a list of bytes that
+        encode 12-bit samples)
+        """
+        self.dut._log.error("This must be implemented in child class.")
+
+    def _check_samples(self, job, data) -> int:
+        """ Check <data> for errors. Return the number of errors seen.
+        """
+        self.dut._log.error("This must be implemented in child class.")
+
+    async def _run(self) -> None:
+        """ Main run loop. """
+        self.dut_reading_signal.value = 0
+        self.job_id = 0
+        while True:
+            job = await self.jobs.get()
+            await self._pre_read_wait(job)
+            await self._initiate_read()
+            self.dut_reading_signal.value = 1
+            self.dut._log.info("Starting read for job  %d: %s" % (self.job_id, job))
+            data = await self._read_samples(job)
+            self.dut_reading_signal.value = 0
+            errors = self._check_samples(job, data)
+            self.results.put_nowait ({"errors": errors})
+            self.job_id += 1
+
+
+
+class ADCTest(GenericTest):
+    def __init__(self, dut, harness, registers, dut_job_signal, dut_reading_signal, num_captures=5):
+        super().__init__(dut, harness, registers, num_captures)
+        self.dut_job_signal = dut_job_signal
+        self.checker = ADCCapture(dut, harness, dut_reading_signal)
+        self.capture_min = None
+        self.capture_max = None
+
+    async def _job_setup(self) -> dict:
+        samples = random.randint(self.capture_min, self.capture_max)
+        await self.registers.write(16, self.registers.to_bytes(samples, 4))
+        bits_per_sample = 12
+        return {"samples": samples, "bits_per_sample": bits_per_sample}
+
+    async def _dispatch_delay(self) -> None:
+            await ClockCycles(self.clk, random.randint(0,1000)) # allow other jobs to sneak in here
+
+    async def _trigger(self) -> None:
+        await self.trigger_now()
+        # TODO: code more trigger options
 
     async def trigger_now(self) -> None:
         await self.registers.write(1, [0x24])
@@ -55,67 +176,10 @@ class ADCTest(object):
         await self.registers.write(1, [0x4c])
 
 
-class CaptureRead(object):
-    def __init__(self, dut, harness):
-        self.clk = dut.clk_usb
-        self.dut = dut
-        self.harness = harness
-        self.jobs = Queue()
-        self.results = Queue()
-        self._coro = None
 
-    def start(self) -> None:
-        """Start monitor"""
-        if self._coro is not None:
-            raise RuntimeError("Capture already started")
-        self._coro = cocotb.start_soon(self._run())
-
-    def stop(self) -> None:
-        """Stop monitor"""
-        if self._coro is None:
-            raise RuntimeError("Capture never started")
-        self._coro.kill()
-        self._coro = None
-
-    async def _run(self) -> None:
-        while True:
-            dats = await self.jobs.get()
-            samples = dats['samples']
-
-            await ClockCycles(self.clk, samples*4) # UI clock is USB clock, so that's the dominant portion of the capture delay
-
-            # Read capture:
-            # 1. wait for DDR to be done writing:
-            self.dut._log.info("waiting for writing to be done...")
-            not_done_writing = True
-            while not_done_writing:
-                await ClockCycles(self.clk, 50)
-                not_done_writing = not await self.harness.ddr_done_writing()
-
-            #self.dut._log.info("issuing initiate read command...")
-            # 2. initiate the read:
-            await self.harness.registers.write(105, [0])
-            await self.harness.registers.write(105, [1])
-            await ClockCycles(self.clk, 50)
-
-            # 2. wait for FIFO to not be empty:
-            self.dut._log.info("waiting for FIFO to not be empty...")
-            #from remote_pdb import RemotePdb; rpdb = RemotePdb("127.0.0.1", 4000)
-            # (then: telnet 127.0.0.1 4000)
-
-            # wait for read FIFO to be not empty:
-            empty = True
-            while empty:
-                await ClockCycles(self.clk, 50)
-                empty = (await self.harness.registers.read(44, 2))[1] & 16
-
-            self.dut._log.info("starting the read (%0d samples)" % samples)
-            raw = await self.read_adc_data(samples)
-
-            data = self.processHuskyData(samples, bytearray(raw))
-            errors = self.check_ramp(data, stop=False, verbose=True)
-            self.results.put_nowait ({"errors": errors})
-
+class ADCCapture(GenericCapture):
+    def __init__(self, dut, harness, dut_reading_signal):
+        super().__init__(dut, harness, dut_reading_signal)
 
     async def read_adc_data(self, samples, bits_per_sample=12):
         # do the read:
@@ -126,11 +190,42 @@ class CaptureRead(object):
             dut._log.error("Unsupported! (yet)")
         bytes_read = 0
         bytes_remaining = bytes_to_read
-        self.dut.adc_reading.value = 1
         raw = list(await self.harness.registers.read(3, bytes_remaining))
-        self.harness.dut.adc_reading.value = 0
         return raw
 
+    async def _pre_read_wait(self, job) -> None:
+        samples = job['samples']
+        await ClockCycles(self.clk, samples*4) # UI clock is USB clock, so that's the dominant portion of the capture delay
+        # then, wait for DDR to be done writing:
+        #self.dut._log.info("waiting for DDR writing to be done...")
+        not_done_writing = True
+        while not_done_writing:
+            await ClockCycles(self.clk, 50)
+            not_done_writing = not await self.harness.ddr_done_writing()
+
+    async def _initiate_read(self) -> None:
+        #self.dut._log.info("issuing initiate read command...")
+        # 1. initiate the read:
+        await self.harness.registers.write(105, [0])
+        await self.harness.registers.write(105, [1])
+        await ClockCycles(self.clk, 50)
+        # wait for read FIFO to be not empty:
+        #self.dut._log.info("waiting for FIFO to not be empty...")
+        empty = True
+        while empty:
+            await ClockCycles(self.clk, 50)
+            empty = (await self.harness.registers.read(44, 2))[1] & 16
+
+    async def _read_samples(self, job) -> list:
+        samples = job['samples']
+        #self.dut._log.info("starting the read (%0d samples)" % samples)
+        raw = await self.read_adc_data(samples)
+        data = self.processHuskyData(samples, bytearray(raw))
+        return data
+
+    def _check_samples(self, job, data) -> int:
+        errors = self.check_ramp(data, stop=False, verbose=True)
+        return errors
 
     def processHuskyData(self, NumberPoints, data, bits_per_sample=12):
         if bits_per_sample == 12:
@@ -145,14 +240,13 @@ class CaptureRead(object):
             raise ValueError("unsupported")
         return data[:NumberPoints]
 
-
     def check_ramp(self, raw, bits_per_sample=12, segment_cycles=0, verbose=True, stop=True):
         MOD = 2**bits_per_sample
         samples = len(raw)
         current_count = raw[0]
         errors = 0
         first_error = None
-        self.dut._log.info("Checking ramp (%0d samples)" % len(raw))
+        #self.dut._log.info("Checking ramp (%0d samples)" % len(raw))
         for i, byte in enumerate(raw[1:]):
             if byte != (current_count+1)%MOD:
                 if verbose: self.dut._log.error("Sample %d: expected %d got %d" % (i, (current_count+1)%MOD, byte))
@@ -184,13 +278,6 @@ class Harness(object):
 
     async def initialize_dut(self):
         self.dut.target_io4.value = 0
-        self.dut.adc_reading.value = 0
-        self.dut.la_reading.value = 0
-        self.dut.trace_reading.value = 0
-        #self.dut.adc_job.value = 0
-        self.dut.adc_job.value = cocotb.binary.BinaryValue("xxxxxxxx")
-        self.dut.la_job.value = cocotb.binary.BinaryValue("xxxxxxxx")
-        self.dut.trace_job.value = cocotb.binary.BinaryValue("xxxxxxxx")
         await self.reset()
 
     async def reset(self):
@@ -276,7 +363,10 @@ async def basic_capture(dut, samples=301, bits_per_sample=12, timeout_time=10000
         samples = int(cocotb.plusargs['samples'])
     registers = Registers(dut)
     harness = Harness(dut, registers)
-    adctest = ADCTest(dut, harness, registers, num_captures=3)
+    adctest = ADCTest(dut, harness, registers, dut.adc_job, dut.adc_reading, num_captures=3)
+    adctest.capture_min = 300
+    adctest.capture_max = 600
+
     await harness.initialize_dut()
     await registers.write(121, [1]) # use DDR and set ADC ramp mode
     adctest.start()
