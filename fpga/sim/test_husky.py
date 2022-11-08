@@ -2,6 +2,7 @@ import cocotb
 from cocotb.triggers import RisingEdge, FallingEdge, Timer, ClockCycles, Join
 from cocotb.clock import Clock
 from cocotb.queue import Queue
+from cocotb.handle import Force, Release
 #from cocotb.regression import TestFactory
 import random
 import math
@@ -20,6 +21,7 @@ class GenericTest(object):
         self.dut_job_signal = None
         self._coro = None
         self.dispatch_id = 0
+        self.name = None
 
     def start(self) -> None:
         """Start test thread"""
@@ -36,15 +38,6 @@ class GenericTest(object):
             raise RuntimeError("Capture never started")
         self._coro.kill()
         self._coro = None
-
-    def _increment_dut_job(self) -> None:
-        """increment DUT job index, so it can be see in waveform"""
-        if self.dut_job_signal is None:
-            raise RuntimeError("DUT job not defined")
-        if self.dut_job_signal.value == cocotb.binary.BinaryValue("xxxxxxxx"):
-            self.dut_job_signal.value = 0
-        else:
-            self.dut_job_signal.value = self.dut_job_signal.value + 1
 
     async def done(self) -> None:
         """ wait for _run() to complete """
@@ -68,15 +61,21 @@ class GenericTest(object):
         """
         self.dut._log.error("This must be implemented in child class.")
 
+    async def _initial_setup(self) -> None:
+        """ Initial DUT setup to do prior to the main dispatch loop.
+        """
+        self.dut._log.error("This must be implemented in child class.")
+
     async def _run(self) -> None:
         """ Main run loop. """
         self.dut_job_signal.value = cocotb.binary.BinaryValue("xxxxxxxx")
+        await self._initial_setup()
         for cap in range(self.num_captures):
-            self._increment_dut_job()
+            self.dut_job_signal.value = self.dispatch_id
             job = await self._job_setup()
+            self.dut._log.info("%6s Triggering  job number %d: %s" %(self.name, self.dispatch_id, job))
             await self._trigger()
             await self._dispatch_delay()
-            self.dut._log.info("Dispatching job number %d: %s" % (self.dispatch_id, job))
             self.checker.jobs.put_nowait(job)
             result = await self.checker.results.get()
             assert result['errors'] == 0
@@ -94,6 +93,7 @@ class GenericCapture(object):
         self.results = Queue()
         self._coro = None
         self.job_id = 0
+        self.name = None
 
     def start(self) -> None:
         """Start capture thread"""
@@ -140,8 +140,9 @@ class GenericCapture(object):
             await self._pre_read_wait(job)
             await self._initiate_read()
             self.dut_reading_signal.value = 1
-            self.dut._log.info("Starting read for job  %d: %s" % (self.job_id, job))
+            self.dut._log.info("%6s Starting read for job  %d: %s" % (self.name, self.job_id, job))
             data = await self._read_samples(job)
+            self.dut._log.info("%6s Done read (job %d)" % (self.name, self.job_id))
             self.dut_reading_signal.value = 0
             errors = self._check_samples(job, data)
             self.results.put_nowait ({"errors": errors})
@@ -156,12 +157,16 @@ class ADCTest(GenericTest):
         self.checker = ADCCapture(dut, harness, dut_reading_signal)
         self.capture_min = None
         self.capture_max = None
+        self.name = 'ADC'
 
     async def _job_setup(self) -> dict:
         samples = random.randint(self.capture_min, self.capture_max)
         await self.registers.write(16, self.registers.to_bytes(samples, 4))
         bits_per_sample = 12
         return {"samples": samples, "bits_per_sample": bits_per_sample}
+
+    async def _initial_setup(self) -> None:
+        await self.registers.write(121, [1]) # use DDR and set ADC ramp mode
 
     async def _dispatch_delay(self) -> None:
             await ClockCycles(self.clk, random.randint(0,1000)) # allow other jobs to sneak in here
@@ -180,6 +185,7 @@ class ADCTest(GenericTest):
 class ADCCapture(GenericCapture):
     def __init__(self, dut, harness, dut_reading_signal):
         super().__init__(dut, harness, dut_reading_signal)
+        self.name = 'ADC'
 
     async def read_adc_data(self, samples, bits_per_sample=12):
         # do the read:
@@ -188,9 +194,7 @@ class ADCCapture(GenericCapture):
         else:
             bytes_to_read = samples
             dut._log.error("Unsupported! (yet)")
-        bytes_read = 0
-        bytes_remaining = bytes_to_read
-        raw = list(await self.harness.registers.read(3, bytes_remaining))
+        raw = list(await self.harness.registers.read(3, bytes_to_read))
         return raw
 
     async def _pre_read_wait(self, job) -> None:
@@ -265,6 +269,104 @@ class ADCCapture(GenericCapture):
 
 
 
+class LATest(GenericTest):
+    def __init__(self, dut, harness, registers, dut_job_signal, dut_reading_signal, num_captures=5):
+        super().__init__(dut, harness, registers, num_captures)
+        self.dut_job_signal = dut_job_signal
+        self.checker = LACapture(dut, harness, dut_reading_signal)
+        self.capture_min = None
+        self.capture_max = None
+        self.name = 'LA'
+
+    async def _job_setup(self) -> dict:
+        samples = random.randint(self.capture_min, self.capture_max)
+        if samples % 2:
+            samples -= 1
+        # TODO: randomize these too:
+        capture_width = 4
+        downsample = 0
+        await self.registers.write(77, self.registers.to_bytes(samples, 4))
+        await self.registers.write(78, [downsample])
+        if capture_width == 4:
+            await self.registers.write(76, [0x86])   # LA_CAPTURE_GROUP: group 6 in 4-bit capture mode
+        else:
+            await self.registers.write(76, [0x06])   # LA_CAPTURE_GROUP: group 6 in 9-bit capture mode
+        return {"samples": samples, "capture_width": capture_width, "downsample": downsample}
+
+    async def _initial_setup(self) -> None:
+        await self.registers.write(0xed, [0]) # REG_TRACE_EN: disable trace
+        await self.registers.write(71, [1])   # LA_CLOCK_SOURCE: select USB clock
+        await self.registers.write(99, [1])   # LA_ENABLED
+
+    async def _dispatch_delay(self) -> None:
+            await ClockCycles(self.clk, random.randint(0,1000)) # allow other jobs to sneak in here
+
+    async def _trigger(self) -> None:
+        await self.trigger_now()
+        # TODO: code more trigger options
+
+    async def trigger_now(self) -> None:
+        await self.registers.write(98, [0])   # LA_ARM
+        await self.registers.write(98, [1])   # LA_ARM
+        await self.registers.write(75, [1])   # LA_MANUAL_CAPTURE
+        await ClockCycles(self.clk, 10)
+        await self.registers.write(75, [0])   # LA_MANUAL_CAPTURE
+
+
+class LACapture(GenericCapture):
+    def __init__(self, dut, harness, dut_reading_signal):
+        super().__init__(dut, harness, dut_reading_signal)
+        self.name = 'LA'
+
+    async def read_la_data(self, samples, capture_width=4):
+        # do the read:
+        if capture_width == 4:
+            bytes_to_read = math.ceil(samples/2)
+        else:
+            # TODO (9)
+            dut._log.error("Unsupported! (yet)")
+        raw = list(await self.harness.registers.read(3, bytes_to_read))
+        return raw
+
+    # TODO: I think this is ok?
+    async def _pre_read_wait(self, job) -> None:
+        samples = job['samples']
+        await ClockCycles(self.clk, samples*4) # UI clock is USB clock, so that's the dominant portion of the capture delay
+        # then, wait for DDR to be done writing:
+        #self.dut._log.info("waiting for DDR writing to be done...")
+        not_done_writing = True
+        while not_done_writing:
+            await ClockCycles(self.clk, 50)
+            not_done_writing = not await self.harness.ddr_done_writing()
+
+    async def _initiate_read(self) -> None:
+        #self.dut._log.info("issuing initiate read command...")
+        # 1. initiate the read:
+        await self.harness.registers.write(105, [0])
+        await self.harness.registers.write(105, [2])
+        await ClockCycles(self.clk, 50)
+        # wait for read FIFO to be not empty:
+        #self.dut._log.info("waiting for FIFO to not be empty...")
+        empty = True
+        while empty:
+            await ClockCycles(self.clk, 50)
+            empty = (await self.harness.registers.read(44, 2))[1] & 16
+
+    async def _read_samples(self, job) -> list:
+        samples = job['samples']
+        data = await self.read_la_data(samples)
+        return data
+
+    def _check_samples(self, job, data) -> int:
+        errors = 0
+        for i,byte in enumerate(data[:len(data)-8]): # TODO: for now, avoid checking the last few bytes...
+            expected = (0xa1 + 2*i) % 256
+            if expected != byte:
+                errors += 1
+                self.dut._log.error("Sample %d: expected %0x, got %0x" % (i, expected, byte))
+        return errors
+
+
 class Harness(object):
     def __init__(self, dut, registers):
         self.dut = dut
@@ -279,6 +381,10 @@ class Harness(object):
     async def initialize_dut(self):
         self.dut.target_io4.value = 0
         await self.reset()
+        await self.registers.write(51, [0,0,0,0,0,0xcc,0,1])  # CLOCKGLITCH_SETTINGS: set source to clk_usb (otherwise, X's propagate)
+        self.dut.U_dut.reg_clockglitch.U_clockglitch.glitch_go.value = Force(0)
+        await ClockCycles(self.dut.clk_usb, 10)
+        self.dut.U_dut.reg_clockglitch.U_clockglitch.glitch_go.value = Release()
 
     async def reset(self):
         await self.registers.write(28, [1])
@@ -303,42 +409,6 @@ class Harness(object):
             assert rdata == wdata, "Wrote %x but read %x" % (wdata, rdata)
 
 
-@cocotb.test(skip=True)
-async def my_test(dut, indelay=1):
-    """Try accessing the design."""
-    # note: indelay argument can be defined by TestFactory... but it can also be defined via the Makefile with PLUSARGS
-    #indelay = int(cocotb.plusargs['indelay'])
-    registers = Registers(dut)
-    harness = Harness(dut, registers)
-
-    await harness.reset()
-    await Timer(5, units="ns")  # wait a bit
-
-    #r1 = cocotb.start_soon(harness.register_rw_thread(16))
-    #r2 = cocotb.start_soon(harness.register_rw_thread(17))
-
-    dut._log.info("indelay is %d", indelay)
-    await Timer(indelay, units="ns")  # wait a bit
-    await Timer(random.randint(0, 20), units="ns")  # wait a bit
-    #await FallingEdge(dut.clk_usb)  # wait for falling edge/"negedge"
-    #dut._log.info("cmd_arm_usb is %s", dut.U_dut.cmd_arm_usb.value)
-    #assert dut.U_dut.cmd_arm_usb.value[0] == 0, "cmd_arm_usb[0] is not 0!"
-    #dut._log.info("Current time: %s", cocotb.utils.get_sim_time('ns'))
-
-    rdata = await registers.read(4)
-    dut._log.info("Read: %x", rdata[0])
-    await registers.write(4, [241])
-    rdata = await registers.read(4)
-    dut._log.info("Read: %x", rdata[0])
-    await Timer(100, units="ns")  # wait a bit
-
-    wdata = 0x12345678
-    await registers.write(16, registers.to_bytes(0x12345678, 4))
-    await registers.write(4, [95])
-    rdata = registers.from_bytes(await registers.read(16, 4))
-    assert rdata == wdata, "Wrote %x but read %x" % (wdata, rdata)
-
-
 # skipped by default; to run, specify TESTCASE=reg_rw on command line
 @cocotb.test(skip=True)
 async def reg_rw(dut, wait_cycles=1000):
@@ -355,9 +425,8 @@ async def reg_rw(dut, wait_cycles=1000):
     reg_thread4 = cocotb.start_soon(harness.register_rw_thread(0, 1))
     await ClockCycles(dut.clk_usb, wait_cycles)
 
-
 @cocotb.test()
-async def basic_capture(dut, samples=301, bits_per_sample=12, timeout_time=10000):
+async def adc_capture(dut, samples=301, bits_per_sample=12, timeout_time=10000):
     """Basic ADC capture."""
     if 'samples' in cocotb.plusargs.keys():
         samples = int(cocotb.plusargs['samples'])
@@ -368,8 +437,39 @@ async def basic_capture(dut, samples=301, bits_per_sample=12, timeout_time=10000
     adctest.capture_max = 600
 
     await harness.initialize_dut()
-    await registers.write(121, [1]) # use DDR and set ADC ramp mode
     adctest.start()
     await adctest.done()
 
+@cocotb.test()
+async def la_capture(dut, timeout_time=10000):
+    """Basic LA capture."""
+    registers = Registers(dut)
+    harness = Harness(dut, registers)
+    latest = LATest(dut, harness, registers, dut.la_job, dut.la_reading, num_captures=3)
+    latest.capture_min = 300
+    latest.capture_max = 600
+
+    await harness.initialize_dut()
+    latest.start()
+    await latest.done()
+
+@cocotb.test()
+async def all_capture(dut, timeout_time=10000):
+    """Concurrent captures of ADC and LA."""
+    registers = Registers(dut)
+    harness = Harness(dut, registers)
+
+    latest = LATest(dut, harness, registers, dut.la_job, dut.la_reading, num_captures=3)
+    latest.capture_min = 30
+    latest.capture_max = 60
+
+    adctest = ADCTest(dut, harness, registers, dut.adc_job, dut.adc_reading, num_captures=3)
+    adctest.capture_min = 30
+    adctest.capture_max = 60
+
+    await harness.initialize_dut()
+    latest.start()
+    adctest.start()
+    await latest.done()
+    await adctest.done()
 

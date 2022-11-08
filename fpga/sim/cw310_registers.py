@@ -6,8 +6,6 @@ class Registers(object):
     def __init__(self, dut):
         self.dut = dut
         self.lock = Lock()
-        self.rdata_r = None
-        self.i12BitReadCount = False
 
     async def setup_rw_address(self, address):
         self.dut.USB_CEn.value = 1
