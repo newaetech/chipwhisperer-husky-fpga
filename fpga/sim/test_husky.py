@@ -3,12 +3,23 @@ from cocotb.triggers import RisingEdge, FallingEdge, Timer, ClockCycles, Join, L
 from cocotb.clock import Clock
 from cocotb.queue import Queue
 from cocotb.handle import Force, Release
+from cocotb.log import SimLogFormatter
 #from cocotb.regression import TestFactory
 import random
 import math
 from cw310_registers import Registers
 import numpy as np
+import logging
 
+# Note: this could also be place in individual test functions by replacing root_logger by dut._log.
+logging.basicConfig(filemode='w')   # TODO: this doesn't take; file is always appended; suspect this
+                                    # is due to the basicConfig() call in log.py's default_config()?
+root_logger = logging.getLogger()
+# TODO: derive these from makefile?
+root_logger.setLevel(logging.DEBUG)
+fh = logging.FileHandler("sim.log")
+fh.setFormatter(SimLogFormatter())
+root_logger.addHandler(fh)
 
 class GenericTest(object):
     def __init__(self, dut, harness, registers, num_captures):
@@ -22,6 +33,7 @@ class GenericTest(object):
         self._coro = None
         self.dispatch_id = 0
         self.name = None
+        self.errors = 0
 
     def start(self) -> None:
         """Start test thread"""
@@ -39,9 +51,10 @@ class GenericTest(object):
         self._coro.kill()
         self._coro = None
 
-    async def done(self) -> None:
+    async def done(self) -> int:
         """ wait for _run() to complete """
         await Join(self._coro)
+        return self.errors
 
     async def _job_setup(self) -> dict:
         """ Generate and program properties of the job that will be run.
@@ -88,6 +101,7 @@ class GenericTest(object):
             while self.harness.read_lock.locked:
                 await ClockCycles(self.clk, 10)
             self.harness.queue.put_nowait(self.name)
+            self.dut._log.debug("%12s pushing to job queue (count = %d)" % (job_name, self.harness.queue.qsize()))
             self.dut._log.info("%12s Triggering: %s" %(job_name, job))
             self.dut.current_action.value = self.harness.hexstring("%12s Triggering" % job_name)
             await self._trigger()
@@ -95,8 +109,10 @@ class GenericTest(object):
             self.checker.jobs.put_nowait(job)
             await self._wait_capture_done(job)
             self.harness.queue.get_nowait()
+            self.dut._log.debug("%12s popping from job queue (count = %d)" % (job_name, self.harness.queue.qsize()))
             result = await self.checker.results.get()
-            assert result['errors'] == 0
+            #assert result['errors'] == 0 # TODO: optionally assert here, to stop test as soon as errors are found?
+            self.errors += result['errors']
             self.dispatch_id += 1
 
 
@@ -160,8 +176,11 @@ class GenericCapture(object):
             # see comments around queue definition in Harness for how this queue and lock mechanism works:
             self.dut._log.info("%12s trying to acquire read lock..." % job_name)
             await self.harness.read_lock.acquire()
+            self.dut._log.debug("%12s read lock acquired" % job_name)
+            self.dut._log.debug("%12s awaiting empty queue (count = %d)" % (job_name, self.harness.queue.qsize()))
             while not self.harness.queue.empty():
                 await ClockCycles(self.clk, 10)
+            self.dut._log.debug("%12s empty queue wait done" % job_name)
             await self._initiate_read()
             self.dut_reading_signal.value = 1
             self.dut._log.info("%12s Starting read for job: %s" % (job_name, job))
@@ -169,6 +188,7 @@ class GenericCapture(object):
             data = await self._read_samples(job)
             self.dut._log.info("%12s Done read" % job_name)
             self.harness.read_lock.release()
+            self.dut._log.info("%12s read lock released" % job_name)
             self.dut_reading_signal.value = 0
             errors = self._check_samples(job, data)
             self.results.put_nowait ({"errors": errors})
@@ -501,6 +521,7 @@ async def adc_capture(dut, samples=301, bits_per_sample=12, timeout_time=10000):
     await harness.initialize_dut()
     adctest.start()
     await adctest.done()
+    assert adctest.errors == 0
 
 @cocotb.test()
 async def la_capture(dut, timeout_time=10000):
@@ -514,6 +535,7 @@ async def la_capture(dut, timeout_time=10000):
     await harness.initialize_dut()
     latest.start()
     await latest.done()
+    assert latest.errors == 0
 
 @cocotb.test()
 async def all_capture(dut, timeout_time=10000):
@@ -529,11 +551,10 @@ async def all_capture(dut, timeout_time=10000):
     adctest.capture_min = 30
     adctest.capture_max = 60
 
-    print(type(dut._log))
-
     await harness.initialize_dut()
     latest.start()
     adctest.start()
     await latest.done()
     await adctest.done()
+    assert latest.errors + adctest.errors == 0
 
