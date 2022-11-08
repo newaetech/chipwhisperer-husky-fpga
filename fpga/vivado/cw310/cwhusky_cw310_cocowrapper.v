@@ -143,7 +143,8 @@ module cwhusky_cw310_cocowrapper(
 
     input  wire [7:0]   adc_job,
     input  wire [7:0]   la_job,
-    input  wire [7:0]   trace_job
+    input  wire [7:0]   trace_job,
+    input  wire [24*8-1:0] current_action
 );
 
 

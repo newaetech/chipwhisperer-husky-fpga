@@ -1,5 +1,5 @@
 import cocotb
-from cocotb.triggers import RisingEdge, FallingEdge, Timer, ClockCycles, Join
+from cocotb.triggers import RisingEdge, FallingEdge, Timer, ClockCycles, Join, Lock
 from cocotb.clock import Clock
 from cocotb.queue import Queue
 from cocotb.handle import Force, Release
@@ -66,17 +66,35 @@ class GenericTest(object):
         """
         self.dut._log.error("This must be implemented in child class.")
 
+    async def _wait_capture_done(self, job: dict) -> None:
+        """ Wait for DUT to finish capturing the job we just dispatched, so
+        that we can remove our entry from the harness queue (which is used to
+        prevent read attempts during capture).
+        """
+        self.dut._log.error("This must be implemented in child class.")
+
+
     async def _run(self) -> None:
         """ Main run loop. """
         self.dut_job_signal.value = cocotb.binary.BinaryValue("xxxxxxxx")
         await self._initial_setup()
         for cap in range(self.num_captures):
+            job_name = self.name + "_job_" + str(self.dispatch_id)
             self.dut_job_signal.value = self.dispatch_id
             job = await self._job_setup()
-            self.dut._log.info("%6s Triggering  job number %d: %s" %(self.name, self.dispatch_id, job))
+            job['job_name'] = job_name
+            # see comments around queue definition in Harness for how this queue and lock mechanism works:
+            self.dut._log.info("%12s trying to trigger job..." % job_name)
+            while self.harness.read_lock.locked:
+                await ClockCycles(self.clk, 10)
+            self.harness.queue.put_nowait(self.name)
+            self.dut._log.info("%12s Triggering: %s" %(job_name, job))
+            self.dut.current_action.value = self.harness.hexstring("%12s Triggering" % job_name)
             await self._trigger()
-            await self._dispatch_delay()
+            #await self._dispatch_delay() TODO- ?
             self.checker.jobs.put_nowait(job)
+            await self._wait_capture_done(job)
+            self.harness.queue.get_nowait()
             result = await self.checker.results.get()
             assert result['errors'] == 0
             self.dispatch_id += 1
@@ -137,12 +155,20 @@ class GenericCapture(object):
         self.job_id = 0
         while True:
             job = await self.jobs.get()
-            await self._pre_read_wait(job)
+            job_name = job['job_name']
+            #await self._pre_read_wait(job) TODO: no longer needed since _wait_capture_done does the equivalent?
+            # see comments around queue definition in Harness for how this queue and lock mechanism works:
+            self.dut._log.info("%12s trying to acquire read lock..." % job_name)
+            await self.harness.read_lock.acquire()
+            while not self.harness.queue.empty():
+                await ClockCycles(self.clk, 10)
             await self._initiate_read()
             self.dut_reading_signal.value = 1
-            self.dut._log.info("%6s Starting read for job  %d: %s" % (self.name, self.job_id, job))
+            self.dut._log.info("%12s Starting read for job: %s" % (job_name, job))
+            self.dut.current_action.value = self.harness.hexstring("%12s Reading" % job_name)
             data = await self._read_samples(job)
-            self.dut._log.info("%6s Done read (job %d)" % (self.name, self.job_id))
+            self.dut._log.info("%12s Done read" % job_name)
+            self.harness.read_lock.release()
             self.dut_reading_signal.value = 0
             errors = self._check_samples(job, data)
             self.results.put_nowait ({"errors": errors})
@@ -170,6 +196,16 @@ class ADCTest(GenericTest):
 
     async def _dispatch_delay(self) -> None:
             await ClockCycles(self.clk, random.randint(0,1000)) # allow other jobs to sneak in here
+
+    async def _wait_capture_done(self, job: dict) -> None:
+        samples = job['samples']
+        await ClockCycles(self.clk, samples) # UI clock is USB clock, so that's the dominant portion of the capture delay
+        # then, wait for DDR to be done writing:
+        #self.dut._log.info("waiting for DDR writing to be done...")
+        not_done_writing = True
+        while not_done_writing:
+            await ClockCycles(self.clk, 50)
+            not_done_writing = not await self.harness.ddr_done_writing()
 
     async def _trigger(self) -> None:
         await self.trigger_now()
@@ -254,7 +290,7 @@ class ADCCapture(GenericCapture):
         #self.dut._log.info("Checking ramp (%0d samples)" % len(data))
         for i, byte in enumerate(data[1:]):
             if byte != (current_count+1)%MOD:
-                if verbose: self.dut._log.error("%s Sample %d: expected %d got %d" % (self.name, i, (current_count+1)%MOD, byte))
+                if verbose: self.dut._log.error("%12s Sample %d: expected %d got %d" % (job['job_name'], i, (current_count+1)%MOD, byte))
                 errors += 1
                 if stop:
                     return errors
@@ -301,6 +337,16 @@ class LATest(GenericTest):
 
     async def _dispatch_delay(self) -> None:
             await ClockCycles(self.clk, random.randint(0,1000)) # allow other jobs to sneak in here
+
+    async def _wait_capture_done(self, job: dict) -> None:
+        samples = job['samples']
+        await ClockCycles(self.clk, samples) # UI clock is USB clock, so that's the dominant portion of the capture delay
+        # then, wait for DDR to be done writing:
+        #self.dut._log.info("waiting for DDR writing to be done...")
+        not_done_writing = True
+        while not_done_writing:
+            await ClockCycles(self.clk, 50)
+            not_done_writing = not await self.harness.ddr_done_writing()
 
     async def _trigger(self) -> None:
         await self.trigger_now()
@@ -360,7 +406,7 @@ class LACapture(GenericCapture):
             expected = (0xa1 + 2*i) % 256
             if expected != byte:
                 errors += 1
-                self.dut._log.error("Sample %d: expected %0x, got %0x" % (i, expected, byte))
+                self.dut._log.error("%12s Sample %d: expected %0x, got %0x" % (job['job_name'], i, expected, byte))
         return errors
 
 
@@ -368,6 +414,17 @@ class Harness(object):
     def __init__(self, dut, registers):
         self.dut = dut
         self.registers = registers
+        self.queue = Queue(maxsize=3)   # maxsize represents the number of concurrent capture sources: ADC, LA, trace
+                                        # The purpose of this queue is to enforce concurrency rules, which are a bit tricky:
+                                        # 1. Each capture source can be active concurrently.
+                                        # 2. No read can occur while another read is occuring or when a capture is occuring.
+                                        # Queue entries carry no information other than their presence.
+                                        # When a capture source wishes to issue a capture trigger, it first verifies that the
+                                        # global read lock is not locked. It then pushes an entry into this queue; it pops the
+                                        # queue when the capture is done.
+                                        # On the read side, a global read lock is first acquired, and then we must wait until
+                                        # this queue is empty before starting the read.
+        self.read_lock = Lock()
         #cocotb.start_soon(Clock(dut.clk_usb, 1, units='ns').start())
         adc_period = random.randint(4, 20)
         self.dut._log.info("ADC clock randomized to %5.1f MHz" % (1/adc_period*1000))
@@ -404,6 +461,14 @@ class Harness(object):
             #self.dut._log.info("Reading from %d at time %s" % (address, cocotb.utils.get_sim_time('ns')))
             rdata = self.registers.from_bytes(await self.registers.read(address, size))
             assert rdata == wdata, "Wrote %x but read %x" % (wdata, rdata)
+
+    @staticmethod
+    def hexstring(string, max_chars=24):
+        """ Convenience function to put a string onto the simulation waveform."""
+        data = 0
+        for i,j in enumerate(string[:max_chars]):
+            data += (ord(j) << ((max_chars-1-i)*8))
+        return data
 
 
 # skipped by default; to run, specify TESTCASE=reg_rw on command line
@@ -456,13 +521,15 @@ async def all_capture(dut, timeout_time=10000):
     registers = Registers(dut)
     harness = Harness(dut, registers)
 
-    latest = LATest(dut, harness, registers, dut.la_job, dut.la_reading, num_captures=3)
+    latest = LATest(dut, harness, registers, dut.la_job, dut.la_reading, num_captures=2)
     latest.capture_min = 30
     latest.capture_max = 60
 
-    adctest = ADCTest(dut, harness, registers, dut.adc_job, dut.adc_reading, num_captures=3)
+    adctest = ADCTest(dut, harness, registers, dut.adc_job, dut.adc_reading, num_captures=2)
     adctest.capture_min = 30
     adctest.capture_max = 60
+
+    print(type(dut._log))
 
     await harness.initialize_dut()
     latest.start()
