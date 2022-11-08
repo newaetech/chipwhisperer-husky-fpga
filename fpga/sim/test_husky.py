@@ -187,7 +187,7 @@ class ADCCapture(GenericCapture):
         super().__init__(dut, harness, dut_reading_signal)
         self.name = 'ADC'
 
-    async def read_adc_data(self, samples, bits_per_sample=12):
+    async def read_adc_data(self, samples, bits_per_sample):
         # do the read:
         if bits_per_sample == 12:
             bytes_to_read = math.ceil(samples*1.5)
@@ -222,14 +222,11 @@ class ADCCapture(GenericCapture):
 
     async def _read_samples(self, job) -> list:
         samples = job['samples']
+        bits_per_sample = job['bits_per_sample']
         #self.dut._log.info("starting the read (%0d samples)" % samples)
-        raw = await self.read_adc_data(samples)
+        raw = await self.read_adc_data(samples, bits_per_sample)
         data = self.processHuskyData(samples, bytearray(raw))
         return data
-
-    def _check_samples(self, job, data) -> int:
-        errors = self.check_ramp(data, stop=False, verbose=True)
-        return errors
 
     def processHuskyData(self, NumberPoints, data, bits_per_sample=12):
         if bits_per_sample == 12:
@@ -244,16 +241,20 @@ class ADCCapture(GenericCapture):
             raise ValueError("unsupported")
         return data[:NumberPoints]
 
-    def check_ramp(self, raw, bits_per_sample=12, segment_cycles=0, verbose=True, stop=True):
+    def _check_samples(self, job, data) -> int:
+        bits_per_sample = job['bits_per_sample']
+        segment_cycles = 0 # TODO
+        verbose = True # TODO?
+        stop = False # TODO?
         MOD = 2**bits_per_sample
-        samples = len(raw)
-        current_count = raw[0]
+        samples = len(data)
+        current_count = data[0]
         errors = 0
         first_error = None
-        #self.dut._log.info("Checking ramp (%0d samples)" % len(raw))
-        for i, byte in enumerate(raw[1:]):
+        #self.dut._log.info("Checking ramp (%0d samples)" % len(data))
+        for i, byte in enumerate(data[1:]):
             if byte != (current_count+1)%MOD:
-                if verbose: self.dut._log.error("Sample %d: expected %d got %d" % (i, (current_count+1)%MOD, byte))
+                if verbose: self.dut._log.error("%s Sample %d: expected %d got %d" % (self.name, i, (current_count+1)%MOD, byte))
                 errors += 1
                 if stop:
                     return errors
@@ -318,16 +319,6 @@ class LACapture(GenericCapture):
         super().__init__(dut, harness, dut_reading_signal)
         self.name = 'LA'
 
-    async def read_la_data(self, samples, capture_width=4):
-        # do the read:
-        if capture_width == 4:
-            bytes_to_read = math.ceil(samples/2)
-        else:
-            # TODO (9)
-            dut._log.error("Unsupported! (yet)")
-        raw = list(await self.harness.registers.read(3, bytes_to_read))
-        return raw
-
     # TODO: I think this is ok?
     async def _pre_read_wait(self, job) -> None:
         samples = job['samples']
@@ -354,7 +345,13 @@ class LACapture(GenericCapture):
 
     async def _read_samples(self, job) -> list:
         samples = job['samples']
-        data = await self.read_la_data(samples)
+        capture_width = job['capture_width']
+        if capture_width == 4:
+            bytes_to_read = math.ceil(samples/2)
+        else:
+            # TODO (9)
+            dut._log.error("Unsupported! (yet)")
+        data = list(await self.harness.registers.read(3, bytes_to_read))
         return data
 
     def _check_samples(self, job, data) -> int:
