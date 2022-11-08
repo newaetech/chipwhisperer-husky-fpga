@@ -64,10 +64,10 @@ class GenericTest(object):
         self.dut._log.error("This must be implemented in child class.")
 
     async def _dispatch_delay(self) -> None:
-        """ Allow for a delay between the job being dispatched and the
-        corresponding checker(GenericCapture) instance being notified of it.
+        """ Random delay before starting first job, so that ordering of initial
+        jobs is random.
         """
-        self.dut._log.error("This must be implemented in child class.")
+        await ClockCycles(self.clk, random.randint(0,100))
 
     async def _trigger(self) -> None:
         """ Trigger the DUT capture.
@@ -91,6 +91,7 @@ class GenericTest(object):
         """ Main run loop. """
         self.dut_job_signal.value = cocotb.binary.BinaryValue("xxxxxxxx")
         await self._initial_setup()
+        await self._dispatch_delay()
         for cap in range(self.num_captures):
             job_name = self.name + "_job_" + str(self.dispatch_id)
             self.dut_job_signal.value = self.dispatch_id
@@ -105,7 +106,6 @@ class GenericTest(object):
             self.dut._log.info("%12s Triggering: %s" %(job_name, job))
             self.dut.current_action.value = self.harness.hexstring("%12s Triggering" % job_name)
             await self._trigger()
-            #await self._dispatch_delay() TODO- ?
             self.checker.jobs.put_nowait(job)
             await self._wait_capture_done(job)
             self.harness.queue.get_nowait()
@@ -213,9 +213,6 @@ class ADCTest(GenericTest):
 
     async def _initial_setup(self) -> None:
         await self.registers.write(121, [1]) # use DDR and set ADC ramp mode
-
-    async def _dispatch_delay(self) -> None:
-            await ClockCycles(self.clk, random.randint(0,1000)) # allow other jobs to sneak in here
 
     async def _wait_capture_done(self, job: dict) -> None:
         samples = job['samples']
@@ -354,9 +351,6 @@ class LATest(GenericTest):
         await self.registers.write(0xed, [0]) # REG_TRACE_EN: disable trace
         await self.registers.write(71, [1])   # LA_CLOCK_SOURCE: select USB clock
         await self.registers.write(99, [1])   # LA_ENABLED
-
-    async def _dispatch_delay(self) -> None:
-            await ClockCycles(self.clk, random.randint(0,1000)) # allow other jobs to sneak in here
 
     async def _wait_capture_done(self, job: dict) -> None:
         samples = job['samples']
