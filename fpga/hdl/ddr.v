@@ -237,11 +237,9 @@ module ddr (
     reg incr_app_address;
 
     reg reset_app_address;
-    reg [29:0] top_app_addr;
     reg [29:0] adc_top_app_addr;
     reg [29:0] la_top_app_addr;
     reg [29:0] trace_top_app_addr;
-    reg set_top_addr;
 
     reg ddr_writing_r;
     wire ddr_writing = (ddr_state == pS_DDR_WAIT_WRITE) ||
@@ -643,6 +641,7 @@ module ddr (
                 // This is where we arbitrate between the different preddr sources.
                 if (arm_event)  // TODO- other sources? used to have capture_go_adc here but that's not right
                                 // (consider multiple active sources all firing off close to each other)
+                                // I don't think this condition belongs here at all!
                     next_ddr_state = pS_DDR_IDLE;
                 // ddr_state_r check because ddr_write_data_done goes low one cycle after getting here:
                 else if (ddr_write_data_done && ~single_write_ui && (ddr_state_r == pS_DDR_WAIT_WRITE)) begin 
@@ -863,22 +862,12 @@ module ddr (
                 end
             end
 
-            if (set_top_addr) begin
-                set_top_addr <= 1'b0;
-                if (source_select == pADC_SOURCE)
-                    adc_top_app_addr <= top_app_addr;
-                else if (source_select == pLA_SOURCE)
-                    la_top_app_addr <= top_app_addr;
-                else if (source_select == pLA_SOURCE)
-                    trace_top_app_addr <= top_app_addr;
-            end
-            else if (reset_app_address && (ddr_state != pS_DDR_IDLE)) begin
-                set_top_addr <= 1'b1;
-                if (ddr_state == pS_DDR_WAIT_WRITE)
-                    top_app_addr <= app_addr;
-                else
-                    top_app_addr <= app_addr + pDDR_INC_ADDR;
-            end
+            if (write_done_adc)
+                adc_top_app_addr <= adc_app_addr + pDDR_INC_ADDR;
+            if (write_done_la)
+                la_top_app_addr <= la_app_addr + pDDR_INC_ADDR;
+            if (write_done_trace)
+                trace_top_app_addr <= trace_app_addr + pDDR_INC_ADDR;
 
             if (single_read_ui && app_rd_data_valid) begin
                 if (app_rd_data_end) begin
