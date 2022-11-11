@@ -518,11 +518,12 @@ async def reg_rw(dut, wait_cycles=1000):
     reg_thread4 = cocotb.start_soon(harness.register_rw_thread(0, 1))
     await ClockCycles(dut.clk_usb, wait_cycles)
 
-@cocotb.test()
-async def adc_capture(dut, samples=301, bits_per_sample=12, timeout_time=10000):
+@cocotb.test(timeout_time=100, timeout_unit="us")
+async def adc_capture(dut, samples=301):
     """Basic ADC capture."""
-    if 'samples' in cocotb.plusargs.keys():
-        samples = int(cocotb.plusargs['samples'])
+    # not used; just to show one way to pass arguments; in this case, PLUSARGS += +samples=<X> (if using standard Cocotb makefiles)
+    #if 'samples' in cocotb.plusargs.keys():
+    #    samples = int(cocotb.plusargs['samples'])
     registers = Registers(dut)
     harness = Harness(dut, registers)
     adctest = ADCTest(dut, harness, registers, dut.adc_job, dut.adc_reading, num_captures=1)
@@ -534,8 +535,8 @@ async def adc_capture(dut, samples=301, bits_per_sample=12, timeout_time=10000):
     await adctest.done()
     assert harness.errors == 0
 
-@cocotb.test()
-async def la_capture(dut, timeout_time=10000):
+@cocotb.test(timeout_time=100, timeout_unit="us")
+async def la_capture(dut):
     """Basic LA capture."""
     registers = Registers(dut)
     harness = Harness(dut, registers)
@@ -548,8 +549,8 @@ async def la_capture(dut, timeout_time=10000):
     await latest.done()
     assert harness.errors == 0
 
-@cocotb.test()
-async def all_capture(dut, timeout_time=10000):
+@cocotb.test(timeout_time=100, timeout_unit="us")
+async def all_capture(dut):
     """Concurrent captures of ADC and LA."""
     registers = Registers(dut)
     harness = Harness(dut, registers)
