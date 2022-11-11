@@ -490,6 +490,11 @@ module fifo_top_husky_pro (
 
     // NOTE: the FIFO flush from arming the scope does not connect to the LA or trace preddr FIFOs, since trace and LA
     // have their own arming mechanisms; this *should* be fine since their preddr FIFOs will report "empty" when not enabled.
+    // NOTE2: this would cause DUT to hang-up if an ADC job comes in when LA
+    // job has already begun (thanks cocotb!). I think it's fine to just
+    // remove it, but leaving these notes in case this somehow causes an
+    // issue, for some reason I can't think of right now... TODO: eventually
+    // clean up!
     wire all_preddr_fifo_empty = preddr_fifo_empty && preddr_la_empty && preddr_trace_empty;
 
     always @(posedge clk_usb) begin
@@ -505,7 +510,8 @@ module fifo_top_husky_pro (
             {all_preddr_fifo_empty_usb, all_preddr_fifo_empty_usb_pipe} <= {all_preddr_fifo_empty_usb_pipe, all_preddr_fifo_empty};
             if (arm_pulse_usb)
                 flushing <= 1'b1;
-            else if (fast_fifo_empty_usb && all_preddr_fifo_empty_usb && postddr_fifo_empty)
+            //else if (fast_fifo_empty_usb && all_preddr_fifo_empty_usb && postddr_fifo_empty)
+            else if (fast_fifo_empty_usb && postddr_fifo_empty)
                 flushing <= 1'b0;
         end
     end
