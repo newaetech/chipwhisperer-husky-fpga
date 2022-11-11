@@ -906,7 +906,7 @@ module ddr (
             // some point, to allow others their turn)
             if (single_write_go || single_read_go)
                 source_select <= pADC_SOURCE;
-            else if ((ddr_state == pS_DDR_WAIT_WRITE) && ~preddr_all_fifo_empty) begin
+            else if ((ddr_state == pS_DDR_WAIT_WRITE) && ~preddr_all_fifo_empty && ~preddr_fifo_rd) begin
                 if (~preddr_adc_fifo_empty)
                     source_select <= pADC_SOURCE;
                 else if (~preddr_la_fifo_empty)
