@@ -83,7 +83,7 @@ TOPLEVEL = cwhusky_cw310_cocowrapper
 MODULE = test_husky
 
 # design has registers which aren't a multiple of 8 bits, so upper bits are read as X- let's have them resolve to 0/1 randomly:
-COCOTB_RESOLVE_X = RANDOM
+export COCOTB_RESOLVE_X = RANDOM
 
 # available to python as cocotb.plusargs['indelay']:
 #PLUSARGS += +indelay=3

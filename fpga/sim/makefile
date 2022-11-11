@@ -42,6 +42,7 @@ VERBOSE=0
 all: compile run
 all_sad: compile_sad run
 all_edge: compile_edge run
+coco: compile_coco run_coco
 
 compile_sad:
 	iverilog \
@@ -113,11 +114,11 @@ compile:
 	cwhusky_tb.v \
 	-g2005-sv \
 	-I../hdl \
+	-I../tracewhisperer/hdl/ \
 	-Wportbind \
 	-Wselect-range \
 	-D$(FIFOSIZE) \
 	-DTRACE \
-	-I../tracewhisperer/hdl/ \
 	-P cwhusky_tb.pADC_LOW_RES=$(ADC_LOW_RES) \
 	-P cwhusky_tb.pSLOW_ADC=$(SLOW_ADC) \
 	-P cwhusky_tb.pFAST_ADC=$(FAST_ADC) \
@@ -145,6 +146,26 @@ compile:
 	-P cwhusky_tb.pDOWNSAMPLE=$(DOWNSAMPLE) \
 	-P cwhusky_tb.pDUMP=$(DUMP) \
 	-P cwhusky_tb.pSEED=$(SEED) \
+	-o $(EXEFILE) \
+
+compile_coco:
+	iverilog -ccmdfile_coco \
+	../vivado/cw310/cwhusky_cw310_cocowrapper.v \
+	-g2005-sv \
+	-I../hdl \
+	-I../tracewhisperer/hdl/ \
+	-s glbl \
+	-s cwhusky_cw310_cocowrapper \
+	-Wportbind \
+	-Wselect-range \
+	-D$(FIFOSIZE) \
+	-DTRACE \
+	-DNOMIG \
+	-DCW310 \
+	-DPRO \
+	-DREGULARDDR \
+	-DCOCOTB_SIM=1 \
+	-P cwhusky_cw310_cocowrapper.pDUMP=$(DUMP) \
 	-o $(EXEFILE) \
 
 cwlite:
@@ -194,6 +215,18 @@ fifo:
 
 run:
 	vvp -l$(LOGFILE) $(EXEFILE) -$(WAVEFORMAT)
+
+# note that -M and -m arguments must immediately follow vvp, otherwise Python doesn't start!
+run_coco:
+	COCOTB_RESOLVE_X=RANDOM \
+	TOPLEVEL=cwhusky_cw310_cocowrapper \
+	TOPLEVEL_LANG=verilog \
+	NUMCAP=$(NUMCAP) \
+	MODULE=test_husky \
+	LIBPYTHON_LOC=$(shell cocotb-config --libpython) \
+	vvp -M $(shell cocotb-config --lib-dir) \
+	-m $(shell cocotb-config --lib-name vpi icarus) \
+	-l$(LOGFILE) $(EXEFILE) -$(WAVEFORMAT) \
 
 clean:
 	rm -f a.out results/*.vvp
