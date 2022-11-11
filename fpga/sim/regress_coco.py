@@ -24,16 +24,32 @@ args = parser.parse_args()
 # Define testcases:
 tests = []
 tests.append(dict(name  = 'adc_capture',
-             frequency = 1,
+             testcase = 'capture',
+             frequency = 2,
+             LA_CAPTURE = 0,
+             TRACE_CAPTURE = 0,
              description = 'ADC-only capture.'))
 
 tests.append(dict(name  = 'la_capture',
-             frequency = 1,
+             testcase = 'capture',
+             frequency = 2,
+             ADC_CAPTURE = 0,
+             TRACE_CAPTURE = 0,
              description = 'LA-only capture.'))
 
 tests.append(dict(name  = 'all_capture',
+             testcase = 'capture',
              frequency = 1,
              description = 'All sources capture.'))
+
+tests.append(dict(name  = 'big_capture',
+             testcase = 'capture',
+             frequency = 4,
+             MIN_SIZE = 100,
+             MAX_SIZE= 1000,
+             NUM_CAPTURES = 2,
+             description = 'All sources, larger captures.'))
+
 
 
 def print_tests():
@@ -115,7 +131,7 @@ for test in tests:
 
    for i in range(args.runs):
 
-      makeargs = ['make', 'run_coco', 'TESTCASE=%s' % test['name'], 'EXEFILE=%s' % exefile, 'COCOTB_DEBUG_LEVEL=%s' % args.cocodebug]
+      makeargs = ['make', 'run_coco', 'TESTCASE=%s' % test['testcase'], 'EXEFILE=%s' % exefile, 'COCOTB_DEBUG_LEVEL=%s' % args.cocodebug]
       if (args.seed):
           seed = args.seed
       else:

@@ -21,12 +21,14 @@ fh.setFormatter(SimLogFormatter())
 root_logger.addHandler(fh)
 
 class GenericTest(object):
-    def __init__(self, dut, harness, registers, num_captures):
+    def __init__(self, dut, harness, registers):
         self.clk = dut.clk_usb
         self.dut = dut
         self.harness = harness
         self.registers = registers
-        self.num_captures = num_captures
+        self.num_captures = None
+        self.capture_min = None
+        self.capture_max = None
         self.checker = None
         self.dut_job_signal = None
         self._coro = None
@@ -209,11 +211,9 @@ class GenericCapture(object):
 
 class ADCTest(GenericTest):
     def __init__(self, dut, harness, registers, dut_job_signal, dut_reading_signal, num_captures=5):
-        super().__init__(dut, harness, registers, num_captures)
+        super().__init__(dut, harness, registers)
         self.dut_job_signal = dut_job_signal
         self.checker = ADCCapture(dut, harness, dut_reading_signal)
-        self.capture_min = None
-        self.capture_max = None
         self.name = 'ADC'
 
     async def _job_setup(self) -> dict:
@@ -334,11 +334,9 @@ class ADCCapture(GenericCapture):
 
 class LATest(GenericTest):
     def __init__(self, dut, harness, registers, dut_job_signal, dut_reading_signal, num_captures=5):
-        super().__init__(dut, harness, registers, num_captures)
+        super().__init__(dut, harness, registers)
         self.dut_job_signal = dut_job_signal
         self.checker = LACapture(dut, harness, dut_reading_signal)
-        self.capture_min = None
-        self.capture_max = None
         self.name = 'LA'
 
     async def _job_setup(self) -> dict:
@@ -438,6 +436,7 @@ class Harness(object):
     def __init__(self, dut, registers):
         self.dut = dut
         self.registers = registers
+        self.tests = []
         self.errors = 0
         self.queue = Queue(maxsize=3)   # maxsize represents the number of concurrent capture sources: ADC, LA, trace
                                         # The purpose of this queue is to enforce concurrency rules, which are a bit tricky:
@@ -479,6 +478,24 @@ class Harness(object):
         else:
             return False
 
+    def register_test(self, test):
+        """ Add to list of running tests, so that we can later wait for all of
+        them to complete via all_tests_done().
+        """
+        self.tests.append(test)
+
+    async def all_tests_done(self):
+        """ Wait for all tests which were registered via register_test() to finish.
+        """
+        for test in self.tests:
+            await test.done()
+
+    def start_tests(self):
+        """ Wait for all tests which were registered via register_test() to finish.
+        """
+        for test in self.tests:
+            test.start()
+
     def inc_error(self):
         self.errors += 1
         self.dut.errors.value = self.errors
@@ -518,58 +535,35 @@ async def reg_rw(dut, wait_cycles=1000):
     reg_thread4 = cocotb.start_soon(harness.register_rw_thread(0, 1))
     await ClockCycles(dut.clk_usb, wait_cycles)
 
-@cocotb.test(timeout_time=100, timeout_unit="us")
-async def adc_capture(dut, samples=301):
-    """Basic ADC capture."""
-    # not used; just to show one way to pass arguments; in this case, PLUSARGS += +samples=<X> (if using standard Cocotb makefiles)
-    #if 'samples' in cocotb.plusargs.keys():
-    #    samples = int(cocotb.plusargs['samples'])
-    registers = Registers(dut)
-    harness = Harness(dut, registers)
-    adctest = ADCTest(dut, harness, registers, dut.adc_job, dut.adc_reading, num_captures=1)
-    adctest.capture_min = 300
-    adctest.capture_max = 600
 
-    await harness.initialize_dut()
-    adctest.start()
-    await adctest.done()
-    assert harness.errors == 0
-
-@cocotb.test(timeout_time=100, timeout_unit="us")
-async def la_capture(dut):
-    """Basic LA capture."""
-    registers = Registers(dut)
-    harness = Harness(dut, registers)
-    latest = LATest(dut, harness, registers, dut.la_job, dut.la_reading, num_captures=3)
-    latest.capture_min = 300
-    latest.capture_max = 600
-
-    await harness.initialize_dut()
-    latest.start()
-    await latest.done()
-    assert harness.errors == 0
-
-@cocotb.test(timeout_time=100, timeout_unit="us")
-async def all_capture(dut):
+@cocotb.test(timeout_time=300, timeout_unit="us")
+async def capture(dut):
     """Concurrent captures of ADC and LA."""
     registers = Registers(dut)
     harness = Harness(dut, registers)
-    try:
-        numcap = int(os.getenv("NUMCAP"))
-    except:
-        numcap = 3
-    latest = LATest(dut, harness, registers, dut.la_job, dut.la_reading, num_captures=numcap)
-    latest.capture_min = 30
-    latest.capture_max = 60
 
-    adctest = ADCTest(dut, harness, registers, dut.adc_job, dut.adc_reading, num_captures=numcap)
-    adctest.capture_min = 30
-    adctest.capture_max = 60
+    num_captures = int(os.getenv('NUM_CAPTURES', '3'))
+    min_size = int(os.getenv('MIN_SIZE', '30'))
+    max_size = int(os.getenv('MAX_SIZE', '100'))
 
     await harness.initialize_dut()
-    latest.start()
-    adctest.start()
-    await latest.done()
-    await adctest.done()
+
+    if int(os.getenv('LA_CAPTURE')):
+        latest = LATest(dut, harness, registers, dut.la_job, dut.la_reading)
+        latest.num_captures = num_captures
+        latest.capture_min = min_size
+        latest.capture_max = max_size
+        harness.register_test(latest)
+
+    if int(os.getenv('ADC_CAPTURE')):
+        adctest = ADCTest(dut, harness, registers, dut.adc_job, dut.adc_reading)
+        adctest.num_captures = num_captures
+        adctest.capture_min = min_size
+        adctest.capture_max = max_size
+        harness.register_test(adctest)
+
+    harness.start_tests()
+    await harness.all_tests_done()
     assert harness.errors == 0
+
 
