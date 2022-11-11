@@ -10,16 +10,15 @@ import math
 from cw310_registers import Registers
 import numpy as np
 import logging
+import os
 
 # Note: this could also be place in individual test functions by replacing root_logger by dut._log.
 root_logger = logging.getLogger()
-# TODO: derive these from makefile?
-fh = logging.FileHandler("sim.log")
+logfile = os.getenv('LOGFILE', 'make.log')
+print('Logfile = %s' % logfile)
+fh = logging.FileHandler(logfile, 'w')
 fh.setFormatter(SimLogFormatter())
 root_logger.addHandler(fh)
-root_logger.setLevel(logging.DEBUG) # this doesn't work anymore?!? I think it worked when called on dut._log
-logging.basicConfig(filemode='w')   # TODO: this doesn't take; file is always appended; suspect this
-                                    # is due to the basicConfig() call in log.py's default_config()?
 
 class GenericTest(object):
     def __init__(self, dut, harness, registers, num_captures):
@@ -192,6 +191,7 @@ class GenericCapture(object):
             while not self.harness.queue.empty():
                 await ClockCycles(self.clk, 10)
             self.dut._log.debug("%12s empty queue wait done" % job_name)
+            self.dut.current_action.value = self.harness.hexstring("%12s initread" % job_name)
             await self._initiate_read()
             self.dut_reading_signal.value = 1
             self.dut._log.info("%12s Starting read for job: %s" % (job_name, job))
@@ -317,7 +317,7 @@ class ADCCapture(GenericCapture):
         #self.dut._log.info("Checking ramp (%0d samples)" % len(data))
         for i, byte in enumerate(data[1:]):
             if byte != (current_count+1)%MOD:
-                if verbose: self.dut._log.error("%12s Sample %d: expected %d got %d" % (job['job_name'], i, (current_count+1)%MOD, byte))
+                if verbose: self.dut._log.error("%12s Sample %4d: expected %3x got %3x" % (job['job_name'], i, (current_count+1)%MOD, byte))
                 self.inc_error()
                 if stop:
                     return
@@ -431,7 +431,7 @@ class LACapture(GenericCapture):
             expected = (0xa1 + 2*i) % 256
             if expected != byte:
                 self.inc_error()
-                self.dut._log.error("%12s Sample %d: expected %0x, got %0x" % (job['job_name'], i, expected, byte))
+                self.dut._log.error("%12s Sample %4d: expected %2x got %2x" % (job['job_name'], i, expected, byte))
 
 
 class Harness(object):
@@ -457,6 +457,7 @@ class Harness(object):
         adc_clock_thread = cocotb.start_soon(Clock(dut.PLL_CLK1, adc_period, units="ns").start())
         # TODO: initialize all DUT input values
         self.dut.errors.value = 0
+
 
     async def initialize_dut(self):
         self.dut.target_io4.value = 0
@@ -552,12 +553,15 @@ async def all_capture(dut, timeout_time=10000):
     """Concurrent captures of ADC and LA."""
     registers = Registers(dut)
     harness = Harness(dut, registers)
-
-    latest = LATest(dut, harness, registers, dut.la_job, dut.la_reading, num_captures=3)
+    try:
+        numcap = int(os.getenv("NUMCAP"))
+    except:
+        numcap = 3
+    latest = LATest(dut, harness, registers, dut.la_job, dut.la_reading, num_captures=numcap)
     latest.capture_min = 30
     latest.capture_max = 60
 
-    adctest = ADCTest(dut, harness, registers, dut.adc_job, dut.adc_reading, num_captures=3)
+    adctest = ADCTest(dut, harness, registers, dut.adc_job, dut.adc_reading, num_captures=numcap)
     adctest.capture_min = 30
     adctest.capture_max = 60
 
