@@ -38,6 +38,8 @@ TRIGGERS=1
 FLUSH=0
 THRESHOLD=0
 VERBOSE=0
+COCOTB_DEBUG_LEVEL=INFO
+NUMCAP=3
 
 all: compile run
 all_sad: compile_sad run
@@ -223,6 +225,7 @@ run_coco:
 	TOPLEVEL_LANG=verilog \
 	NUMCAP=$(NUMCAP) \
 	MODULE=test_husky \
+	COCOTB_DEBUG_LEVEL=$(COCOTB_DEBUG_LEVEL) \
 	LIBPYTHON_LOC=$(shell cocotb-config --libpython) \
 	vvp -M $(shell cocotb-config --lib-dir) \
 	-m $(shell cocotb-config --lib-name vpi icarus) \

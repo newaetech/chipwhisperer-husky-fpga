@@ -18,6 +18,7 @@ parser.add_argument("--exclude", help="Exclude tests whose name contains TESTS",
 parser.add_argument("--list", help="List available tests.", action='store_true')
 parser.add_argument("--dump", help="Enable waveform dumping.", action='store_true')
 parser.add_argument("--proc", type=int, help="Maximum number of parallel jobs to dispatch.", default=32)
+parser.add_argument("--cocodebug", help="Cocotb debug level", default='INFO')
 args = parser.parse_args()
 
 # Define testcases:
@@ -114,7 +115,7 @@ for test in tests:
 
    for i in range(args.runs):
 
-      makeargs = ['make', 'run_coco', 'TESTCASE=%s' % test['name'], 'EXEFILE=%s' % exefile]
+      makeargs = ['make', 'run_coco', 'TESTCASE=%s' % test['name'], 'EXEFILE=%s' % exefile, 'COCOTB_DEBUG_LEVEL=%s' % args.cocodebug]
       if (args.seed):
           seed = args.seed
       else:
@@ -144,7 +145,7 @@ for test in tests:
 
       # run:
       if run_test:
-         print("Adding job: %s" % makeargs)
+         #print("Adding job: %s" % makeargs)
          jobs_to_submit.append((makeargs, logfile, outfile, seed))
          exefiles.append(exefile)
 
