@@ -165,6 +165,12 @@ class GenericCapture(object):
         """
         self.dut._log.error("This must be implemented in child class.")
 
+    async def _check_fifo_errors(self, job_name) -> None:
+        """ Check FIFO status and errors. Meant to be called after reading all
+        samples. Verifies that FIFO is empty.
+        """
+        self.dut._log.error("This must be implemented in child class.")
+
     def _check_samples(self, job, data) -> None:
         """ Check <data> for errors. Return the number of errors seen.
         """
@@ -203,6 +209,7 @@ class GenericCapture(object):
             self.harness.read_lock.release()
             self.dut._log.info("%12s read lock released" % job_name)
             self.dut_reading_signal.value = 0
+            await self._check_fifo_errors(job_name)
             self._check_samples(job, data)
             self.results.put_nowait({"errors": self.errors})
             self.job_id += 1
@@ -215,6 +222,7 @@ class ADCTest(GenericTest):
         self.dut_job_signal = dut_job_signal
         self.checker = ADCCapture(dut, harness, dut_reading_signal)
         self.name = 'ADC'
+        fifo_watch_thread = cocotb.start_soon(self.fifo_watch())
 
     async def _job_setup(self) -> dict:
         samples = random.randint(self.capture_min, self.capture_max)
@@ -244,6 +252,27 @@ class ADCTest(GenericTest):
         await self.registers.write(1, [0x0c])
         await self.registers.write(1, [0x4c])
 
+    async def fifo_watch(self) -> None:
+        # TODO: add FIFO error checking to LA and trace FIFOs
+        while True:
+            await RisingEdge(self.dut.U_dut.oadc.U_fifo.error_flag or self.dut.U_dut.oadc.U_ddr.U_ddr3_model.dropped_read_request)
+            self.harness.inc_error()
+            # accessing vector bits requires iverilog >= 10.3:
+            error_value = self.dut.U_dut.oadc.U_fifo.error_stat.value
+            error_message = 'Internal FIFO error(s) (0x%0x): ' % error_value
+            if error_value & 2**10: error_message += "preddr_fifo_overflow "
+            if error_value & 2**9 : error_message += "preddr_fifo_underflow "
+            if error_value & 2**8 : error_message += "gain_error "
+            if error_value & 2**7 : error_message += "segment_error "
+            if error_value & 2**6 : error_message += "downsample_error "
+            if error_value & 2**5 : error_message += "clip_error "
+            if error_value & 2**4 : error_message += "presamp_error "
+            if error_value & 2**3 : error_message += "fast_fifo_overflow"
+            if error_value & 2**2 : error_message += "fast_fifo_underflow "
+            if error_value & 2**1 : error_message += "postddr_fifo_overflow "
+            if error_value & 2**0 : error_message += "postddr_fifo_underflow_masked "
+            if self.dut.U_dut.oadc.U_ddr.U_ddr3_model.dropped_read_request: error_message += "DDR dropped read request "
+            self.dut._log.error(error_message)
 
 
 class ADCCapture(GenericCapture):
@@ -291,6 +320,19 @@ class ADCCapture(GenericCapture):
         raw = await self.read_adc_data(samples, bits_per_sample)
         data = self.processHuskyData(samples, bytearray(raw))
         return data
+
+    async def _check_fifo_errors(self, job_name) -> None:
+        # TODO: replace internal signal checks with a register status read
+        if self.dut.U_dut.oadc.U_fifo.fast_fifo_empty.value == 0:
+            self.harness.inc_error()
+            self.dut._log.error('%12s fast FIFO not empty after reading all samples.' % job_name)
+        if self.dut.U_dut.oadc.U_fifo.preddr_fifo_empty.value == 0:
+            self.harness.inc_error()
+            self.dut._log.error('%12s pre-DDR FIFO not empty after reading all samples.' % job_name)
+        ## TODO: temporarily commented out because last word is left unread, due to the first word fallthrough nature of the FIFO.
+        #if self.dut.U_dut.oadc.U_fifo.postddr_fifo_empty.value == 0:
+        #    self.harness.inc_error()
+        #    self.dut._log.error('%12s post-DDR FIFO not empty after reading all samples.' % job_name)
 
     def processHuskyData(self, NumberPoints, data, bits_per_sample=12):
         if bits_per_sample == 12:
@@ -423,6 +465,17 @@ class LACapture(GenericCapture):
             dut._log.error("Unsupported! (yet)")
         data = list(await self.harness.registers.read(3, bytes_to_read))
         return data
+
+    async def _check_fifo_errors(self, job_name) -> None:
+        # TODO: replace internal signal checks with a register status read
+        self.dut._log.info('CHECKING FIFO ERRORS')
+        if self.dut.U_dut.U_la_converter.fifo_empty.value == 0:
+            self.harness.inc_error()
+            self.dut._log.error('%12s pre-DDR FIFO not empty after reading all samples.' % job_name)
+        ## TODO: temporarily commented out because last word is left unread, due to the first word fallthrough nature of the FIFO.
+        #if self.dut.U_dut.oadc.U_fifo.postddr_fifo_empty.value == 0:
+        #    self.harness.inc_error()
+        #    self.dut._log.error('%12s post-DDR FIFO not empty after reading all samples.' % job_name)
 
     def _check_samples(self, job, data) -> None:
         for i,byte in enumerate(data[:len(data)-8]): # TODO: for now, avoid checking the last few bytes...
