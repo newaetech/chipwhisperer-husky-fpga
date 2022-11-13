@@ -257,9 +257,11 @@ class ADCTest(GenericTest):
         while True:
             await RisingEdge(self.dut.U_dut.oadc.U_fifo.error_flag or self.dut.U_dut.oadc.U_ddr.U_ddr3_model.dropped_read_request)
             self.harness.inc_error()
-            # accessing vector bits requires iverilog >= 10.3:
+            error_message = 'Internal FIFO/DDR error(s): '
+            if self.dut.U_dut.oadc.U_ddr.U_ddr3_model.dropped_read_request.value: error_message += "DDR dropped read request "
+            await ClockCycles(self.clk, 2) # Note: without this, error_value comes back as 0, even though it changes on the same cycle as error_flag
             error_value = self.dut.U_dut.oadc.U_fifo.error_stat.value
-            error_message = 'Internal FIFO error(s) (0x%0x): ' % error_value
+            # accessing vector bits requires iverilog >= 10.3:
             if error_value & 2**10: error_message += "preddr_fifo_overflow "
             if error_value & 2**9 : error_message += "preddr_fifo_underflow "
             if error_value & 2**8 : error_message += "gain_error "
@@ -271,7 +273,6 @@ class ADCTest(GenericTest):
             if error_value & 2**2 : error_message += "fast_fifo_underflow "
             if error_value & 2**1 : error_message += "postddr_fifo_overflow "
             if error_value & 2**0 : error_message += "postddr_fifo_underflow_masked "
-            if self.dut.U_dut.oadc.U_ddr.U_ddr3_model.dropped_read_request: error_message += "DDR dropped read request "
             self.dut._log.error(error_message)
 
 
@@ -468,7 +469,6 @@ class LACapture(GenericCapture):
 
     async def _check_fifo_errors(self, job_name) -> None:
         # TODO: replace internal signal checks with a register status read
-        self.dut._log.info('CHECKING FIFO ERRORS')
         if self.dut.U_dut.U_la_converter.fifo_empty.value == 0:
             self.harness.inc_error()
             self.dut._log.error('%12s pre-DDR FIFO not empty after reading all samples.' % job_name)
@@ -518,6 +518,7 @@ class Harness(object):
         self.dut.U_dut.reg_clockglitch.U_clockglitch.glitch_go.value = Force(0)
         await ClockCycles(self.dut.clk_usb, 10)
         self.dut.U_dut.reg_clockglitch.U_clockglitch.glitch_go.value = Release()
+        await self.registers.write(45, [3]) # NO_CLIP_ERRORS: disable gain errors
 
     async def reset(self):
         await self.registers.write(28, [1])
