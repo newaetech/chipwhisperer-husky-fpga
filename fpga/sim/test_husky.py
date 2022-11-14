@@ -478,11 +478,13 @@ class LACapture(GenericCapture):
         #    self.dut._log.error('%12s post-DDR FIFO not empty after reading all samples.' % job_name)
 
     def _check_samples(self, job, data) -> None:
-        for i,byte in enumerate(data[:len(data)-8]): # TODO: for now, avoid checking the last few bytes...
+        for i,byte in enumerate(data):
             expected = (0xa1 + 2*i) % 256
             if expected != byte:
                 self.inc_error()
                 self.dut._log.error("%12s Sample %4d: expected %2x got %2x" % (job['job_name'], i, expected, byte))
+            else:
+                self.dut._log.info("%12s Good sample %4d: %2x" % (job['job_name'], i, byte))
 
 
 class Harness(object):

@@ -58,7 +58,6 @@ module preddr_18to64_converter (
     reg done_hold;
     reg fifo_empty_raw_r;
     reg capture_done_r;
-    reg capture_done_r2;
 
     // TODO: report these somewhere
     wire fifo_full;
@@ -68,6 +67,32 @@ module preddr_18to64_converter (
     wire fifo_rd_rd = fifo_rd || (I_fifo_flush & ~fifo_empty);
 
     assign fifo_empty = (enabled)? fifo_empty_raw : 1'b1; // to prevent X's when there is no clock
+
+    // Generate filler writes, so that all the data we received is pushed out
+    // when it's not a multiple of 64 bits; mark "capture done" for the read
+    // side when this filler write is done (instead of using the
+    // "capture_done" input which doesn't account for these filler writes).
+    // TODO-note: this works for LA in 4-bit mode; some tweaks may be required
+    // in other capture modes?
+    reg filler_write;
+    reg filler_write_r;
+    wire writing_done;
+    reg writing_done_r;
+    always @(posedge wr_clk) begin
+        if (reset) begin
+            filler_write <= 1'b0;
+            filler_write_r  <= 1'b0;
+        end
+        else begin
+            filler_write_r <= filler_write;
+            writing_done_r <= writing_done;
+            if (capture_done_r)
+                filler_write <= 1'b1;
+            else if (capture_start || fifo_wr)
+                filler_write <= 1'b0;
+        end
+    end
+    assign writing_done = filler_write_r && ~filler_write;
 
     always @(posedge wr_clk) begin
         if (reset) begin
@@ -79,11 +104,10 @@ module preddr_18to64_converter (
             fifo_din <= 0;
             fifo_wr <= 0;
             capture_done_r <= 0;
-            capture_done_r2 <= 0;
         end
         else begin
             wide_word_valid_r <= wide_word_valid;
-            {capture_done_r2, capture_done_r} <= {capture_done_r, capture_done};
+            capture_done_r <= capture_done;
             if (enabled) begin
                 fifo_wr <= wide_word_valid && ~wide_word_valid_r;
                 if (capture_start) begin
@@ -92,7 +116,7 @@ module preddr_18to64_converter (
                     wide_word_shifter <= 0;
                     sample_counter <= 0;
                 end
-                else if (I_wr) begin
+                else if (I_wr || filler_write) begin
                     if (I_4bit_mode) begin
                         wide_word_shifter <= {wide_word_shifter[81:0], I_data[7:0]};
                         if (sample_counter == 7) begin
@@ -192,7 +216,7 @@ module preddr_18to64_converter (
     cdc_pulse U_done (
         .reset_i       (reset),
         .src_clk       (wr_clk),
-        .src_pulse     (capture_done_r2),
+        .src_pulse     (writing_done_r),
         .dst_clk       (rd_clk),
         .dst_pulse     (capture_done_rd)
     );
