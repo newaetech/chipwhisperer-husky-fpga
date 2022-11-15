@@ -208,6 +208,12 @@ module ddr3_app_model #(
     wire [pDATA_WIDTH*2-1:0] memory3 = memory[3];
     wire [pDATA_WIDTH*2-1:0] memory8192 = memory[8192];
     wire [pDATA_WIDTH*2-1:0] memory8193 = memory[8193];
+    wire [pDATA_WIDTH*2-1:0] memory8194 = memory[8194];
+    wire [pDATA_WIDTH*2-1:0] memory8195 = memory[8195];
+    wire [pDATA_WIDTH*2-1:0] memory8196 = memory[8196];
+    wire [pDATA_WIDTH*2-1:0] memory8197 = memory[8197];
+    wire [pDATA_WIDTH*2-1:0] memory8198 = memory[8198];
+    wire [pDATA_WIDTH*2-1:0] memory8199 = memory[8199];
 
 `endif
 

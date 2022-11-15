@@ -313,6 +313,10 @@ module ddr (
     wire arm_pulse_ui;
     wire first_read_pulse_ui;
 
+    reg postddr_fifo_rd_r;
+    reg postddr_effective_underflow;
+    reg postddr_effective_underflow_charged;
+
     ////////////////////////////
     // Post-DDR FIFO read logic:
     ////////////////////////////
@@ -328,7 +332,8 @@ module ddr (
           // fifo_read_fifoen check catches a case where while postddr_fifo_underflow doesn't occur, the read is still too
           // soon in that slow_read_count will get messed up
           postddr_fifo_underflow_masked = ~no_underflow_errors && ( (postddr_fifo_underflow && (postddr_fifo_underflow_count == pMAX_UNDERFLOWS)) ||
-                                                                    (fifo_read_fifoen && postddr_fifo_empty && ~first_read_done) );
+                                                                    (fifo_read_fifoen && postddr_fifo_empty && ~first_read_done) ||
+                                                                     postddr_effective_underflow );
     end
 
     always @(posedge clk_usb) begin
@@ -340,7 +345,7 @@ module ddr (
           // Xilinx FIFO asserts "underflow" for a single cycle only:
           if (fresh_start_usb)
              postddr_fifo_underflow_sticky <= 0;
-          else if (postddr_fifo_underflow)
+          else if (postddr_fifo_underflow || postddr_effective_underflow)
              postddr_fifo_underflow_sticky <= 1;
 
           // SAM3U likes to read multiples of 4 bytes, so we don't flag an
@@ -1031,12 +1036,27 @@ module ddr (
           fifo_overflow_ddr <= 1'b1;
     end
 
-    // detect "reading too soon" separately from general underflow errors:
     always @(posedge clk_usb) begin
+       postddr_fifo_rd_r <= postddr_fifo_rd && !(flushing || pre_read_flush_usb);
+       // detect "reading too soon" separately from general underflow errors;
        if (fresh_start_usb)
           reading_too_soon_error <= 1'b0;
        else if (fifo_read_fifoen && ((ddr_state == pS_DDR_WAIT_READ) && pre_read_flush_usb))
           reading_too_soon_error <= 1'b1;
+
+       // Detect a read which results in an empty FIFO (outside of flushing)
+       // -- it's equivalent to underflow; tricky bit is that *sometimes* this
+       // can legitimately happen on the last read. Solution: "charge" the
+       // error flag and fire the error only if another read happens before
+       // a new capture read is initiated.
+       if (fresh_start_usb) begin
+           postddr_effective_underflow_charged <= 1'b0;
+           postddr_effective_underflow <= 1'b0;
+       end
+       else if (postddr_effective_underflow_charged && postddr_fifo_rd)
+           postddr_effective_underflow <= 1'b1;
+       else if (postddr_fifo_rd_r && postddr_fifo_empty) // TODO-note: should this detection also be added to Husky?
+           postddr_effective_underflow_charged <= 1'b1;
     end
 
 

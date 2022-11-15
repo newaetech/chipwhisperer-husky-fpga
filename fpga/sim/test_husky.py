@@ -360,7 +360,7 @@ class ADCCapture(GenericCapture):
         #self.dut._log.info("Checking ramp (%0d samples)" % len(data))
         for i, byte in enumerate(data[1:]):
             if byte != (current_count+1)%MOD:
-                if verbose: self.dut._log.error("%12s Sample %4d: expected %3x got %3x" % (job['job_name'], i, (current_count+1)%MOD, byte))
+                self.dut._log.error("%12s Sample %4d: expected %3x got %3x" % (job['job_name'], i, (current_count+1)%MOD, byte))
                 self.inc_error()
                 if stop:
                     return
@@ -545,6 +545,7 @@ class Harness(object):
         """
         for test in self.tests:
             await test.done()
+        await ClockCycles(self.dut.clk_usb, 10) # to give time for fifo_watch errors to be seen
 
     def start_tests(self):
         """ Wait for all tests which were registered via register_test() to finish.
