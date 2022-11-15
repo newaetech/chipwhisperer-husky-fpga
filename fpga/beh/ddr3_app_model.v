@@ -175,11 +175,11 @@ module ddr3_app_model #(
         read_allowed = 1'b0;
         while (1) begin
             wait (~fifo_empty);
-            repeat ($urandom_range(2, 20)) @(posedge clk);
+            repeat ($urandom_range(2, 10)) @(posedge clk);
             read_allowed = 1'b1;
-            if ($urandom_range(0,1)) begin
+            if ($urandom_range(0,4) == 0) begin
                 read_allowed = 1'b0;
-                repeat ($urandom_range(2, 20)) @(posedge clk);
+                repeat ($urandom_range(2, 10)) @(posedge clk);
             end
         end
     end
