@@ -106,6 +106,7 @@ module openadc_interface #(
     output wire                         clear_fifo_errors,
     input  wire [1:0]                   trace_fifo_errors,
     input  wire [1:0]                   la_fifo_errors,
+    input  wire                         tb_ui_clk,
 `endif
 
     // CW310-specific:
@@ -810,7 +811,8 @@ module openadc_interface #(
           .temp_out                 (temp_out),
           .ADC_clk_fbp              (ADC_clk_fbp ),
           .ADC_clk_fbn              (ADC_clk_fbn ),
-          .ui_clk                   (ui_clk)
+          .ui_clk                   (ui_clk),
+          .tb_ui_clk                (tb_ui_clk)
        );
        assign fifo_overflow = fifo_overflow_noddr || fifo_overflow_ddr;
 

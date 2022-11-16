@@ -523,6 +523,7 @@ class Harness(object):
         self.dut._log.info("ADC clock randomized to %5.1f MHz" % (1/adc_period*1000))
         usb_clock_thread = cocotb.start_soon(Clock(dut.clk_usb, 10, units="ns").start())
         adc_clock_thread = cocotb.start_soon(Clock(dut.PLL_CLK1, adc_period, units="ns").start())
+        ui_clock_thread = cocotb.start_soon(Clock(dut.ui_clk, 6, units="ns").start())
         # TODO: initialize all DUT input values
         self.dut.errors.value = 0
 
@@ -538,7 +539,7 @@ class Harness(object):
 
     async def reset(self):
         await self.registers.write(28, [1])
-        #await ClockCycles(self.dut.clk_usb, 10)
+        await ClockCycles(self.dut.clk_usb, 10)
         await self.registers.write(28, [0])
 
     async def ddr_done_writing(self):

@@ -77,6 +77,7 @@ module cwhusky_cw310_cocowrapper(
     input wire          ADC_clk_fbp, // CW310: these are actually used for the MIG reference clock input
     input wire          ADC_clk_fbn,
     input wire          PLL_CLK1,    // CW310 PLL is used as the ADC clock
+    input wire          ui_clk,      // testbench only
     //output wire         ADC_CLKP,
     //output wire         ADC_CLKN,
     //output wire         ADC_SCLK,     // CW310 new
@@ -188,6 +189,7 @@ cwhusky_cw310_top U_dut (
     .ADC_clk_fbp        (ADC_clk_fbp  ),
     .ADC_clk_fbn        (ADC_clk_fbn  ),
     .PLL_CLK1           (PLL_CLK1     ),
+    .tb_ui_clk          (ui_clk       ),
     //.ADC_DP             (6'b0         ),
     //.ADC_DN             (6'b0         ),
     //.ADC_CLKP           (             ),

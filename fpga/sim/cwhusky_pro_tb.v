@@ -27,6 +27,7 @@ Author: Jean-Pierre Thibault <jpthibault@newae.com>
 
 module cwhusky_tb();
    parameter pCLK_USB_PERIOD = 10;
+   parameter pCLK_UI_PERIOD = 6;
    parameter pCLK_ADC_FAST_PERIOD = 5.5;
    //parameter pCLK_ADC_SLOW_PERIOD = 16.0;
    parameter pCLK_ADC_SLOW_PERIOD = 31.0;
@@ -69,6 +70,7 @@ module cwhusky_tb();
    `include "tb_reg_tasks.v"
 
    reg                  clk_usb;
+   reg                  ui_clk;
    reg                  clk_adc_slow;
    reg                  clk_adc_fast;
    reg                  clk_adc_nom;
@@ -201,6 +203,7 @@ module cwhusky_tb();
       fifo_error = 0;
       warnings = 0;
       clk_usb = 0;
+      ui_clk = 0;
       clk_adc_slow = 0;
       clk_adc_fast = 0;
       clk_adc_nom = 0;
@@ -941,6 +944,7 @@ always @(posedge U_dut.U_la_converter.fifo_wr)
    end
 
 
+   always #(pCLK_UI_PERIOD/2) ui_clk = !ui_clk;
    always #(pCLK_USB_PERIOD/2) clk_usb = !clk_usb;
    always #(pCLK_ADC_FAST_PERIOD/2) clk_adc_fast = !clk_adc_fast;
    always #(pCLK_ADC_SLOW_PERIOD/2) clk_adc_slow = !clk_adc_slow;
@@ -980,6 +984,7 @@ cwhusky_cw310_top U_dut (
     .ADC_clk_fbp        (clk_adc      ),
     .ADC_clk_fbn        (1'b0         ),
     .PLL_CLK1           (clk_adc      ),
+    .tb_ui_clk          (ui_clk       ),
     //.ADC_DP             (6'b0         ),
     //.ADC_DN             (6'b0         ),
     //.ADC_CLKP           (             ),

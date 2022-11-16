@@ -131,7 +131,8 @@ module ddr (
     // CW310-specific:
     input wire          ADC_clk_fbp,
     input wire          ADC_clk_fbn,
-    output wire         ui_clk
+    output wire         ui_clk,
+    input  wire         tb_ui_clk
 
 );
 
@@ -1232,7 +1233,7 @@ wire stat_reset = (ddr_rwtest_en)? rw_stat_reset : capture_go_adc;
 
 `else
     // basic behavioural model for simulation testing
-   assign ui_clk = clk_usb;
+   assign ui_clk = tb_ui_clk;
    ddr3_app_model #(
       .pDATA_WIDTH                         (32),
       .pADDR_WIDTH                         (30),

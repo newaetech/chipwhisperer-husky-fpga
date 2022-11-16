@@ -33,6 +33,9 @@ module cwhusky_cw310_top(
     output wire        LED_UNUSED,              // CW310 new
     output wire        LED_GLITCHOUT_HIGHPWR,   // CW310 new
     output wire        LED_GLITCHOUT_LOWPWR,    // CW310 new
+`ifdef __ICARUS__
+    input wire          tb_ui_clk,   // simulation only
+`endif
 
     // DDR3 (Pro) stuff:
     output wire        xo_en,
@@ -460,6 +463,10 @@ module cwhusky_cw310_top(
    assign LED_CAP = cw_led_cap;
    assign LED_ARMED = cw_led_armed;
 
+   `ifndef __ICARUS__
+       wire tb_ui_clk = 1'b0;
+   `endif
+
 
    openadc_interface #(
         .pBYTECNT_SIZE  (pBYTECNT_SIZE)
@@ -537,6 +544,7 @@ module cwhusky_cw310_top(
         .clear_fifo_errors      (clear_fifo_errors  ),
         .trace_fifo_errors      (trace_fifo_errors  ),
         .la_fifo_errors         (la_fifo_errors     ),
+        .tb_ui_clk              (tb_ui_clk          ),
 `endif
 
         // CW310-specific:
