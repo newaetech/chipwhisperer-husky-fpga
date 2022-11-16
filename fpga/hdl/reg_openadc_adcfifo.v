@@ -186,7 +186,7 @@ module reg_openadc_adcfifo #(
              ddr_trace_start_address <= 30'h0008_0000;
          `else
              ddr_la_start_address    <= 30'h1000_0000;
-             ddr_trace_start_address <= 30'h8000_0000;
+             ddr_trace_start_address <= 30'h2000_0000;
          `endif
       end 
       else if (reg_write) begin
