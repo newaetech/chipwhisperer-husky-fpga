@@ -223,6 +223,7 @@ class ADCTest(GenericTest):
         self.checker = ADCCapture(dut, harness, dut_reading_signal)
         self.name = 'ADC'
         fifo_watch_thread = cocotb.start_soon(self.fifo_watch())
+        preddr_watch_thread = cocotb.start_soon(self.preddr_watch())
 
     async def _job_setup(self) -> dict:
         samples = random.randint(self.capture_min, self.capture_max)
@@ -253,7 +254,6 @@ class ADCTest(GenericTest):
         await self.registers.write(1, [0x4c])
 
     async def fifo_watch(self) -> None:
-        # TODO: add FIFO error checking to LA and trace FIFOs
         while True:
             await RisingEdge(self.dut.U_dut.oadc.U_fifo.error_flag or self.dut.U_dut.oadc.U_ddr.U_ddr3_model.dropped_read_request)
             self.harness.inc_error()
@@ -262,6 +262,8 @@ class ADCTest(GenericTest):
             await ClockCycles(self.clk, 2) # Note: without this, error_value comes back as 0, even though it changes on the same cycle as error_flag
             error_value = self.dut.U_dut.oadc.U_fifo.error_stat.value
             # accessing vector bits requires iverilog >= 10.3:
+            if error_value & 2**12: error_message += "ddr_full "
+            if error_value & 2**11: error_message += "reading_too_soon  "
             if error_value & 2**10: error_message += "preddr_fifo_overflow "
             if error_value & 2**9 : error_message += "preddr_fifo_underflow "
             if error_value & 2**8 : error_message += "gain_error "
@@ -273,6 +275,18 @@ class ADCTest(GenericTest):
             if error_value & 2**2 : error_message += "fast_fifo_underflow "
             if error_value & 2**1 : error_message += "postddr_fifo_overflow "
             if error_value & 2**0 : error_message += "postddr_fifo_underflow_masked "
+            self.dut._log.error(error_message)
+
+    async def preddr_watch(self) -> None:
+        while True:
+            await RisingEdge(self.dut.U_dut.U_trace_converter.error_flag or self.dut.U_dut.U_la_converter.error_flag)
+            self.harness.inc_error()
+            error_message = 'Pre-DDR FIFO error(s): '
+            await ClockCycles(self.clk, 2)
+            if self.dut.U_dut.U_trace_converter.fifo_overflow_sticky:  error_message += "U_trace_converter overflow "
+            if self.dut.U_dut.U_trace_converter.fifo_underflow_sticky: error_message += "U_trace_converter underflow "
+            if self.dut.U_dut.U_la_converter.fifo_overflow_sticky:     error_message += "U_la_converter overflow "
+            if self.dut.U_dut.U_la_converter.fifo_underflow_sticky:    error_message += "U_la_converter underflow "
             self.dut._log.error(error_message)
 
 
@@ -312,7 +326,7 @@ class ADCCapture(GenericCapture):
         empty = True
         while empty:
             await ClockCycles(self.clk, 50)
-            empty = (await self.harness.registers.read(44, 2))[1] & 16
+            empty = (await self.harness.registers.read(44, 2))[1] & 32
 
     async def _read_samples(self, job) -> list:
         samples = job['samples']
@@ -368,7 +382,7 @@ class ADCCapture(GenericCapture):
                     first_error = i
                 current_count = byte
             else:
-                #self.dut._log.info("Good sample! (%d)" % byte)
+                self.dut._log.debug("%12s Good sample %4d: %2x" % (job['job_name'], i, byte))
                 current_count += 1
                 if (i+2) % samples == 0:
                     current_count = (current_count + segment_cycles - samples) % MOD
@@ -454,7 +468,7 @@ class LACapture(GenericCapture):
         empty = True
         while empty:
             await ClockCycles(self.clk, 50)
-            empty = (await self.harness.registers.read(44, 2))[1] & 16
+            empty = (await self.harness.registers.read(44, 2))[1] & 32
 
     async def _read_samples(self, job) -> list:
         samples = job['samples']
@@ -484,7 +498,7 @@ class LACapture(GenericCapture):
                 self.inc_error()
                 self.dut._log.error("%12s Sample %4d: expected %2x got %2x" % (job['job_name'], i, expected, byte))
             else:
-                self.dut._log.info("%12s Good sample %4d: %2x" % (job['job_name'], i, byte))
+                self.dut._log.debug("%12s Good sample %4d: %2x" % (job['job_name'], i, byte))
 
 
 class Harness(object):

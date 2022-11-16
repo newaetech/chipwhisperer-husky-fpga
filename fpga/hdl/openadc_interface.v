@@ -103,6 +103,9 @@ module openadc_interface #(
     input  wire                         capture_go_la,
     input  wire                         write_done_trace,
     input  wire                         write_done_la,
+    output wire                         clear_fifo_errors,
+    input  wire [1:0]                   trace_fifo_errors,
+    input  wire [1:0]                   la_fifo_errors,
 `endif
 
     // CW310-specific:
@@ -130,12 +133,11 @@ module openadc_interface #(
     wire        segment_cycle_counter_en;
     wire [1:0]  led_select;
     wire       data_source_select;
-    wire [11:0] fifo_error_stat;
-    wire [11:0] fifo_first_error_stat;
+    wire [12:0] fifo_error_stat;
+    wire [12:0] fifo_first_error_stat;
     wire [2:0] fifo_first_error_state;
     wire       no_clip_errors;
     wire       no_gain_errors;
-    wire       clear_fifo_errors;
     wire       capture_done;
     wire       armed_and_ready;
     wire [2:0] fifo_state;
@@ -575,6 +577,8 @@ module openadc_interface #(
       .clear_fifo_errors                (clear_fifo_errors),
       .capture_done                     (capture_done),
       .O_data_source_select             (data_source_select),
+      .trace_fifo_errors                (trace_fifo_errors),
+      .la_fifo_errors                   (la_fifo_errors),
 
       .ddr_single_write                 (single_write      ),
       .ddr_single_read                  (single_read       ),
@@ -640,6 +644,7 @@ module openadc_interface #(
        wire         fifo_overflow_noddr;
        wire         arm_pulse_usb;
        wire         reading_too_soon_error;
+       wire         ddr_full_error;
 
        fifo_top_husky_pro U_fifo (
           .reset                    (reset),
@@ -664,6 +669,7 @@ module openadc_interface #(
 
           .fifo_overflow            (fifo_overflow_noddr),
           .reading_too_soon_error   (reading_too_soon_error),
+          .ddr_full_error           (ddr_full_error),
           .error_flag               (fifo_error_flag),
           .error_stat               (fifo_error_stat),
           .first_error_stat         (fifo_first_error_stat),
@@ -791,6 +797,7 @@ module openadc_interface #(
           .postddr_fifo_underflow_masked (postddr_fifo_underflow_masked),
           .preddr_adc_fifo_underflow(preddr_adc_fifo_underflow ),
           .reading_too_soon_error   (reading_too_soon_error),
+          .ddr_full_error           (ddr_full_error        ),
           .error_flag               (error_flag            ),
           .flushing                 (flushing),
 
@@ -871,8 +878,8 @@ module openadc_interface #(
        assign ddr_write_idle = 0;
        assign ddr_max_read_stall_count = 0;
        assign ddr_max_write_stall_count = 0;
-       assign fifo_error_stat[11:9] = 0;
-       assign fifo_first_error_stat[11:9] = 0;
+       assign fifo_error_stat[12:9] = 0;
+       assign fifo_first_error_stat[12:9] = 0;
        assign ddr_state = 0;
        assign single_read_data = 0;
        assign ddr_read_data_done = 0;

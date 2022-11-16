@@ -35,12 +35,14 @@ module preddr_18to64_converter (
     input wire [17:0]   I_data,
     input wire          I_wr,
     input wire          I_4bit_mode,
+    input wire          clear_fifo_errors,
 
     input  wire         fifo_rd,
     output wire [63:0]  fifo_dout,
     output wire         fifo_empty,
     output reg          capture_done_out,
-    output wire         capture_start_out
+    output wire         capture_start_out,
+    output wire [1:0]   fifo_errors
 );
 
 
@@ -59,14 +61,19 @@ module preddr_18to64_converter (
     reg fifo_empty_raw_r;
     reg capture_done_r;
 
-    // TODO: report these somewhere
     wire fifo_full;
     wire fifo_overflow;
     wire fifo_underflow;
 
+    reg  fifo_overflow_sticky = 1'b0;
+    reg  fifo_underflow_sticky = 1'b0;
+
     wire fifo_rd_rd = fifo_rd || (I_fifo_flush & ~fifo_empty);
 
     assign fifo_empty = (enabled)? fifo_empty_raw : 1'b1; // to prevent X's when there is no clock
+
+    assign fifo_errors = {fifo_overflow_sticky, fifo_underflow_sticky};
+    wire error_flag = |fifo_errors; // convenience for testbench
 
     // Generate filler writes, so that all the data we received is pushed out
     // when it's not a multiple of 64 bits; mark "capture done" for the read
@@ -212,6 +219,22 @@ module preddr_18to64_converter (
             fifo_empty_raw_r <= 1'b0;
         end
     end
+
+    always @(posedge wr_clk) begin
+        // lazily don't CDC clear_fifo_errors since it's set and cleared from Python
+        if (clear_fifo_errors || capture_start)
+            fifo_overflow_sticky <= 1'b0;
+        else if (fifo_overflow)
+            fifo_overflow_sticky <= 1'b1;
+    end
+
+    always @(posedge wr_clk) begin
+        if (clear_fifo_errors || capture_start_out)
+            fifo_underflow_sticky <= 1'b0;
+        else if (fifo_overflow)
+            fifo_underflow_sticky <= 1'b1;
+    end
+
 
     cdc_pulse U_done (
         .reset_i       (reset),

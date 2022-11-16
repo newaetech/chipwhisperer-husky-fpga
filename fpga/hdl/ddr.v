@@ -118,6 +118,7 @@ module ddr (
     output wire         postddr_fifo_overflow,
     output reg          postddr_fifo_underflow_masked,
     output reg          reading_too_soon_error,
+    output reg          ddr_full_error,
     input  wire         flushing,
 
     // debug only:
@@ -229,7 +230,6 @@ module ddr (
     localparam pS_DDR_ADC_BYPASS      = 3'd7;
     reg [2:0] next_ddr_state, ddr_state_r; // TODO-later: trim size
 
-    reg ddr_full_error; // TODO: store this
     // TODO: flag error if arm event occurs when we are not idle
     assign ddr_read_data_done = ddr_reading && ( (source_select == pADC_SOURCE)?   (adc_top_app_addr   == main_app_addr) :
                                                  (source_select == pLA_SOURCE)?    (la_top_app_addr    == main_app_addr) :
@@ -630,13 +630,13 @@ module ddr (
             end
 
             pS_DDR_ADC_BYPASS: begin
+                // TODO: re-word DDR bypass with all sources in mind, as per note in Husky/Pro
                 if (use_ddr)
                     next_ddr_state = pS_DDR_IDLE;
                 else begin
                     next_ddr_state = pS_DDR_ADC_BYPASS;
                     // extra checks here to throttle the reads and ensure we don't overflow the FIFO; 
                     // it's ok if we don't read back-to-back.
-                    // TODO: handle reading LA and trace FIFOs here? (or maybe not)
                     if (~preddr_adc_fifo_empty && ~postddr_fifo_full && ~preddr_fifo_rd_r && ~postddr_fifo_wr)
                         preddr_fifo_rd = 1'b1;
                 end
@@ -838,7 +838,14 @@ module ddr (
             preddr_all_fifo_empty_r <= preddr_all_fifo_empty;
             ddr_writing_r <= ddr_writing;
             single_read_done <= 0;
-            // TODO (later): clear mechanism for ddr_full_error
+            if (capture_go_any)
+                ddr_full_error <= 1'b0;
+            // Convention is trace start address > LA start address, and ADC start address is 0.
+            else if ( (adc_app_addr >= ddr_la_start_address) ||
+                      (la_app_addr  >= ddr_trace_start_address) ||
+                      (incr_app_address && (main_app_addr >= pDDR_MAX_ADDR)) )
+                ddr_full_error <= 1'b1;
+
             if (single_write_ui || single_read_ui)
                 adc_app_addr <= single_address;
             else if (reset_app_address) begin
@@ -855,16 +862,12 @@ module ddr (
                 */
             end
             else if (incr_app_address) begin
-                if (main_app_addr == pDDR_MAX_ADDR)
-                    ddr_full_error <= 1'b1;
-                else begin
-                    if (source_select == pADC_SOURCE) 
-                        adc_app_addr <= adc_app_addr + pDDR_INC_ADDR;
-                    else if (source_select == pLA_SOURCE) 
-                        la_app_addr <= la_app_addr + pDDR_INC_ADDR;
-                    else
-                        trace_app_addr <= trace_app_addr + pDDR_INC_ADDR;
-                end
+                if (source_select == pADC_SOURCE) 
+                    adc_app_addr <= adc_app_addr + pDDR_INC_ADDR;
+                else if (source_select == pLA_SOURCE) 
+                    la_app_addr <= la_app_addr + pDDR_INC_ADDR;
+                else
+                    trace_app_addr <= trace_app_addr + pDDR_INC_ADDR;
             end
 
             if (write_done_adc)

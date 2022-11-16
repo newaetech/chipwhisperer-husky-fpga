@@ -47,8 +47,8 @@ module fifo_top_husky_pro (
 
     output wire         fifo_overflow, //If overflow happens (bad during stream mode)
     output reg          error_flag,
-    output reg [11:0]   error_stat,
-    output reg [11:0]   first_error_stat,
+    output reg [12:0]   error_stat,
+    output reg [12:0]   first_error_stat,
     output reg [2:0]    first_error_state,
     input  wire         clear_fifo_errors,
     input  wire         no_clip_errors,
@@ -71,6 +71,7 @@ module fifo_top_husky_pro (
     input  wire         postddr_fifo_overflow,
     input  wire         postddr_fifo_underflow_masked,
     input  wire         reading_too_soon_error,
+    input  wire         ddr_full_error,
 
     output wire         arm_pulse_usb,
 
@@ -531,9 +532,11 @@ module fifo_top_husky_pro (
     reg arm_usb_r;
     assign arm_pulse_usb = arm_usb && ~arm_usb_r;
 
-    function [11:0] error_bits (input [11:0] current_error);
+    // this may seem awkward; goal is to set new error bits without clearing old ones
+    function [12:0] error_bits (input [12:0] current_error);
        begin
           error_bits = current_error;
+          if (ddr_full_error)                error_bits[12] = 1'b1;
           if (reading_too_soon_error)        error_bits[11] = 1'b1;
           if (preddr_fifo_overflow)          error_bits[10] = 1'b1;
           if (preddr_fifo_underflow)         error_bits[9]  = 1'b1;
@@ -570,7 +573,7 @@ module fifo_top_husky_pro (
           else begin
              if (gain_error || segment_error || downsample_error || clip_error || presamp_error || 
                  fast_fifo_overflow || fast_fifo_underflow || postddr_fifo_overflow || postddr_fifo_underflow_masked || 
-                 preddr_fifo_overflow || preddr_fifo_underflow || reading_too_soon_error) begin
+                 preddr_fifo_overflow || preddr_fifo_underflow || reading_too_soon_error || ddr_full_error) begin
                 error_flag <= 1;
                 if (!error_flag) begin
                    first_error_stat <= error_bits(first_error_stat);

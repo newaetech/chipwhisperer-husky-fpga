@@ -328,6 +328,7 @@ module cwhusky_cw310_top(
    wire           trace_capture_start_ui;
    wire           trace_capture_done;
    wire           trace_capture_done_ui;
+   wire           clear_fifo_errors;
 
    wire           preddr_trace_rd;
    wire           [63:0] preddr_trace_data;
@@ -336,6 +337,9 @@ module cwhusky_cw310_top(
    wire           [63:0] preddr_la_data;
    wire           preddr_la_empty;
    wire           ui_clk;
+
+   wire [1:0]     la_fifo_errors;
+   wire [1:0]     trace_fifo_errors;
 
    assign USB_SPARE0 = enable_avrprog? 1'bz : stream_segment_available;
 
@@ -530,6 +534,9 @@ module cwhusky_cw310_top(
         .write_done_trace       (trace_capture_done_ui ),
         .capture_go_la          (la_capture_start_ui   ),
         .capture_go_trace       (trace_capture_start_ui),
+        .clear_fifo_errors      (clear_fifo_errors  ),
+        .trace_fifo_errors      (trace_fifo_errors  ),
+        .la_fifo_errors         (la_fifo_errors     ),
 `endif
 
         // CW310-specific:
@@ -1189,9 +1196,11 @@ module cwhusky_cw310_top(
         .I_data                 (trace_wr_data),
         .I_wr                   (trace_fifo_wr),
         .I_4bit_mode            (1'b0),
+        .clear_fifo_errors      (clear_fifo_errors),
         .fifo_rd                (preddr_trace_rd),
         .fifo_dout              (preddr_trace_data),
-        .fifo_empty             (preddr_trace_empty)
+        .fifo_empty             (preddr_trace_empty),
+        .fifo_errors            (trace_fifo_errors)
     );
 
     preddr_18to64_converter U_la_converter (
@@ -1207,9 +1216,11 @@ module cwhusky_cw310_top(
         .I_data                 (la_wr_data),
         .I_wr                   (la_fifo_wr),
         .I_4bit_mode            (la_4bit_mode),
+        .clear_fifo_errors      (clear_fifo_errors),
         .fifo_rd                (preddr_la_rd),
         .fifo_dout              (preddr_la_data),
-        .fifo_empty             (preddr_la_empty)
+        .fifo_empty             (preddr_la_empty),
+        .fifo_errors            (la_fifo_errors)
     );
 
 `endif

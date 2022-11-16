@@ -43,8 +43,8 @@ module reg_openadc_adcfifo #(
    output reg          low_res_lsb,
    output reg          fast_fifo_read_mode,
    output reg  [16:0]  stream_segment_threshold,
-   input  wire [11:0]  fifo_error_stat,
-   input  wire [11:0]  fifo_first_error_stat,
+   input  wire [12:0]  fifo_error_stat,
+   input  wire [12:0]  fifo_first_error_stat,
    input  wire [2:0]   fifo_first_error_state,
    output reg          clear_fifo_errors,
 
@@ -52,6 +52,9 @@ module reg_openadc_adcfifo #(
    output reg          no_underflow_errors,
    input  wire         capture_done,
    output reg          O_data_source_select,
+
+   input  wire [1:0]   trace_fifo_errors,
+   input  wire [1:0]   la_fifo_errors,
 
    // DDR3 (Pro) stuff:
    output reg          O_use_ddr,
@@ -104,7 +107,12 @@ module reg_openadc_adcfifo #(
    reg [7:0] reg_datao_reg;
    assign reg_datao = reg_datao_reg;
 
-   wire [12:0] fifo_stat = {fifo_empty, fifo_error_stat};
+   wire [23:0] fifo_stat = {4'b0,               // 23:20
+                            trace_fifo_errors,  // 19:18
+                            la_fifo_errors,     // 17:16
+                            2'b0,               // 15:14
+                            fifo_empty,         // 13
+                            fifo_error_stat};   // 12:0
 
    wire [159:0] ddr3_rw_stats = {I_ddr3_read_read,              // 159:128
                                  I_ddr3_read_idle,              // 127:96
@@ -171,7 +179,9 @@ module reg_openadc_adcfifo #(
          O_use_ddr <= 1'b1;
          O_data_source_select <= 1; // default to ADC
          `ifdef __ICARUS__
-             // use different defaults, due to the smaller DDR address space in simulation
+             // Use different defaults, due to the smaller DDR address space in simulation.
+             // Convention is trace start address > LA start address, and ADC start address is 0; 
+             // error checking on crossing boundaries assumes this.
              ddr_la_start_address    <= 30'h0001_0000;
              ddr_trace_start_address <= 30'h0008_0000;
          `else
