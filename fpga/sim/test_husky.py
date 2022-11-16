@@ -374,7 +374,7 @@ class ADCCapture(GenericCapture):
         #self.dut._log.info("Checking ramp (%0d samples)" % len(data))
         for i, byte in enumerate(data[1:]):
             if byte != (current_count+1)%MOD:
-                self.dut._log.error("%12s Sample %4d: expected %3x got %3x" % (job['job_name'], i, (current_count+1)%MOD, byte))
+                self.dut._log.error("%12s Sample %4d: expected %3x got %3x" % (job['job_name'], i+1, (current_count+1)%MOD, byte))
                 self.inc_error()
                 if stop:
                     return
@@ -382,7 +382,7 @@ class ADCCapture(GenericCapture):
                     first_error = i
                 current_count = byte
             else:
-                self.dut._log.debug("%12s Good sample %4d: %2x" % (job['job_name'], i, byte))
+                self.dut._log.debug("%12s Good sample %4d: %2x" % (job['job_name'], i+1, byte))
                 current_count += 1
                 if (i+2) % samples == 0:
                     current_count = (current_count + segment_cycles - samples) % MOD
@@ -492,13 +492,13 @@ class LACapture(GenericCapture):
         #    self.dut._log.error('%12s post-DDR FIFO not empty after reading all samples.' % job_name)
 
     def _check_samples(self, job, data) -> None:
-        for i,byte in enumerate(data):
-            expected = (0xa1 + 2*i) % 256
+        for i,byte in enumerate(data[1:]):
+            expected = (data[0] + 2*(i+1)) % 256
             if expected != byte:
                 self.inc_error()
-                self.dut._log.error("%12s Sample %4d: expected %2x got %2x" % (job['job_name'], i, expected, byte))
+                self.dut._log.error("%12s Sample %4d: expected %2x got %2x" % (job['job_name'], i+1, expected, byte))
             else:
-                self.dut._log.debug("%12s Good sample %4d: %2x" % (job['job_name'], i, byte))
+                self.dut._log.debug("%12s Good sample %4d: %2x" % (job['job_name'], i+1, byte))
 
 
 class Harness(object):

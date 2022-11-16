@@ -354,7 +354,7 @@ module reg_la #(
    reg capture8_source;
 
    reg ticktock;
-   reg [8:0] ramp_pattern;
+   reg [8:0] ramp_pattern = 9'd0;
 
    assign capture_start = capturing && ~capturing_r;
    assign capture_done = capturing_r && ~capturing;
@@ -460,6 +460,7 @@ module reg_la #(
        endcase
    end
 
+   always @ (posedge observer_clk) ramp_pattern <= ramp_pattern + 1;
 
    always @ (posedge observer_clk) begin
       if (reset) begin
@@ -477,7 +478,6 @@ module reg_la #(
          capture8_reg <= 2'b0;
          ticktock <= 1'b0;
          fifo_wr <= 1'b0;
-         ramp_pattern <= 9'b0;
       end
 
       else begin
@@ -513,12 +513,6 @@ module reg_la #(
 
          else
              fifo_wr <= 1'b0;
-
-         if (capture_go)
-            ramp_pattern <= 9'h1a0;
-         else
-            ramp_pattern <= ramp_pattern + 1;
-
       end
    end
 
