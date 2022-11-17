@@ -118,7 +118,7 @@ module reg_openadc_adcfifo #(
                             trace_fifo_errors,  // 19:18
                             la_fifo_errors,     // 17:16
                             2'b0,               // 15:14
-                            fifo_empty,         // 13
+                            fifo_empty,         // 13 (this is post-ddr/slow FIFO empty)
                             fifo_error_stat};   // 12:0
 
    wire [159:0] ddr3_rw_stats = {I_ddr3_read_read,              // 159:128

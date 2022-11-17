@@ -653,6 +653,7 @@ module openadc_interface #(
        wire         arm_pulse_usb;
        wire         reading_too_soon_error;
        wire         ddr_full_error;
+       wire         source_flushing = adc_flushing || la_flushing || trace_flushing;
 
        fifo_top_husky_pro U_fifo (
           .reset                    (reset),
@@ -807,7 +808,7 @@ module openadc_interface #(
           .reading_too_soon_error   (reading_too_soon_error),
           .ddr_full_error           (ddr_full_error        ),
           .error_flag               (error_flag            ),
-          .flushing                 (adc_flushing          ), // TODO: why only look at ADC flushing???
+          .source_flushing          (source_flushing       ),
           .postddr_flush            (postddr_flush         ),
 
           .ddr_state                (ddr_state),

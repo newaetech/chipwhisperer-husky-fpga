@@ -119,7 +119,7 @@ module ddr (
     output reg          postddr_fifo_underflow_masked,
     output reg          reading_too_soon_error,
     output reg          ddr_full_error,
-    input  wire         flushing,       // TODO: this is adc_flushing; what about other sources?
+    input  wire         source_flushing,
     output wire         postddr_flush,
 
     // debug only:
@@ -278,7 +278,6 @@ module ddr (
 
     reg read_started;
     reg pre_read_flush;
-    reg arm_event;
 
     reg  [63:0]         postddr_fifo_din;
     wire                postddr_fifo_full;
@@ -314,7 +313,6 @@ module ddr (
     wire start_la_read_usb_pulse;
     wire start_trace_read_usb_pulse;
 
-    wire arm_pulse_ui;
     wire first_read_pulse_ui;
 
     reg postddr_fifo_rd_r;
@@ -381,14 +379,6 @@ module ddr (
       .src_pulse     (read_update),
       .dst_clk       (clk_usb),
       .dst_pulse     (read_update_usb)
-   );
-
-   cdc_pulse U_arm_pulse_cdc (
-      .reset_i       (reset),
-      .src_clk       (clk_usb),
-      .src_pulse     (arm_pulse_usb),
-      .dst_clk       (ui_clk),
-      .dst_pulse     (arm_pulse_ui)
    );
 
    cdc_pulse U_fresh_start_cdc (
@@ -501,7 +491,7 @@ module ddr (
     end
 
     assign slow_fifo_rd_fast = fifo_read_fifoen && (low_res? (slow_read_count == 2) : ((slow_read_count == 3) || (slow_read_count == 8))); // TODO!
-    assign postddr_fifo_rd = ((flushing || pre_read_flush_usb) && ~postddr_fifo_empty) || 
+    assign postddr_fifo_rd = ((source_flushing || pre_read_flush_usb) && ~postddr_fifo_empty) || 
                              ((fast_fifo_read_mode)? slow_fifo_rd_fast : slow_fifo_rd_slow);
 
     reg [7:0] fifo_read_data_pre;
@@ -648,12 +638,8 @@ module ddr (
 
             pS_DDR_WAIT_WRITE: begin
                 // This is where we arbitrate between the different preddr sources.
-                if (arm_event)  // TODO- other sources? used to have capture_go_adc here but that's not right
-                                // (consider multiple active sources all firing off close to each other)
-                                // I don't think this condition belongs here at all!
-                    next_ddr_state = pS_DDR_IDLE;
                 // ddr_state_r check because ddr_write_data_done goes low one cycle after getting here:
-                else if (ddr_write_data_done && ~single_write_ui && (ddr_state_r == pS_DDR_WAIT_WRITE)) begin 
+                if (ddr_write_data_done && ~single_write_ui && (ddr_state_r == pS_DDR_WAIT_WRITE)) begin 
                     reset_app_address = 1'b1;
                     next_ddr_state = pS_DDR_IDLE;
                 end
@@ -710,7 +696,7 @@ module ddr (
 
             pS_DDR_WAIT_READ: begin
                 main_app_en = 1'b0;
-                if (ddr_rwtest_en || capture_go_any || arm_event || ddr_read_change)
+                if (ddr_rwtest_en || capture_go_any || ddr_read_change)
                     next_ddr_state = pS_DDR_IDLE;
                 else if (~postddr_fifo_empty_ui && ~read_started && ~single_read_ui) begin
                     pre_read_flush = 1'b1;
@@ -831,7 +817,6 @@ module ddr (
             ddr_write_data_done <= 0;
             ddr_writing_r <= 0;
             read_started <= 1'b0;
-            arm_event <= 0;
             capture_go_any <= 0;
         end
 
@@ -979,14 +964,6 @@ module ddr (
             else if (ddr_state == pS_DDR_READ1)
                 read_started <= 1'b1;
 
-            // To catch arm pulse even if we're busy; this is used to abort an active DDR read or write activity
-            // if the scope is re-armed prior to the DDR process's normal conclusion. This can arise if the user
-            // does a long capture but doesn't read the full capture.
-            if (arm_pulse_ui) // TODO: what about non-ADC sources?
-                arm_event <= 1'b1;
-            else if (ddr_state == pS_DDR_IDLE)
-                arm_event <= 1'b0;
-
             if (capture_go_adc || capture_go_la || capture_go_trace)
                 capture_go_any <= 1'b1;
             else if (ddr_state_r == pS_DDR_IDLE)        // capture_go_any may cause the FSM to go to idle; by clearing on ddr_state_r,
@@ -1044,7 +1021,7 @@ module ddr (
     end
 
     always @(posedge clk_usb) begin
-       postddr_fifo_rd_r <= postddr_fifo_rd && !(flushing || pre_read_flush_usb);
+       postddr_fifo_rd_r <= postddr_fifo_rd && !(source_flushing || pre_read_flush_usb);
        // detect "reading too soon" separately from general underflow errors;
        if (fresh_start_usb)
           reading_too_soon_error <= 1'b0;
@@ -1462,7 +1439,7 @@ wire stat_reset = (ddr_rwtest_en)? rw_stat_reset : capture_go_adc;
         .probe2         (postddr_fifo_rd),      // input wire [0:0]
         .probe3         (postddr_fifo_empty),   // input wire [0:0]
         .probe4         (postddr_fifo_underflow),// input wire [0:0]
-        .probe5         (flushing),             // input wire [0:0]
+        .probe5         (source_flushing),      // input wire [0:0]
         .probe6         (arm_pulse_usb),        // input wire [0:0]
         .probe7         (slow_fifo_rd_fast),    // input wire [0:0]
         .probe8         (fifo_read_fifoen),     // input wire [0:0]

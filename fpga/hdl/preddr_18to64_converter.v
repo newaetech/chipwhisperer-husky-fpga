@@ -269,7 +269,7 @@ module preddr_18to64_converter (
 
 `ifdef NOFIFO
     //for clean iverilog compilation
-    // TODO: need to indicate "write_done_adc" equivalent
+
 `else
     pre_ddr_generic_fifo U_pre_ddr_fifo (
        .rst          (reset),

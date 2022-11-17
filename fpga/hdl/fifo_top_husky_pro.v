@@ -408,7 +408,6 @@ module fifo_top_husky_pro (
                 // 1. wait for fast FIFO to empty;
                 // 2. generate "filler reads" so that the last full 64-bit word of ADC samples can be formed
                 // 3. wait state so that we don't get back out of idle right away
-                // TODO: need extra conditions for DDR?
                 if ((fast_fifo_empty && (done_wait_count == 0)) || arm_i) begin
                    fast_fifo_rd_en <= 1'b0;
                    state <= pS_IDLE;
