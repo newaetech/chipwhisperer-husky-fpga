@@ -55,6 +55,10 @@ module reg_openadc_adcfifo #(
 
    input  wire [1:0]   trace_fifo_errors,
    input  wire [1:0]   la_fifo_errors,
+   input  wire         adc_flushing,
+   input  wire         la_flushing,
+   input  wire         trace_flushing,
+   input  wire         postddr_flush,
 
    // DDR3 (Pro) stuff:
    output reg          O_use_ddr,
@@ -107,7 +111,10 @@ module reg_openadc_adcfifo #(
    reg [7:0] reg_datao_reg;
    assign reg_datao = reg_datao_reg;
 
-   wire [23:0] fifo_stat = {4'b0,               // 23:20
+   wire [23:0] fifo_stat = {1'b0,               // 23
+                            trace_flushing | postddr_flush,     // 22
+                            la_flushing | postddr_flush,        // 21
+                            adc_flushing | postddr_flush,       // 20
                             trace_fifo_errors,  // 19:18
                             la_fifo_errors,     // 17:16
                             2'b0,               // 15:14

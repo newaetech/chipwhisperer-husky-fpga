@@ -544,6 +544,8 @@ module cwhusky_cw310_top(
         .clear_fifo_errors      (clear_fifo_errors  ),
         .trace_fifo_errors      (trace_fifo_errors  ),
         .la_fifo_errors         (la_fifo_errors     ),
+        .trace_flushing         (trace_fifo_flush   ),
+        .la_flushing            (la_fifo_flush      ),
         .tb_ui_clk              (tb_ui_clk          ),
 `endif
 

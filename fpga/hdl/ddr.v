@@ -119,7 +119,8 @@ module ddr (
     output reg          postddr_fifo_underflow_masked,
     output reg          reading_too_soon_error,
     output reg          ddr_full_error,
-    input  wire         flushing,
+    input  wire         flushing,       // TODO: this is adc_flushing; what about other sources?
+    output wire         postddr_flush,
 
     // debug only:
     input  wire         preddr_adc_fifo_underflow,
@@ -272,6 +273,8 @@ module ddr (
     reg single_write_done;
     reg single_read_done;
     assign ddr_single_done = single_write_done || single_read_done;
+
+    assign postddr_flush = pre_read_flush_usb;
 
     reg read_started;
     reg pre_read_flush;

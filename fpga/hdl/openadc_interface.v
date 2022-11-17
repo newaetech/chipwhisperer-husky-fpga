@@ -106,6 +106,8 @@ module openadc_interface #(
     output wire                         clear_fifo_errors,
     input  wire [1:0]                   trace_fifo_errors,
     input  wire [1:0]                   la_fifo_errors,
+    input  wire                         trace_flushing,
+    input  wire                         la_flushing,
     input  wire                         tb_ui_clk,
 `endif
 
@@ -143,7 +145,8 @@ module openadc_interface #(
     wire       armed_and_ready;
     wire [2:0] fifo_state;
     wire [2:0] ddr_state;
-    wire       flushing;
+    wire       adc_flushing;
+    wire       postddr_flush;
 
     wire         single_write;
     wire         single_read;
@@ -580,6 +583,10 @@ module openadc_interface #(
       .O_data_source_select             (data_source_select),
       .trace_fifo_errors                (trace_fifo_errors),
       .la_fifo_errors                   (la_fifo_errors),
+      .adc_flushing                     (adc_flushing),
+      .la_flushing                      (la_flushing),
+      .trace_flushing                   (trace_flushing),
+      .postddr_flush                    (postddr_flush),
 
       .ddr_single_write                 (single_write      ),
       .ddr_single_read                  (single_read       ),
@@ -700,7 +707,7 @@ module openadc_interface #(
           .postddr_fifo_empty       (fifo_empty),
           .postddr_fifo_overflow    (postddr_fifo_overflow),
           .postddr_fifo_underflow_masked (postddr_fifo_underflow_masked),
-          .flushing                 (flushing),
+          .flushing                 (adc_flushing),
 
           .preddr_fifo_wr           (slow_fifo_wr),
           .preddr_fifo_underflow    (preddr_adc_fifo_underflow ),
@@ -800,7 +807,8 @@ module openadc_interface #(
           .reading_too_soon_error   (reading_too_soon_error),
           .ddr_full_error           (ddr_full_error        ),
           .error_flag               (error_flag            ),
-          .flushing                 (flushing),
+          .flushing                 (adc_flushing          ), // TODO: why only look at ADC flushing???
+          .postddr_flush            (postddr_flush         ),
 
           .ddr_state                (ddr_state),
 

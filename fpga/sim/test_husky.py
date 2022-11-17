@@ -214,6 +214,19 @@ class GenericCapture(object):
             self.results.put_nowait({"errors": self.errors})
             self.job_id += 1
 
+    def _limit_read(self, job) -> int:
+        """ To test that the design functions correctly when the full capture is not read back.
+        """
+        samples = job['samples']
+        #1. Read full capture 75% of the time:
+        if random.randint(0,3) < 3:
+            return samples
+        #2. otherwise randomly reduce the number of samples read to as little as 1:
+        else:
+            samples = random.randint(1, samples-1)
+            self.dut._log.info("%12s reducing sample read count to %d" % (job['job_name'], samples))
+            return samples
+
 
 
 class ADCTest(GenericTest):
@@ -249,9 +262,10 @@ class ADCTest(GenericTest):
         # TODO: code more trigger options
 
     async def trigger_now(self) -> None:
-        await self.registers.write(1, [0x24])
-        await self.registers.write(1, [0x0c])
-        await self.registers.write(1, [0x4c])
+        await self.registers.write(1, [0x24]) # disarm
+        await self.registers.write(1, [0x0c]) # arm
+        await self.harness.wait_flush('ADC')  # allow for any flushes (triggered by arming) to complete before triggering
+        await self.registers.write(1, [0x4c]) # trigger
 
     async def fifo_watch(self) -> None:
         while True:
@@ -321,6 +335,7 @@ class ADCCapture(GenericCapture):
         await self.harness.registers.write(105, [0])
         await self.harness.registers.write(105, [1])
         await ClockCycles(self.clk, 50)
+        await self.harness.wait_flush('ADC') # if previous read wasn't complete, wait for post-DDR to get flushed
         # wait for read FIFO to be not empty:
         #self.dut._log.info("waiting for FIFO to not be empty...")
         empty = True
@@ -329,7 +344,7 @@ class ADCCapture(GenericCapture):
             empty = (await self.harness.registers.read(44, 2))[1] & 32
 
     async def _read_samples(self, job) -> list:
-        samples = job['samples']
+        samples = self._limit_read(job)
         bits_per_sample = job['bits_per_sample']
         #self.dut._log.info("starting the read (%0d samples)" % samples)
         raw = await self.read_adc_data(samples, bits_per_sample)
@@ -434,10 +449,11 @@ class LATest(GenericTest):
         # TODO: code more trigger options
 
     async def trigger_now(self) -> None:
-        await self.registers.write(98, [0])   # LA_ARM
-        await self.registers.write(98, [1])   # LA_ARM
+        await self.registers.write(98, [0])   # LA disarm
+        await self.registers.write(98, [1])   # LA arm
+        await self.harness.wait_flush('LA')   # allow for any flushes (triggered by arming) to complete before triggering
         await self.registers.write(75, [1])   # LA_MANUAL_CAPTURE
-        await ClockCycles(self.clk, 10)
+        #await ClockCycles(self.clk, 10)       # TODO: is this needed anymore?
         await self.registers.write(75, [0])   # LA_MANUAL_CAPTURE
 
 
@@ -463,6 +479,7 @@ class LACapture(GenericCapture):
         await self.harness.registers.write(105, [0])
         await self.harness.registers.write(105, [2])
         await ClockCycles(self.clk, 50)
+        await self.harness.wait_flush('LA') # if previous read wasn't complete, wait for post-DDR to get flushed
         # wait for read FIFO to be not empty:
         #self.dut._log.info("waiting for FIFO to not be empty...")
         empty = True
@@ -471,7 +488,7 @@ class LACapture(GenericCapture):
             empty = (await self.harness.registers.read(44, 2))[1] & 32
 
     async def _read_samples(self, job) -> list:
-        samples = job['samples']
+        samples = self._limit_read(job)
         capture_width = job['capture_width']
         if capture_width == 4:
             bytes_to_read = math.ceil(samples/2)
@@ -548,6 +565,19 @@ class Harness(object):
             return True
         else:
             return False
+
+    async def wait_flush(self, source):
+        if source == 'ADC':
+            bitmask = 16
+        elif source == 'LA':
+            bitmask = 32
+        elif source == 'trace':
+            bitmask = 64
+        flushing = True
+        await ClockCycles(self.dut.clk_usb, 5) # give time for flushing to begin
+        while flushing:
+            self.dut._log.info("(wating for flush to complete...)")
+            flushing = (await self.registers.read(44, 3))[2] & bitmask
 
     def register_test(self, test):
         """ Add to list of running tests, so that we can later wait for all of
