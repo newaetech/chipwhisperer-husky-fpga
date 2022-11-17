@@ -364,7 +364,8 @@ class ADCCapture(GenericCapture):
         #    self.harness.inc_error()
         #    self.dut._log.error('%12s post-DDR FIFO not empty after reading all samples.' % job_name)
 
-    def processHuskyData(self, NumberPoints, data, bits_per_sample=12):
+    @staticmethod
+    def processHuskyData(NumberPoints, data, bits_per_sample=12):
         if bits_per_sample == 12:
             if len(data)%3:
                 data.extend([0]*(3-len(data)%3))
@@ -413,11 +414,14 @@ class LATest(GenericTest):
 
     async def _job_setup(self) -> dict:
         samples = random.randint(self.capture_min, self.capture_max)
-        if samples % 2:
+        if samples % 2: 
+            # in both 4- and 9-bit mode, samples are collected two at a time, so enforce it to be an even number
             samples -= 1
-        # TODO: randomize these too:
-        capture_width = 4
-        downsample = 0
+        if random.randint(0,1):
+            capture_width = 4
+        else:
+            capture_width = 9
+        downsample = 0 # TODO: randomize later
         await self.registers.write(77, self.registers.to_bytes(samples, 4))
         await self.registers.write(78, [downsample])
         if capture_width == 4:
@@ -492,11 +496,41 @@ class LACapture(GenericCapture):
         capture_width = job['capture_width']
         if capture_width == 4:
             bytes_to_read = math.ceil(samples/2)
+        elif capture_width == 9:
+            bytes_to_read = math.ceil(samples*9/8)
         else:
-            # TODO (9)
-            dut._log.error("Unsupported! (yet)")
+            raise ValueError("Unsupported capture width")
         data = list(await self.harness.registers.read(3, bytes_to_read))
+        if capture_width == 9:
+            data = self.process9bitRawData(data)
         return data
+
+    @staticmethod
+    def process9bitRawData(raw, verbose=False):
+        """ Check LA 9-bit ramp pattern: instead of efficient numpy.reshape (as
+        done in processHuskyData), we take a simple big hammer...
+            1. expand the raw data list to a multiple of 9*64 bits = 72 bytes.
+            2. take each 48-byte chunk as a large number and shift out forty 9-bit words, one at a time
+            3. trim any extra words to account for 1
+        """
+        words = []
+        diff = len(raw) % 72
+        raw_extended = raw.copy()
+        if diff:
+            extrazeros = 72-diff
+            raw_extended.extend([0]*extrazeros)
+        else:
+            extrazeros = 0
+        if verbose: print('%d extra zeros' % extrazeros)
+        for i in range(len(raw_extended)//72):
+            bignum = int.from_bytes(raw_extended[i*72:(i+1)*72], byteorder='big')
+            if verbose: print(hex(bignum))
+            for j in range(64):
+                word = (bignum >> (576-9*(j+1)) & 0x1ff)
+                words.append(word)
+                if verbose: print(hex(word))
+        num_full_words = int(len(raw)/9*8)
+        return words[:num_full_words]
 
     async def _check_fifo_errors(self, job_name) -> None:
         # TODO: replace internal signal checks with a register status read
@@ -509,8 +543,16 @@ class LACapture(GenericCapture):
         #    self.dut._log.error('%12s post-DDR FIFO not empty after reading all samples.' % job_name)
 
     def _check_samples(self, job, data) -> None:
+        if job['capture_width'] == 4:
+            MOD = 256 # that's just how it works!
+            INC = 2
+        elif job['capture_width'] == 9:
+            MOD = 2**9
+            INC = 1
+        else:
+            raise ValueError('Unsupported')
         for i,byte in enumerate(data[1:]):
-            expected = (data[0] + 2*(i+1)) % 256
+            expected = (data[0] + INC*(i+1)) % MOD
             if expected != byte:
                 self.inc_error()
                 self.dut._log.error("%12s Sample %4d: expected %2x got %2x" % (job['job_name'], i+1, expected, byte))
@@ -576,7 +618,7 @@ class Harness(object):
         flushing = True
         await ClockCycles(self.dut.clk_usb, 5) # give time for flushing to begin
         while flushing:
-            self.dut._log.info("(wating for flush to complete...)")
+            self.dut._log.debug("...waiting for flush to complete...")
             flushing = (await self.registers.read(44, 3))[2] & bitmask
 
     def register_test(self, test):
@@ -638,7 +680,7 @@ async def reg_rw(dut, wait_cycles=1000):
     await ClockCycles(dut.clk_usb, wait_cycles)
 
 
-@cocotb.test(timeout_time=300, timeout_unit="us")
+@cocotb.test(timeout_time=400, timeout_unit="us")
 async def capture(dut):
     """Concurrent captures of ADC and LA."""
     registers = Registers(dut)

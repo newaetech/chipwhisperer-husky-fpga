@@ -79,23 +79,35 @@ module preddr_18to64_converter (
     // when it's not a multiple of 64 bits; mark "capture done" for the read
     // side when this filler write is done (instead of using the
     // "capture_done" input which doesn't account for these filler writes).
-    // TODO-note: this works for LA in 4-bit mode; some tweaks may be required
-    // in other capture modes?
     reg filler_write;
     reg filler_write_r;
     wire writing_done;
     reg writing_done_r;
+    reg fifo_written;
     always @(posedge wr_clk) begin
         if (reset) begin
             filler_write <= 1'b0;
             filler_write_r  <= 1'b0;
+            fifo_written <= 1'b0;
         end
         else begin
             filler_write_r <= filler_write;
             writing_done_r <= writing_done;
+
+            if (I_4bit_mode)
+                fifo_written <= 1'b1;
+            else begin
+                // in 9-bit mode, wait to see *2* fifo writes after capture_done, otherwise data
+                // may not all get through:
+                if (filler_write && fifo_wr)
+                    fifo_written <= 1'b1;
+                else if (~filler_write)
+                    fifo_written <= 1'b0;
+            end
+
             if (capture_done_r)
                 filler_write <= 1'b1;
-            else if (capture_start || fifo_wr)
+            else if (capture_start || (fifo_written && fifo_wr))
                 filler_write <= 1'b0;
         end
     end
