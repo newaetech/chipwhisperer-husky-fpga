@@ -190,7 +190,7 @@ module reg_openadc_adcfifo #(
              // Convention is trace start address > LA start address, and ADC start address is 0; 
              // error checking on crossing boundaries assumes this.
              ddr_la_start_address    <= 30'h0001_0000;
-             ddr_trace_start_address <= 30'h0008_0000;
+             ddr_trace_start_address <= 30'h0004_0000;
          `else
              ddr_la_start_address    <= 30'h1000_0000;
              ddr_trace_start_address <= 30'h2000_0000;

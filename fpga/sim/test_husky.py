@@ -431,7 +431,6 @@ class LATest(GenericTest):
         return {"samples": samples, "capture_width": capture_width, "downsample": downsample}
 
     async def _initial_setup(self) -> None:
-        await self.registers.write(0xed, [0]) # REG_TRACE_EN: disable trace
         await self.registers.write(71, [1])   # LA_CLOCK_SOURCE: select USB clock
         await self.registers.write(99, [1])   # LA_ENABLED
 
@@ -457,7 +456,6 @@ class LATest(GenericTest):
         await self.registers.write(98, [1])   # LA arm
         await self.harness.wait_flush('LA')   # allow for any flushes (triggered by arming) to complete before triggering
         await self.registers.write(75, [1])   # LA_MANUAL_CAPTURE
-        #await ClockCycles(self.clk, 10)       # TODO: is this needed anymore?
         await self.registers.write(75, [0])   # LA_MANUAL_CAPTURE
 
 
@@ -509,9 +507,9 @@ class LACapture(GenericCapture):
     def process9bitRawData(raw, verbose=False):
         """ Check LA 9-bit ramp pattern: instead of efficient numpy.reshape (as
         done in processHuskyData), we take a simple big hammer...
-            1. expand the raw data list to a multiple of 9*64 bits = 72 bytes.
-            2. take each 48-byte chunk as a large number and shift out forty 9-bit words, one at a time
-            3. trim any extra words to account for 1
+            1. expand the raw data list to a multiple of 9*64 bits = 72 bytes = 576 bits;
+            2. take each 72-byte chunk as a large number and shift out sixty-four 9-bit words, one at a time;
+            3. trim any extra words to account for #1 above.
         """
         words = []
         diff = len(raw) % 72
@@ -558,6 +556,135 @@ class LACapture(GenericCapture):
                 self.dut._log.error("%12s Sample %4d: expected %2x got %2x" % (job['job_name'], i+1, expected, byte))
             else:
                 self.dut._log.debug("%12s Good sample %4d: %2x" % (job['job_name'], i+1, byte))
+
+
+
+class TraceTest(GenericTest):
+    def __init__(self, dut, harness, registers, dut_job_signal, dut_reading_signal, num_captures=5):
+        super().__init__(dut, harness, registers)
+        self.dut_job_signal = dut_job_signal
+        self.checker = TraceCapture(dut, harness, dut_reading_signal)
+        self.name = 'trace'
+
+    async def _job_setup(self) -> dict:
+        samples = random.randint(self.capture_min, self.capture_max)
+        await self.registers.write(0x8a, self.registers.to_bytes(samples, 3))
+        return {"samples": samples}
+
+    async def _initial_setup(self) -> None:
+        await self.registers.write(0x91, [1]) # trace reset
+        await self.registers.write(0x91, [0]) 
+        await self.registers.write(0xed, [1]) # REG_TRACE_EN: enable trace
+        await self.registers.write(0xe5, [2])   # REG_FE_CLOCK_SEL: select USB clock
+        await self.registers.write(0x8b, [1])   # REG_COUNT_WRITES
+        await self.registers.write(0xf6, [1])   # REG_TRACE_TEST
+        await self.registers.write(0xc8, [0])   # REG_SOFT_TRIG_ENABLE: disable, X's otherwise
+
+    async def _wait_capture_done(self, job: dict) -> None:
+        samples = job['samples']
+        await ClockCycles(self.clk, samples) # UI clock is USB clock, so that's the dominant portion of the capture delay
+        # then, wait for DDR to be done writing:
+        #self.dut._log.info("waiting for DDR writing to be done...")
+        not_done_writing = True
+        while not_done_writing:
+            await ClockCycles(self.clk, 50)
+            not_done_writing = not await self.harness.ddr_done_writing()
+
+    async def _trigger(self) -> None:
+        await self.trigger_now()
+        # TODO: code more trigger options
+
+    async def trigger_now(self) -> None:
+        await self.registers.write(0x84, [0])   # trace disarm
+        await self.registers.write(0x84, [1])   # trace arm
+        await self.harness.wait_flush('trace')# allow for any flushes (triggered by arming) to complete before triggering
+        await self.registers.write(0x84, [3])   # capture now
+
+
+class TraceCapture(GenericCapture):
+    def __init__(self, dut, harness, dut_reading_signal):
+        super().__init__(dut, harness, dut_reading_signal)
+        self.name = 'trace'
+
+    # TODO: I think this is ok?
+    async def _pre_read_wait(self, job) -> None:
+        samples = job['samples']
+        await ClockCycles(self.clk, samples*4) # UI clock is USB clock, so that's the dominant portion of the capture delay
+        # then, wait for DDR to be done writing:
+        #self.dut._log.info("waiting for DDR writing to be done...")
+        not_done_writing = True
+        while not_done_writing:
+            await ClockCycles(self.clk, 50)
+            not_done_writing = not await self.harness.ddr_done_writing()
+
+    async def _initiate_read(self) -> None:
+        #self.dut._log.info("issuing initiate read command...")
+        # 1. initiate the read:
+        await self.harness.registers.write(105, [0])
+        await self.harness.registers.write(105, [4])
+        await ClockCycles(self.clk, 50)
+        await self.harness.wait_flush('trace') # if previous read wasn't complete, wait for post-DDR to get flushed
+        # wait for read FIFO to be not empty:
+        #self.dut._log.info("waiting for FIFO to not be empty...")
+        empty = True
+        while empty:
+            await ClockCycles(self.clk, 50)
+            empty = (await self.harness.registers.read(44, 2))[1] & 32
+
+    async def _read_samples(self, job) -> list:
+        samples = self._limit_read(job)
+        samples = job['samples']
+        bytes_to_read = math.ceil(samples*18/8)
+        data = list(await self.harness.registers.read(3, bytes_to_read))
+        data = self.process18bitRawData(data)
+        return data
+
+    @staticmethod
+    def process18bitRawData(raw, verbose=False):
+        """ Check trace 18-bit ramp pattern: instead of efficient numpy.reshape (as
+        done in processHuskyData), we take a simple big hammer...
+            1. expand the raw data list to a multiple of 9*64 bits = 72 bytes = 576 bits;
+            2. take each 72-byte chunk as a large number and shift out thirty-two 18-bit words, one at a time;
+            3. trim any extra words to account for #1 above.
+        """
+        words = []
+        diff = len(raw) % 72
+        raw_extended = raw.copy()
+        if diff:
+            extrazeros = 72-diff
+            raw_extended.extend([0]*extrazeros)
+        else:
+            extrazeros = 0
+        if verbose: print('%d extra zeros' % extrazeros)
+        for i in range(len(raw_extended)//72):
+            bignum = int.from_bytes(raw_extended[i*72:(i+1)*72], byteorder='big')
+            if verbose: print(hex(bignum))
+            for j in range(32):
+                word = (bignum >> (576-18*(j+1)) & 0x3ffff)
+                words.append(word)
+                if verbose: print(hex(word))
+        num_full_words = int(len(raw)/18*8)
+        return words[:num_full_words]
+
+    async def _check_fifo_errors(self, job_name) -> None:
+        # TODO: replace internal signal checks with a register status read
+        if self.dut.U_dut.U_trace_converter.fifo_empty.value == 0:
+            self.harness.inc_error()
+            self.dut._log.error('%12s pre-DDR FIFO not empty after reading all samples.' % job_name)
+        ## TODO: temporarily commented out because last word is left unread, due to the first word fallthrough nature of the FIFO.
+        #if self.dut.U_dut.oadc.U_fifo.postddr_fifo_empty.value == 0:
+        #    self.harness.inc_error()
+        #    self.dut._log.error('%12s post-DDR FIFO not empty after reading all samples.' % job_name)
+
+    def _check_samples(self, job, data) -> None:
+        for i,byte in enumerate(data[1:]):
+            expected = (data[0] + i + 1) % 2**18
+            if expected != byte:
+                self.inc_error()
+                self.dut._log.error("%12s Sample %4d: expected %5x got %5x" % (job['job_name'], i+1, expected, byte))
+            else:
+                self.dut._log.debug("%12s Good sample %4d: %5x" % (job['job_name'], i+1, byte))
+
 
 
 class Harness(object):
@@ -680,7 +807,7 @@ async def reg_rw(dut, wait_cycles=1000):
     await ClockCycles(dut.clk_usb, wait_cycles)
 
 
-@cocotb.test(timeout_time=400, timeout_unit="us")
+@cocotb.test(timeout_time=600, timeout_unit="us")
 async def capture(dut):
     """Concurrent captures of ADC and LA."""
     registers = Registers(dut)
@@ -705,6 +832,13 @@ async def capture(dut):
         adctest.capture_min = min_size
         adctest.capture_max = max_size
         harness.register_test(adctest)
+
+    if int(os.getenv('TRACE_CAPTURE')):
+        tracetest = TraceTest(dut, harness, registers, dut.trace_job, dut.trace_reading)
+        tracetest.num_captures = num_captures
+        tracetest.capture_min = min_size
+        tracetest.capture_max = max_size
+        harness.register_test(tracetest)
 
     harness.start_tests()
     await harness.all_tests_done()

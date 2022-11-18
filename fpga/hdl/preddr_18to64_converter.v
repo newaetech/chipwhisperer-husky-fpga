@@ -42,7 +42,8 @@ module preddr_18to64_converter (
     output wire         fifo_empty,
     output reg          capture_done_out,
     output wire         capture_start_out,
-    output wire [1:0]   fifo_errors
+    output wire [1:0]   fifo_errors,
+    output wire         fifo_full
 );
 
 
@@ -61,7 +62,6 @@ module preddr_18to64_converter (
     reg fifo_empty_raw_r;
     reg capture_done_r;
 
-    wire fifo_full;
     wire fifo_overflow;
     wire fifo_underflow;
 

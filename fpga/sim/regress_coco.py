@@ -25,17 +25,27 @@ args = parser.parse_args()
 tests = []
 tests.append(dict(name  = 'adc_capture',
              testcase = 'capture',
-             frequency = 2,
+             frequency = 3,
              LA_CAPTURE = 0,
              TRACE_CAPTURE = 0,
+             MAX_SIZE = 300,
              description = 'ADC-only capture.'))
 
 tests.append(dict(name  = 'la_capture',
              testcase = 'capture',
-             frequency = 2,
+             frequency = 3,
              ADC_CAPTURE = 0,
              TRACE_CAPTURE = 0,
+             MAX_SIZE = 300,
              description = 'LA-only capture.'))
+
+tests.append(dict(name  = 'trace_capture',
+             testcase = 'capture',
+             frequency = 3,
+             ADC_CAPTURE = 0,
+             LA_CAPTURE = 0,
+             MAX_SIZE = 300,
+             description = 'Trace-only capture.'))
 
 tests.append(dict(name  = 'all_capture',
              testcase = 'capture',

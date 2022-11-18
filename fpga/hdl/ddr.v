@@ -748,9 +748,9 @@ module ddr (
     wire preddr_all_fifo_empty = preddr_adc_fifo_empty &&
                                  preddr_la_fifo_empty &&
                                  preddr_trace_fifo_empty; 
-    wire preddr_chosen_fifo_empty = (source_select == pADC_SOURCE)? preddr_adc_fifo_empty :
-                                    (source_select == pLA_SOURCE)?  preddr_la_fifo_empty :
-                                                                    preddr_la_fifo_empty;
+    wire preddr_chosen_fifo_empty = (source_select == pADC_SOURCE)?   preddr_adc_fifo_empty :
+                                    (source_select == pLA_SOURCE)?    preddr_la_fifo_empty :
+                                    (source_select == pTRACE_SOURCE)? preddr_trace_fifo_empty : 1'b1;
     reg preddr_fifo_rd;
     assign preddr_adc_fifo_rd   = preddr_fifo_rd && (source_select == pADC_SOURCE);
     assign preddr_la_fifo_rd    = preddr_fifo_rd && (source_select == pLA_SOURCE);

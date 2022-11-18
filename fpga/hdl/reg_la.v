@@ -124,6 +124,9 @@ module reg_la #(
     assign O_enabled = reg_enabled;
 
 `ifdef __ICARUS__
+   // TODO: this seems redundant, given how trace_capture_on is used to
+   // choose fifo_wr_clk in top-level; resolve this later when re-building
+   // Husky.
    assign source_clk = (I_trace_en) ?                trace_fe_clk :
                        (clock_source_reg == 2'b01) ? clk_usb : 
                        (clock_source_reg == 2'b10) ? pll_fpga_clk :

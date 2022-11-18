@@ -343,6 +343,7 @@ module cwhusky_cw310_top(
 
    wire [1:0]     la_fifo_errors;
    wire [1:0]     trace_fifo_errors;
+   wire           trace_fifo_full;
 
    assign USB_SPARE0 = enable_avrprog? 1'bz : stream_segment_available;
 
@@ -736,7 +737,8 @@ module cwhusky_cw310_top(
         .observer_clk           (observer_clk),
         .observer_locked        (observer_locked),
         .mmcm_shutdown          (xadc_error_flag),
-        .I_trace_en             (trace_en),
+        //.I_trace_en             (trace_en),
+        .I_trace_en             (1'b0), // trace/LA aren't mutually exclusive here; TODO: a better mechanism?
         .O_enabled              (la_enabled),             
         .freq_measure           (freq_measure),
         .O_4bit_mode            (la_4bit_mode),
@@ -1025,6 +1027,7 @@ module cwhusky_cw310_top(
           .trace_clk_in                 (TRACECLOCK),
           .fe_clk                       (fe_clk),
           .usb_clk                      (clk_usb_buf),
+          .fifo_rd_clk                  (ui_clk),
           .reset_pin                    (reg_rst),
           .fpga_reset                   (),
           .I_external_arm               (cmd_arm_usb),
@@ -1092,8 +1095,8 @@ module cwhusky_cw310_top(
           .capture_start                (trace_capture_start),
           .capture_done                 (trace_capture_done),
 
-          .fifo_full                    (fifo_full),
-          .fifo_overflow_blocked        (fifo_overflow_blocked),
+          .fifo_full                    (trace_fifo_full),
+          .fifo_overflow_blocked        (trace_fifo_errors[1]),
           .fifo_in_data                 (trace_wr_data),
           .fifo_wr                      (trace_fifo_wr),
                                                
@@ -1210,7 +1213,8 @@ module cwhusky_cw310_top(
         .fifo_rd                (preddr_trace_rd),
         .fifo_dout              (preddr_trace_data),
         .fifo_empty             (preddr_trace_empty),
-        .fifo_errors            (trace_fifo_errors)
+        .fifo_errors            (trace_fifo_errors),
+        .fifo_full              (trace_fifo_full)
     );
 
     preddr_18to64_converter U_la_converter (
@@ -1230,7 +1234,8 @@ module cwhusky_cw310_top(
         .fifo_rd                (preddr_la_rd),
         .fifo_dout              (preddr_la_data),
         .fifo_empty             (preddr_la_empty),
-        .fifo_errors            (la_fifo_errors)
+        .fifo_errors            (la_fifo_errors),
+        .fifo_full              ()      // unused
     );
 
 `endif
