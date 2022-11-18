@@ -240,10 +240,10 @@ module preddr_18to64_converter (
             fifo_overflow_sticky <= 1'b1;
     end
 
-    always @(posedge wr_clk) begin
+    always @(posedge rd_clk) begin
         if (clear_fifo_errors || capture_start_out)
             fifo_underflow_sticky <= 1'b0;
-        else if (fifo_overflow)
+        else if (fifo_underflow)
             fifo_underflow_sticky <= 1'b1;
     end
 
