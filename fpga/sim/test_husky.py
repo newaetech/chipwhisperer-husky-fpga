@@ -704,6 +704,9 @@ class Harness(object):
                                         # On the read side, a global read lock is first acquired, and then we must wait until
                                         # this queue is empty before starting the read.
         self.read_lock = Lock()
+        # Actual seed is obtained only if RANDOM_SEED is defined on vvp command line (otherwise you get 0)
+        # regress.py always specifies the seed so this is fine.
+        self.dut._log.info("seed: %d" % int(os.getenv('RANDOM_SEED', '0')))
         #cocotb.start_soon(Clock(dut.clk_usb, 1, units='ns').start())
         adc_period = random.randint(4, 20)
         self.dut._log.info("ADC clock randomized to %5.1f MHz" % (1/adc_period*1000))
