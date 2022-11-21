@@ -613,7 +613,7 @@ module ddr (
                             reset_app_address = 1'b1;
                             next_ddr_state = pS_DDR_WAIT_READ;
                         end
-                        else begin // normal ADC write-to-read case
+                        else begin
                             reset_app_address = 1'b1;
                             next_ddr_state = pS_DDR_WAIT_WRITE;
                         end
@@ -952,14 +952,9 @@ module ddr (
             else if (ddr_writing && (active_sources == 3'b000))
                 ddr_write_data_done <= 1'b1;
 
-            //TODO: first_read_pulse_ui can cause failures if it results in
-            //read_started going back low when FSM is in pS_DDR_WAIT_READ
-            //state (it will trigger a flush). It also generally causes
-            //read_started to pulse low a second time on every read cycle.
-            //Need to figure out a better solution but reluctant to do so
-            //without a simulation testbench which covers all the corners
-            //here.
-            if (start_read_ui_pulse || first_read_pulse_ui)
+            // TODO-note: this used to also condition on first_read_pulse_ui but that led to read_started pulsing low
+            // for no reason; no harm seemed to come from that but it still felt wrong.
+            if (start_read_ui_pulse)
                 read_started <= 1'b0;
             else if (ddr_state == pS_DDR_READ1)
                 read_started <= 1'b1;
@@ -968,6 +963,8 @@ module ddr (
                 capture_go_any <= 1'b1;
             else if (ddr_state_r == pS_DDR_IDLE)        // capture_go_any may cause the FSM to go to idle; by clearing on ddr_state_r,
                 capture_go_any <= 1'b0;                 // we ensure that the FSM has a chance to exit idle
+                                                        // This means that after a job completes normally, we can find ourselves exiting IDLE
+                                                        // for no reason (because capture_go_any is still high), but that's harmless
         end
 
     end
