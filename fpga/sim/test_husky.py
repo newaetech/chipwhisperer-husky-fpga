@@ -1,5 +1,5 @@
 import cocotb
-from cocotb.triggers import RisingEdge, FallingEdge, Timer, ClockCycles, Join, Lock
+from cocotb.triggers import RisingEdge, FallingEdge, Timer, ClockCycles, Join, Lock, Event
 from cocotb.clock import Clock
 from cocotb.queue import Queue
 from cocotb.handle import Force, Release
@@ -35,6 +35,11 @@ class GenericTest(object):
         self.dispatch_id = 0
         self.name = None
         self.errors = 0
+        self.downstream_triggers = [None]
+        self.allow_downstream_triggers = True
+        self.downstream_event = Event()
+        self.external_jobs = Queue() # queue for jobs received from other sources
+        self.can_be_externally_triggered = True
 
     def start(self) -> None:
         """Start test thread"""
@@ -52,6 +57,12 @@ class GenericTest(object):
         self._coro.kill()
         self._coro = None
 
+    def running(self) -> bool:
+        if self._coro is None or self._coro.done():
+            return False
+        else:
+            return True
+
     async def done(self) -> None:
         """ wait for _run() to complete """
         await Join(self._coro)
@@ -67,13 +78,26 @@ class GenericTest(object):
         """
         self.dut._log.error("This must be implemented in child class.")
 
+    async def _job_external_source_mods(self, job) -> dict:
+        """ Change job properties when driven by some external source.
+        Takes in the job, modifies the job, takes any required action, and
+        returns the modified job.
+        """
+        self.dut._log.error("This must be implemented in child class.")
+
+    async def _post_job(self) -> None:
+        """ Runs after the job completes.
+        """
+        pass
+
+
     async def _dispatch_delay(self) -> None:
         """ Random delay before starting first job, so that ordering of initial
         jobs is random.
         """
         await ClockCycles(self.clk, random.randint(0,100))
 
-    async def _trigger(self) -> None:
+    async def _trigger(self, job) -> None:
         """ Trigger the DUT capture.
         """
         self.dut._log.error("This must be implemented in child class.")
@@ -90,6 +114,11 @@ class GenericTest(object):
         """
         self.dut._log.error("This must be implemented in child class.")
 
+    def get_downstream_trigger(self) -> None:
+        """ If a job triggers another job, returns that second job's Test
+        class; otherwise, returns None.
+        """
+        return None
 
     async def _run(self) -> None:
         """ Main run loop. """
@@ -101,20 +130,49 @@ class GenericTest(object):
             self.dut_job_signal.value = self.dispatch_id
             job = await self._job_setup()
             job['job_name'] = job_name
+
+            # this job might be triggered from a different GenericTest instance, in which case we 
+            # may have to change some of its properties: (example: LA job triggered by ADC capture)
+            if cap == self.num_captures - 1:
+                self.can_be_externally_triggered = False
+            if not self.external_jobs.empty():
+                source, event = self.external_jobs.get_nowait()
+                self.dut._log.info("%12s using external job from %s" % (job_name, source.name))
+                job = await self._job_external_source_mods(source, job)
+                externally_triggered = True
+            else:
+                externally_triggered = False
+
             # see comments around queue definition in Harness for how this queue and lock mechanism works:
             self.dut._log.debug("%12s trying to trigger job..." % job_name)
             while self.harness.read_lock.locked:
                 await ClockCycles(self.clk, 10)
+            self.dut._log.info("%12s trying to trigger job: read lock freed" % job_name)
+            # decide whether this job also triggers a downstream job:
+            # TODO: this only allows a single downstream trigger; extend it to multiple!
+            downstream_trigger = self.get_downstream_trigger()
+            if downstream_trigger:
+                self.dut._log.info("%12s sending downstream trigger to %s" % (job_name, downstream_trigger.name))
+                downstream_trigger.external_jobs.put_nowait((self, self.downstream_event))
+                # wait for downstream job to be ready to capture
+                await self.downstream_event.wait()
+                self.downstream_event.clear()
+
+            # now we can trigger *this* job:
             self.harness.queue.put_nowait(self.name)
             self.dut._log.debug("%12s pushing to job queue (count = %d)" % (job_name, self.harness.queue.qsize()))
             self.dut._log.info("%12s Triggering: %s" %(job_name, job))
             self.dut.current_action.value = self.harness.hexstring("%12s Triggering" % job_name)
-            await self._trigger()
+            await self._trigger(job)
+            if externally_triggered:
+                # let the parent triggering job know that we're good to go:
+                event.set()
             self.checker.jobs.put_nowait(job)
             await self._wait_capture_done(job)
             self.harness.queue.get_nowait()
             self.dut._log.debug("%12s popping from job queue (count = %d)" % (job_name, self.harness.queue.qsize()))
             result = await self.checker.results.get()
+            await self._post_job()
             #assert result['errors'] == 0 # TODO: optionally assert here, to stop test as soon as errors are found?
             self.errors += result['errors']
             self.dispatch_id += 1
@@ -257,7 +315,7 @@ class ADCTest(GenericTest):
             await ClockCycles(self.clk, 50)
             not_done_writing = not await self.harness.ddr_done_writing()
 
-    async def _trigger(self) -> None:
+    async def _trigger(self, job) -> None:
         await self.trigger_now()
         # TODO: code more trigger options
 
@@ -302,6 +360,17 @@ class ADCTest(GenericTest):
             if self.dut.U_dut.U_la_converter.fifo_overflow_sticky:     error_message += "U_la_converter overflow "
             if self.dut.U_dut.U_la_converter.fifo_underflow_sticky:    error_message += "U_la_converter underflow "
             self.dut._log.error(error_message)
+
+    def get_downstream_trigger(self) -> None:
+        # TODO: possibly return multiple downstream triggers
+        if self.allow_downstream_triggers:
+            choice = random.choice(self.downstream_triggers)
+            if choice is not None:
+                if not choice.can_be_externally_triggered:
+                    choice = None
+        else:
+            choice = None
+        return choice
 
 
 class ADCCapture(GenericCapture):
@@ -421,6 +490,7 @@ class LATest(GenericTest):
             capture_width = 4
         else:
             capture_width = 9
+        trigger_type = 'manual'
         downsample = 0 # TODO: randomize later
         await self.registers.write(77, self.registers.to_bytes(samples, 4))
         await self.registers.write(78, [downsample])
@@ -428,14 +498,25 @@ class LATest(GenericTest):
             await self.registers.write(76, [0x86])   # LA_CAPTURE_GROUP: group 6 in 4-bit capture mode
         else:
             await self.registers.write(76, [0x06])   # LA_CAPTURE_GROUP: group 6 in 9-bit capture mode
-        return {"samples": samples, "capture_width": capture_width, "downsample": downsample}
+        return {"samples": samples, "capture_width": capture_width, "trigger_type": trigger_type, "downsample": downsample}
+
+    async def _job_external_source_mods(self, source, job) -> dict:
+        #source = self.external_jobs.get_nowait()
+        if source.name == 'ADC':
+            job['trigger_type'] = 'ADC'
+            await self.registers.write(72, [1]) # LA_TRIGGER_SOURCE
+        else:
+            raise ValueError
+        return job
+
+    async def _post_job(self) -> None:
+        """ reset LA_TRIGGER_SOURCE to something that won't fire so it doesn't inadvertently trigger later!
+        """
+        await self.registers.write(72, [0]) # LA_TRIGGER_SOURCE
 
     async def _initial_setup(self) -> None:
         await self.registers.write(71, [1])   # LA_CLOCK_SOURCE: select USB clock
         await self.registers.write(99, [1])   # LA_ENABLED
-
-    #async def _dispatch_delay(self) -> None:
-    #    await ClockCycles(self.clk, 200)
 
     async def _wait_capture_done(self, job: dict) -> None:
         samples = job['samples']
@@ -447,8 +528,13 @@ class LATest(GenericTest):
             await ClockCycles(self.clk, 50)
             not_done_writing = not await self.harness.ddr_done_writing()
 
-    async def _trigger(self) -> None:
-        await self.trigger_now()
+    async def _trigger(self, job) -> None:
+        if job['trigger_type'] == 'manual':
+            await self.trigger_now()
+        elif job['trigger_type'] == 'ADC':
+            await self.trigger_adc()
+        else:
+            raise ValueError
         # TODO: code more trigger options
 
     async def trigger_now(self) -> None:
@@ -457,6 +543,12 @@ class LATest(GenericTest):
         await self.harness.wait_flush('LA')   # allow for any flushes (triggered by arming) to complete before triggering
         await self.registers.write(75, [1])   # LA_MANUAL_CAPTURE
         await self.registers.write(75, [0])   # LA_MANUAL_CAPTURE
+
+    async def trigger_adc(self) -> None:
+        await self.registers.write(98, [0])   # LA disarm
+        await self.registers.write(98, [1])   # LA arm
+        await self.harness.wait_flush('LA')   # allow for any flushes (triggered by arming) to complete before triggering
+
 
 
 class LACapture(GenericCapture):
@@ -590,7 +682,7 @@ class TraceTest(GenericTest):
             await ClockCycles(self.clk, 50)
             not_done_writing = not await self.harness.ddr_done_writing()
 
-    async def _trigger(self) -> None:
+    async def _trigger(self, job) -> None:
         await self.trigger_now()
         # TODO: code more trigger options
 
@@ -764,6 +856,11 @@ class Harness(object):
             await test.done()
         await ClockCycles(self.dut.clk_usb, 10) # to give time for fifo_watch errors to be seen
 
+    #def init_tests(self):
+    #    """ call after all tests have been defined, to resolve inter-dependencies
+    #    """
+    #    TODO?
+
     def start_tests(self):
         """ Wait for all tests which were registered via register_test() to finish.
         """
@@ -827,6 +924,8 @@ async def capture(dut):
         latest.num_captures = num_captures
         latest.capture_min = min_size
         latest.capture_max = max_size
+        if int(os.getenv('NO_DOWNSTREAM_TRIGGERS', 0)):
+            latest.allow_downstream_triggers = False
         harness.register_test(latest)
 
     if int(os.getenv('ADC_CAPTURE')):
@@ -834,6 +933,8 @@ async def capture(dut):
         adctest.num_captures = num_captures
         adctest.capture_min = min_size
         adctest.capture_max = max_size
+        if int(os.getenv('NO_DOWNSTREAM_TRIGGERS', 0)):
+            adctest.allow_downstream_triggers = False
         harness.register_test(adctest)
 
     if int(os.getenv('TRACE_CAPTURE')):
@@ -841,9 +942,19 @@ async def capture(dut):
         tracetest.num_captures = num_captures
         tracetest.capture_min = min_size
         tracetest.capture_max = max_size
+        if int(os.getenv('NO_DOWNSTREAM_TRIGGERS', 0)):
+            tracetest.allow_downstream_triggers = False
         harness.register_test(tracetest)
 
+
+    # TODO: find a better mechanism (maybe init_tests?); add trace
+    try:
+        adctest.downstream_triggers.append(latest)
+    except NameError:
+        pass
+
     harness.start_tests()
+    dut._log.debug("ADC downstream enabled: %s" % adctest.allow_downstream_triggers)
     await harness.all_tests_done()
     assert harness.errors == 0
 

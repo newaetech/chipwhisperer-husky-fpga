@@ -45,6 +45,7 @@ TRACE_CAPTURE=1
 ADC_CAPTURE=1
 MIN_SIZE=30
 MAX_SIZE=100
+NO_DOWNSTREAM_TRIGGERS=0
 
 all: compile run
 all_sad: compile_sad run
@@ -234,6 +235,7 @@ run_coco:
 	ADC_CAPTURE=$(ADC_CAPTURE) \
 	MIN_SIZE=$(MIN_SIZE) \
 	MAX_SIZE=$(MAX_SIZE) \
+	NO_DOWNSTREAM_TRIGGERS=$(NO_DOWNSTREAM_TRIGGERS) \
 	MODULE=test_husky \
 	COCOTB_DEBUG_LEVEL=$(COCOTB_DEBUG_LEVEL) \
 	LIBPYTHON_LOC=$(shell cocotb-config --libpython) \

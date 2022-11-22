@@ -52,6 +52,12 @@ tests.append(dict(name  = 'all_capture',
              frequency = 1,
              description = 'All sources capture.'))
 
+tests.append(dict(name  = 'all_capture_no_downstream',
+             testcase = 'capture',
+             frequency = 2,
+             NO_DOWNSTREAM_TRIGGERS = 1,
+             description = 'All sources capture, no downstream triggers.'))
+
 tests.append(dict(name  = 'big_capture',
              testcase = 'capture',
              frequency = 4,
@@ -59,6 +65,15 @@ tests.append(dict(name  = 'big_capture',
              MAX_SIZE= 1000,
              NUM_CAPTURES = 2,
              description = 'All sources, larger captures.'))
+
+#tests.append(dict(name  = 'adctrig',
+#             testcase = 'capture',
+#             frequency = 1,
+#             MIN_SIZE = 30,
+#             MAX_SIZE= 90,
+#             TRACE_CAPTURE = 0,
+#             NUM_CAPTURES = 1,
+#             description = 'ADC and LA only, covering LA triggered by ADC.'))
 
 
 
