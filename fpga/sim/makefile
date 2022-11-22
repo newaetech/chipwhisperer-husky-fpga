@@ -38,7 +38,7 @@ TRIGGERS=1
 FLUSH=0
 THRESHOLD=0
 VERBOSE=0
-COCOTB_DEBUG_LEVEL=INFO
+COCOTB_LOG_LEVEL=INFO
 NUM_CAPTURES=3
 LA_CAPTURE=1
 TRACE_CAPTURE=1
@@ -237,11 +237,12 @@ run_coco:
 	MAX_SIZE=$(MAX_SIZE) \
 	NO_DOWNSTREAM_TRIGGERS=$(NO_DOWNSTREAM_TRIGGERS) \
 	MODULE=test_husky \
-	COCOTB_DEBUG_LEVEL=$(COCOTB_DEBUG_LEVEL) \
+	COCOTB_LOG_LEVEL=$(COCOTB_LOG_LEVEL) \
 	LIBPYTHON_LOC=$(shell cocotb-config --libpython) \
 	vvp -M $(shell cocotb-config --lib-dir) \
 	-m $(shell cocotb-config --lib-name vpi icarus) \
 	-l$(LOGFILE) $(EXEFILE) -$(WAVEFORMAT) \
+
 
 clean:
 	rm -f a.out results/*.vvp

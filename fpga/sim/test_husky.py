@@ -147,7 +147,7 @@ class GenericTest(object):
             self.dut._log.debug("%12s trying to trigger job..." % job_name)
             while self.harness.read_lock.locked:
                 await ClockCycles(self.clk, 10)
-            self.dut._log.info("%12s trying to trigger job: read lock freed" % job_name)
+            self.dut._log.debug("%12s trying to trigger job: read lock freed" % job_name)
             # decide whether this job also triggers a downstream job:
             # TODO: this only allows a single downstream trigger; extend it to multiple!
             downstream_trigger = self.get_downstream_trigger()

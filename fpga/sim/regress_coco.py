@@ -156,7 +156,7 @@ for test in tests:
 
    for i in range(args.runs):
 
-      makeargs = ['make', 'run_coco', 'TESTCASE=%s' % test['testcase'], 'EXEFILE=%s' % exefile, 'COCOTB_DEBUG_LEVEL=%s' % args.cocodebug]
+      makeargs = ['make', 'run_coco', 'TESTCASE=%s' % test['testcase'], 'EXEFILE=%s' % exefile, 'COCOTB_LOG_LEVEL=%s' % args.cocodebug]
       if (args.seed):
           seed = args.seed
       else:
