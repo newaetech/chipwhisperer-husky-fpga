@@ -102,7 +102,7 @@ module ddr3_app_model #(
             @(posedge clk);
             // write part 2:
             wait (app_en && app_wdf_wren);
-            #1 memory[app_addr>>3] = {app_wdf_data_r, app_wdf_data};
+            #1 memory[app_addr>>3] = {app_wdf_data, app_wdf_data_r};
             @(posedge clk);
             if ($urandom_range(0, 1)) begin
                 app_rdy_wr = 1'b0;
@@ -167,8 +167,8 @@ module ddr3_app_model #(
         end
     end
 
-    assign app_rd_data = fifo_rd_r?  fifo_out[63:32] :
-                         fifo_rd_r2? fifo_out[31:0] : 32'b0;
+    assign app_rd_data = fifo_rd_r?  fifo_out[31:0] :
+                         fifo_rd_r2? fifo_out[63:32] : 32'b0;
 
     // read logic: throttle FIFO reads
     initial begin
@@ -214,6 +214,11 @@ module ddr3_app_model #(
     wire [pDATA_WIDTH*2-1:0] memory8197 = memory[8197];
     wire [pDATA_WIDTH*2-1:0] memory8198 = memory[8198];
     wire [pDATA_WIDTH*2-1:0] memory8199 = memory[8199];
+    wire [pDATA_WIDTH*2-1:0] memory32776 = memory[32776];
+    wire [pDATA_WIDTH*2-1:0] memory32777 = memory[32777];
+    wire [pDATA_WIDTH*2-1:0] memory32778 = memory[32778];
+    wire [pDATA_WIDTH*2-1:0] memory32779 = memory[32779];
+    wire [pDATA_WIDTH*2-1:0] memory32780 = memory[32780];
 
 `endif
 
