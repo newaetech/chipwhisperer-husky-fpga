@@ -306,12 +306,12 @@ class GenericCapture(object):
         increment = self.sample_increment
         mod = 2**width
         read_data = self.raw_read_data
-        num_big_words = math.ceil(len(read_data)*8/(32*width))
+        num_big_words = math.ceil(len(read_data)*8/(64*width))*2
 
         #self.dut._log.info("num_big_words=%d, read_data=%s" % (num_big_words, read_data))
         self.dut._log.info("first=%03x, width=%d, increment=%d, mod=%d" % (first_sample, width, increment, mod))
-        if len(read_data) % 4:
-            read_data.extend([0]*(4-len(read_data)%4))
+        if len(read_data) % 8:
+            read_data.extend([0]*(8-len(read_data)%8))
         message = "Expected: "
         word = first_sample
         for i in range(num_big_words):
@@ -324,7 +324,11 @@ class GenericCapture(object):
             for j in range(width):
                 word32bits = (big_word >> (32*(width-j-1)) & 0xffff_ffff)
                 #self.dut._log.info("words32bits: %
-                message += "%08x " % word32bits
+                if j%2:
+                    end = ' '
+                else:
+                    end = '_'
+                message += "%08x%s" % (word32bits, end)
                 expected_words.append(word32bits)
         message += "\nGot:      "
         num_words = math.floor(len(read_data)/4)
@@ -332,13 +336,17 @@ class GenericCapture(object):
             big_word = 0
             for j in range(4):
                 big_word = read_data[i*4+j] + (big_word << 8)
-            message += "%08x " % big_word
+            if i%2:
+                end = ' '
+            else:
+                end = '_'
+            message += "%08x%s" % (big_word, end)
             actual_words.append(big_word)
         self.dut._log.info(message)
-        for i in range(len(actual_words)):
-            if actual_words[i] != expected_words[i]:
-                self.dut._log.error("32-bit word %3d: expected %08x" % (i, expected_words[i]))
-                self.dut._log.error("                 got      %08x" % actual_words[i])
+        for i in range(len(actual_words)//2):
+            if (actual_words[i*2] != expected_words[i*2]) or (actual_words[i*2+1] != expected_words[i*2+1]):
+                self.dut._log.error("64-bit word %3d: expected %08x_%08x" % (i, expected_words[i*2], expected_words[i*2+1]))
+                self.dut._log.error("                 got      %08x_%08x" % (actual_words[i*2], actual_words[i*2+1]))
 
 
 
