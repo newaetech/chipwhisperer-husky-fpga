@@ -98,7 +98,7 @@ module ddr3_app_model #(
         while (1) begin
             // write part 1:
             wait (app_en && app_wdf_wren && app_cmd == CMD_WRITE);
-            app_wdf_data_r = app_wdf_data;
+            //app_wdf_data_r = app_wdf_data; // this led to *very* rare failures
             @(posedge clk);
             // write part 2:
             wait (app_en && app_wdf_wren);
@@ -111,6 +111,10 @@ module ddr3_app_model #(
             end
         end
     end
+
+    always @(posedge clk)
+        if (app_en && app_wdf_wren && app_cmd == CMD_WRITE)
+            app_wdf_data_r <= app_wdf_data;
 
     // read logic: FIFO write thread
     // simple model to emulate how reads are serviced: the first request
