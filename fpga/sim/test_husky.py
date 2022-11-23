@@ -191,6 +191,8 @@ class GenericCapture(object):
         self.job_id = 0
         self.name = None
         self.errors = 0
+        self.first_read_sample = None
+        self.raw_read_data = []
 
     def start(self) -> None:
         """Start capture thread"""
@@ -270,6 +272,8 @@ class GenericCapture(object):
             await self._check_fifo_errors(job_name)
             self._check_samples(job, data)
             self.results.put_nowait({"errors": self.errors})
+            if self.errors:
+                self.find_bad_words(job)
             self.job_id += 1
 
     def _limit_read(self, job) -> int:
@@ -284,6 +288,57 @@ class GenericCapture(object):
             samples = random.randint(1, samples-1)
             self.dut._log.info("%12s reducing sample read count to %d" % (job['job_name'], samples))
             return samples
+
+    def find_bad_words(self, job):
+        """ Convenience method to help debugging bad sample reads.
+        Internally, Husky stores sample data in 32-bit words. Since the source
+        samples can be 9, 12 or 18 bits wide, it can be hard to pinpoint where
+        things go wrong inside Husky when a bad sample value is obtained. Given
+        the first sample of a capture (assumed to be correct), this method
+        prints the sequence of expected 32-bit words and the actual received
+        sequence of 32-bit words; this makes it easier to
+        see where things diverged.
+        """
+        expected_words = []
+        actual_words = []
+        first_sample = self.first_read_sample
+        width = job['bits_per_sample']
+        increment = self.sample_increment
+        mod = 2**width
+        read_data = self.raw_read_data
+        num_big_words = math.ceil(len(read_data)*8/(32*width))
+
+        #self.dut._log.info("num_big_words=%d, read_data=%s" % (num_big_words, read_data))
+        self.dut._log.info("first=%03x, width=%d, increment=%d, mod=%d" % (first_sample, width, increment, mod))
+        if len(read_data) % 4:
+            read_data.extend([0]*(4-len(read_data)%4))
+        message = "Expected: "
+        word = first_sample
+        for i in range(num_big_words):
+            big_word = 0
+            for j in range(32):
+                big_word = word + (big_word << width)
+                word = (word + increment) % mod
+                #self.dut._log.info("j=%d, big_word: %096x; word=%d" % (j, big_word, word))
+                #self.dut._log.info("j=%d, big_word: %x; word=%d" % (j, big_word, word))
+            for j in range(width):
+                word32bits = (big_word >> (32*(width-j-1)) & 0xffff_ffff)
+                #self.dut._log.info("words32bits: %
+                message += "%08x " % word32bits
+                expected_words.append(word32bits)
+        message += "\nGot:      "
+        num_words = math.floor(len(read_data)/4)
+        for i in range(num_words):
+            big_word = 0
+            for j in range(4):
+                big_word = read_data[i*4+j] + (big_word << 8)
+            message += "%08x " % big_word
+            actual_words.append(big_word)
+        self.dut._log.info(message)
+        for i in range(len(actual_words)):
+            if actual_words[i] != expected_words[i]:
+                self.dut._log.error("32-bit word %3d: expected %08x" % (i, expected_words[i]))
+                self.dut._log.error("                 got      %08x" % actual_words[i])
 
 
 
@@ -377,6 +432,7 @@ class ADCCapture(GenericCapture):
     def __init__(self, dut, harness, dut_reading_signal):
         super().__init__(dut, harness, dut_reading_signal)
         self.name = 'ADC'
+        self.sample_increment = 1
 
     async def read_adc_data(self, samples, bits_per_sample):
         # do the read:
@@ -416,8 +472,8 @@ class ADCCapture(GenericCapture):
         samples = self._limit_read(job)
         bits_per_sample = job['bits_per_sample']
         #self.dut._log.info("starting the read (%0d samples)" % samples)
-        raw = await self.read_adc_data(samples, bits_per_sample)
-        data = self.processHuskyData(samples, bytearray(raw))
+        self.raw_read_data = await self.read_adc_data(samples, bits_per_sample)
+        data = self.processHuskyData(samples, bytearray(self.raw_read_data))
         return data
 
     async def _check_fifo_errors(self, job_name) -> None:
@@ -455,6 +511,7 @@ class ADCCapture(GenericCapture):
         MOD = 2**bits_per_sample
         samples = len(data)
         current_count = data[0]
+        self.first_read_sample = int(current_count)
         first_error = None
         #self.dut._log.info("Checking ramp (%0d samples)" % len(data))
         for i, byte in enumerate(data[1:]):
@@ -487,18 +544,18 @@ class LATest(GenericTest):
             # in both 4- and 9-bit mode, samples are collected two at a time, so enforce it to be an even number
             samples -= 1
         if random.randint(0,1):
-            capture_width = 4
+            bits_per_sample = 8 # not a typo: in four-bit mode the ramp pattern is 8 bits long
         else:
-            capture_width = 9
+            bits_per_sample = 9
         trigger_type = 'manual'
         downsample = 0 # TODO: randomize later
         await self.registers.write(77, self.registers.to_bytes(samples, 4))
         await self.registers.write(78, [downsample])
-        if capture_width == 4:
+        if bits_per_sample == 8:
             await self.registers.write(76, [0x86])   # LA_CAPTURE_GROUP: group 6 in 4-bit capture mode
         else:
             await self.registers.write(76, [0x06])   # LA_CAPTURE_GROUP: group 6 in 9-bit capture mode
-        return {"samples": samples, "capture_width": capture_width, "trigger_type": trigger_type, "downsample": downsample}
+        return {"samples": samples, "bits_per_sample": bits_per_sample, "trigger_type": trigger_type, "downsample": downsample}
 
     async def _job_external_source_mods(self, source, job) -> dict:
         #source = self.external_jobs.get_nowait()
@@ -555,6 +612,7 @@ class LACapture(GenericCapture):
     def __init__(self, dut, harness, dut_reading_signal):
         super().__init__(dut, harness, dut_reading_signal)
         self.name = 'LA'
+        self.sample_increment = None # filled in by each job
 
     # TODO: I think this is ok?
     async def _pre_read_wait(self, job) -> None:
@@ -583,15 +641,16 @@ class LACapture(GenericCapture):
 
     async def _read_samples(self, job) -> list:
         samples = self._limit_read(job)
-        capture_width = job['capture_width']
-        if capture_width == 4:
+        bits_per_sample = job['bits_per_sample']
+        if bits_per_sample == 8:
             bytes_to_read = math.ceil(samples/2)
-        elif capture_width == 9:
+        elif bits_per_sample == 9:
             bytes_to_read = math.ceil(samples*9/8)
         else:
             raise ValueError("Unsupported capture width")
         data = list(await self.harness.registers.read(3, bytes_to_read))
-        if capture_width == 9:
+        self.raw_read_data = data
+        if bits_per_sample == 9:
             data = self.process9bitRawData(data)
         return data
 
@@ -633,14 +692,15 @@ class LACapture(GenericCapture):
         #    self.dut._log.error('%12s post-DDR FIFO not empty after reading all samples.' % job_name)
 
     def _check_samples(self, job, data) -> None:
-        if job['capture_width'] == 4:
-            MOD = 256 # that's just how it works!
+        if job['bits_per_sample'] == 8:
             INC = 2
-        elif job['capture_width'] == 9:
-            MOD = 2**9
+        elif job['bits_per_sample'] == 9:
             INC = 1
         else:
             raise ValueError('Unsupported')
+        MOD = 2**job['bits_per_sample']
+        self.first_read_sample = int(data[0])
+        self.sample_increment = INC
         for i,byte in enumerate(data[1:]):
             expected = (data[0] + INC*(i+1)) % MOD
             if expected != byte:
@@ -661,7 +721,8 @@ class TraceTest(GenericTest):
     async def _job_setup(self) -> dict:
         samples = random.randint(self.capture_min, self.capture_max)
         await self.registers.write(0x8a, self.registers.to_bytes(samples, 3))
-        return {"samples": samples}
+        bits_per_sample = 18
+        return {"samples": samples, "bits_per_sample": bits_per_sample}
 
     async def _initial_setup(self) -> None:
         await self.registers.write(0x91, [1]) # trace reset
@@ -697,6 +758,7 @@ class TraceCapture(GenericCapture):
     def __init__(self, dut, harness, dut_reading_signal):
         super().__init__(dut, harness, dut_reading_signal)
         self.name = 'trace'
+        self.sample_increment = 1
 
     # TODO: I think this is ok?
     async def _pre_read_wait(self, job) -> None:
@@ -727,8 +789,8 @@ class TraceCapture(GenericCapture):
         samples = self._limit_read(job)
         samples = job['samples']
         bytes_to_read = math.ceil(samples*18/8)
-        data = list(await self.harness.registers.read(3, bytes_to_read))
-        data = self.process18bitRawData(data)
+        self.raw_read_data = list(await self.harness.registers.read(3, bytes_to_read))
+        data = self.process18bitRawData(self.raw_read_data)
         return data
 
     @staticmethod
@@ -769,6 +831,7 @@ class TraceCapture(GenericCapture):
         #    self.dut._log.error('%12s post-DDR FIFO not empty after reading all samples.' % job_name)
 
     def _check_samples(self, job, data) -> None:
+        self.first_read_sample = int(data[0])
         for i,byte in enumerate(data[1:]):
             expected = (data[0] + i + 1) % 2**18
             if expected != byte:
@@ -954,7 +1017,7 @@ async def capture(dut):
         pass
 
     harness.start_tests()
-    dut._log.debug("ADC downstream enabled: %s" % adctest.allow_downstream_triggers)
+    #dut._log.debug("ADC downstream enabled: %s" % adctest.allow_downstream_triggers)
     await harness.all_tests_done()
     assert harness.errors == 0
 
