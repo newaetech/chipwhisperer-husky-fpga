@@ -47,13 +47,19 @@ MIN_SIZE=30
 MAX_SIZE=100
 NO_DOWNSTREAM_TRIGGERS=0
 
+ifdef IVERILOG10
+    IPATH=/usr/bin/
+else
+    IPATH=/usr/local/bin/
+endif
+
 all: compile run
 all_sad: compile_sad run
 all_edge: compile_edge run
 coco: compile_coco run_coco
 
 compile_sad:
-	iverilog \
+	$(IPATH)iverilog \
 	../hdl/sad.v \
 	../hdl/sad_wrapper.v \
 	../hdl/usb_reg_main.v \
@@ -79,7 +85,7 @@ compile_sad:
 	-o $(EXEFILE) \
 
 sad_nofifo:
-	iverilog \
+	$(IPATH)iverilog \
 	../hdl/sad.v \
 	../hdl/sad_wrapper.v \
 	../hdl/usb_reg_main.v \
@@ -98,7 +104,7 @@ sad_nofifo:
 	-o $(EXEFILE) \
 
 compile_edge:
-	iverilog \
+	$(IPATH)iverilog \
 	../hdl/edge_trigger.v \
 	../hdl/edge_wrapper.v \
 	../hdl/usb_reg_main.v \
@@ -118,7 +124,7 @@ compile_edge:
 
 
 compile:
-	iverilog -ccmdfile \
+	$(IPATH)iverilog -ccmdfile \
 	cwhusky_tb.v \
 	-g2005-sv \
 	-I../hdl \
@@ -157,7 +163,7 @@ compile:
 	-o $(EXEFILE) \
 
 compile_coco:
-	iverilog -ccmdfile_coco \
+	$(IPATH)iverilog -ccmdfile_coco \
 	../vivado/cw310/cwhusky_cw310_cocowrapper.v \
 	-g2005-sv \
 	-I../hdl \
@@ -177,14 +183,14 @@ compile_coco:
 	-o $(EXEFILE) \
 
 cwlite:
-	iverilog -ccmdfile_cwlite \
+	$(IPATH)iverilog -ccmdfile_cwlite \
 	-g2005-sv \
 	-I../hdl \
 	-Wportbind \
 	-Wselect-range \
 
 nofifo:
-	iverilog -ccmdfile_nofifo \
+	$(IPATH)iverilog -ccmdfile_nofifo \
 	cwhusky_tb.v \
 	-g2005-sv \
 	-I../hdl \
@@ -209,7 +215,7 @@ lint:
 	2>&1 | tee lint.out \
 
 fifo:
-	iverilog \
+	$(IPATH)iverilog \
 	../hdl/fifo_top_husky.v \
         ../vivado/cwhusky.srcs/sources_1/ip/adc_fast_fifo/adc_fast_fifo_sim_netlist.v \
         ../vivado/cwhusky.srcs/sources_1/ip/usb_slow_fifo/usb_slow_fifo_sim_netlist.v \
@@ -222,7 +228,7 @@ fifo:
 
 
 run:
-	vvp -l$(LOGFILE) $(EXEFILE) -$(WAVEFORMAT)
+	$(IPATH)vvp -l$(LOGFILE) $(EXEFILE) -$(WAVEFORMAT)
 
 # note that -M and -m arguments must immediately follow vvp, otherwise Python doesn't start!
 run_coco:
@@ -239,7 +245,7 @@ run_coco:
 	MODULE=test_husky \
 	COCOTB_LOG_LEVEL=$(COCOTB_LOG_LEVEL) \
 	LIBPYTHON_LOC=$(shell cocotb-config --libpython) \
-	vvp -M $(shell cocotb-config --lib-dir) \
+	$(IPATH)vvp -M $(shell cocotb-config --lib-dir) \
 	-m $(shell cocotb-config --lib-name vpi icarus) \
 	-l$(LOGFILE) $(EXEFILE) -$(WAVEFORMAT) \
 

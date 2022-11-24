@@ -152,7 +152,7 @@ module cwhusky_cw310_top(
    wire [5:0]    ADC_DP;
    wire [5:0]    ADC_DN;
    wire          PLL_STATUS;
-   wire          FPGA_CDOUT;
+   wire          FPGA_CDOUT = 1'b0;
    wire          SAM_MOSI;
    wire          SAM_SPCK;
    wire          SAM_CS;
