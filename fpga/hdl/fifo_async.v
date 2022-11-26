@@ -25,9 +25,11 @@ module fifo_async #(
     input  wire                         wen, 
     input  wire [pDATA_WIDTH-1:0]       wdata,
     output reg                          wfull,
+    output reg                          woverflow,
     input  wire                         ren, 
     output wire [pDATA_WIDTH-1:0]       rdata,
-    output reg                          rempty
+    output reg                          rempty,
+    output reg                          runderflow
 );
 
     wire [pADDR_WIDTH-1:0] waddr, raddr;
@@ -39,6 +41,17 @@ module fifo_async #(
     wire [pADDR_WIDTH:0] wgraynext, wbinnext;
     wire wfull_val;
 
+    // New: overflow flag
+    always @(posedge wclk or negedge wrst_n)
+        if (!wrst_n) woverflow <= 1'b0;
+        else if (wen && wfull) woverflow <= 1'b1;
+        else woverflow <= 1'b0;
+
+    // New: underflow flag
+    always @(posedge rclk or negedge rrst_n)
+        if (!rrst_n) runderflow <= 1'b0;
+        else if (ren && rempty) runderflow <= 1'b1;
+        else runderflow <= 1'b0;
 
     //sync_r2w module in original code:
     always @(posedge wclk or negedge wrst_n)
@@ -74,6 +87,12 @@ module fifo_async #(
             assign rdata = mem[raddr];
             always @(posedge wclk)
                 if (wen && !wfull) mem[waddr] <= wdata;
+
+            //debug only:
+            wire [63:0] mem0 = mem[0];
+            wire [63:0] mem1 = mem[1];
+            wire [63:0] mem2 = mem[2];
+            wire [63:0] mem3 = mem[3];
         end
     endgenerate
 
