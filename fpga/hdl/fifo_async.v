@@ -12,12 +12,15 @@ Changes made:
     - combine the original 6 modules into a single one
     - over/underflow flags
     - programmable full threshold
+    - parameterize depth instead of address width
+    - make "first word fall through" an option
 
 *************************************************************************/
 
 module fifo_async #(
     parameter pDATA_WIDTH = 8,
     parameter pDEPTH = 32,
+    parameter pFALLTHROUGH = 0, // "first word fall through" 
     parameter pBRAM = 0
 ) (
     input  wire                         wclk, 
@@ -56,6 +59,8 @@ module fifo_async #(
     reg [pADDR_WIDTH:0] wbin;
     wire [pADDR_WIDTH:0] wgraynext, wbinnext;
     wire wfull_val;
+    wire [pDATA_WIDTH-1:0] rdata_fwft;
+    reg  [pDATA_WIDTH-1:0] rdata_reg;
 
     // New: overflow flag
     always @(posedge wclk or negedge wrst_n)
@@ -97,9 +102,11 @@ module fifo_async #(
         else begin: flop_inst
             // RTL Verilog memory model
             reg [pDATA_WIDTH-1:0] mem [0:pDEPTH-1];
-            assign rdata = mem[raddr];
+            assign rdata_fwft = mem[raddr];
             always @(posedge wclk)
                 if (wen && !wfull) mem[waddr] <= wdata;
+            always @(posedge rclk)
+                if (ren && !rempty) rdata_reg <= rdata_fwft;
             //debug only:
             wire [63:0] mem0 = mem[0];
             wire [63:0] mem1 = mem[1];
@@ -107,6 +114,9 @@ module fifo_async #(
             wire [63:0] mem3 = mem[3];
         end
     endgenerate
+
+    // New: optional first word fall through mode
+    assign rdata = pFALLTHROUGH ? rdata_fwft : rdata_reg;
 
     // rptr_empty module in original code:
     // GRAYSTYLE2 pointer
@@ -159,7 +169,7 @@ module fifo_async #(
         end
         else begin
             wq2_rptr_bin_r <= wq2_rptr_bin; // help timing?
-            if (wq2_rptr_bin_r <= wbin + wfull_threshold_value)
+            if (wq2_rptr_bin_r + wfull_threshold_value <= wbin)
                 wfull_threshold <= 1'b1;
             else
                 wfull_threshold <= 1'b0;
