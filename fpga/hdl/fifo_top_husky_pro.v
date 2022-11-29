@@ -702,66 +702,110 @@ module fifo_top_husky_pro (
     wire preddr_fifo_rd = I_preddr_fifo_rd || (flushing_ui && !preddr_fifo_empty);
 
 
-    `ifdef NOFIFO
-       //for clean iverilog compilation
-
-    `elsif TINYFIFO
-       //for faster corner case simulation
-       tiny_adc_fast_fifo U_adc_fast_fifo(
-          .clk          (adc_sampleclk),
-          .rst          (reset),
-          .din          (adc_datain),
-          .wr_en        (fast_fifo_wr),
-          .rd_en        (fast_fifo_rd),
-          .dout         (fast_fifo_dout),
-          .full         (fast_fifo_full),
-          .empty        (fast_fifo_empty),
-          .overflow     (fast_fifo_overflow),
-          .underflow    (fast_fifo_underflow)
-       );
-
-       pre_ddr_slow_fifo U_pre_ddr_slow_fifo (
-          .rst          (reset),
-          .wr_clk       (adc_sampleclk),
-          .rd_clk       (ui_clk),
-          .din          (preddr_fifo_din),
-          .wr_en        (preddr_fifo_wr),
-          .rd_en        (preddr_fifo_rd),
-          .dout         (preddr_fifo_dout),
-          .full         (preddr_fifo_full),
-          .empty        (preddr_fifo_empty),
-          .overflow     (preddr_fifo_overflow),
-          .underflow    (preddr_fifo_underflow)
-       );
+    `ifdef NOXILINXFIFO
+        `ifdef TINYFIFO
+            fifo_sync #(
+                .pDATA_WIDTH    (12),
+                .pDEPTH         (1024),
+                .pFALLTHROUGH   (1)
+            ) U_adc_fast_fifo (
+                .clk            (adc_sampleclk),
+                .rst_n          (~reset),
+                .full_threshold_value (10'd0),
+                .wen            (fast_fifo_wr),
+                .wdata          (adc_datain),
+                .full           (fast_fifo_full),
+                .overflow       (fast_fifo_overflow),
+                .ren            (fast_fifo_rd),
+                .rdata          (fast_fifo_dout),
+                .empty          (fast_fifo_empty),
+                .almost_empty   (),
+                .underflow      (fast_fifo_underflow)
+            );
+        `else
+            fifo_sync #(
+                .pDATA_WIDTH    (12),
+                .pDEPTH         (32768),
+                .pFALLTHROUGH   (1)
+            ) U_adc_fast_fifo (
+                .clk            (adc_sampleclk),
+                .rst_n          (~reset),
+                .full_threshold_value (15'd0),
+                .wen            (fast_fifo_wr),
+                .wdata          (adc_datain),
+                .full           (fast_fifo_full),
+                .overflow       (fast_fifo_overflow),
+                .ren            (fast_fifo_rd),
+                .rdata          (fast_fifo_dout),
+                .empty          (fast_fifo_empty),
+                .almost_empty   (),
+                .underflow      (fast_fifo_underflow)
+            );
+        `endif
+        fifo_async #(
+            .pDATA_WIDTH    (64),
+            .pDEPTH         (512),
+            .pFALLTHROUGH   (0)
+        ) U_pre_ddr_slow_fifo (
+            .wclk                   (adc_sampleclk),
+            .rclk                   (ui_clk),
+            .wrst_n                 (~reset),
+            .rrst_n                 (~reset),
+            .wfull_threshold_value  (9'd0),
+            .wen                    (preddr_fifo_wr),
+            .wdata                  (preddr_fifo_din),
+            .wfull                  (preddr_fifo_full),
+            .woverflow              (preddr_fifo_overflow),
+            .wfull_threshold        (),
+            .ren                    (preddr_fifo_rd),
+            .rdata                  (preddr_fifo_dout),
+            .rempty                 (preddr_fifo_empty),
+            .runderflow             (preddr_fifo_underflow)
+        );
 
     `else
-       //normal case
-       adc_fast_fifo U_adc_fast_fifo (
-          .clk          (adc_sampleclk),
-          .rst          (reset),
-          .din          (adc_datain),
-          .wr_en        (fast_fifo_wr),
-          .rd_en        (fast_fifo_rd),
-          .dout         (fast_fifo_dout),
-          .full         (fast_fifo_full),
-          .empty        (fast_fifo_empty),
-          .overflow     (fast_fifo_overflow),
-          .underflow    (fast_fifo_underflow)
-       );
-
-       pre_ddr_slow_fifo U_pre_ddr_slow_fifo (
-          .rst          (reset),
-          .wr_clk       (adc_sampleclk),
-          .rd_clk       (ui_clk),
-          .din          (preddr_fifo_din),
-          .wr_en        (preddr_fifo_wr),
-          .rd_en        (preddr_fifo_rd),
-          .dout         (preddr_fifo_dout),
-          .full         (preddr_fifo_full),
-          .empty        (preddr_fifo_empty),
-          .overflow     (preddr_fifo_overflow),
-          .underflow    (preddr_fifo_underflow)
-       );
+        `ifdef TINYFIFO
+           //for faster corner case simulation
+           tiny_adc_fast_fifo U_adc_fast_fifo(
+              .clk          (adc_sampleclk),
+              .rst          (reset),
+              .din          (adc_datain),
+              .wr_en        (fast_fifo_wr),
+              .rd_en        (fast_fifo_rd),
+              .dout         (fast_fifo_dout),
+              .full         (fast_fifo_full),
+              .empty        (fast_fifo_empty),
+              .overflow     (fast_fifo_overflow),
+              .underflow    (fast_fifo_underflow)
+           );
+        `else
+           //normal case
+           adc_fast_fifo U_adc_fast_fifo (
+              .clk          (adc_sampleclk),
+              .rst          (reset),
+              .din          (adc_datain),
+              .wr_en        (fast_fifo_wr),
+              .rd_en        (fast_fifo_rd),
+              .dout         (fast_fifo_dout),
+              .full         (fast_fifo_full),
+              .empty        (fast_fifo_empty),
+              .overflow     (fast_fifo_overflow),
+              .underflow    (fast_fifo_underflow)
+           );
+        `endif
+        pre_ddr_slow_fifo U_pre_ddr_slow_fifo (
+           .rst          (reset),
+           .wr_clk       (adc_sampleclk),
+           .rd_clk       (ui_clk),
+           .din          (preddr_fifo_din),
+           .wr_en        (preddr_fifo_wr),
+           .rd_en        (preddr_fifo_rd),
+           .dout         (preddr_fifo_dout),
+           .full         (preddr_fifo_full),
+           .empty        (preddr_fifo_empty),
+           .overflow     (preddr_fifo_overflow),
+           .underflow    (preddr_fifo_underflow)
+        );
 
     `endif
 

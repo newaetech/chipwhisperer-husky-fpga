@@ -188,7 +188,28 @@ module ddr3_app_model #(
         end
     end
 
-    `ifndef NOFIFO
+    `ifdef NOXILINXFIFO
+        fifo_sync #(
+            .pDATA_WIDTH    (64),
+            .pDEPTH         (512),
+            .pFALLTHROUGH   (0)
+        ) U_read_fifo (
+            .clk            (clk),
+            .rst_n          (~reset),
+            .full_threshold_value (9'd16),
+            .wen            (fifo_wr),
+            .wdata          (fifo_in),
+            .full           (fifo_full),
+            .full_threshold (prog_full),
+            .overflow       (fifo_overflow),
+            .ren            (fifo_rd),
+            .rdata          (fifo_out),
+            .empty          (fifo_empty),
+            .almost_empty   (),
+            .underflow      (fifo_underflow)
+        );
+
+    `else
         ddr_model_fifo U_read_fifo(
            .clk          (clk),
            .rst          (reset),
@@ -203,7 +224,6 @@ module ddr3_app_model #(
            .underflow    (fifo_underflow)
         );
     `endif
-
 
     // debug only:
     wire [pDATA_WIDTH*2-1:0] memory0 = memory[0];

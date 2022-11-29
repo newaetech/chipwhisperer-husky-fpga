@@ -117,7 +117,7 @@ lint:
 	-DNOMIG \
 	-DCW310 \
 	-DPRO \
-	-DNOFIFO \
+	-DNOXILINXFIFO \
 	-DTRACE \
 	-DLINT \
 	--top-module cwhusky_cw310_top \

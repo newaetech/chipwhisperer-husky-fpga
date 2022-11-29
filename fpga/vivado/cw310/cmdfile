@@ -26,6 +26,8 @@ cwhusky_cw310_top.v
 ../../hdl/userio.v
 ../../hdl/sad.v
 ../../hdl/edge_trigger.v
+../../hdl/fifo_async.v
+../../hdl/fifo_sync.v
 ../../tracewhisperer/hdl/trace_top.v
 ../../tracewhisperer/hdl/reg_trace.v
 ../../tracewhisperer/hdl/fe_capture_trace.v

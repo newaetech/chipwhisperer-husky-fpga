@@ -1282,44 +1282,87 @@ wire stat_reset = (ddr_rwtest_en)? rw_stat_reset : capture_go_adc;
    );
 
 
-    `ifdef NOFIFO
-       //for clean iverilog compilation
-
-    `elsif TINYFIFO
-       //for faster corner case simulation
-       tiny_post_ddr_slow_fifo U_post_ddr_slow_fifo (
-          .rst          (reset),
-          .wr_clk       (ui_clk),
-          .rd_clk       (clk_usb),
-          .din          (postddr_fifo_din),
-          .wr_en        (postddr_fifo_wr),
-          .rd_en        (postddr_fifo_rd),
-          .dout         (postddr_fifo_dout),
-          .full         (postddr_fifo_full),
-          .prog_full    (postddr_fifo_prog_full),
-          .empty        (postddr_fifo_empty),
-          .overflow     (postddr_fifo_overflow),
-          .underflow    (postddr_fifo_underflow)
-       );
+    `ifdef NOXILINXFIFO
+        `ifdef TINYFIFO
+            fifo_async #(
+                .pDATA_WIDTH    (64),
+                .pDEPTH         (512),
+                .pFALLTHROUGH   (1)
+            ) U_post_ddr_slow_fifo (
+                .wclk                   (ui_clk),
+                .rclk                   (clk_usb),
+                .wrst_n                 (~reset),
+                .rrst_n                 (~reset),
+                .wfull_threshold_value  (9'd256),
+                .wen                    (postddr_fifo_wr),
+                .wdata                  (postddr_fifo_din),
+                .wfull                  (postddr_fifo_full),
+                .woverflow              (postddr_fifo_overflow),
+                .wfull_threshold        (postddr_fifo_prog_full),
+                .ren                    (postddr_fifo_rd),
+                .rdata                  (postddr_fifo_dout),
+                .rempty                 (postddr_fifo_empty),
+                .runderflow             (postddr_fifo_underflow)
+            );
+        `else
+            fifo_async #(
+                .pDATA_WIDTH    (64),
+                .pDEPTH         (8192),
+                .pFALLTHROUGH   (1)
+            ) U_post_ddr_slow_fifo (
+                .wclk                   (ui_clk),
+                .rclk                   (clk_usb),
+                .wrst_n                 (~reset),
+                .rrst_n                 (~reset),
+                .wfull_threshold_value  (13'd4096),
+                .wen                    (postddr_fifo_wr),
+                .wdata                  (postddr_fifo_din),
+                .wfull                  (postddr_fifo_full),
+                .woverflow              (postddr_fifo_overflow),
+                .wfull_threshold        (postddr_fifo_prog_full),
+                .ren                    (postddr_fifo_rd),
+                .rdata                  (postddr_fifo_dout),
+                .rempty                 (postddr_fifo_empty),
+                .runderflow             (postddr_fifo_underflow)
+            );
+        `endif
 
     `else
-       //normal case
-       post_ddr_slow_fifo U_post_ddr_slow_fifo (
-          .rst          (reset),
-          .wr_clk       (ui_clk),
-          .rd_clk       (clk_usb),
-          .din          (postddr_fifo_din),
-          .wr_en        (postddr_fifo_wr),
-          .rd_en        (postddr_fifo_rd),
-          .dout         (postddr_fifo_dout),
-          .full         (postddr_fifo_full),
-          .prog_full    (postddr_fifo_prog_full),
-          .empty        (postddr_fifo_empty),
-          .overflow     (postddr_fifo_overflow),
-          .underflow    (postddr_fifo_underflow)
-       );
+        `ifdef TINYFIFO
+         //for faster corner case simulation
+             tiny_post_ddr_slow_fifo U_post_ddr_slow_fifo (
+                .rst          (reset),
+                .wr_clk       (ui_clk),
+                .rd_clk       (clk_usb),
+                .din          (postddr_fifo_din),
+                .wr_en        (postddr_fifo_wr),
+                .rd_en        (postddr_fifo_rd),
+                .dout         (postddr_fifo_dout),
+                .full         (postddr_fifo_full),
+                .prog_full    (postddr_fifo_prog_full),
+                .empty        (postddr_fifo_empty),
+                .overflow     (postddr_fifo_overflow),
+                .underflow    (postddr_fifo_underflow)
+             );
+         `else
+             //normal case
+             post_ddr_slow_fifo U_post_ddr_slow_fifo (
+                .rst          (reset),
+                .wr_clk       (ui_clk),
+                .rd_clk       (clk_usb),
+                .din          (postddr_fifo_din),
+                .wr_en        (postddr_fifo_wr),
+                .rd_en        (postddr_fifo_rd),
+                .dout         (postddr_fifo_dout),
+                .full         (postddr_fifo_full),
+                .prog_full    (postddr_fifo_prog_full),
+                .empty        (postddr_fifo_empty),
+                .overflow     (postddr_fifo_overflow),
+                .underflow    (postddr_fifo_underflow)
+             );
+         `endif
+     `endif
 
-    `endif
 
 
 `ifdef ILA_DDR3

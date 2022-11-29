@@ -196,8 +196,25 @@ module sad #(
     generate 
         for (i = 0; i < pREF_SAMPLES; i = i + 1) begin: gen_counter_registers
 
-            `ifdef NOFIFO
-               //for clean iverilog compilation
+            `ifdef NOXILINXFIFO
+                fifo_sync #(
+                    .pDATA_WIDTH    (8),
+                    .pDEPTH         (128),
+                    .pFALLTHROUGH   (0)
+                ) U_post_ddr_cummings (
+                    .clk            (adc_sampleclk),
+                    .rst_n          (~reset),
+                    .full_threshold_value (7'd0),
+                    .wen            (fifo_wr),
+                    .wdata          (counter_incr[i]),
+                    .full           (),
+                    .overflow       (fifo_overflow[i]),
+                    .ren            (fifo_rd),
+                    .rdata          (fifo_out[i]),
+                    .empty          (fifo_empty[i]),
+                    .almost_empty   (fifo_almost_empty[i]),
+                    .underflow      (fifo_underflow[i])
+                );
             `else
                // Here we instantiate one small FIFO for each SAD counter. We
                // could easily instantiate a single large FIFO instead, but

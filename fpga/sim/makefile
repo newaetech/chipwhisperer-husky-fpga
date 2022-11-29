@@ -182,6 +182,8 @@ compile_coco:
 	-P cwhusky_cw310_cocowrapper.pDUMP=$(DUMP) \
 	-o $(EXEFILE) \
 
+#-DNOXILINXFIFO \
+
 cwlite:
 	$(IPATH)iverilog -ccmdfile_cwlite \
 	-g2005-sv \

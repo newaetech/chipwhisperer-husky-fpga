@@ -279,8 +279,26 @@ module preddr_18to64_converter (
     assign wider_word_shifter_debug[ 15:  0] = {7'b0, wide_word_shifter[ 8: 0]};
 
 
-`ifdef NOFIFO
-    //for clean iverilog compilation
+`ifdef NOXILINXFIFO
+    fifo_async #(
+        .pDATA_WIDTH    (64),
+        .pDEPTH         (4096),
+        .pFALLTHROUGH   (0)
+    ) U_pre_ddr_fifo (
+        .wclk                   (wr_clk),
+        .rclk                   (rd_clk),
+        .wrst_n                 (~reset),
+        .rrst_n                 (~reset),
+        .wfull_threshold_value  (12'd0),
+        .wen                    (fifo_wr),
+        .wdata                  (fifo_din),
+        .wfull                  (fifo_full),
+        .woverflow              (fifo_overflow),
+        .ren                    (fifo_rd_rd),
+        .rdata                  (fifo_dout),
+        .rempty                 (fifo_empty_raw),
+        .runderflow             (fifo_underflow)
+    );
 
 `else
     pre_ddr_generic_fifo U_pre_ddr_fifo (
@@ -296,7 +314,7 @@ module preddr_18to64_converter (
        .overflow     (fifo_overflow),
        .underflow    (fifo_underflow)
     );
-`endif // NOFIFO
+`endif // NOXILINXFIFO
 
 `ifdef ILA_PREDDR_CONVERTER
     ila_preddr_converter U_preddr_converter (
