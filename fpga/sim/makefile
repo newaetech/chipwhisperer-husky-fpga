@@ -177,12 +177,11 @@ compile_coco:
 	-DNOMIG \
 	-DCW310 \
 	-DPRO \
+	-DNOXILINXFIFO \
 	-DREGULARDDR \
 	-DCOCOTB_SIM=1 \
 	-P cwhusky_cw310_cocowrapper.pDUMP=$(DUMP) \
 	-o $(EXEFILE) \
-
-#-DNOXILINXFIFO \
 
 cwlite:
 	$(IPATH)iverilog -ccmdfile_cwlite \
