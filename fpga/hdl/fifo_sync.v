@@ -29,11 +29,13 @@ module fifo_sync #(
     parameter pDATA_WIDTH = 8,
     parameter pDEPTH = 32,
     parameter pFALLTHROUGH = 0, // "first word fall through" 
-    parameter pBRAM = 0
+    parameter pFLOPS = 1,       // pFLOPS, pBRAM and pDISTRIBUTED are mutually exclusive
+    parameter pBRAM = 0,        // Setting pBRAM or pDISTRIBUTE instantiates a Xilinx
+    parameter pDISTRIBUTED = 0  // xpm_memory_sdpram instance for storage; otherwise, flops.
 )(
     input  wire                         clk, 
     input  wire                         rst_n,
-    input  wire [pADDR_WIDTH-1:0]       full_threshold_value,
+    input  wire [31:0]                  full_threshold_value,
     input  wire                         wen, 
     input  wire [pDATA_WIDTH-1:0]       wdata,
     output wire                         full,
@@ -59,10 +61,9 @@ module fifo_sync #(
                              (pDEPTH == 32768)? 15 :
                              (pDEPTH == 65536)? 16 : 0;
 
+    wire [pADDR_WIDTH-1:0] full_threshold_value_trimmed = full_threshold_value[pADDR_WIDTH-1:0];
     wire [pADDR_WIDTH-1:0] waddr, raddr;
     reg  [pADDR_WIDTH:0] wptr, rptr;
-    wire [pDATA_WIDTH-1:0] rdata_fwft;
-    reg  [pDATA_WIDTH-1:0] rdata_reg;
 
     assign waddr = wptr[pADDR_WIDTH-1:0];
     assign raddr = rptr[pADDR_WIDTH-1:0];
@@ -101,27 +102,112 @@ module fifo_sync #(
 
     // storage:
     generate
-        if (pBRAM) begin : bram_inst
-            // TODO: Xilinx BRAM
-        end
+        if (pBRAM || pDISTRIBUTED) begin : xilinx_inst
+            localparam pMEMORY_PRIMITIVE = (pBRAM)? "block" : "distributed";
+            localparam pREAD_LATENCY = (pBRAM)? 1 : 0;
+
+            wire [pDATA_WIDTH-1:0] memout;
+            wire [pADDR_WIDTH-1:0] mem_raddr;
+            wire mem_rd;
+
+            if (pDISTRIBUTED) begin: distributed_memout_inst
+                reg [pDATA_WIDTH-1:0] memout_reg;
+                always @(posedge clk) if (ren && !empty) memout_reg <= memout;
+                assign rdata = (pFALLTHROUGH)? memout : memout_reg;
+                assign mem_raddr = raddr;
+                assign mem_rd = 1'b1;
+            end // distributed_memout_inst
+
+            else if (pBRAM) begin: bram_memout_inst
+                reg [pADDR_WIDTH-1:0] current_raddr, next_raddr;
+                wire [pADDR_WIDTH-1:0] raddr_fwft;
+                assign mem_raddr = (pFALLTHROUGH)? raddr_fwft : raddr;
+                assign raddr_fwft = ren? next_raddr : current_raddr;
+                assign rdata = memout;
+                assign mem_rd = (pFALLTHROUGH)? 1'b1 : ren;
+                always @(posedge clk or negedge rst_n) begin
+                    if (~rst_n) begin
+                        current_raddr <= 0;
+                        next_raddr <= 1;
+                    end
+                    else if (ren && ~empty) begin
+                        current_raddr <= current_raddr + 1;
+                        next_raddr <= next_raddr + 1;
+                    end
+                end
+            end // bram_memout_inst
+
+            // IMPORTANT NOTE: to simulate with iverilog, some assertions in
+            // xpm_memory.sv need to be commented out (with Vivado 2020.2, the
+            // whole gen_coll_msgs block), and the -gsupported-assertion
+            // iverilog option used.
+            xpm_memory_sdpram #(
+                .ADDR_WIDTH_A                       (pADDR_WIDTH),
+                .ADDR_WIDTH_B                       (pADDR_WIDTH),
+                .AUTO_SLEEP_TIME                    (0),
+                .BYTE_WRITE_WIDTH_A                 (pDATA_WIDTH),
+                .CLOCKING_MODE                      ("common_clock"),
+                .ECC_MODE                           ("no_ecc"),
+                .MEMORY_INIT_FILE                   ("none"),
+                .MEMORY_INIT_PARAM                  ("0"),
+                .MEMORY_OPTIMIZATION                ("false"), // TODO: try it
+                .MEMORY_PRIMITIVE                   (pMEMORY_PRIMITIVE),
+                .MEMORY_SIZE                        (pDATA_WIDTH*pDEPTH),
+                .MESSAGE_CONTROL                    (0),
+                .READ_DATA_WIDTH_B                  (pDATA_WIDTH),
+                .READ_LATENCY_B                     (pREAD_LATENCY),
+                .READ_RESET_VALUE_B                 ("0"),
+                .RST_MODE_A                         ("SYNC"),
+                .RST_MODE_B                         ("SYNC"),
+                .USE_EMBEDDED_CONSTRAINT            (0), // TODO: try it
+                .USE_MEM_INIT                       (0),
+                .WAKEUP_TIME                        ("disable_sleep"),
+                .WRITE_DATA_WIDTH_A                 (pDATA_WIDTH),
+                .WRITE_MODE_B                       ("read_first")
+            )
+            xpm_memory_sdpram_inst (
+                .dbiterrb                           (),         // 1-bit output: Status signal to indicate double bit error occurrence on the data output of port B.
+                .doutb                              (memout),   // READ_DATA_WIDTH_B-bit output: Data output for port B read operations.
+                .sbiterrb                           (),         // 1-bit output: Status signal to indicate single bit error occurrence on the data output of port B.
+                .addra                              (waddr),    // ADDR_WIDTH_A-bit input: Address for port A write operations.
+                .addrb                              (mem_raddr),// ADDR_WIDTH_B-bit input: Address for port B read operations.
+                .clka                               (clk),      // 1-bit input: Clock signal for port A. Also clocks port B when parameter CLOCKING_MODE is "common_clock".
+                //.clkb                               (1'b0),     // 1-bit input: Clock signal for port B when parameter CLOCKING_MODE is "independent_clock". Unused when parameter CLOCKING_MODE is "common_clock".
+                .clkb                               (clk),      // 1-bit input: Clock signal for port B when parameter CLOCKING_MODE is "independent_clock". Unused when parameter CLOCKING_MODE is "common_clock".
+                .dina                               (wdata),    // WRITE_DATA_WIDTH_A-bit input: Data input for port A write operations.
+                .ena                                (1'b1),     // 1-bit input: Memory enable signal for port A. Must be high on clock cycles when write operations are initiated. Pipelined internally.
+                .enb                                (mem_rd),   // 1-bit input: Memory enable signal for port B. Must be high on clock cycles when read operations are initiated. Pipelined internally.
+                .injectdbiterra                     (1'b0),     // 1-bit input: Controls double bit error injection on input data when ECC enabled (Error injection capability is not available in "decode_only" mode).
+                .injectsbiterra                     (1'b0),     // 1-bit input: Controls single bit error injection on input data when ECC enabled (Error injection capability is not available in "decode_only" mode).
+                .regceb                             (1'b1),     // 1-bit input: Clock Enable for the last register stage on the output data path.
+                .rstb                               (~rst_n),    // 1-bit input: Reset signal for the final port B output register stage.  Synchronously resets output port doutb to the value specified by parameter READ_RESET_VALUE_B.
+                .sleep                              (1'b0),     // 1-bit input: sleep signal to enable the dynamic power saving feature.
+                .wea                                (wen)       // WRITE_DATA_WIDTH_A-bit input: Write enable vector for port A input data port dina. 1 bit wide when word-wide writes are used. In byte-wide write configurations, each bit controls the writing one byte of dina to address addra. For example, to synchronously write only bits [15-8] of dina when WRITE_DATA_WIDTH_A is 32, wea would be 4'b0010.
+            );
+        end // xilinx_inst
+
         else begin: flop_inst
             // RTL Verilog memory model
             reg [pDATA_WIDTH-1:0] mem [0:pDEPTH-1];
+            wire [pDATA_WIDTH-1:0] rdata_fwft;
+            reg  [pDATA_WIDTH-1:0] rdata_reg;
             assign rdata_fwft = mem[raddr];
             always @(posedge clk) begin
                 if (wen && !full) mem[waddr] <= wdata;
                 if (ren && !empty) rdata_reg <= rdata_fwft;
             end
+
+            // optional first word fall through mode
+            assign rdata = pFALLTHROUGH ? rdata_fwft : rdata_reg;
+    
             //debug only:
             wire [63:0] mem0 = mem[0];
             wire [63:0] mem1 = mem[1];
             wire [63:0] mem2 = mem[2];
             wire [63:0] mem3 = mem[3];
-        end
+        end // flop_inst
     endgenerate
 
-    // optional first word fall through mode
-    assign rdata = pFALLTHROUGH ? rdata_fwft : rdata_reg;
 
     assign empty = (wptr == rptr);
     assign almost_empty = (wptr == rptr + 1) || empty;
@@ -129,7 +215,7 @@ module fifo_sync #(
                     (wptr[pADDR_WIDTH-1:0] == rptr[pADDR_WIDTH-1:0]) );
 
     // programmable almost full threshold
-    assign full_threshold = (rptr + full_threshold_value <= wptr);
+    assign full_threshold = (rptr + full_threshold_value_trimmed <= wptr);
 
 
 endmodule
