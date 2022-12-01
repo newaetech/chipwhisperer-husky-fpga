@@ -4,9 +4,6 @@
 /***********************************************************************
 This file is part of the ChipWhisperer Project. See www.newae.com for more
 details, or the codebase at http://www.chipwhisperer.com
-Built from fifo_top_husky.v and modified for Pro.
-
-http://www.sunburst-design.com/papers/CummingsSNUG2002SJ_FIFO1.pdf
 
 Copyright (c) 2022, NewAE Technology Inc. All rights reserved.
 Author: Jean-Pierre Thibault <jpthibault@newae.com>
@@ -101,6 +98,12 @@ module fifo_sync #(
     end
 
     // storage:
+    `ifdef FAST_FIFO_SIM // flops simulate substantially faster (~50% faster Husky-Pro simulation)
+        localparam pFAST_SIM_FLOPS = 1;
+    `else
+        localparam pFAST_SIM_FLOPS = 0;
+    `endif
+
     generate
         if (pBRAM || pDISTRIBUTED) begin : xilinx_inst
             localparam pMEMORY_PRIMITIVE = (pBRAM)? "block" : "distributed";
@@ -124,7 +127,7 @@ module fifo_sync #(
                 assign mem_raddr = (pFALLTHROUGH)? raddr_fwft : raddr;
                 assign raddr_fwft = ren? next_raddr : current_raddr;
                 assign rdata = memout;
-                assign mem_rd = (pFALLTHROUGH)? 1'b1 : ren;
+                assign mem_rd = (pFALLTHROUGH)? ~empty : ren;
                 always @(posedge clk or negedge rst_n) begin
                     if (~rst_n) begin
                         current_raddr <= 0;
@@ -135,58 +138,66 @@ module fifo_sync #(
                         next_raddr <= next_raddr + 1;
                     end
                 end
+                `ifdef __ICARUS__
+                    wire warning = (wen && mem_rd && (mem_raddr == waddr));
+                    always @(posedge clk) begin
+                        if (warning)
+                            $display("%t WARNING: reading and writing same BRAM address simultaneously; probably won't work as expected! (%m)", $time);
+                    end
+                `endif
             end // bram_memout_inst
 
-            // IMPORTANT NOTE: to simulate with iverilog, some assertions in
-            // xpm_memory.sv need to be commented out (with Vivado 2020.2, the
-            // whole gen_coll_msgs block), and the -gsupported-assertion
-            // iverilog option used.
-            xpm_memory_sdpram #(
-                .ADDR_WIDTH_A                       (pADDR_WIDTH),
-                .ADDR_WIDTH_B                       (pADDR_WIDTH),
-                .AUTO_SLEEP_TIME                    (0),
-                .BYTE_WRITE_WIDTH_A                 (pDATA_WIDTH),
-                .CLOCKING_MODE                      ("common_clock"),
-                .ECC_MODE                           ("no_ecc"),
-                .MEMORY_INIT_FILE                   ("none"),
-                .MEMORY_INIT_PARAM                  ("0"),
-                .MEMORY_OPTIMIZATION                ("false"), // TODO: try it
-                .MEMORY_PRIMITIVE                   (pMEMORY_PRIMITIVE),
-                .MEMORY_SIZE                        (pDATA_WIDTH*pDEPTH),
-                .MESSAGE_CONTROL                    (0),
-                .READ_DATA_WIDTH_B                  (pDATA_WIDTH),
-                .READ_LATENCY_B                     (pREAD_LATENCY),
-                .READ_RESET_VALUE_B                 ("0"),
-                .RST_MODE_A                         ("SYNC"),
-                .RST_MODE_B                         ("SYNC"),
-                .USE_EMBEDDED_CONSTRAINT            (0), // TODO: try it
-                .USE_MEM_INIT                       (0),
-                .WAKEUP_TIME                        ("disable_sleep"),
-                .WRITE_DATA_WIDTH_A                 (pDATA_WIDTH),
-                .WRITE_MODE_B                       ("read_first")
-            )
-            xpm_memory_sdpram_inst (
-                .dbiterrb                           (),         // 1-bit output: Status signal to indicate double bit error occurrence on the data output of port B.
-                .doutb                              (memout),   // READ_DATA_WIDTH_B-bit output: Data output for port B read operations.
-                .sbiterrb                           (),         // 1-bit output: Status signal to indicate single bit error occurrence on the data output of port B.
-                .addra                              (waddr),    // ADDR_WIDTH_A-bit input: Address for port A write operations.
-                .addrb                              (mem_raddr),// ADDR_WIDTH_B-bit input: Address for port B read operations.
-                .clka                               (clk),      // 1-bit input: Clock signal for port A. Also clocks port B when parameter CLOCKING_MODE is "common_clock".
-                //.clkb                               (1'b0),     // 1-bit input: Clock signal for port B when parameter CLOCKING_MODE is "independent_clock". Unused when parameter CLOCKING_MODE is "common_clock".
-                .clkb                               (clk),      // 1-bit input: Clock signal for port B when parameter CLOCKING_MODE is "independent_clock". Unused when parameter CLOCKING_MODE is "common_clock".
-                .dina                               (wdata),    // WRITE_DATA_WIDTH_A-bit input: Data input for port A write operations.
-                .ena                                (1'b1),     // 1-bit input: Memory enable signal for port A. Must be high on clock cycles when write operations are initiated. Pipelined internally.
-                .enb                                (mem_rd),   // 1-bit input: Memory enable signal for port B. Must be high on clock cycles when read operations are initiated. Pipelined internally.
-                .injectdbiterra                     (1'b0),     // 1-bit input: Controls double bit error injection on input data when ECC enabled (Error injection capability is not available in "decode_only" mode).
-                .injectsbiterra                     (1'b0),     // 1-bit input: Controls single bit error injection on input data when ECC enabled (Error injection capability is not available in "decode_only" mode).
-                .regceb                             (1'b1),     // 1-bit input: Clock Enable for the last register stage on the output data path.
-                .rstb                               (~rst_n),    // 1-bit input: Reset signal for the final port B output register stage.  Synchronously resets output port doutb to the value specified by parameter READ_RESET_VALUE_B.
-                .sleep                              (1'b0),     // 1-bit input: sleep signal to enable the dynamic power saving feature.
-                .wea                                (wen)       // WRITE_DATA_WIDTH_A-bit input: Write enable vector for port A input data port dina. 1 bit wide when word-wide writes are used. In byte-wide write configurations, each bit controls the writing one byte of dina to address addra. For example, to synchronously write only bits [15-8] of dina when WRITE_DATA_WIDTH_A is 32, wea would be 4'b0010.
-            );
+            if (pFAST_SIM_FLOPS == 0) begin: xpm_inst
+                // IMPORTANT NOTE: to simulate with iverilog, some assertions in
+                // xpm_memory.sv need to be commented out (with Vivado 2020.2, the
+                // whole gen_coll_msgs block), and the -gsupported-assertion
+                // iverilog option used.
+                xpm_memory_sdpram #(
+                    .ADDR_WIDTH_A                       (pADDR_WIDTH),
+                    .ADDR_WIDTH_B                       (pADDR_WIDTH),
+                    .AUTO_SLEEP_TIME                    (0),
+                    .BYTE_WRITE_WIDTH_A                 (pDATA_WIDTH),
+                    .CLOCKING_MODE                      ("common_clock"),
+                    .ECC_MODE                           ("no_ecc"),
+                    .MEMORY_INIT_FILE                   ("none"),
+                    .MEMORY_INIT_PARAM                  ("0"),
+                    .MEMORY_OPTIMIZATION                ("true"),
+                    .MEMORY_PRIMITIVE                   (pMEMORY_PRIMITIVE),
+                    .MEMORY_SIZE                        (pDATA_WIDTH*pDEPTH),
+                    .MESSAGE_CONTROL                    (0),
+                    .READ_DATA_WIDTH_B                  (pDATA_WIDTH),
+                    .READ_LATENCY_B                     (pREAD_LATENCY),
+                    .READ_RESET_VALUE_B                 ("0"),
+                    .RST_MODE_A                         ("SYNC"),
+                    .RST_MODE_B                         ("SYNC"),
+                    .USE_EMBEDDED_CONSTRAINT            (0),
+                    .USE_MEM_INIT                       (0),
+                    .WAKEUP_TIME                        ("disable_sleep"),
+                    .WRITE_DATA_WIDTH_A                 (pDATA_WIDTH),
+                    .WRITE_MODE_B                       ("read_first")
+                )
+                xpm_memory_sdpram_inst (
+                    .dbiterrb                           (),         // 1-bit output: Status signal to indicate double bit error occurrence on the data output of port B.
+                    .doutb                              (memout),   // READ_DATA_WIDTH_B-bit output: Data output for port B read operations.
+                    .sbiterrb                           (),         // 1-bit output: Status signal to indicate single bit error occurrence on the data output of port B.
+                    .addra                              (waddr),    // ADDR_WIDTH_A-bit input: Address for port A write operations.
+                    .addrb                              (mem_raddr),// ADDR_WIDTH_B-bit input: Address for port B read operations.
+                    .clka                               (clk),      // 1-bit input: Clock signal for port A. Also clocks port B when parameter CLOCKING_MODE is "common_clock".
+                    .clkb                               (1'b0),     // 1-bit input: Clock signal for port B when parameter CLOCKING_MODE is "independent_clock". Unused when parameter CLOCKING_MODE is "common_clock".
+                    .dina                               (wdata),    // WRITE_DATA_WIDTH_A-bit input: Data input for port A write operations.
+                    .ena                                (1'b1),     // 1-bit input: Memory enable signal for port A. Must be high on clock cycles when write operations are initiated. Pipelined internally.
+                    .enb                                (mem_rd),   // 1-bit input: Memory enable signal for port B. Must be high on clock cycles when read operations are initiated. Pipelined internally.
+                    .injectdbiterra                     (1'b0),     // 1-bit input: Controls double bit error injection on input data when ECC enabled (Error injection capability is not available in "decode_only" mode).
+                    .injectsbiterra                     (1'b0),     // 1-bit input: Controls single bit error injection on input data when ECC enabled (Error injection capability is not available in "decode_only" mode).
+                    .regceb                             (1'b1),     // 1-bit input: Clock Enable for the last register stage on the output data path.
+                    .rstb                               (~rst_n),    // 1-bit input: Reset signal for the final port B output register stage.  Synchronously resets output port doutb to the value specified by parameter READ_RESET_VALUE_B.
+                    .sleep                              (1'b0),     // 1-bit input: sleep signal to enable the dynamic power saving feature.
+                    .wea                                (wen)       // WRITE_DATA_WIDTH_A-bit input: Write enable vector for port A input data port dina. 1 bit wide when word-wide writes are used. In byte-wide write configurations, each bit controls the writing one byte of dina to address addra. For example, to synchronously write only bits [15-8] of dina when WRITE_DATA_WIDTH_A is 32, wea would be 4'b0010.
+                );
+            end // xpm_inst
         end // xilinx_inst
 
-        else begin: flop_inst
+        if (pFLOPS || pFAST_SIM_FLOPS) begin: flop_inst
             // RTL Verilog memory model
             reg [pDATA_WIDTH-1:0] mem [0:pDEPTH-1];
             wire [pDATA_WIDTH-1:0] rdata_fwft;
