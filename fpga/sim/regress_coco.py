@@ -19,6 +19,7 @@ parser.add_argument("--list", help="List available tests.", action='store_true')
 parser.add_argument("--dump", help="Enable waveform dumping.", action='store_true')
 parser.add_argument("--proc", type=int, help="Maximum number of parallel jobs to dispatch.", default=32)
 parser.add_argument("--cocodebug", help="Cocotb debug level", default='INFO')
+parser.add_argument("--fast_fifo_sim", help="xxx.", action='store_true')
 args = parser.parse_args()
 
 # Define testcases:
@@ -134,6 +135,8 @@ outfile = open('coco_compile.out', 'w')
 makeargs = ['make', 'compile_coco', 'EXEFILE=%s' % exefile]
 if args.dump:
     makeargs.append('DUMP=1')
+if args.fast_fifo_sim:
+    makeargs.append('FAST_FIFO_SIM=FAST_FIFO_SIM')
 result = subprocess.run(makeargs, stdout=outfile, stderr=outfile)
 if result.returncode:
     print ("Compilation for target %s failed (return code: %d), check coco_compile.out." % result.returncode)

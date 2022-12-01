@@ -26,6 +26,7 @@ SEED=1
 TIMEOUT_CYCLES=50000
 DUMP=0
 FIFOSIZE=REGULARFIFO
+FAST_FIFO_SIM=NOFASTFIFO
 ERRORS_OK=0
 PRESAMP_ERROR=0
 DOWNSAMPLE=0
@@ -166,6 +167,7 @@ compile_coco:
 	$(IPATH)iverilog -ccmdfile_coco \
 	../vivado/cw310/cwhusky_cw310_cocowrapper.v \
 	-g2005-sv \
+	-gsupported-assertions \
 	-I../hdl \
 	-I../tracewhisperer/hdl/ \
 	-s glbl \
@@ -178,6 +180,7 @@ compile_coco:
 	-DCW310 \
 	-DPRO \
 	-DNOXILINXFIFO \
+	-D$(FAST_FIFO_SIM) \
 	-DREGULARDDR \
 	-DCOCOTB_SIM=1 \
 	-P cwhusky_cw310_cocowrapper.pDUMP=$(DUMP) \

@@ -192,11 +192,14 @@ module ddr3_app_model #(
         fifo_sync #(
             .pDATA_WIDTH    (64),
             .pDEPTH         (512),
-            .pFALLTHROUGH   (0)
+            .pFALLTHROUGH   (0),
+            .pFLOPS         (1),
+            .pDISTRIBUTED   (0),
+            .pBRAM          (0)
         ) U_read_fifo (
             .clk            (clk),
             .rst_n          (~reset),
-            .full_threshold_value (9'd16),
+            .full_threshold_value (16),
             .wen            (fifo_wr),
             .wdata          (fifo_in),
             .full           (fifo_full),

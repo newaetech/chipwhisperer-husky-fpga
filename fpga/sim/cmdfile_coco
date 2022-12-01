@@ -30,6 +30,7 @@
 ../hdl/edge_trigger.v
 ../hdl/fifo_async.v
 ../hdl/fifo_sync.v
+../sim/vivado/xpm_memory.sv
 ../tracewhisperer/hdl/trace_top.v
 ../tracewhisperer/hdl/reg_trace.v
 ../tracewhisperer/hdl/fe_capture_trace.v

@@ -283,13 +283,16 @@ module preddr_18to64_converter (
     fifo_async #(
         .pDATA_WIDTH    (64),
         .pDEPTH         (4096),
-        .pFALLTHROUGH   (0)
+        .pFALLTHROUGH   (0),
+        .pFLOPS         (0),
+        .pDISTRIBUTED   (0),
+        .pBRAM          (1)
     ) U_pre_ddr_fifo (
         .wclk                   (wr_clk),
         .rclk                   (rd_clk),
         .wrst_n                 (~reset),
         .rrst_n                 (~reset),
-        .wfull_threshold_value  (12'd0),
+        .wfull_threshold_value  (0),
         .wen                    (fifo_wr),
         .wdata                  (fifo_din),
         .wfull                  (fifo_full),

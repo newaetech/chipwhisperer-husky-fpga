@@ -1287,13 +1287,16 @@ wire stat_reset = (ddr_rwtest_en)? rw_stat_reset : capture_go_adc;
             fifo_async #(
                 .pDATA_WIDTH    (64),
                 .pDEPTH         (512),
-                .pFALLTHROUGH   (1)
+                .pFALLTHROUGH   (1),
+                .pFLOPS         (0),
+                .pDISTRIBUTED   (0),
+                .pBRAM          (1)
             ) U_post_ddr_slow_fifo (
                 .wclk                   (ui_clk),
                 .rclk                   (clk_usb),
                 .wrst_n                 (~reset),
                 .rrst_n                 (~reset),
-                .wfull_threshold_value  (9'd256),
+                .wfull_threshold_value  (256),
                 .wen                    (postddr_fifo_wr),
                 .wdata                  (postddr_fifo_din),
                 .wfull                  (postddr_fifo_full),
@@ -1308,13 +1311,16 @@ wire stat_reset = (ddr_rwtest_en)? rw_stat_reset : capture_go_adc;
             fifo_async #(
                 .pDATA_WIDTH    (64),
                 .pDEPTH         (8192),
-                .pFALLTHROUGH   (1)
+                .pFALLTHROUGH   (1),
+                .pFLOPS         (0),
+                .pDISTRIBUTED   (0),
+                .pBRAM          (1)
             ) U_post_ddr_slow_fifo (
                 .wclk                   (ui_clk),
                 .rclk                   (clk_usb),
                 .wrst_n                 (~reset),
                 .rrst_n                 (~reset),
-                .wfull_threshold_value  (13'd4096),
+                .wfull_threshold_value  (4096),
                 .wen                    (postddr_fifo_wr),
                 .wdata                  (postddr_fifo_din),
                 .wfull                  (postddr_fifo_full),

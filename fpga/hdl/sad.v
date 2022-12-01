@@ -200,11 +200,14 @@ module sad #(
                 fifo_sync #(
                     .pDATA_WIDTH    (8),
                     .pDEPTH         (128),
-                    .pFALLTHROUGH   (0)
-                ) U_post_ddr_cummings (
+                    .pFALLTHROUGH   (0),
+                    .pFLOPS         (0),
+                    .pDISTRIBUTED   (0),
+                    .pBRAM          (1)
+                ) U_fifo (
                     .clk            (adc_sampleclk),
                     .rst_n          (~reset),
-                    .full_threshold_value (7'd0),
+                    .full_threshold_value (0),
                     .wen            (fifo_wr),
                     .wdata          (counter_incr[i]),
                     .full           (),

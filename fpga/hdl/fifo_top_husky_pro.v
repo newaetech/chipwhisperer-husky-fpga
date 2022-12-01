@@ -704,14 +704,20 @@ module fifo_top_husky_pro (
 
     `ifdef NOXILINXFIFO
         `ifdef TINYFIFO
+            // Note: can't use pBRAM on U_adc_fast_fifo because it would lead
+            // to writing and reading the same memory location simultaneously.
+            // This could be addressed by changing the FSM R/W timings.
             fifo_sync #(
                 .pDATA_WIDTH    (12),
                 .pDEPTH         (1024),
-                .pFALLTHROUGH   (1)
+                .pFALLTHROUGH   (1),
+                .pFLOPS         (0),
+                .pDISTRIBUTED   (1),
+                .pBRAM          (0)
             ) U_adc_fast_fifo (
                 .clk            (adc_sampleclk),
                 .rst_n          (~reset),
-                .full_threshold_value (10'd0),
+                .full_threshold_value (0),
                 .wen            (fast_fifo_wr),
                 .wdata          (adc_datain),
                 .full           (fast_fifo_full),
@@ -726,11 +732,14 @@ module fifo_top_husky_pro (
             fifo_sync #(
                 .pDATA_WIDTH    (12),
                 .pDEPTH         (32768),
-                .pFALLTHROUGH   (1)
+                .pFALLTHROUGH   (1),
+                .pFLOPS         (0),
+                .pDISTRIBUTED   (1),
+                .pBRAM          (0)
             ) U_adc_fast_fifo (
                 .clk            (adc_sampleclk),
                 .rst_n          (~reset),
-                .full_threshold_value (15'd0),
+                .full_threshold_value (0),
                 .wen            (fast_fifo_wr),
                 .wdata          (adc_datain),
                 .full           (fast_fifo_full),
@@ -745,13 +754,16 @@ module fifo_top_husky_pro (
         fifo_async #(
             .pDATA_WIDTH    (64),
             .pDEPTH         (512),
-            .pFALLTHROUGH   (0)
+            .pFALLTHROUGH   (0),
+            .pFLOPS         (0),
+            .pDISTRIBUTED   (0),
+            .pBRAM          (1)
         ) U_pre_ddr_slow_fifo (
             .wclk                   (adc_sampleclk),
             .rclk                   (ui_clk),
             .wrst_n                 (~reset),
             .rrst_n                 (~reset),
-            .wfull_threshold_value  (9'd0),
+            .wfull_threshold_value  (0),
             .wen                    (preddr_fifo_wr),
             .wdata                  (preddr_fifo_din),
             .wfull                  (preddr_fifo_full),
