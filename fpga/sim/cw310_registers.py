@@ -1,5 +1,5 @@
 import cocotb
-from cocotb.triggers import RisingEdge, FallingEdge, Timer, ClockCycles, Lock
+from cocotb.triggers import RisingEdge, ClockCycles, Lock
 import random
 
 class Registers(object):

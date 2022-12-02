@@ -1,5 +1,5 @@
 import cocotb
-from cocotb.triggers import RisingEdge, FallingEdge, Timer, ClockCycles, Join, Lock, Event
+from cocotb.triggers import RisingEdge, ClockCycles, Join, Lock, Event
 from cocotb.clock import Clock
 from cocotb.queue import Queue
 from cocotb.handle import Force, Release
