@@ -35,8 +35,9 @@ class GenericTest(object):
         self.dispatch_id = 0
         self.name = None
         self.errors = 0
-        self.downstream_triggers = [None]
-        self.downstream_event = Event()
+        self.downstream_triggers = []
+        self.downstream_triggers_pending = 0
+        self.trigger_event = Event()
         self.external_jobs = Queue() # queue for jobs received from other sources
         self.can_be_externally_triggered = True
         self.allowed_downstream_triggers = []
@@ -124,11 +125,11 @@ class GenericTest(object):
         """
         self.dut._log.error("This must be implemented in child class.")
 
-    def get_downstream_trigger(self, job) -> None:
+    def get_downstream_trigger(self, job) -> list:
         """ If a job triggers another job, returns that second job's Test
         class; otherwise, returns None.
         """
-        return None
+        return []
 
     @staticmethod
     def valid_external_trigger_combo(choice, job) -> bool:
@@ -152,43 +153,61 @@ class GenericTest(object):
             if cap == self.num_captures - 1:
                 self.can_be_externally_triggered = False
             if not self.external_jobs.empty():
-                source, event = self.external_jobs.get_nowait()
+                source = self.external_jobs.get_nowait()
                 self.dut._log.info("%12s using external job from %s" % (job_name, source.name))
                 job = await self._job_external_source_mods(source, job)
+                self.dut._log.debug("%12s returned from external source mods" % job_name)
                 externally_triggered = True
             else:
+                self.dut._log.debug("%12s not externally triggered" % job_name)
                 externally_triggered = False
 
             # see comments around queue definition in Harness for how this queue and lock mechanism works:
-            self.dut._log.debug("%12s trying to trigger job..." % job_name)
+            self.dut._log.debug("%12s trying to trigger job (waiting for read_lock to be freed)..." % job_name)
             while self.harness.read_lock.locked:
                 await ClockCycles(self.clk, 10)
-            self.dut._log.debug("%12s trying to trigger job: read lock freed" % job_name)
+            self.dut._log.debug("%12s trying to trigger job: read_lock freed" % job_name)
             # decide whether this job also triggers a downstream job:
-            # TODO: this only allows a single downstream trigger; extend it to multiple!
-            downstream_trigger = self.get_downstream_trigger(job)
-            if downstream_trigger:
-                self.dut._log.info("%12s sending downstream trigger to %s" % (job_name, downstream_trigger.name))
-                downstream_trigger.external_jobs.put_nowait((self, self.downstream_event))
+            downstream_triggers = self.get_downstream_trigger(job)
+            if downstream_triggers:
+                self.trigger_event.clear()
+                self.downstream_triggers_pending = len(downstream_triggers)
+                for downstream_trigger in downstream_triggers:
+                    self.dut._log.info("%12s sending downstream trigger to %s" % (job_name, downstream_trigger.name))
+                    downstream_trigger.external_jobs.put_nowait(self)
                 # wait for downstream job to be ready to capture
-                await self.downstream_event.wait()
-                self.downstream_event.clear()
+                while self.downstream_triggers_pending:
+                    self.dut._log.debug("%12s waiting for downstream triggers to get set up (%d left)..." % (job_name, self.downstream_triggers_pending))
+                    await ClockCycles(self.clk, 10)
+                self.dut._log.debug("%12s all downstream triggers are good to go!" % job_name)
 
             # now we can trigger *this* job:
-            self.harness.queue.put_nowait(self.name)
+            if not externally_triggered:
+                # harness.queue tracks the number of currently active capture jobs; if a job
+                # is externally triggered, then it will get accounted for by the *externally triggering job*,
+                # otherwise there's a (small) chance for unfortunate timing where everything locks up.
+                self.harness.queue.put_nowait(self.name)
+                for downstream_trigger in downstream_triggers:
+                    self.harness.queue.put_nowait(downstream_trigger.name)
             self.dut._log.debug("%12s pushing to job queue (count = %d)" % (job_name, self.harness.queue.qsize()))
             self.dut._log.info("%12s Triggering: %s" %(job_name, job))
             self.dut.current_action.value = self.harness.hexstring("%12s Triggering" % job_name)
             await self._arm()
             await self._trigger(job)
+            self.trigger_event.set()
             if externally_triggered:
                 # let the parent triggering job know that we're good to go:
-                event.set()
+                source.downstream_triggers_pending -= 1
+                self.dut._log.info("%12s ready and waiting for external trigger (decremented source's downstream trigger count wait)!" % job_name)
+                await source.trigger_event.wait()
+                self.dut._log.info("%12s done waiting for external trigger" % job_name)
+            # Careful! once the job is pushed to the checker.jobs queue, the checker will try to acquire read_lock, 
+            # which can block activity in other concurrently running instances of this _run method.
             self.checker.jobs.put_nowait(job)
             await self._wait_capture_done(job)
             self._untrigger(job)
             self.harness.queue.get_nowait()
-            self.dut._log.debug("%12s popping from job queue (count = %d)" % (job_name, self.harness.queue.qsize()))
+            self.dut._log.debug("%12s popped from job queue (count = %d)" % (job_name, self.harness.queue.qsize()))
             result = await self.checker.results.get()
             await self._post_job()
             #assert result['errors'] == 0 # TODO: optionally assert here, to stop test as soon as errors are found?
@@ -284,9 +303,9 @@ class GenericCapture(object):
             job_name = job['job_name']
             #await self._pre_read_wait(job) TODO: no longer needed since _wait_capture_done does the equivalent?
             # see comments around queue definition in Harness for how this queue and lock mechanism works:
-            self.dut._log.info("%12s trying to acquire read lock..." % job_name)
+            self.dut._log.debug("%12s trying to acquire read_lock..." % job_name)
             await self.harness.read_lock.acquire()
-            self.dut._log.debug("%12s read lock acquired" % job_name)
+            self.dut._log.info("%12s read_lock acquired" % job_name)
             self.dut._log.debug("%12s awaiting empty queue (count = %d)" % (job_name, self.harness.queue.qsize()))
             while not self.harness.queue.empty():
                 await ClockCycles(self.clk, 10)
@@ -299,7 +318,7 @@ class GenericCapture(object):
             data = await self._read_samples(job)
             self.dut._log.info("%12s Done read" % job_name)
             self.harness.read_lock.release()
-            self.dut._log.info("%12s read lock released" % job_name)
+            self.dut._log.info("%12s read_lock released" % job_name)
             self.dut_reading_signal.value = 0
             await self._check_fifo_errors(job_name)
             self._check_samples(job, data)
@@ -475,20 +494,26 @@ class ADCTest(GenericTest):
             if self.dut.U_dut.U_la_converter.fifo_underflow_sticky:    error_message += "U_la_converter underflow "
             self.dut._log.error(error_message)
 
-    def get_downstream_trigger(self, job) -> None:
-        # TODO: possibly return multiple downstream triggers
-        #choice = self.downstream_triggers[-1]
-        #if not choice.can_be_externally_triggered:
-        #    choice = None
-        #return choice
-        if self.harness.allow_downstream_triggers:
-            choice = random.choice(self.downstream_triggers)
-            if choice is not None:
-                if (not choice.can_be_externally_triggered) or (not self.valid_external_trigger_combo(choice, job)):
-                    choice = None
+    def get_downstream_trigger(self, job) -> list:
+        # Randomly choose the number of *potential* downstream triggers, up to and including all possible downstream triggers.
+        # Since potential downstream triggers can get discarded for many reasons (via can_be_externally_triggered and 
+        # valid_external_trigger_combo), we skew the random choice heavily towards the maximum.
+        if len(self.downstream_triggers):
+            weights=[1]*(len(self.downstream_triggers)+1)
+            weights[-1] = 4
+            num_potential_triggers = random.choices(range(len(self.downstream_triggers)+1), weights)[0]
         else:
-            choice = None
-        return choice
+            num_potential_triggers = 0
+        if (num_potential_triggers == 0) or (not self.harness.allow_downstream_triggers):
+            choices = []
+        else:
+            choices = []
+            for i in range(num_potential_triggers):
+                choice = random.choice(self.downstream_triggers)
+                if choice.can_be_externally_triggered and self.valid_external_trigger_combo(choice, job) and choice not in choices:
+                    choices.append(choice)
+        self.dut._log.info("%12s choosing %d downstream triggers" % (job['job_name'], len(choices)))
+        return choices
 
     @staticmethod
     def valid_external_trigger_combo(choice, job) -> bool:
@@ -947,7 +972,7 @@ class Harness(object):
                                         # global read lock is not locked. It then pushes an entry into this queue; it pops the
                                         # queue when the capture is done.
                                         # On the read side, a global read lock is first acquired, and then we must wait until
-                                        # this queue is empty before starting the read.
+                                        # this queue is empty (meaning no active captures) before starting the read.
         self.read_lock = Lock()
         # Actual seed is obtained only if RANDOM_SEED is defined on vvp command line (otherwise you get 0)
         # regress.py always specifies the seed so this is fine.
@@ -1084,7 +1109,7 @@ async def reg_rw(dut, wait_cycles=1000):
 
 @cocotb.test(timeout_time=600, timeout_unit="us")
 async def capture(dut):
-    """Concurrent captures of ADC and LA."""
+    """Concurrent captures of ADC, trace and LA."""
     registers = Registers(dut)
     harness = Harness(dut, registers)
 
