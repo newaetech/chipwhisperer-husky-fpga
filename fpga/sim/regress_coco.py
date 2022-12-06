@@ -19,8 +19,14 @@ parser.add_argument("--list", help="List available tests.", action='store_true')
 parser.add_argument("--dump", help="Enable waveform dumping.", action='store_true')
 parser.add_argument("--proc", type=int, help="Maximum number of parallel jobs to dispatch.", default=32)
 parser.add_argument("--cocodebug", help="Cocotb debug level", default='INFO')
-parser.add_argument("--fast_fifo_sim", help="xxx.", action='store_true')
+parser.add_argument("--fast_fifo_sim", help="Force FIFOs to use flopped version, for considerably faster run times.", action='store_true')
+parser.add_argument("--compile_once", help="Compile only once for faster regressions. CAUTION: prevents changes to test parameters \
+                                            which affect Verilog instantiations (such as TINYFIFO), which means \
+                                            some testcases won't run as intended.  Test parameters which affect \
+                                            only the Python testbench are not impacted by this.", action='store_true')
 args = parser.parse_args()
+
+# Optionally compile only once, for faster regressions (which prevents changing defines such as TINYFIFO from their defaults):
 
 # Define testcases:
 tests = []
@@ -129,7 +135,6 @@ stat_regex = re.compile(r'TESTS=(\d+) PASS=(\d+) FAIL=(\d+) SKIP=(\d+)')
 test_regex = re.compile(args.tests)
 exclude_regex = re.compile(args.exclude)
 
-# With cocotb we compile only once:
 exefile = 'coco.vvp'
 outfile = open('coco_compile.out', 'w')
 makeargs = ['make', 'compile_coco', 'EXEFILE=%s' % exefile]
@@ -159,7 +164,13 @@ for test in tests:
 
    for i in range(args.runs):
 
-      makeargs = ['make', 'run_coco', 'TESTCASE=%s' % test['testcase'], 'EXEFILE=%s' % exefile, 'COCOTB_LOG_LEVEL=%s' % args.cocodebug]
+      if args.compile_once:
+          make_target = 'run_coco'
+      else:
+          make_target = 'coco'
+
+
+      makeargs = ['make', make_target, 'TESTCASE=%s' % test['testcase'], 'COCOTB_LOG_LEVEL=%s' % args.cocodebug]
       if (args.seed):
           seed = args.seed
       else:
@@ -172,7 +183,10 @@ for test in tests:
       for key in test.keys():
          if key == 'name':
             logfile = "results/%s%d.log" % (test[key], i) 
+            if not args.compile_once:
+                exefile = "results/%s%d.vvp" % (test[key], i) 
             makeargs.append("LOGFILE=%s" % logfile)
+            makeargs.append("EXEFILE=%s" % exefile)
          elif key == 'description':
             pass
          elif key == 'frequency':
@@ -267,4 +281,11 @@ if fails:
     for f in fails:
         print(f)
 
+# clean up .vvp files:
+if not args.compile_once:
+    for v in exefiles:
+        try:
+            os.remove(v)
+        except OSError as e:
+            print("Error removing %s: %s" % (v, e))
 
