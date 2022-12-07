@@ -302,16 +302,21 @@ module ddr (
     wire slow_fifo_rd_fast;
     reg [3:0] slow_read_count;
 
+    reg ddr_start_adc_read_pulsed;
+    reg ddr_start_la_read_pulsed;
+    reg ddr_start_trace_read_pulsed;
+
+    reg ddr_start_adc_read_r;
     reg ddr_start_la_read_r;
     reg ddr_start_trace_read_r;
-    reg ddr_start_adc_read_r;
+
     wire start_read_ui_pulse;
     wire start_adc_read_ui_pulse;
     wire start_la_read_ui_pulse;
     wire start_trace_read_ui_pulse;
-    wire start_adc_read_usb_pulse;
-    wire start_la_read_usb_pulse;
-    wire start_trace_read_usb_pulse;
+    reg  start_adc_read_usb_pulse;
+    reg  start_la_read_usb_pulse;
+    reg  start_trace_read_usb_pulse;
 
     wire first_read_pulse_ui;
 
@@ -794,6 +799,15 @@ module ddr (
         end
     end
 
+`ifdef __ICARUS__
+    // to help debug
+    reg [31:0] postddr_fifo_writes = 0;
+    reg [31:0] postddr_fifo_reads = 0;
+    always @ (posedge ui_clk) if (postddr_fifo_wr) postddr_fifo_writes <= postddr_fifo_writes + 1;
+    always @ (posedge clk_usb) if (postddr_fifo_rd) postddr_fifo_reads <= postddr_fifo_reads + 1;
+`endif
+
+
     // DDR FSM sequential control logic and slow FIFO writes:
     always @(posedge ui_clk) begin
         if (reset) begin
@@ -971,19 +985,55 @@ module ddr (
 
     always @(posedge clk_usb) begin
         if (reset) begin
+            start_adc_read_usb_pulse <= 1'b0;
+            start_la_read_usb_pulse <= 1'b0;
+            start_trace_read_usb_pulse <= 1'b0;
+
+            ddr_start_adc_read_pulsed <= 1'b0;
+            ddr_start_la_read_pulsed <= 1'b0;
+            ddr_start_trace_read_pulsed <= 1'b0;
+
+            ddr_start_adc_read_r <= 1'b0;
             ddr_start_la_read_r <= 1'b0;
             ddr_start_trace_read_r <= 1'b0;
-            ddr_start_adc_read_r <= 1'b0;
         end
+
         else begin
+            ddr_start_adc_read_r   <= ddr_start_adc_read;
             ddr_start_la_read_r    <= ddr_start_la_read;
             ddr_start_trace_read_r <= ddr_start_trace_read;
-            ddr_start_adc_read_r   <= ddr_start_adc_read;
+
+            if (start_adc_read_usb_pulse)
+                start_adc_read_usb_pulse <= 1'b0;
+            else if ((ddr_state == pS_DDR_IDLE) && ddr_start_adc_read && ~ddr_start_adc_read_pulsed)
+                start_adc_read_usb_pulse <= 1'b1;
+            if (ddr_start_adc_read && ~ddr_start_adc_read_r)
+                ddr_start_adc_read_pulsed <= 1'b0;
+            else if (start_adc_read_usb_pulse)
+                ddr_start_adc_read_pulsed <= 1'b1;
+
+            if (start_la_read_usb_pulse)
+                start_la_read_usb_pulse <= 1'b0;
+            else if ((ddr_state == pS_DDR_IDLE) && ddr_start_la_read && ~ddr_start_la_read_pulsed)
+                start_la_read_usb_pulse <= 1'b1;
+            if (ddr_start_la_read && ~ddr_start_la_read_r)
+                ddr_start_la_read_pulsed <= 1'b0;
+            else if (start_la_read_usb_pulse)
+                ddr_start_la_read_pulsed <= 1'b1;
+
+
+            if (start_trace_read_usb_pulse)
+                start_trace_read_usb_pulse <= 1'b0;
+            else if ((ddr_state == pS_DDR_IDLE) && ddr_start_trace_read && ~ddr_start_trace_read_pulsed)
+                start_trace_read_usb_pulse <= 1'b1;
+            if (ddr_start_trace_read && ~ddr_start_trace_read_r)
+                ddr_start_trace_read_pulsed <= 1'b0;
+            else if (start_trace_read_usb_pulse)
+                ddr_start_trace_read_pulsed <= 1'b1;
+
+
         end
     end
-    assign start_adc_read_usb_pulse = ddr_start_adc_read && ~ddr_start_adc_read_r;
-    assign start_la_read_usb_pulse = ddr_start_la_read && ~ddr_start_la_read_r;
-    assign start_trace_read_usb_pulse = ddr_start_trace_read && ~ddr_start_trace_read_r;
 
     cdc_pulse U_start_adc_read_cdc (
         .reset_i       (reset),
