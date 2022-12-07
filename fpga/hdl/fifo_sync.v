@@ -226,8 +226,16 @@ module fifo_sync #(
                     (wptr[pADDR_WIDTH-1:0] == rptr[pADDR_WIDTH-1:0]) );
 
     // programmable almost full threshold
-    assign full_threshold = (rptr + full_threshold_value_trimmed <= wptr);
+    // The comparison is a bit tricky but boils down to: add an MSB (set to 0)
+    // to both pointers to prevent overflow when adding the threshold value,
+    // except when wptr has wrapped around but rptr hasn't: in that case, add
+    // an MSB set to 1 to wptr, to make it as though it didn't overflow.
+    wire [pADDR_WIDTH+1:0] adjust_rt = {1'b0, rptr} + {2'b0, full_threshold_value_trimmed};
+    wire [pADDR_WIDTH+1:0] adjust_wt1 = {1'b0, wptr};
+    wire [pADDR_WIDTH+1:0] adjust_wt2 = {1'b1, wptr};
+    wire case2 = (~wptr[pADDR_WIDTH] && rptr[pADDR_WIDTH]);
 
+    assign full_threshold = (adjust_rt <= ((case2)? adjust_wt2 : adjust_wt1));
 
 endmodule
 

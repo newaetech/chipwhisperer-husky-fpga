@@ -250,9 +250,18 @@ module fifo_async #(
     // New: programmable almost full threshold
     // Convert the read pointer from gray to binary so that it can be compared
     // against the write pointer + threshold in binary.
-    // Gray to binary conversion examples and tests:
+    // The comparison is a bit tricky but boils down to: add an MSB (set to 0)
+    // to both pointers to prevent overflow when adding the threshold value,
+    // except when wbin has wrapped around but rbin hasn't: in that case, add
+    // an MSB set to 1 to wbin, to make it as though it didn't overflow.
     wire [pADDR_WIDTH:0] wq2_rptr_bin = wq2_rptr ^ (wq2_rptr_bin>>1);
     reg  [pADDR_WIDTH:0] wq2_rptr_bin_r;
+
+    wire [pADDR_WIDTH+1:0] adjust_rt = {1'b0, wq2_rptr_bin_r} + {2'b0, wfull_threshold_value_trimmed};
+    wire [pADDR_WIDTH+1:0] adjust_wt1 = {1'b0, wbin};
+    wire [pADDR_WIDTH+1:0] adjust_wt2 = {1'b1, wbin};
+    wire case2 = (~wbin[pADDR_WIDTH] && wq2_rptr_bin_r[pADDR_WIDTH]);
+
     always @(posedge wclk or negedge wrst_n) begin
         if (!wrst_n) begin
             wfull_threshold <= 1'b0;
@@ -260,7 +269,7 @@ module fifo_async #(
         end
         else begin
             wq2_rptr_bin_r <= wq2_rptr_bin; // help timing?
-            if (wq2_rptr_bin_r + wfull_threshold_value <= wbin)
+            if (adjust_rt <= ((case2)? adjust_wt2 : adjust_wt1))
                 wfull_threshold <= 1'b1;
             else
                 wfull_threshold <= 1'b0;
