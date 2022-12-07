@@ -64,6 +64,13 @@ module ddr3_app_model #(
     reg [pDATA_WIDTH*2-1:0] memory [0:65535];
 `endif
 
+`ifdef FAST_DDR_WRITES
+    localparam pSLOW_DDR_PROB = 10;
+`else
+    localparam pSLOW_DDR_PROB = 1;
+`endif
+
+
     reg [pDATA_WIDTH-1:0] app_wdf_data_r;
 
     reg app_rdy_wr;
@@ -104,7 +111,7 @@ module ddr3_app_model #(
             wait (app_en && app_wdf_wren);
             #1 memory[app_addr>>3] = {app_wdf_data, app_wdf_data_r};
             @(posedge clk);
-            if ($urandom_range(0, 1)) begin
+            if ($urandom_range(0, pSLOW_DDR_PROB) == 0) begin
                 app_rdy_wr = 1'b0;
                 repeat ($urandom_range(1, 10)) @(posedge clk);
                 app_rdy_wr = 1'b1;

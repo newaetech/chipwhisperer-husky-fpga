@@ -172,7 +172,7 @@ async def reg_rw(dut, wait_cycles=1000):
     await ClockCycles(dut.clk_usb, wait_cycles)
 
 
-@cocotb.test(timeout_time=600, timeout_unit="us")
+@cocotb.test(timeout_time=2000, timeout_unit="us")
 async def capture(dut):
     """Concurrent captures of ADC, trace and LA."""
     registers = Registers(dut)

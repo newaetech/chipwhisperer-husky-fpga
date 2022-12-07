@@ -278,30 +278,62 @@ module preddr_18to64_converter (
     assign wider_word_shifter_debug[ 31: 16] = {7'b0, wide_word_shifter[17: 9]};
     assign wider_word_shifter_debug[ 15:  0] = {7'b0, wide_word_shifter[ 8: 0]};
 
+`ifdef __ICARUS__
+    // debug only
+    reg [31:0] fifo_writes = 0;
+    reg [31:0] fifo_reads = 0;
+    always @(posedge wr_clk) if (fifo_wr) fifo_writes <= fifo_writes + 1;
+    always @(posedge rd_clk) if (fifo_rd) fifo_reads <= fifo_reads + 1;
+`endif
 
 `ifdef NOXILINXFIFO
-    fifo_async #(
-        .pDATA_WIDTH    (64),
-        .pDEPTH         (4096),
-        .pFALLTHROUGH   (0),
-        .pFLOPS         (0),
-        .pDISTRIBUTED   (0),
-        .pBRAM          (1)
-    ) U_pre_ddr_fifo (
-        .wclk                   (wr_clk),
-        .rclk                   (rd_clk),
-        .wrst_n                 (~reset),
-        .rrst_n                 (~reset),
-        .wfull_threshold_value  (0),
-        .wen                    (fifo_wr),
-        .wdata                  (fifo_din),
-        .wfull                  (fifo_full),
-        .woverflow              (fifo_overflow),
-        .ren                    (fifo_rd_rd),
-        .rdata                  (fifo_dout),
-        .rempty                 (fifo_empty_raw),
-        .runderflow             (fifo_underflow)
-    );
+    `ifdef TINYFIFO
+        fifo_async #(
+            .pDATA_WIDTH    (64),
+            .pDEPTH         (512),
+            .pFALLTHROUGH   (0),
+            .pFLOPS         (0),
+            .pDISTRIBUTED   (0),
+            .pBRAM          (1)
+        ) U_pre_ddr_fifo (
+            .wclk                   (wr_clk),
+            .rclk                   (rd_clk),
+            .wrst_n                 (~reset),
+            .rrst_n                 (~reset),
+            .wfull_threshold_value  (0),
+            .wen                    (fifo_wr),
+            .wdata                  (fifo_din),
+            .wfull                  (fifo_full),
+            .woverflow              (fifo_overflow),
+            .ren                    (fifo_rd_rd),
+            .rdata                  (fifo_dout),
+            .rempty                 (fifo_empty_raw),
+            .runderflow             (fifo_underflow)
+        );
+    `else
+        fifo_async #(
+            .pDATA_WIDTH    (64),
+            .pDEPTH         (4096),
+            .pFALLTHROUGH   (0),
+            .pFLOPS         (0),
+            .pDISTRIBUTED   (0),
+            .pBRAM          (1)
+        ) U_pre_ddr_fifo (
+            .wclk                   (wr_clk),
+            .rclk                   (rd_clk),
+            .wrst_n                 (~reset),
+            .rrst_n                 (~reset),
+            .wfull_threshold_value  (0),
+            .wen                    (fifo_wr),
+            .wdata                  (fifo_din),
+            .wfull                  (fifo_full),
+            .woverflow              (fifo_overflow),
+            .ren                    (fifo_rd_rd),
+            .rdata                  (fifo_dout),
+            .rempty                 (fifo_empty_raw),
+            .runderflow             (fifo_underflow)
+        );
+    `endif
 
 `else
     pre_ddr_generic_fifo U_pre_ddr_fifo (

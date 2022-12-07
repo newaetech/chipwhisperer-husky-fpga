@@ -68,10 +68,51 @@ tests.append(dict(name  = 'all_capture_no_downstream',
 tests.append(dict(name  = 'big_capture',
              testcase = 'capture',
              frequency = 4,
-             MIN_SIZE = 100,
+             MIN_SIZE = 300,
              MAX_SIZE= 1000,
              NUM_CAPTURES = 2,
              description = 'All sources, larger captures.'))
+
+tests.append(dict(name  = 'huge_adc_capture',
+             testcase = 'capture',
+             frequency = 7,
+             MIN_SIZE = 12000,
+             MAX_SIZE = 12100,
+             NUM_CAPTURES = 1,
+             LA_CAPTURE = 0,
+             TRACE_CAPTURE = 0,
+             FIFOSIZE = "TINYFIFO",
+             # with TINY FIFO, for ADC we have:
+             # fast FIFO: 1024 samples
+             # pre DDR: 512*64/12 = 2730 samples
+             # post DDR: 512*64/12 = 2730 samples
+             # DDR capacity: selectable via TINYDDR, 256*64/12 = 1365 or 64K*64/12 = 349525 samples
+             description = 'ADC capture exceeding pre-DDR FIFO size.'))
+
+tests.append(dict(name  = 'huge_la_capture',
+             testcase = 'capture',
+             frequency = 7,
+             MIN_SIZE = 12000,
+             MAX_SIZE = 12100,
+             NUM_CAPTURES = 1,
+             ADC_CAPTURE = 0,
+             TRACE_CAPTURE = 0,
+             FIFOSIZE = "TINYFIFO",
+             # with TINY FIFO, for LA we have:
+             # pre DDR: 512*64/9 = 3640 samples
+             # DDR capacity: selectable via TINYDDR, 256*64/12 = 1365 or 64K*64/12 = 349525 samples
+             description = 'LA capture exceeding pre-DDR FIFO size.'))
+
+tests.append(dict(name  = 'huge_all_capture',
+             testcase = 'capture',
+             frequency = 7,
+             MIN_SIZE = 4000,
+             MAX_SIZE = 4100,
+             NUM_CAPTURES = 1,
+             FIFOSIZE = "TINYFIFO",
+             DDR_MODEL_WRITES = 'FAST_DDR_WRITES',
+             description = 'LA capture exceeding pre-DDR FIFO size.'))
+
 
 #tests.append(dict(name  = 'adctrig',
 #             testcase = 'capture',
@@ -185,6 +226,8 @@ for test in tests:
             logfile = "results/%s%d.log" % (test[key], i) 
             if not args.compile_once:
                 exefile = "results/%s%d.vvp" % (test[key], i) 
+                if args.dump:
+                   makeargs.append('DUMP=1')
             makeargs.append("LOGFILE=%s" % logfile)
             makeargs.append("EXEFILE=%s" % exefile)
          elif key == 'description':
