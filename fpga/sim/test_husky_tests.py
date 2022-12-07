@@ -209,7 +209,7 @@ class ADCTest(GenericTest):
         self.checker = ADCCapture(dut, harness, dut_reading_signal)
         self.name = 'ADC'
         fifo_watch_thread = cocotb.start_soon(self.fifo_watch())
-        preddr_watch_thread = cocotb.start_soon(self.preddr_watch())
+        ddr_watch_thread = cocotb.start_soon(self.ddr_model_watch())
         self.allowed_downstream_triggers = ['LA', 'trace']
 
     async def _job_setup(self) -> dict:
@@ -261,10 +261,9 @@ class ADCTest(GenericTest):
 
     async def fifo_watch(self) -> None:
         while True:
-            await RisingEdge(self.dut.U_dut.oadc.U_fifo.error_flag or self.dut.U_dut.oadc.U_ddr.U_ddr3_model.dropped_read_request)
+            await RisingEdge(self.dut.U_dut.oadc.U_fifo.error_flag)
             self.harness.inc_error()
             error_message = 'Internal FIFO/DDR error(s): '
-            if self.dut.U_dut.oadc.U_ddr.U_ddr3_model.dropped_read_request.value: error_message += "DDR dropped read request "
             await ClockCycles(self.clk, 2) # Note: without this, error_value comes back as 0, even though it changes on the same cycle as error_flag
             error_value = self.dut.U_dut.oadc.U_fifo.error_stat.value
             # accessing vector bits requires iverilog >= 10.3:
@@ -283,17 +282,12 @@ class ADCTest(GenericTest):
             if error_value & 2**0 : error_message += "postddr_fifo_underflow_masked "
             self.dut._log.error(error_message)
 
-    async def preddr_watch(self) -> None:
+    async def ddr_model_watch(self) -> None:
         while True:
-            await RisingEdge(self.dut.U_dut.U_trace_converter.error_flag or self.dut.U_dut.U_la_converter.error_flag)
+            await RisingEdge(self.dut.U_dut.oadc.U_ddr.U_ddr3_model.dropped_read_request)
             self.harness.inc_error()
-            error_message = 'Pre-DDR FIFO error(s): '
-            await ClockCycles(self.clk, 2)
-            if self.dut.U_dut.U_trace_converter.fifo_overflow_sticky.value:  error_message += "U_trace_converter overflow "
-            if self.dut.U_dut.U_trace_converter.fifo_underflow_sticky.value: error_message += "U_trace_converter underflow "
-            if self.dut.U_dut.U_la_converter.fifo_overflow_sticky.value:     error_message += "U_la_converter overflow "
-            if self.dut.U_dut.U_la_converter.fifo_underflow_sticky.value:    error_message += "U_la_converter underflow "
-            self.dut._log.error(error_message)
+            self.dut._log.error('Internal FIFO/DDR error(s): DDR dropped read request')
+
 
     def get_downstream_trigger(self, job) -> list:
         # Randomly choose the number of *potential* downstream triggers, up to and including all possible downstream triggers.
@@ -331,6 +325,7 @@ class LATest(GenericTest):
         self.dut_job_signal = dut_job_signal
         self.checker = LACapture(dut, harness, dut_reading_signal)
         self.name = 'LA'
+        preddr_watch_thread = cocotb.start_soon(self.preddr_watch())
 
     async def _job_setup(self) -> dict:
         samples = random.randint(self.capture_min, self.capture_max)
@@ -396,6 +391,15 @@ class LATest(GenericTest):
         await self.registers.write(75, [1])   # LA_MANUAL_CAPTURE
         await self.registers.write(75, [0])   # LA_MANUAL_CAPTURE
 
+    async def preddr_watch(self) -> None:
+        while True:
+            await RisingEdge(self.dut.U_dut.U_la_converter.error_flag)
+            self.harness.inc_error()
+            error_message = 'Pre-DDR FIFO error(s): '
+            await ClockCycles(self.clk, 2)
+            if self.dut.U_dut.U_la_converter.fifo_overflow_sticky.value:     error_message += "U_la_converter overflow "
+            if self.dut.U_dut.U_la_converter.fifo_underflow_sticky.value:    error_message += "U_la_converter underflow "
+            self.dut._log.error(error_message)
 
 
 class TraceTest(GenericTest):
@@ -404,6 +408,7 @@ class TraceTest(GenericTest):
         self.dut_job_signal = dut_job_signal
         self.checker = TraceCapture(dut, harness, dut_reading_signal)
         self.name = 'trace'
+        preddr_watch_thread = cocotb.start_soon(self.preddr_watch())
 
     async def _job_setup(self) -> dict:
         samples = random.randint(self.capture_min, self.capture_max)
@@ -462,4 +467,15 @@ class TraceTest(GenericTest):
         """
         await self.registers.write(0xc7, [0]) # REG_SOFT_TRIG_PASSTHRU
         await self.registers.write(0xc8, [0]) # REG_SOFT_TRIG_ENABLE
+
+    async def preddr_watch(self) -> None:
+        while True:
+            await RisingEdge(self.dut.U_dut.U_trace_converter.error_flag)
+            self.harness.inc_error()
+            error_message = 'Pre-DDR FIFO error(s): '
+            await ClockCycles(self.clk, 2)
+            if self.dut.U_dut.U_trace_converter.fifo_overflow_sticky.value:  error_message += "U_trace_converter overflow "
+            if self.dut.U_dut.U_trace_converter.fifo_underflow_sticky.value: error_message += "U_trace_converter underflow "
+            self.dut._log.error(error_message)
+
 
