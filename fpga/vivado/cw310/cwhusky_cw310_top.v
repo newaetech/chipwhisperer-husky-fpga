@@ -22,7 +22,7 @@ Author: Jean-Pierre Thibault <jpthibault@newae.com>
   along with chipwhisperer.  If not, see <http://www.gnu.org/licenses/>.
 *************************************************************************/
 
-module cwhusky_cw310_top(  
+module cwhusky_cw310_top (
     input wire         clk_usb,
 
     output wire        LED_ADC, //  LED_CLK1FAIL on schematic,
@@ -470,7 +470,7 @@ module cwhusky_cw310_top(
 
 
    openadc_interface #(
-        .pBYTECNT_SIZE  (pBYTECNT_SIZE)
+        .pBYTECNT_SIZE          (pBYTECNT_SIZE)
    ) oadc (
         .clk_usb                (clk_usb_buf),
         .reset_o                (reg_rst),

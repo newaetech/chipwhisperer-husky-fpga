@@ -150,38 +150,15 @@ module cwhusky_cw310_cocowrapper(
 );
 
 
-   parameter pTIMEOUT_CYCLES = 50000;
    parameter pDUMP = 0;
-   parameter pCLK_USB_PERIOD = 10;
 
-
-   // initialization thread:
    initial begin
-      //seed = pSEED;
-      //$display("Running with seed=%0d", seed);
-      //rdata = $urandom(seed);
-
       if (pDUMP) begin
           //$display("YYY Got the DUMP!");
           $dumpfile("results/cw310_coco.fst");
           $dumpvars(0, cwhusky_cw310_cocowrapper);
       end
-      //else
-      //    $display("XXX no DUMP :-(");
-
    end
-
-   /* timeout thread:
-   initial begin
-      if (pTIMEOUT_CYCLES > 0) begin
-          #(pCLK_USB_PERIOD*pTIMEOUT_CYCLES);
-          //errors += 1;
-          $display("ERROR: global timeout.");
-          //$display("SIMULATION FAILED (%0d errors)", errors);
-          $finish;
-      end
-   end
-   */
 
 
 cwhusky_cw310_top U_dut (  
