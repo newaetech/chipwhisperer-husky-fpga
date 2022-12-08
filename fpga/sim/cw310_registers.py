@@ -6,6 +6,9 @@ class Registers(object):
     def __init__(self, dut):
         self.dut = dut
         self.lock = Lock()
+        self.dut.USB_RDn.value = 1
+        self.dut.USB_WRn.value = 1
+        self.dut.USB_CEn.value = 1
 
     async def setup_rw_address(self, address):
         self.dut.USB_CEn.value = 1
