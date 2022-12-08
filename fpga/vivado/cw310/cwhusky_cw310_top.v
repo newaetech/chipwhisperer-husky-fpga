@@ -34,7 +34,10 @@ module cwhusky_cw310_top (
     output wire        LED_GLITCHOUT_HIGHPWR,   // CW310 new
     output wire        LED_GLITCHOUT_LOWPWR,    // CW310 new
 `ifdef __ICARUS__
-    input wire          tb_ui_clk,   // simulation only
+    // simulation only:
+    input wire          tb_ui_clk,
+    output wire         glitch_out,
+    output wire         glitch_clk,   
 `endif
 
     // DDR3 (Pro) stuff:
@@ -205,6 +208,11 @@ module cwhusky_cw310_top (
    wire pll_fpga_clk;
    wire observer_clk;
    wire observer_locked;
+   `ifdef __ICARUS__
+       assign glitch_out = glitchclk;
+       assign glitch_clk = glitch_mmcm1_clk_out;
+   `endif
+
 
    `ifdef __ICARUS__
       assign clk_usb_buf = clk_usb;

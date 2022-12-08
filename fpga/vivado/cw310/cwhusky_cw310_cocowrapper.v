@@ -141,10 +141,13 @@ module cwhusky_cw310_cocowrapper(
     input  wire         adc_reading,
     input  wire         la_reading,
     input  wire         trace_reading,
+    input  wire         glitch_reading,
+    input  wire         expected_glitch,
 
     input  wire [7:0]   adc_job,
     input  wire [7:0]   la_job,
     input  wire [7:0]   trace_job,
+    input  wire [7:0]   glitch_job,
     input  wire [24*8-1:0] current_action,
     input  wire [31:0]  errors
 );
@@ -160,6 +163,12 @@ module cwhusky_cw310_cocowrapper(
       end
    end
 
+   wire glitch_out;
+   wire glitch_clk;
+   reg glitch_error;
+   // Note: glitch_error is flopped, otherwise simulator/cocotb may "see" false errors at every edge:
+   always @(negedge glitch_clk) glitch_error <= (glitch_out != expected_glitch);
+
 
 cwhusky_cw310_top U_dut (  
     .clk_usb            (clk_usb      ),
@@ -167,6 +176,8 @@ cwhusky_cw310_top U_dut (
     .ADC_clk_fbn        (ADC_clk_fbn  ),
     .PLL_CLK1           (PLL_CLK1     ),
     .tb_ui_clk          (ui_clk       ),
+    .glitch_out         (glitch_out   ),
+    .glitch_clk         (glitch_clk   ),
     //.ADC_DP             (6'b0         ),
     //.ADC_DN             (6'b0         ),
     //.ADC_CLKP           (             ),

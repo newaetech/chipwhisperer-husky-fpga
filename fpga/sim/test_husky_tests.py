@@ -2,7 +2,8 @@ import cocotb
 from cocotb.triggers import RisingEdge, ClockCycles, Join, Lock, Event
 from cocotb.clock import Clock
 from cocotb.queue import Queue
-from test_husky_captures import ADCCapture, LACapture, TraceCapture
+from cocotb.handle import Force, Release
+from test_husky_captures import ADCCapture, LACapture, TraceCapture, GlitchCapture
 import random
 import numpy as np
 
@@ -63,14 +64,14 @@ class GenericTest(object):
         Dictionary of values which will be passed to the corresponding
         checker(GenericCapture) instance.
         """
-        self.dut._log.error("This must be implemented in child class.")
+        self.dut._log.error("_job_setup() must be implemented in child class.")
 
     async def _job_external_source_mods(self, source, job) -> dict:
         """ Change job properties when driven by some external source.
         Takes in the job, modifies the job, takes any required action, and
         returns the modified job.
         """
-        self.dut._log.error("This must be implemented in child class.")
+        self.dut._log.error("_job_external_source_mods() must be implemented in child class.")
 
     async def _post_job(self) -> None:
         """ Runs after the job completes.
@@ -87,12 +88,12 @@ class GenericTest(object):
     async def _arm(self) -> None:
         """ Arm the DUT prior to capture.
         """
-        self.dut._log.error("This must be implemented in child class.")
+        self.dut._log.error("_arm() must be implemented in child class.")
 
     async def _trigger(self, job) -> None:
         """ Trigger the DUT capture.
         """
-        self.dut._log.error("This must be implemented in child class.")
+        self.dut._log.error("_trigger() must be implemented in child class.")
 
     def _untrigger(self, job) -> None:
         """ De-assert trigger, if needed.
@@ -102,14 +103,14 @@ class GenericTest(object):
     async def _initial_setup(self) -> None:
         """ Initial DUT setup to do prior to the main dispatch loop.
         """
-        self.dut._log.error("This must be implemented in child class.")
+        self.dut._log.error("_initial_setup() must be implemented in child class.")
 
     async def _wait_capture_done(self, job: dict) -> None:
         """ Wait for DUT to finish capturing the job we just dispatched, so
         that we can remove our entry from the harness queue (which is used to
         prevent read attempts during capture).
         """
-        self.dut._log.error("This must be implemented in child class.")
+        self.dut._log.error("_wait_capture_done() must be implemented in child class.")
 
     def get_downstream_trigger(self, job) -> list:
         """ If a job triggers another job, returns that second job's Test
@@ -477,5 +478,74 @@ class TraceTest(GenericTest):
             if self.dut.U_dut.U_trace_converter.fifo_overflow_sticky.value:  error_message += "U_trace_converter overflow "
             if self.dut.U_dut.U_trace_converter.fifo_underflow_sticky.value: error_message += "U_trace_converter underflow "
             self.dut._log.error(error_message)
+
+
+
+
+class GlitchTest(GenericTest):
+    def __init__(self, dut, harness, registers, dut_job_signal, dut_reading_signal, num_captures=5):
+        super().__init__(dut, harness, registers)
+        self.dut_job_signal = dut_job_signal
+        self.checker = GlitchCapture(dut, harness, dut_reading_signal)
+        self.name = 'glitch'
+
+    async def _initial_setup(self) -> None:
+        await self.registers.write(49, [0])   # CLOCKGLITCH_POWERDOWN off
+        #await self.registers.write(51, self.registers.to_bytes(1, 8)) # set clock source to clkgen
+        # simulation artifact: prevent glitch output being X:
+        self.dut.U_dut.reg_clockglitch.U_clockglitch.glitch_go.value = Force(0)
+        await ClockCycles(self.dut.clk_usb, 10)
+        self.dut.U_dut.reg_clockglitch.U_clockglitch.glitch_go.value = Release()
+        await ClockCycles(self.dut.clk_usb, 10)
+        self.checker._start_watch_threads()
+
+    async def _job_setup(self) -> dict:
+        trigger_type = 'manual'
+        #glitches = random.randint(self.capture_min, self.capture_max)
+        glitches = 1 # TODO: start with a single glitch
+        offset = 0 # TODO: start with offset=0
+        repeats = 1 # TODO: start with repeats=0
+        await self.registers.write(52, [glitches-1])
+        await self.registers.write(25, self.registers.to_bytes(offset, 4))
+        # setting the repeats value is messy:
+        settings = [0]*8
+        settings[5] = 0x4c
+        if trigger_type == 'manual':
+            settings[5] &= 0xf3 # clear bits 3:2
+        else:
+            raise ValueError('not supported yet')
+        settings[6] = (repeats-1) & 0xff
+        settings[7] = (((repeats-1)>>8) << 2) + 1
+        #settings = (0xcc >> (5*0)) + (((repeats-1) & 0xff) >> (6*8)) + (((((repeats-1)>>8) << 2) + 1) >> (7*0))
+        #await self.registers.write(51, self.registers.to_bytes(settings, 8))
+        await self.registers.write(51, settings)
+        return {"glitches": glitches, "offset": offset, "repeats": repeats, "trigger_type": trigger_type}
+
+    async def _wait_capture_done(self, job: dict) -> None:
+        pass
+
+    async def _arm(self) -> None:
+        pass
+
+    async def _trigger(self, job) -> None:
+        if job['trigger_type'] == 'manual':
+            await self.trigger_now()
+        else:
+            raise ValueError
+        # TODO: code more trigger options
+
+    async def trigger_now(self) -> None:
+        # TODO
+        settings = await self.harness.registers.read(51, 8)
+        settings[5] |= 0x80 # set manual trigger bit
+        settings[5] |= 0x80 # set trigger source to manual
+        await self.registers.write(51, settings)
+
+    async def _post_job(self) -> None:
+        """ reset trigger settings to something that won't fire so it doesn't inadvertently trigger later!
+        """
+        settings = await self.harness.registers.read(51, 8)
+        settings[5] &= 0x7f # clear manual trigger bit in case it was set; no harm if it wasn't
+        await self.registers.write(51, settings[:6])
 
 

@@ -111,7 +111,19 @@ tests.append(dict(name  = 'huge_all_capture',
              NUM_CAPTURES = 1,
              FIFOSIZE = "TINYFIFO",
              DDR_MODEL_WRITES = 'FAST_DDR_WRITES',
-             description = 'LA capture exceeding pre-DDR FIFO size.'))
+             description = 'ADC+trace+LA capture exceeding pre-DDR FIFO size.'))
+
+tests.append(dict(name  = 'glitch_only',
+             testcase = 'capture',
+             frequency = 1,
+             MIN_SIZE = 1,
+             MAX_SIZE = 1,
+             NUM_CAPTURES = 1,
+             ADC_CAPTURE = 0,
+             LA_CAPTURE = 0,
+             TRACE_CAPTURE = 0,
+             GLITCH_CAPTURE = 1,
+             description = 'Only glitches.'))
 
 
 #tests.append(dict(name  = 'adctrig',

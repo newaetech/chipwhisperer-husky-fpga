@@ -33,10 +33,10 @@ module cdc_pulse #(
 
    (* ASYNC_REG = "TRUE" *) reg  [pSYNC_STAGES-1:0] req_pipe;
    (* ASYNC_REG = "TRUE" *) reg  [pSYNC_STAGES-1:0] ack_pipe;
-   reg  src_req;
-   reg  dst_req;
-   reg  dst_req_r;
-   reg  src_ack;
+   reg  src_req = 1'b0;
+   reg  dst_req = 1'b0;
+   reg  dst_req_r = 1'b0;
+   reg  src_ack = 1'b0;
    wire busy;
 
    always @(posedge src_clk) begin

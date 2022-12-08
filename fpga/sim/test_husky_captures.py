@@ -1,5 +1,5 @@
 import cocotb
-from cocotb.triggers import RisingEdge, ClockCycles, Join, Lock, Event
+from cocotb.triggers import RisingEdge, FallingEdge, Edge, ClockCycles, Join, Lock, Event
 from cocotb.clock import Clock
 from cocotb.queue import Queue
 import random
@@ -38,30 +38,30 @@ class GenericCapture(object):
         """ Wait time after job is received. Intended to be used to account for
         the DUT to process the job, before we can go obtain the job result.
         """
-        self.dut._log.error("This must be implemented in child class.")
+        self.dut._log.error("_pre_read_wait() must be implemented in child class.")
 
     async def _initiate_read(self) -> None:
         """ Set up the read and ensure that data is available to be read.
         """
-        self.dut._log.error("This must be implemented in child class.")
+        self.dut._log.error("_initiate_read() must be implemented in child class.")
 
     async def _read_samples(self, job) -> list:
         """ Read all the samples from DUT. Should return actual samples, not
         raw read data (e.g. a list of 12-bit samples, not a list of bytes that
         encode 12-bit samples)
         """
-        self.dut._log.error("This must be implemented in child class.")
+        self.dut._log.error("_read_samples() must be implemented in child class.")
 
     async def _check_fifo_errors(self, job_name) -> None:
         """ Check FIFO status and errors. Meant to be called after reading all
         samples. Verifies that FIFO is empty.
         """
-        self.dut._log.error("This must be implemented in child class.")
+        self.dut._log.error("_check_fifo_errors() must be implemented in child class.")
 
     def _check_samples(self, job, data) -> None:
         """ Check <data> for errors. Return the number of errors seen.
         """
-        self.dut._log.error("This must be implemented in child class.")
+        self.dut._log.error("_check_samples() must be implemented in child class.")
 
     def inc_error(self) -> None:
         """ Call this to increase the local class error count, the global
@@ -482,4 +482,63 @@ class TraceCapture(GenericCapture):
                 self.dut._log.error("%12s Sample %4d: expected %5x got %5x" % (job['job_name'], i+1, expected, byte))
             else:
                 self.dut._log.debug("%12s Good sample %4d: %5x" % (job['job_name'], i+1, byte))
+
+
+
+class GlitchCapture(GenericCapture):
+    def __init__(self, dut, harness, dut_reading_signal):
+        super().__init__(dut, harness, dut_reading_signal)
+        self.name = 'glitch'
+        self.glitch_clock = self.dut.U_dut.reg_clockglitch.glitch_mmcm1_clk_out
+        self.glitch_error = self.dut.glitch_error
+        self.expect_glitch(0)
+
+    def _start_watch_threads(self):
+        self.dut._log.info("STARTING WATCH THREADS!")
+        glitch_watch_thread = cocotb.start_soon(self.glitch_watch())
+
+    async def _run(self) -> None:
+        """ Main run loop. 
+        Verifying glitches is sufficiently different from verifying ADC/LA/trace captures that
+        it merits a custom _run() routine.
+        """
+        self.job_id = 0
+        while True:
+            self.dut_reading_signal.value = 0
+            job = await self.jobs.get()
+            self.dut_reading_signal.value = 1
+            job_name = job['job_name']
+            self.job_name = job_name
+            self.dut._log.info("%12s Starting check for job: %s" % (job_name, job))
+            self.dut.current_action.value = self.harness.hexstring("%12s verify" % job_name)
+            await self.glitch_check(job)
+            await ClockCycles(self.clk, 50)
+            self.results.put_nowait({"errors": self.errors})
+            self.job_id += 1
+            self.not_in_a_job()
+
+    async def glitch_watch(self) -> None:
+        """ Ensures there are glitches when there are supposed to be.
+        """
+        self.not_in_a_job()
+        while True:
+            await Edge(self.glitch_error)
+            self.harness.inc_error()
+            self.dut._log.error('%12s Unexpected glitch value! (expected %d, got %s)' % (self.job_name, self.dut.expected_glitch.value, self.dut.glitch_out.value))
+
+    async def glitch_check(self, job) -> None:
+        """ Ensures there are glitches when there are supposed to be.
+        """
+        await ClockCycles(self.glitch_clock, 3)
+        await FallingEdge(self.glitch_clock)
+        self.expect_glitch(1)
+        for i in range(job['repeats']):
+            await FallingEdge(self.glitch_clock)
+        self.expect_glitch(0)
+
+    def expect_glitch(self, value) -> None:
+        self.dut.expected_glitch.value = value
+
+    def not_in_a_job(self) -> None:
+        self.job_name = '(glitch: no job)'
 

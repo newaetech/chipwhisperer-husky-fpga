@@ -8,7 +8,7 @@ from cocotb.log import SimLogFormatter
 import random
 import math
 from cw310_registers import Registers
-from test_husky_tests import ADCTest, LATest, TraceTest
+from test_husky_tests import ADCTest, LATest, TraceTest, GlitchTest
 import numpy as np
 import logging
 import os
@@ -58,6 +58,7 @@ class Harness(object):
         # the reset will cause target_io4 to "lose" the 0 we'd assigned to it... possibly a simulator/cocotb bug?
         self.dut.target_io4.value = 0
         await self.registers.write(51, [0,0,0,0,0,0xcc,0,1])  # CLOCKGLITCH_SETTINGS: set source to clk_usb (otherwise, X's propagate)
+        #await self.registers.write(51, [0,0,0,0,0,0x4c,0,1])  # CLOCKGLITCH_SETTINGS: set source to clk_usb (otherwise, X's propagate)
         self.dut.U_dut.reg_clockglitch.U_clockglitch.glitch_go.value = Force(0)
         await ClockCycles(self.dut.clk_usb, 10)
         self.dut.U_dut.reg_clockglitch.U_clockglitch.glitch_go.value = Release()
@@ -181,6 +182,8 @@ async def capture(dut):
     num_captures = int(os.getenv('NUM_CAPTURES', '3'))
     min_size = int(os.getenv('MIN_SIZE', '30'))
     max_size = int(os.getenv('MAX_SIZE', '100'))
+    min_glitches = int(os.getenv('MIN_GLITCHES', '1'))
+    max_glitches = int(os.getenv('MAX_GLITCHES', '5'))
 
     await harness.initialize_dut()
     if int(os.getenv('NO_DOWNSTREAM_TRIGGERS', 0)):
@@ -206,6 +209,14 @@ async def capture(dut):
         tracetest.capture_min = min_size
         tracetest.capture_max = max_size
         harness.register_test(tracetest)
+
+    if int(os.getenv('GLITCH_CAPTURE')):
+        glitchtest = GlitchTest(dut, harness, registers, dut.glitch_job, dut.glitch_reading)
+        glitchtest.num_captures = num_captures
+        glitchtest.capture_min = min_glitches
+        glitchtest.capture_max = max_glitches
+        harness.register_test(glitchtest)
+
 
     harness.init_tests()
     harness.start_tests()
