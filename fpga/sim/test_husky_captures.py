@@ -490,7 +490,7 @@ class GlitchCapture(GenericCapture):
         super().__init__(dut, harness, dut_reading_signal)
         self.name = 'glitch'
         self.glitch_clock = self.dut.U_dut.reg_clockglitch.glitch_mmcm1_clk_out
-        self.glitch_error = self.dut.glitch_error
+        self.glitch_error = self.dut.glitch_error_reg
         self.expect_glitch(0)
 
     def _start_watch_threads(self):
@@ -529,7 +529,11 @@ class GlitchCapture(GenericCapture):
     async def glitch_check(self, job) -> None:
         """ Ensures there are glitches when there are supposed to be.
         """
-        await ClockCycles(self.glitch_clock, 3)
+        if job['trigger_type'] == 'manual':
+            actual_offset = 0
+        else:
+            actual_offset = job['offset']
+        await ClockCycles(self.glitch_clock, 3 + actual_offset)
         await FallingEdge(self.glitch_clock)
         self.expect_glitch(1)
         for i in range(job['repeats']):

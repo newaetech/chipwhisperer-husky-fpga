@@ -165,9 +165,10 @@ module cwhusky_cw310_cocowrapper(
 
    wire glitch_out;
    wire glitch_clk;
-   reg glitch_error;
-   // Note: glitch_error is flopped, otherwise simulator/cocotb may "see" false errors at every edge:
-   always @(negedge glitch_clk) glitch_error <= (glitch_out != expected_glitch);
+   reg glitch_error_reg;
+   wire glitch_error = (glitch_out != expected_glitch); // easier to visualize
+   // glitch_error is flopped, otherwise simulator/cocotb may "see" false errors at every edge:
+   always @(negedge glitch_clk) glitch_error_reg <= glitch_error;
 
 
 cwhusky_cw310_top U_dut (  

@@ -491,7 +491,6 @@ class GlitchTest(GenericTest):
 
     async def _initial_setup(self) -> None:
         await self.registers.write(49, [0])   # CLOCKGLITCH_POWERDOWN off
-        #await self.registers.write(51, self.registers.to_bytes(1, 8)) # set clock source to clkgen
         # simulation artifact: prevent glitch output being X:
         self.dut.U_dut.reg_clockglitch.U_clockglitch.glitch_go.value = Force(0)
         await ClockCycles(self.dut.clk_usb, 10)
@@ -502,9 +501,9 @@ class GlitchTest(GenericTest):
     async def _job_setup(self) -> dict:
         trigger_type = 'manual'
         #glitches = random.randint(self.capture_min, self.capture_max)
-        glitches = 1 # TODO: start with a single glitch
-        offset = 0 # TODO: start with offset=0
-        repeats = 1 # TODO: start with repeats=0
+        glitches = 1 # TODO: more glitches
+        offset = random.randint(0, 10) # TODO: randomize over legal range
+        repeats = random.randint(0, 10) # TODO: randomize over legal range
         await self.registers.write(52, [glitches-1])
         await self.registers.write(25, self.registers.to_bytes(offset, 4))
         # setting the repeats value is messy:
@@ -515,9 +514,8 @@ class GlitchTest(GenericTest):
         else:
             raise ValueError('not supported yet')
         settings[6] = (repeats-1) & 0xff
-        settings[7] = (((repeats-1)>>8) << 2) + 1
-        #settings = (0xcc >> (5*0)) + (((repeats-1) & 0xff) >> (6*8)) + (((((repeats-1)>>8) << 2) + 1) >> (7*0))
-        #await self.registers.write(51, self.registers.to_bytes(settings, 8))
+        settings[7] = (((repeats-1)>>8) << 2) + 1   # use USB clock, otherwise there will be a +/- 1 cycle uncertainty on
+                                                    # the glitch output timing, which would complicate verification
         await self.registers.write(51, settings)
         return {"glitches": glitches, "offset": offset, "repeats": repeats, "trigger_type": trigger_type}
 
@@ -535,7 +533,6 @@ class GlitchTest(GenericTest):
         # TODO: code more trigger options
 
     async def trigger_now(self) -> None:
-        # TODO
         settings = await self.harness.registers.read(51, 8)
         settings[5] |= 0x80 # set manual trigger bit
         settings[5] |= 0x80 # set trigger source to manual
