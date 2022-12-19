@@ -744,6 +744,7 @@ module fifo_top_husky_pro (
                 .wdata          (adc_datain),
                 .full           (fast_fifo_full),
                 .overflow       (fast_fifo_overflow),
+                .full_threshold (),
                 .ren            (fast_fifo_rd),
                 .rdata          (fast_fifo_dout),
                 .empty          (fast_fifo_empty),

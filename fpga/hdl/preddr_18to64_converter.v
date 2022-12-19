@@ -328,6 +328,7 @@ module preddr_18to64_converter (
             .wdata                  (fifo_din),
             .wfull                  (fifo_full),
             .woverflow              (fifo_overflow),
+            .wfull_threshold        (),
             .ren                    (fifo_rd_rd),
             .rdata                  (fifo_dout),
             .rempty                 (fifo_empty_raw),

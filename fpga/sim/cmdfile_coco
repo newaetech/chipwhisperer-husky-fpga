@@ -16,7 +16,6 @@
 ../hdl/usb_reg_main.v
 ../hdl/fifo_top_husky.v
 ../hdl/reg_clockglitch.v
-../hdl/cwhusky_top.v
 ../hdl/openadc_interface.v
 ../hdl/clock_managment_advanced.v
 ../hdl/cdc_pulse.v
@@ -54,5 +53,4 @@ vivado/tiny_post_ddr_slow_fifo_sim_netlist.v
 vivado/ddr_model_fifo_sim_netlist.v
 vivado/pre_ddr_generic_fifo_sim_netlist.v
 ../beh/ddr3_app_model.v
--y/tools/Xilinx/Vivado/2020.2/ids_lite/ISE/verilog/src/unisims/
 

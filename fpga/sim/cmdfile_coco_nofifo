@@ -1,17 +1,21 @@
+../vivado/cw310/cwhusky_cw310_top.v
+../hdl/fifo_top_husky_pro.v
+../hdl/ddr.v
+../hdl/preddr_18to64_converter.v
+../hdl/simple_ddr3_rwtest.v
 ../hdl/clockglitch_a7.v
 ../hdl/mmcm_phaseshift_interface.v
 ../hdl/includes.v
 ../hdl/reg_chipwhisperer.v
 ../hdl/reg_openadc.v
 ../hdl/reg_openadc_adcfifo.v
-../hdl/fifo_top_husky.v
 ../hdl/registers.v
 ../hdl/setup.v
 ../hdl/trigger_resync.v
 ../hdl/trigger_unit.v
 ../hdl/usb_reg_main.v
+../hdl/fifo_top_husky.v
 ../hdl/reg_clockglitch.v
-../hdl/cwhusky_top.v
 ../hdl/openadc_interface.v
 ../hdl/clock_managment_advanced.v
 ../hdl/cdc_pulse.v
@@ -23,8 +27,8 @@
 ../hdl/userio.v
 ../hdl/sad.v
 ../hdl/edge_trigger.v
-../hdl/fifo_sync.v
 ../hdl/fifo_async.v
+../hdl/fifo_sync.v
 ../tracewhisperer/hdl/trace_top.v
 ../tracewhisperer/hdl/reg_trace.v
 ../tracewhisperer/hdl/fe_capture_trace.v
@@ -35,4 +39,5 @@
 ../tracewhisperer/phywhisperer-common/hardware/hdl/fe_capture_main.v
 ../tracewhisperer/phywhisperer-common/hardware/hdl/reg_main.v
 ../tracewhisperer/phywhisperer-common/hardware/hdl/pw_trigger.v
+../beh/ddr3_app_model.v
 

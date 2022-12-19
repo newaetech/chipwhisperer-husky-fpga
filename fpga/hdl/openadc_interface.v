@@ -284,7 +284,7 @@ module openadc_interface #(
 
       if (extclk_monitor_disabled)
          extclk_change <= 1'b0;
-      else if (freq_measure_ext && extclk_frequency_int &&
+      else if (freq_measure_ext && (extclk_frequency_int > 0) &&
                ( (extclk_frequency > extclk_frequency_int)?  ((extclk_frequency - extclk_frequency_int) > extclk_limit) :
                                                              ((extclk_frequency_int - extclk_frequency) > extclk_limit) )
               )
@@ -550,6 +550,11 @@ module openadc_interface #(
 
 `ifndef PRO
     wire ui_clk = 1'b0;
+    wire clear_fifo_errors = 1'b0;
+    wire trace_fifo_errors = 1'b0;
+    wire la_fifo_errors = 1'b0;
+    wire la_flushing = 1'b0;
+    wire trace_flushing = 1'b0;
 `endif
 
    reg_openadc_adcfifo #(

@@ -212,6 +212,7 @@ module sad #(
                     .wdata          (counter_incr[i]),
                     .full           (),
                     .overflow       (fifo_overflow[i]),
+                    .full_threshold (),
                     .ren            (fifo_rd),
                     .rdata          (fifo_out[i]),
                     .empty          (fifo_empty[i]),
@@ -280,7 +281,7 @@ module sad #(
                     if (pDIRTY_ENABLED) begin
                         if (dirty[i] && counter_counter[i] == dirty_counter[i])
                             dirty[i] <= 1'b0;
-                        else if (maxdev && counter_incr[i] > maxdev) begin
+                        else if ((maxdev > 0) && (counter_incr[i] > maxdev)) begin
                             dirty[i] <= 1'b1;
                             dirty_counter[i] <= counter_counter[i];
                         end

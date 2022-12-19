@@ -876,6 +876,7 @@ module cwhusky_top(
           .trace_clk_in                 (TRACECLOCK),
           .fe_clk                       (fe_clk),
           .usb_clk                      (clk_usb_buf),
+          .fifo_rd_clk                  (clk_usb_buf),
           .reset_pin                    (reg_rst),
           .fpga_reset                   (),
           .I_external_arm               (cmd_arm_usb),
@@ -1007,7 +1008,6 @@ module cwhusky_top(
    assign fifo_clear_read_flags = trace_arm_usb || la_clear_read_flags;
    assign fifo_clear_write_flags = trace_arm_fe || la_clear_write_flags;
 
-   `ifndef NOFIFO // for clean compilation
    // NOTE: this FIFO is shared by LOGIC_ANALYZER and TRACE.
    // There are no other ifdef's around it, as per the note above in the
    // LOGIC_ANALYZER block.
@@ -1034,7 +1034,6 @@ module cwhusky_top(
 
       .I_custom_fifo_stat_flag  (synchronized)      
    );
-   `endif
 
 `ifdef ILA_SHARED_FIFO
     ila_shared_fifo U_ila_shared_fifo (

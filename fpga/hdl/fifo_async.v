@@ -140,6 +140,7 @@ module fifo_async #(
                 `endif
             end // bram_memout_inst
 
+            `ifndef LINT
             if (pFAST_SIM_FLOPS == 0) begin: xpm_inst
                 // IMPORTANT NOTE: to simulate with iverilog, some assertions in
                 // xpm_memory.sv need to be commented out (with Vivado 2020.2, the
@@ -188,6 +189,7 @@ module fifo_async #(
                     .wea                                (wen)       // WRITE_DATA_WIDTH_A-bit input: Write enable vector for port A input data port dina. 1 bit wide when word-wide writes are used. In byte-wide write configurations, each bit controls the writing one byte of dina to address addra. For example, to synchronously write only bits [15-8] of dina when WRITE_DATA_WIDTH_A is 32, wea would be 4'b0010.
                 );
             end // xpm_inst
+            `endif // LINT
         end // xilinx_inst
 
         if (pFLOPS || pFAST_SIM_FLOPS) begin: flop_inst

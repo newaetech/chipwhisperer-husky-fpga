@@ -49,27 +49,36 @@ GLITCH_CAPTURE=0
 MIN_SIZE=30
 MAX_SIZE=100
 NO_DOWNSTREAM_TRIGGERS=0
-
-ifdef IVERILOG10
-    IPATH=/usr/bin/
-else
-    IPATH=/usr/local/bin/
-endif
+VIVADO_VERSION=2020.2
 
 all: compile run
 all_sad: compile_sad run
 all_edge: compile_edge run
 coco: compile_coco run_coco
 
+ifeq ($(VIVADO_PATH),)
+  ifeq ($(OS), Windows_NT)
+    VIVADO_PATH=/mnt/c/Xilinx/Vivado/
+  else
+    UNAME_S := $(shell uname -s)
+    ifeq ($(UNAME_S),Linux)
+      VIVADO_PATH=/tools/Xilinx/Vivado/
+    endif
+    ifeq ($(UNAME_S),Darwin)
+      VIVADO_PATH=$(HOME)/tools/Xilinx/Vivado/
+    endif
+  endif
+endif
+
 compile_sad:
-	$(IPATH)iverilog \
+	iverilog \
 	../hdl/sad.v \
 	../hdl/sad_wrapper.v \
 	../hdl/usb_reg_main.v \
 	../hdl/cdc_pulse.v \
 	sad_tb.v \
 	vivado/sad_fifo_sim_netlist.v \
-	-y/tools/Xilinx/Vivado/2020.2/ids_lite/ISE/verilog/src/unisims/ \
+	-y/$(VIVADO_PATH)/$(VIVADO_VERSION)/ids_lite/ISE/verilog/src/unisims/ \
 	-g2005-sv \
 	-I../hdl \
 	-Wportbind \
@@ -88,7 +97,7 @@ compile_sad:
 	-o $(EXEFILE) \
 
 sad_nofifo:
-	$(IPATH)iverilog \
+	iverilog \
 	../hdl/sad.v \
 	../hdl/sad_wrapper.v \
 	../hdl/usb_reg_main.v \
@@ -107,13 +116,13 @@ sad_nofifo:
 	-o $(EXEFILE) \
 
 compile_edge:
-	$(IPATH)iverilog \
+	iverilog \
 	../hdl/edge_trigger.v \
 	../hdl/edge_wrapper.v \
 	../hdl/usb_reg_main.v \
 	../hdl/cdc_pulse.v \
 	edge_tb.v \
-	-y/tools/Xilinx/Vivado/2020.2/ids_lite/ISE/verilog/src/unisims/ \
+	-y/$(VIVADO_PATH)/$(VIVADO_VERSION)/ids_lite/ISE/verilog/src/unisims/ \
 	-g2005-sv \
 	-I../hdl \
 	-Wportbind \
@@ -127,8 +136,8 @@ compile_edge:
 
 
 compile:
-	$(IPATH)iverilog -ccmdfile \
-	cwhusky_tb.v \
+	iverilog -ccmdfile \
+	-y/$(VIVADO_PATH)/$(VIVADO_VERSION)/ids_lite/ISE/verilog/src/unisims/ \
 	-g2005-sv \
 	-I../hdl \
 	-I../tracewhisperer/hdl/ \
@@ -164,16 +173,17 @@ compile:
 	-P cwhusky_tb.pDUMP=$(DUMP) \
 	-P cwhusky_tb.pSEED=$(SEED) \
 	-o $(EXEFILE) \
+	cwhusky_tb.v \
 
 compile_coco:
-	$(IPATH)iverilog -ccmdfile_coco \
-	../vivado/cw310/cwhusky_cw310_cocowrapper.v \
+	iverilog -ccmdfile_coco \
+	-I../hdl/ \
+	-I../tracewhisperer/hdl/ \
 	-g2005-sv \
 	-gsupported-assertions \
-	-I../hdl \
-	-I../tracewhisperer/hdl/ \
-	-s glbl \
+	-y/$(VIVADO_PATH)/$(VIVADO_VERSION)/ids_lite/ISE/verilog/src/unisims/ \
 	-s cwhusky_cw310_cocowrapper \
+	-s glbl \
 	-Wportbind \
 	-Wselect-range \
 	-D$(FIFOSIZE) \
@@ -188,24 +198,28 @@ compile_coco:
 	-DCOCOTB_SIM=1 \
 	-P cwhusky_cw310_cocowrapper.pDUMP=$(DUMP) \
 	-o $(EXEFILE) \
+	../vivado/cw310/cwhusky_cw310_cocowrapper.v \
 
 cwlite:
-	$(IPATH)iverilog -ccmdfile_cwlite \
+	iverilog -ccmdfile_cwlite \
 	-g2005-sv \
 	-I../hdl \
+	-y/$(VIVADO_PATH)/$(VIVADO_VERSION)/ids_lite/ISE/verilog/src/unisims/ \
 	-Wportbind \
 	-Wselect-range \
 
 nofifo:
-	$(IPATH)iverilog -ccmdfile_nofifo \
-	cwhusky_tb.v \
-	-g2005-sv \
-	-I../hdl \
+	iverilog -ccmdfile_nofifo \
+	-I../hdl/ \
 	-I../tracewhisperer/hdl/ \
+	-g2005-sv \
 	-Wportbind \
 	-Wselect-range \
 	-DNOFIFO \
+	-DNOXILINXFIFO \
+	-DLINT \
 	-DTRACE \
+	cwhusky_tb.v 
 
 lint:
 	verilator --lint-only -Wall \
@@ -216,17 +230,37 @@ lint:
 	-I../hdl/ \
 	-I../tracewhisperer/hdl/ \
 	-D__ICARUS__ \
-	-DNOFIFO \
+	-DNOXILINXFIFO \
+	-DFASTFIFOSIM \
+	-DLINT \
 	-DTRACE \
 	--top-module cwhusky_top \
 	2>&1 | tee lint.out \
 
+lint_pro:
+	verilator --lint-only -Wall \
+	--error-limit 0 \
+	-Wno-PINCONNECTEMPTY \
+	-Wno-ASSIGNDLY \
+	-f cmdfile_coco_nofifo \
+	-I../hdl/ \
+	-I../tracewhisperer/hdl/ \
+	-D__ICARUS__ \
+	-DPRO \
+	-DNOXILINXFIFO \
+	-DFASTFIFOSIM \
+	-DLINT \
+	-DTRACE \
+	--top-module cwhusky_cw310_top \
+	2>&1 | tee lint.out \
+
+
 fifo:
-	$(IPATH)iverilog \
+	iverilog \
 	../hdl/fifo_top_husky.v \
         ../vivado/cwhusky.srcs/sources_1/ip/adc_fast_fifo/adc_fast_fifo_sim_netlist.v \
         ../vivado/cwhusky.srcs/sources_1/ip/usb_slow_fifo/usb_slow_fifo_sim_netlist.v \
-        -y/mnt/c/Xilinx/Vivado/2019.2/ids_lite/ISE/verilog/src/unisims/ \
+	-y/$(VIVADO_PATH)/$(VIVADO_VERSION)/ids_lite/ISE/verilog/src/unisims/ \
 	-I../hdl \
 	-DTRACE \
 	-g2005-sv \
@@ -235,7 +269,7 @@ fifo:
 
 
 run:
-	$(IPATH)vvp -l$(LOGFILE) $(EXEFILE) -$(WAVEFORMAT)
+	vvp -l$(LOGFILE) $(EXEFILE) -$(WAVEFORMAT)
 
 # note that -M and -m arguments must immediately follow vvp, otherwise Python doesn't start!
 run_coco:
@@ -253,7 +287,7 @@ run_coco:
 	MODULE=test_husky \
 	COCOTB_LOG_LEVEL=$(COCOTB_LOG_LEVEL) \
 	LIBPYTHON_LOC=$(shell cocotb-config --libpython) \
-	$(IPATH)vvp -M $(shell cocotb-config --lib-dir) \
+	vvp -M $(shell cocotb-config --lib-dir) \
 	-m $(shell cocotb-config --lib-name vpi icarus) \
 	-l$(LOGFILE) $(EXEFILE) -$(WAVEFORMAT) \
 
