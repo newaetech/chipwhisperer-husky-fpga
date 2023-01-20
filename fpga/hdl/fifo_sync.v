@@ -32,7 +32,10 @@ module fifo_sync #(
 )(
     input  wire                         clk, 
     input  wire                         rst_n,
+    /* verilator lint_off UNUSED */
     input  wire [31:0]                  full_threshold_value,
+    input  wire [31:0]                  empty_threshold_value,
+    /* verilator lint_on UNUSED */
     input  wire                         wen, 
     input  wire [pDATA_WIDTH-1:0]       wdata,
     output wire                         full,
@@ -43,6 +46,7 @@ module fifo_sync #(
     output wire [pDATA_WIDTH-1:0]       rdata,
     output wire                         empty,
     output wire                         almost_empty,
+    output wire                         empty_threshold,
     output reg                          underflow
 );
 
@@ -60,6 +64,7 @@ module fifo_sync #(
                              (pDEPTH == 65536)? 16 : 0;
 
     wire [pADDR_WIDTH-1:0] full_threshold_value_trimmed = full_threshold_value[pADDR_WIDTH-1:0];
+    wire [pADDR_WIDTH-1:0] empty_threshold_value_trimmed = empty_threshold_value[pADDR_WIDTH-1:0];
     wire [pADDR_WIDTH-1:0] waddr, raddr;
     reg  [pADDR_WIDTH:0] wptr, rptr;
 
@@ -106,7 +111,7 @@ module fifo_sync #(
     `endif
 
     generate
-        if ((pBRAM || pDISTRIBUTED) && (pFAST_SIM_FLOPS == 0)) begin : xilinx_inst
+        if (pBRAM || pDISTRIBUTED) begin : xilinx_inst
             localparam pMEMORY_PRIMITIVE = (pBRAM)? "block" : "distributed";
             localparam pREAD_LATENCY = (pBRAM)? 1 : 0;
 
@@ -215,27 +220,24 @@ module fifo_sync #(
             assign rdata = pFALLTHROUGH ? rdata_fwft : rdata_reg;
     
             //debug only:
-            wire [63:0] mem0 = mem[0];
-            wire [63:0] mem1 = mem[1];
-            wire [63:0] mem2 = mem[2];
-            wire [63:0] mem3 = mem[3];
+            //wire [63:0] mem0 = mem[0];
+            //wire [63:0] mem1 = mem[1];
+            //wire [63:0] mem2 = mem[2];
+            //wire [63:0] mem3 = mem[3];
         end // flop_inst
     endgenerate
 
 
     assign empty = (wptr == rptr);
-    assign almost_empty = (wptr == rptr + 1) || empty;
-    //wire almost_full = (wptr + 1 == rptr) || full;
+    wire [pADDR_WIDTH:0] rptr_plus1 = rptr + 1;
+    assign almost_empty = (wptr == rptr_plus1) || empty;
+
     assign full = ( (wptr[pADDR_WIDTH] != rptr[pADDR_WIDTH]) &&
                     (wptr[pADDR_WIDTH-1:0] == rptr[pADDR_WIDTH-1:0]) );
 
     wire [pADDR_WIDTH:0] wptr_plus1 = wptr + 1;
     assign almost_full = ( (wptr_plus1[pADDR_WIDTH] != rptr[pADDR_WIDTH]) &&
-                           (wptr_plus1[pADDR_WIDTH-1:0] == rptr[pADDR_WIDTH-1:0]) );
-
-    wire [pADDR_WIDTH:0] wptr_plus2 = wptr + 2;
-    //assign almost_full = ( (wptr_plus2[pADDR_WIDTH] != rptr[pADDR_WIDTH]) &&
-    //                       (wptr_plus2[pADDR_WIDTH-1:0] == rptr[pADDR_WIDTH-1:0]) ) || full;
+                           (wptr_plus1[pADDR_WIDTH-1:0] == rptr[pADDR_WIDTH-1:0]) ) || full;
 
     // programmable almost full threshold
     // The comparison is a bit tricky but boils down to: add an MSB (set to 0)
@@ -246,8 +248,11 @@ module fifo_sync #(
     wire [pADDR_WIDTH+1:0] adjust_wt1 = {1'b0, wptr};
     wire [pADDR_WIDTH+1:0] adjust_wt2 = {1'b1, wptr};
     wire case2 = (~wptr[pADDR_WIDTH] && rptr[pADDR_WIDTH]);
-
     assign full_threshold = (adjust_rt <= ((case2)? adjust_wt2 : adjust_wt1));
+
+    // similar idea is used for programmable almost empty threshold:
+    wire [pADDR_WIDTH+1:0] rptr_plust = {1'b0, rptr} + {2'b0, empty_threshold_value_trimmed};
+    assign empty_threshold = (((case2)? adjust_wt2 : adjust_wt1) <= rptr_plust);
 
 endmodule
 

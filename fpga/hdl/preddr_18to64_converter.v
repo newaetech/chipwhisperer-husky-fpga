@@ -301,13 +301,18 @@ module preddr_18to64_converter (
             .wrst_n                 (~reset),
             .rrst_n                 (~reset),
             .wfull_threshold_value  (0),
+            .rempty_threshold_value (0),
             .wen                    (fifo_wr),
             .wdata                  (fifo_din),
             .wfull                  (fifo_full),
+            .walmost_full           (),
             .woverflow              (fifo_overflow),
+            .wfull_threshold        (),
+            .rempty_threshold       (),
             .ren                    (fifo_rd_rd),
             .rdata                  (fifo_dout),
             .rempty                 (fifo_empty_raw),
+            .ralmost_empty          (),
             .runderflow             (fifo_underflow)
         );
     `else
@@ -324,14 +329,18 @@ module preddr_18to64_converter (
             .wrst_n                 (~reset),
             .rrst_n                 (~reset),
             .wfull_threshold_value  (0),
+            .rempty_threshold_value (0),
             .wen                    (fifo_wr),
             .wdata                  (fifo_din),
             .wfull                  (fifo_full),
+            .walmost_full           (),
             .woverflow              (fifo_overflow),
             .wfull_threshold        (),
+            .rempty_threshold       (),
             .ren                    (fifo_rd_rd),
             .rdata                  (fifo_dout),
             .rempty                 (fifo_empty_raw),
+            .ralmost_empty          (),
             .runderflow             (fifo_underflow)
         );
     `endif

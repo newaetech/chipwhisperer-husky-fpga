@@ -726,14 +726,18 @@ module fifo_top_husky_pro (
                 .clk            (adc_sampleclk),
                 .rst_n          (~reset),
                 .full_threshold_value (0),
+                .empty_threshold_value (0),
                 .wen            (fast_fifo_wr),
                 .wdata          (adc_datain),
                 .full           (fast_fifo_full),
                 .overflow       (fast_fifo_overflow),
+                .full_threshold (),
+                .empty_threshold(),
                 .ren            (fast_fifo_rd),
                 .rdata          (fast_fifo_dout),
                 .empty          (fast_fifo_empty),
                 .almost_empty   (),
+                .almost_full    (),
                 .underflow      (fast_fifo_underflow)
             );
         `else
@@ -748,15 +752,18 @@ module fifo_top_husky_pro (
                 .clk            (adc_sampleclk),
                 .rst_n          (~reset),
                 .full_threshold_value (0),
+                .empty_threshold_value (0),
                 .wen            (fast_fifo_wr),
                 .wdata          (adc_datain),
                 .full           (fast_fifo_full),
                 .overflow       (fast_fifo_overflow),
                 .full_threshold (),
+                .empty_threshold(),
                 .ren            (fast_fifo_rd),
                 .rdata          (fast_fifo_dout),
                 .empty          (fast_fifo_empty),
                 .almost_empty   (),
+                .almost_full    (),
                 .underflow      (fast_fifo_underflow)
             );
         `endif
@@ -773,14 +780,18 @@ module fifo_top_husky_pro (
             .wrst_n                 (~reset),
             .rrst_n                 (~reset),
             .wfull_threshold_value  (0),
+            .rempty_threshold_value (0),
             .wen                    (preddr_fifo_wr),
             .wdata                  (preddr_fifo_din),
             .wfull                  (preddr_fifo_full),
+            .walmost_full           (),
             .woverflow              (preddr_fifo_overflow),
             .wfull_threshold        (),
             .ren                    (preddr_fifo_rd),
             .rdata                  (preddr_fifo_dout),
             .rempty                 (preddr_fifo_empty),
+            .ralmost_empty          (),
+            .rempty_threshold       (),
             .runderflow             (preddr_fifo_underflow)
         );
 

@@ -11,7 +11,8 @@ Changes made:
     - default_nettype and the missing wire declarations necessitated by this.
     - combine the original 6 modules into a single one
     - over/underflow flags
-    - programmable full threshold
+    - programmable full and empty threshold
+    - almost full / empty flags
     - parameterize depth instead of address width
     - make "first word fall through" an option
     - add Xilinx xpm_memory_sdpram instantiation
@@ -30,15 +31,21 @@ module fifo_async #(
     input  wire                         rclk, 
     input  wire                         wrst_n,
     input  wire                         rrst_n,
+    /* verilator lint_off UNUSED */
     input  wire [31:0]                  wfull_threshold_value,
+    input  wire [31:0]                  rempty_threshold_value,
+    /* verilator lint_on UNUSED */
     input  wire                         wen, 
     input  wire [pDATA_WIDTH-1:0]       wdata,
     output reg                          wfull,
+    output reg                          walmost_full,
     output reg                          woverflow,
     output reg                          wfull_threshold,
     input  wire                         ren, 
     output wire [pDATA_WIDTH-1:0]       rdata,
     output reg                          rempty,
+    output reg                          ralmost_empty,
+    output reg                          rempty_threshold,
     output reg                          runderflow
 );
     localparam pADDR_WIDTH = (pDEPTH ==    32)? 5 :
@@ -55,15 +62,16 @@ module fifo_async #(
                              (pDEPTH == 65536)? 16 : 0;
 
     wire [pADDR_WIDTH-1:0] wfull_threshold_value_trimmed = wfull_threshold_value[pADDR_WIDTH-1:0];
+    wire [pADDR_WIDTH-1:0] rempty_threshold_value_trimmed = rempty_threshold_value[pADDR_WIDTH-1:0];
 
     wire [pADDR_WIDTH-1:0] waddr, raddr;
     reg  [pADDR_WIDTH:0] wq1_rptr, wq2_rptr, rq1_wptr, rq2_wptr, wptr, rptr;
     reg [pADDR_WIDTH:0] rbin;
-    wire [pADDR_WIDTH:0] rgraynext, rbinnext;
-    wire rempty_val;
+    wire [pADDR_WIDTH:0] rgraynext, rbinnext, rbinnext_plus1, rgraynext_plus1;
+    wire rempty_val, ralmost_empty_val;
     reg [pADDR_WIDTH:0] wbin;
-    wire [pADDR_WIDTH:0] wgraynext, wbinnext;
-    wire wfull_val;
+    wire [pADDR_WIDTH:0] wgraynext, wbinnext, wgraynext_plus1, wbinnext_plus1;
+    wire wfull_val, walmost_full_val;
     wire [pDATA_WIDTH-1:0] rdata_fwft;
     reg  [pDATA_WIDTH-1:0] rdata_reg;
 
@@ -203,10 +211,10 @@ module fifo_async #(
             // New: optional first word fall through mode
             assign rdata = pFALLTHROUGH ? rdata_fwft : rdata_reg;
             //debug only:
-            wire [63:0] mem0 = mem[0];
-            wire [63:0] mem1 = mem[1];
-            wire [63:0] mem2 = mem[2];
-            wire [63:0] mem3 = mem[3];
+            //wire [63:0] mem0 = mem[0];
+            //wire [63:0] mem1 = mem[1];
+            //wire [63:0] mem2 = mem[2];
+            //wire [63:0] mem3 = mem[3];
         end
     endgenerate
 
@@ -218,7 +226,7 @@ module fifo_async #(
         else {rbin, rptr} <= {rbinnext, rgraynext};
     // Memory read-address pointer (okay to use binary to address memory)
     assign raddr = rbin[pADDR_WIDTH-1:0];
-    assign rbinnext = rbin + (ren & ~rempty);
+    assign rbinnext = rbin + {{(pADDR_WIDTH-1){1'b0}}, (ren & ~rempty)};
     assign rgraynext = (rbinnext>>1) ^ rbinnext;
     //---------------------------------------------------------------
     // FIFO empty when the next rptr == synchronized wptr or on reset
@@ -228,6 +236,15 @@ module fifo_async #(
         if (!rrst_n) rempty <= 1'b1;
         else rempty <= rempty_val;
 
+    // New: almost empty flag
+    assign rbinnext_plus1 = rbinnext + 1;
+    assign rgraynext_plus1 = (rbinnext_plus1>>1) ^ rbinnext_plus1;
+    assign ralmost_empty_val = (rgraynext_plus1 == rq2_wptr);
+    always @(posedge rclk or negedge rrst_n)
+        if (!rrst_n) ralmost_empty <= 1'b1;
+        else ralmost_empty <= ralmost_empty_val || rempty_val;
+
+
     // wptr_full module in original code:
     // GRAYSTYLE2 pointer
     always @(posedge wclk or negedge wrst_n)
@@ -235,7 +252,7 @@ module fifo_async #(
         else {wbin, wptr} <= {wbinnext, wgraynext};
     // Memory write-address pointer (okay to use binary to address memory)
     assign waddr = wbin[pADDR_WIDTH-1:0];
-    assign wbinnext = wbin + (wen & ~wfull);
+    assign wbinnext = wbin + {{(pADDR_WIDTH-1){1'b0}}, (wen & ~wfull)};
     assign wgraynext = (wbinnext>>1) ^ wbinnext;
     //------------------------------------------------------------------
     // Simplified version of the three necessary full-tests:
@@ -249,6 +266,17 @@ module fifo_async #(
         if (!wrst_n) wfull <= 1'b0;
         else wfull <= wfull_val;
 
+    // New: almost full flag
+    assign wbinnext_plus1 = wbinnext + 1;
+    assign wgraynext_plus1 = (wbinnext_plus1>>1) ^ wbinnext_plus1;
+    assign walmost_full_val = (wgraynext_plus1=={~wq2_rptr[pADDR_WIDTH:pADDR_WIDTH-1],
+                                                  wq2_rptr[pADDR_WIDTH-2:0]});
+    always @(posedge wclk or negedge wrst_n)
+        if (!wrst_n) walmost_full <= 1'b0;
+        else walmost_full <= walmost_full_val || wfull;
+
+
+
     // New: programmable almost full threshold
     // Convert the read pointer from gray to binary so that it can be compared
     // against the write pointer + threshold in binary.
@@ -256,7 +284,9 @@ module fifo_async #(
     // to both pointers to prevent overflow when adding the threshold value,
     // except when wbin has wrapped around but rbin hasn't: in that case, add
     // an MSB set to 1 to wbin, to make it as though it didn't overflow.
+    /* verilator lint_off UNOPTFLAT */
     wire [pADDR_WIDTH:0] wq2_rptr_bin = wq2_rptr ^ (wq2_rptr_bin>>1);
+    /* verilator lint_on UNOPTFLAT */
     reg  [pADDR_WIDTH:0] wq2_rptr_bin_r;
 
     wire [pADDR_WIDTH+1:0] adjust_rt = {1'b0, wq2_rptr_bin_r} + {2'b0, wfull_threshold_value_trimmed};
@@ -277,6 +307,31 @@ module fifo_async #(
                 wfull_threshold <= 1'b0;
         end
     end
+
+    // New: similar idea is used for programmable almost empty threshold:
+    // (except here we must convert the *write* pointer from gray to binary)
+    /* verilator lint_off UNOPTFLAT */
+    wire [pADDR_WIDTH:0] rq2_wptr_bin = rq2_wptr ^ (rq2_wptr_bin>>1);
+    /* verilator lint_on UNOPTFLAT */
+    reg  [pADDR_WIDTH:0] rq2_wptr_bin_r;
+    wire [pADDR_WIDTH+1:0] adjust_rtt = {1'b0, rbin} + {2'b0, rempty_threshold_value_trimmed};
+    wire rcase2 = (~rq2_wptr_bin_r[pADDR_WIDTH] && rbin[pADDR_WIDTH]);
+    wire [pADDR_WIDTH+1:0] adjust_r_wt1 = {1'b0, rq2_wptr_bin_r};
+    wire [pADDR_WIDTH+1:0] adjust_r_wt2 = {1'b1, rq2_wptr_bin_r};
+    always @(posedge rclk or negedge rrst_n) begin
+        if (!rrst_n) begin
+            rempty_threshold <= 1'b0;
+            rq2_wptr_bin_r <= 0;
+        end
+        else begin
+            rq2_wptr_bin_r <= rq2_wptr_bin; // help timing?
+            if (((rcase2)? adjust_r_wt2 : adjust_r_wt1) <= adjust_rtt)
+                rempty_threshold <= 1'b1;
+            else
+                rempty_threshold <= 1'b0;
+        end
+    end
+
 
     // examples of gray-to-binary conversions, to validate:
     //wire [pADDR_WIDTH:0] wgray2bin = wgraynext ^ (wbinnext>>1);

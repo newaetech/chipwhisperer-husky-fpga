@@ -1349,14 +1349,18 @@ wire stat_reset = (ddr_rwtest_en)? rw_stat_reset : capture_go_adc;
                 .wrst_n                 (~reset),
                 .rrst_n                 (~reset),
                 .wfull_threshold_value  (256),
+                .rempty_threshold_value (0),
                 .wen                    (postddr_fifo_wr),
                 .wdata                  (postddr_fifo_din),
                 .wfull                  (postddr_fifo_full),
+                .walmost_full           (),
                 .woverflow              (postddr_fifo_overflow),
                 .wfull_threshold        (postddr_fifo_prog_full),
+                .rempty_threshold       (),
                 .ren                    (postddr_fifo_rd),
                 .rdata                  (postddr_fifo_dout),
                 .rempty                 (postddr_fifo_empty),
+                .ralmost_empty          (),
                 .runderflow             (postddr_fifo_underflow)
             );
         `else
@@ -1373,14 +1377,18 @@ wire stat_reset = (ddr_rwtest_en)? rw_stat_reset : capture_go_adc;
                 .wrst_n                 (~reset),
                 .rrst_n                 (~reset),
                 .wfull_threshold_value  (4096),
+                .rempty_threshold_value (0),
                 .wen                    (postddr_fifo_wr),
                 .wdata                  (postddr_fifo_din),
                 .wfull                  (postddr_fifo_full),
+                .walmost_full           (),
                 .woverflow              (postddr_fifo_overflow),
                 .wfull_threshold        (postddr_fifo_prog_full),
+                .rempty_threshold       (),
                 .ren                    (postddr_fifo_rd),
                 .rdata                  (postddr_fifo_dout),
                 .rempty                 (postddr_fifo_empty),
+                .ralmost_empty          (),
                 .runderflow             (postddr_fifo_underflow)
             );
         `endif
