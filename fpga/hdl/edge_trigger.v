@@ -47,12 +47,10 @@ module edge_trigger #(
 
     reg [15:0] reg_edge_trigger_count;
     reg [15:0] edge_counter;
-    reg [1:0] trigger_in_r;
+    wire [1:0] trigger_in_r;
     reg triggered;
     reg triggered_r;
     reg running_r;
-
-    (* ASYNC_REG = "TRUE" *) reg [1:0] trigger_in_pipe;
 
     // register reads:
     always @(*) begin
@@ -81,16 +79,22 @@ module edge_trigger #(
         end
     end
 
+    cdc_simple U_trigger_in_cdc (
+        .reset          (reset),
+        .clk            (adc_sampleclk),
+        .data_in        (trigger_in),
+        .data_out       (trigger_in_r[0]),
+        .data_out_r     (trigger_in_r[1])
+    );
+
     // trigger logic:
     wire running = active && armed_and_ready;
     always @(posedge adc_sampleclk) begin
         if (reset) begin
-            trigger_in_r <= 2'b0;
             edge_counter <= 0;
             triggered <= 1'b0;
         end
         else begin
-            {trigger_in_r, trigger_in_pipe} <= {trigger_in_r[0], trigger_in_pipe, trigger_in};
             triggered_r <= triggered;
             running_r <= running;
             if (~running)

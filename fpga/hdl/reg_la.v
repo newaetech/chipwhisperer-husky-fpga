@@ -110,10 +110,17 @@ module reg_la #(
     reg reg_arm;
     reg reg_enabled;
 
-    (* ASYNC_REG = "TRUE" *) reg [1:0] arm_pipe;
-    reg  arm_r;
-    reg  arm_r2;
+    wire arm_r;
+    wire arm_r2;
     reg  armed;
+
+    cdc_simple U_arm_cdc (
+        .reset          (reset),
+        .clk            (observer_clk),
+        .data_in        (reg_arm),
+        .data_out       (arm_r),
+        .data_out_r     (arm_r2)
+    );
 
     reg [7:0] reg_datao_reg;
     wire [7:0] reg_datao_drp_observer;
@@ -313,19 +320,15 @@ module reg_la #(
    ); 
 
    // CDC for capture enable:
-   (* ASYNC_REG = "TRUE" *) reg[1:0] capture_go_pipe;
-   reg capture_go_r;
-   reg capture_go_r2;
-   always @ (posedge observer_clk) begin
-      if (reset) begin
-         capture_go_pipe <= 0;
-         capture_go_r <= 0;
-         capture_go_r2 <= 0;
-      end
-      else begin
-         {capture_go_r2, capture_go_r, capture_go_pipe} <= {capture_go_r, capture_go_pipe, capture_go_async};
-      end
-   end
+   wire capture_go_r;
+   wire capture_go_r2;
+   cdc_simple U_capture_go_cdc (
+       .reset          (reset),
+       .clk            (observer_clk),
+       .data_in        (capture_go_async),
+       .data_out       (capture_go_r),
+       .data_out_r     (capture_go_r2)
+   );
 
    // ~capturing is so that we don't restart capturing over ourselves, which 
    // could otherwise happen e.g. in the case of a manually triggered capture:
@@ -634,14 +637,9 @@ module reg_la #(
 
    // Arm CDC:
    always @ (posedge observer_clk) begin
-      if (reset) begin
-         arm_pipe <= 0;
-         arm_r <= 0;
-         arm_r2 <= 0;
+      if (reset)
          armed <= 0;
-      end
       else begin
-         {arm_r2, arm_r, arm_pipe} <= {arm_r, arm_pipe, reg_arm};
          if (capturing)
              armed <= 0;
          else if (arm_r & ~arm_r2)

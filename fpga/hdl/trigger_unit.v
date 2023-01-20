@@ -58,22 +58,18 @@ module trigger_unit(
 
    reg [31:0] adc_delay_cnt;
 
-   (* ASYNC_REG = "TRUE" *) reg[1:0] trigger_now_pipe;
-   reg trigger_now_r;
-   reg trigger_now_r2;
+   wire trigger_now_r;
+   wire trigger_now_r2;
    wire trigger_now;
    reg triggered;
 
-   always @(posedge adc_clk) begin
-      if (reset) begin
-         trigger_now_pipe <= 0;
-         trigger_now_r <= 0;
-         trigger_now_r2 <= 0;
-      end
-      else begin
-         {trigger_now_r2, trigger_now_r, trigger_now_pipe} <= {trigger_now_r, trigger_now_pipe, trigger_now_i};
-      end
-   end
+   cdc_simple U_trigger_now_cdc (
+       .reset          (reset),
+       .clk            (adc_clk),
+       .data_in        (trigger_now_i),
+       .data_out       (trigger_now_r),
+       .data_out_r     (trigger_now_r2)
+   );
 
    assign trigger_now = trigger_now_r && ~trigger_now_r2;
 

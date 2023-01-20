@@ -435,31 +435,35 @@ module fifo_top_husky_pro (
     end
 
 
-   (* ASYNC_REG = "TRUE" *) reg[1:0] clear_fifo_errors_pipe;
-   reg clear_fifo_errors_r;
-   reg clear_fifo_errors_r2;
+   wire clear_fifo_errors_r2;
    assign clear_fifo_errors_adc = clear_fifo_errors_r2;
+   cdc_simple U_clear_fifo_errors_cdc (
+       .reset          (reset),
+       .clk            (adc_sampleclk),
+       .data_in        (clear_fifo_errors),
+       .data_out       (),
+       .data_out_r     (clear_fifo_errors_r2)
+   );
 
-   (* ASYNC_REG = "TRUE" *) reg[1:0] flushing_adc_pipe; 
-   reg flushing_adc;
+   wire flushing_adc;
+   cdc_simple U_flushing_adc_cdc (
+       .reset          (reset),
+       .clk            (adc_sampleclk),
+       .data_in        (flushing),
+       .data_out       (flushing_adc),
+       .data_out_r     ()
+   );
 
     always @(posedge adc_sampleclk) begin
        if (reset) begin
-          clear_fifo_errors_pipe <= 0;
-          clear_fifo_errors_r <= 1'b0;
-          clear_fifo_errors_r2 <= 1'b0;
           arming <= 1'b0;
           armed_and_ready <= 1'b0;
           capture_go_r <= 1'b0;
           capture_go_r2 <= 1'b0;
-          flushing_adc <= 1'b0;
-          flushing_adc_pipe <= 0;
        end
        else begin
           capture_go_r <= capture_go;
           capture_go_r2 <= capture_go_r;
-          {clear_fifo_errors_r2, clear_fifo_errors_r, clear_fifo_errors_pipe} <= {clear_fifo_errors_r, clear_fifo_errors_pipe, clear_fifo_errors};
-          {flushing_adc, flushing_adc_pipe} <= {flushing_adc_pipe, flushing};
           arm_r <= arm_i;
           arm_pulse_adc <= ~arm_r & arm_i;
           if (arm_i && ~arm_r && ~arming) begin
@@ -483,10 +487,24 @@ module fifo_top_husky_pro (
     // Controlled from USB clock domain since that's closest to the ARM event,
     // and FIFOs use all the clocks anyways. Complicated only by all the
     // clocks.
-    (* ASYNC_REG = "TRUE" *) reg[1:0] fast_fifo_empty_usb_pipe;
-    (* ASYNC_REG = "TRUE" *) reg[1:0] all_preddr_fifo_empty_usb_pipe;
-    reg fast_fifo_empty_usb;
-    reg all_preddr_fifo_empty_usb;
+
+    wire fast_fifo_empty_usb;
+    cdc_simple U_fast_fifo_empty_cdc (
+        .reset          (reset),
+        .clk            (clk_usb),
+        .data_in        (fast_fifo_empty),
+        .data_out       (fast_fifo_empty_usb),
+        .data_out_r     ()
+    );
+
+    wire all_preddr_fifo_empty_usb;
+    cdc_simple U_all_preddr_fifo_empty_cdc (
+        .reset          (reset),
+        .clk            (clk_usb),
+        .data_in        (all_preddr_fifo_empty),
+        .data_out       (all_preddr_fifo_empty_usb),
+        .data_out_r     ()
+    );
 
     // NOTE: the FIFO flush from arming the scope does not connect to the LA or trace preddr FIFOs, since trace and LA
     // have their own arming mechanisms; this *should* be fine since their preddr FIFOs will report "empty" when not enabled.
@@ -498,16 +516,9 @@ module fifo_top_husky_pro (
     wire all_preddr_fifo_empty = preddr_fifo_empty && preddr_la_empty && preddr_trace_empty;
 
     always @(posedge clk_usb) begin
-        if (reset) begin
+        if (reset)
             flushing <= 1'b0;
-            fast_fifo_empty_usb_pipe <= 0;
-            fast_fifo_empty_usb <= 0;
-            all_preddr_fifo_empty_usb_pipe <= 0;
-            all_preddr_fifo_empty_usb <= 0;
-        end
         else begin
-            {fast_fifo_empty_usb, fast_fifo_empty_usb_pipe} <= {fast_fifo_empty_usb_pipe, fast_fifo_empty};
-            {all_preddr_fifo_empty_usb, all_preddr_fifo_empty_usb_pipe} <= {all_preddr_fifo_empty_usb_pipe, all_preddr_fifo_empty};
             if (arm_pulse_usb)
                 flushing <= 1'b1;
             //else if (fast_fifo_empty_usb && all_preddr_fifo_empty_usb && postddr_fifo_empty)
@@ -516,17 +527,14 @@ module fifo_top_husky_pro (
         end
     end
 
-    (* ASYNC_REG = "TRUE" *) reg[1:0] flushing_ui_pipe;
-    reg flushing_ui;
-    always @(posedge ui_clk) begin
-        if (reset) begin
-            flushing_ui <= 0;
-            flushing_ui_pipe <= 0;
-        end
-        else
-            {flushing_ui, flushing_ui_pipe} <= {flushing_ui_pipe, flushing};
-    end
-
+    wire flushing_ui;
+    cdc_simple U_flushing_ui_cdc (
+        .reset          (reset),
+        .clk            (ui_clk),
+        .data_in        (flushing),
+        .data_out       (flushing_ui),
+        .data_out_r     ()
+    );
 
     reg arm_usb_r;
     assign arm_pulse_usb = arm_usb && ~arm_usb_r;

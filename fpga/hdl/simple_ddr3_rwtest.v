@@ -109,19 +109,16 @@ assign reading = (state == pS_READ0) ||
 assign app_cmd = writing? CMD_WRITE : CMD_READ;
 
 // since "active" controls FSM states, let's sync it properly:
-(* ASYNC_REG = "TRUE" *) reg[2:0] active_pipe;
-reg active;
-reg active_r;
-always @ (posedge clk) begin
-    if (reset) begin
-        active_pipe <= 0;
-        active <= 0;
-        active_r <= 0;
-    end 
-    else begin
-        {active_r, active, active_pipe} <= {active, active_pipe, active_usb};
-    end 
-end
+wire active;
+wire active_r;
+
+cdc_simple U_active_cdc (
+    .reset          (reset),
+    .clk            (clk),
+    .data_in        (active_usb),
+    .data_out       (active),
+    .data_out_r     (active_r)
+);
 
 assign stat_reset = active && ~active_r;
 

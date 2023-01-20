@@ -263,12 +263,10 @@ module ddr (
 
     reg                 preddr_fifo_rd_r;
 
-    (* ASYNC_REG = "TRUE" *) reg[1:0] single_write_pipe;
-    (* ASYNC_REG = "TRUE" *) reg[1:0] single_read_pipe;
-    reg single_write_ui;
-    reg single_write_ui_r;
-    reg single_read_ui;
-    reg single_read_ui_r;
+    wire single_write_ui;
+    wire single_write_ui_r;
+    wire single_read_ui;
+    wire single_read_ui_r;
     
     reg single_write_done;
     reg single_read_done;
@@ -394,32 +392,25 @@ module ddr (
       .dst_pulse     (fresh_start_ui)
    );
 
+    wire postddr_fifo_empty_ui;
+    cdc_simple U_postddr_fifo_empty_cdc (
+        .reset          (reset),
+        .clk            (ui_clk),
+        .data_in        (postddr_fifo_empty),
+        .data_out       (postddr_fifo_empty_ui),
+        .data_out_r     ()
+    );
 
-    (* ASYNC_REG = "TRUE" *) reg[1:0] postddr_fifo_empty_ui_pipe;
-    reg postddr_fifo_empty_ui;
-    always @(posedge ui_clk) begin
-        if (reset) begin
-            postddr_fifo_empty_ui <= 0;
-            postddr_fifo_empty_ui_pipe <= 0;
-        end
-        else begin
-            {postddr_fifo_empty_ui, postddr_fifo_empty_ui_pipe} <= {postddr_fifo_empty_ui_pipe, postddr_fifo_empty};
-        end
-    end
+    wire pre_read_flush_usb;
+    wire pre_read_flush_usb_r;
+    cdc_simple U_pre_read_flush_cdc (
+        .reset          (reset),
+        .clk            (clk_usb),
+        .data_in        (pre_read_flush),
+        .data_out       (pre_read_flush_usb),
+        .data_out_r     (pre_read_flush_usb_r)
+    );
 
-    (* ASYNC_REG = "TRUE" *) reg[1:0] pre_read_flush_usb_pipe;
-    reg pre_read_flush_usb;
-    reg pre_read_flush_usb_r;
-    always @(posedge clk_usb) begin
-        if (reset) begin
-            pre_read_flush_usb <= 0;
-            pre_read_flush_usb_r <= 0;
-            pre_read_flush_usb_pipe <= 0;
-        end
-        else begin
-            {pre_read_flush_usb_r, pre_read_flush_usb, pre_read_flush_usb_pipe} <= {pre_read_flush_usb, pre_read_flush_usb_pipe, pre_read_flush};
-        end
-    end
 
    // track how many FIFO entries (roughly) are available to be read; tricky because of two clock domains!
    always @(posedge ui_clk) begin
@@ -522,17 +513,14 @@ module ddr (
     // FIFO gets flushed in this case), so instead we explicitely look at
     // read_started
 
-    (* ASYNC_REG = "TRUE" *) reg[1:0] read_started_usb_pipe;
-    reg read_started_usb;
-    always @(posedge clk_usb) begin
-        if (reset) begin
-            read_started_usb <= 0;
-            read_started_usb_pipe <= 0;
-        end
-        else begin
-            {read_started_usb, read_started_usb_pipe} <= {read_started_usb_pipe, read_started};
-        end
-    end
+    wire read_started_usb;
+    cdc_simple U_read_started_cdc (
+        .reset          (reset),
+        .clk            (clk_usb),
+        .data_in        (read_started),
+        .data_out       (read_started_usb),
+        .data_out_r     ()
+    );
 
     always @(posedge clk_usb) begin
         // if ~postddr_fifo_empty when one of those events occur, we don't
@@ -558,20 +546,21 @@ module ddr (
         if (fifo_read_fifoen || first_read) fifo_read_data <= fifo_read_data_pre;
     end
 
-    always @(posedge ui_clk) begin
-        if (reset) begin
-            single_write_pipe <= 0;
-            single_read_pipe <= 0;
-            single_write_ui <= 0;
-            single_write_ui_r <= 0;
-            single_read_ui <= 0;
-            single_read_ui_r <= 0;
-        end
-        else begin
-            {single_write_ui_r, single_write_ui, single_write_pipe} <= {single_write_ui, single_write_pipe, single_write};
-            {single_read_ui_r, single_read_ui, single_read_pipe} <= {single_read_ui, single_read_pipe, single_read};
-        end
-    end
+    cdc_simple U_single_write_cdc (
+        .reset          (reset),
+        .clk            (ui_clk),
+        .data_in        (single_write),
+        .data_out       (single_write_ui),
+        .data_out_r     (single_write_ui_r)
+    );
+
+    cdc_simple U_single_read_cdc (
+        .reset          (reset),
+        .clk            (ui_clk),
+        .data_in        (single_read),
+        .data_out       (single_read_ui),
+        .data_out_r     (single_read_ui_r)
+    );
 
     wire single_write_go = single_write_ui && ~single_write_ui_r;
     wire single_read_go = single_read_ui && ~single_read_ui_r;
@@ -770,28 +759,41 @@ module ddr (
     reg  [2:0] ddr_active_read_r;
     reg  ddr_read_change;
 
-    reg ddr_start_adc_read_ui;
-    reg ddr_start_la_read_ui;
-    reg ddr_start_trace_read_ui;
-    (* ASYNC_REG = "TRUE" *) reg[1:0] ddr_start_adc_read_ui_pipe;
-    (* ASYNC_REG = "TRUE" *) reg[1:0] ddr_start_la_read_ui_pipe;
-    (* ASYNC_REG = "TRUE" *) reg[1:0] ddr_start_trace_read_ui_pipe;
+    wire ddr_start_adc_read_ui;
+    wire ddr_start_la_read_ui;
+    wire ddr_start_trace_read_ui;
+
+    cdc_simple U_ddr_start_adc_read_cdc (
+        .reset          (reset),
+        .clk            (ui_clk),
+        .data_in        (ddr_start_adc_read),
+        .data_out       (ddr_start_adc_read_ui),
+        .data_out_r     ()
+    );
+
+    cdc_simple U_ddr_start_la_read_cdc (
+        .reset          (reset),
+        .clk            (ui_clk),
+        .data_in        (ddr_start_la_read),
+        .data_out       (ddr_start_la_read_ui),
+        .data_out_r     ()
+    );
+
+    cdc_simple U_ddr_start_trace_read_cdc (
+        .reset          (reset),
+        .clk            (ui_clk),
+        .data_in        (ddr_start_trace_read),
+        .data_out       (ddr_start_trace_read_ui),
+        .data_out_r     ()
+    );
 
     always @(posedge ui_clk) begin
         if (reset) begin
-            ddr_start_adc_read_ui <= 0;
-            ddr_start_la_read_ui <= 0;
-            ddr_start_trace_read_ui <= 0;
-            ddr_start_adc_read_ui_pipe <= 0;
-            ddr_start_la_read_ui_pipe <= 0;
-            ddr_start_trace_read_ui_pipe <= 0;
+            ddr_read_change <= 1'b0;
             ddr_active_read_r <= 0;
         end
         else begin
             ddr_active_read_r <= ddr_active_read;
-            {ddr_start_adc_read_ui, ddr_start_adc_read_ui_pipe} <= {ddr_start_adc_read_ui_pipe, ddr_start_adc_read};
-            {ddr_start_la_read_ui, ddr_start_la_read_ui_pipe} <= {ddr_start_la_read_ui_pipe, ddr_start_la_read};
-            {ddr_start_trace_read_ui, ddr_start_trace_read_ui_pipe} <= {ddr_start_trace_read_ui_pipe, ddr_start_trace_read};
             if (ddr_active_read != ddr_active_read_r)
                 ddr_read_change <= 1'b1;
             else if (ddr_state == pS_DDR_IDLE)

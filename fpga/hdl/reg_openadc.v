@@ -82,22 +82,13 @@ module reg_openadc #(
 
    wire reset;
 
-   (* ASYNC_REG = "TRUE" *) reg[1:0] arm_pipe;
-   reg arm_r;
-   reg arm_r2;
-
-   always @(posedge adc_sampleclk) begin
-      if (reset) begin
-         arm_pipe <= 0;
-         arm_r <= 0;
-         arm_r2 <= 0;
-      end
-      else begin
-         {arm_r2, arm_r, arm_pipe} <= {arm_r, arm_pipe, cmd_arm_usb};
-      end
-   end
-   assign cmd_arm_adc = arm_r2;
-
+   cdc_simple U_cdc_simple (
+       .reset          (reset),
+       .clk            (adc_sampleclk),
+       .data_in        (cmd_arm_usb),
+       .data_out       (),
+       .data_out_r     (cmd_arm_adc)
+   );
 
    wire reset_fromreg;
    assign reset = reset_i | reset_fromreg;
