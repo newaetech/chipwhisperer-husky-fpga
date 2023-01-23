@@ -503,7 +503,7 @@ class GlitchTest(GenericTest):
         #glitches = random.randint(self.capture_min, self.capture_max)
         glitches = 1 # TODO: more glitches
         offset = random.randint(0, 10) # TODO: randomize over legal range
-        repeats = random.randint(0, 10) # TODO: randomize over legal range
+        repeats = random.randint(1, 10) # TODO: randomize over legal range
         await self.registers.write(52, [glitches-1])
         await self.registers.write(25, self.registers.to_bytes(offset, 4))
         # setting the repeats value is messy:

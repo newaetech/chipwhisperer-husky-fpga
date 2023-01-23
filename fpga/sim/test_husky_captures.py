@@ -494,7 +494,6 @@ class GlitchCapture(GenericCapture):
         self.expect_glitch(0)
 
     def _start_watch_threads(self):
-        self.dut._log.info("STARTING WATCH THREADS!")
         glitch_watch_thread = cocotb.start_soon(self.glitch_watch())
 
     async def _run(self) -> None:
