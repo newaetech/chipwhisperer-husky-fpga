@@ -1,3 +1,6 @@
 [submodule "fpga/tracewhisperer"]
 	path = fpga/tracewhisperer
 	url = git@github.com:newaetech/tracewhisperer.git
+[submodule "fpga/fpga-common"]
+	path = fpga/fpga-common
+	url = git@github.com:newaetech/fpga-common.git
