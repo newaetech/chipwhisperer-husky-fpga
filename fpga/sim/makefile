@@ -48,7 +48,7 @@ compile_sad:
 	../hdl/sad.v \
 	../hdl/sad_wrapper.v \
 	../hdl/usb_reg_main.v \
-	../hdl/cdc_pulse.v \
+	../fpga-common/hdl/cdc_pulse.v \
 	sad_tb.v \
 	vivado/sad_fifo_sim_netlist.v \
 	-y/tools/Xilinx/Vivado/2020.2/ids_lite/ISE/verilog/src/unisims/ \
@@ -74,7 +74,7 @@ sad_nofifo:
 	../hdl/sad.v \
 	../hdl/sad_wrapper.v \
 	../hdl/usb_reg_main.v \
-	../hdl/cdc_pulse.v \
+	../fpga-common/hdl/cdc_pulse.v \
 	sad_tb.v \
 	-g2005-sv \
 	-DNOFIFO \
@@ -93,7 +93,7 @@ compile_edge:
 	../hdl/edge_trigger.v \
 	../hdl/edge_wrapper.v \
 	../hdl/usb_reg_main.v \
-	../hdl/cdc_pulse.v \
+	../fpga-common/hdl/cdc_pulse.v \
 	edge_tb.v \
 	-y/tools/Xilinx/Vivado/2020.2/ids_lite/ISE/verilog/src/unisims/ \
 	-g2005-sv \
