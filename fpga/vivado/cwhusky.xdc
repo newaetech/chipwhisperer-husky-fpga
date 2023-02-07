@@ -37,6 +37,7 @@ set_case_analysis 1 [get_pins U_fifo_clk_mux/S]
 #set_clock_groups -logically_exclusive -group clk_usb -group TRACECLOCK -group target_hs1
 #set_clock_groups -logically_exclusive -group pll_fpga_clk -group glitchclk
 
+set_property PULLTYPE PULLDOWN [get_ports target_io4]
 
 # These are needed to meet timing on USB_Data:
 set_max_delay 15 -through [get_pins USB_Data_IOBUF*inst/T]
