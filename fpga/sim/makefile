@@ -49,6 +49,7 @@ compile_sad:
 	../hdl/sad_wrapper.v \
 	../hdl/usb_reg_main.v \
 	../fpga-common/hdl/cdc_pulse.v \
+	../fpga-common/hdl/cdc_simple.v \
 	sad_tb.v \
 	vivado/sad_fifo_sim_netlist.v \
 	-y/tools/Xilinx/Vivado/2020.2/ids_lite/ISE/verilog/src/unisims/ \
@@ -178,6 +179,22 @@ lint:
 	-DTRACE \
 	--top-module cwhusky_top \
 	2>&1 | tee lint.out \
+
+lint_sad:
+	verilator --lint-only -Wall \
+	--error-limit 0 \
+	-Wno-PINCONNECTEMPTY \
+	-Wno-ASSIGNDLY \
+	-I../hdl/ \
+	-D__ICARUS__ \
+	-DNOFIFO \
+	-DTRACE \
+	../hdl/sad.v \
+	../fpga-common/hdl/cdc_pulse.v \
+	../fpga-common/hdl/cdc_simple.v \
+	--top-module sad \
+	2>&1 | tee lint.sad \
+
 
 fifo:
 	iverilog \
