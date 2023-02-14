@@ -46,6 +46,8 @@ all_edge: compile_edge run
 compile_sad:
 	iverilog \
 	../hdl/sad.v \
+	../hdl/sad_v2.v \
+	../hdl/sad_v3_baseline.v \
 	../hdl/sad_wrapper.v \
 	../hdl/usb_reg_main.v \
 	../fpga-common/hdl/cdc_pulse.v \

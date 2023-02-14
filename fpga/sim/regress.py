@@ -238,12 +238,12 @@ tests.append(dict(name  = 'downsample',
 tests.append(dict(name  = 'sad',
              frequency = 2,
              BITS_PER_SAMPLE = 8,
-             REF_SAMPLES = 32, # maximum supported by target (could do more by upsizing internal registers)
+             REF_SAMPLES = 64, # caution: increasing this slows down simulation *a lot*
              THRESHOLD = [10,50], # keep threshold low to avoid unintentional triggers - testbench isn't smart enough
-             TRIGGERS = 10,
+             TRIGGERS = 4,
              FLUSH = [0,1],
              LINEAR_RAMP = 0,
-             TIMEOUT_CYCLES = 2000,
+             TIMEOUT_CYCLES = 5000,
              TOP = 'sad_tb.v',
              description = 'SAD block-level test.'))
 
@@ -356,7 +356,7 @@ exclude_regex = re.compile(args.exclude)
 
 # Check once that compile passes:
 outfile = open('regress.out', 'w')
-for compile_target in ['compile', 'sad_nofifo', 'compile_edge']:
+for compile_target in ['compile', 'compile_edge']:
     makeargs = ['make', compile_target]
     result = subprocess.run(makeargs, stdout=outfile, stderr=outfile)
     if result.returncode:

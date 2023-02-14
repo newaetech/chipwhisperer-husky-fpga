@@ -29,7 +29,8 @@ module sad #(
     // exceeded, the FIFO must be updated in Vivado.
     parameter pBYTECNT_SIZE = 7,
     parameter pREF_SAMPLES = 32, 
-    parameter pBITS_PER_SAMPLE = 8
+    parameter pBITS_PER_SAMPLE = 8,
+    parameter pSAD_COUNTER_WIDTH = 12
 )(
     input wire          reset,
 
@@ -54,15 +55,35 @@ module sad #(
 );
 
     reg  triggered;
+    reg [15:0] num_triggers;
     reg clear_status;
     reg clear_status_r;
     wire clear_status_adc;
 
     reg multiple_triggers;
-    reg [pBITS_PER_SAMPLE-1:0] maxdev;
     reg [pREF_SAMPLES*pBITS_PER_SAMPLE-1:0] refsamples;
     reg [31:0] threshold; // must be wide enough so it doesn't overflow (must hold addition of pREF_SAMPLES numbers that are each pBITS_PER_SAMPLE bits wide)
     reg [7:0] master_counter; // must be wide enough to count to pREF_SAMPLES-1
+    reg [pREF_SAMPLES-1:0] resetter;
+
+    reg individual_trigger [0:pREF_SAMPLES-1];
+    reg [pSAD_COUNTER_WIDTH-1:0] sad_counter [0:pREF_SAMPLES-1];
+    reg [pSAD_COUNTER_WIDTH-1:0] counter_incr [0:pREF_SAMPLES-1];
+
+    wire armed_and_ready_adc;
+    wire armed_and_ready_adc_r;
+
+    reg ready2trigger0;
+    reg [pREF_SAMPLES-1:1] ready2trigger_1andup;
+    wire [pREF_SAMPLES-1:0] ready2trigger_all = {ready2trigger_1andup, ready2trigger0};
+
+    reg  decision [0:pREF_SAMPLES-1];
+    reg [pBITS_PER_SAMPLE-1:0]  nextrefsample [0:pREF_SAMPLES-1];
+    reg [pBITS_PER_SAMPLE-1:0]  nextrefsample_r [0:pREF_SAMPLES-1];
+    wire [pBITS_PER_SAMPLE-1:0]  refsample [0:pREF_SAMPLES-1];
+    reg [pSAD_COUNTER_WIDTH-1:0] adc_datain_rpr, adc_datain_rmr; // sign extend
+    reg [pBITS_PER_SAMPLE-1:0] adc_datain_r;
+    wire [23:0] multiple_triggers_reg = {num_triggers, 7'b0, multiple_triggers};
 
     // register reads:
     always @(*) begin
@@ -73,8 +94,8 @@ module sad #(
                 `SAD_STATUS: reg_datao = {7'b0, triggered};
                 `SAD_BITS_PER_SAMPLE: reg_datao = pBITS_PER_SAMPLE;
                 `SAD_REF_SAMPLES: reg_datao = pREF_SAMPLES;
-                `SAD_MAX_DEV: reg_datao = maxdev[reg_bytecnt*8 +: 8];
-                `SAD_MULTIPLE_TRIGGERS: reg_datao = {7'b0, multiple_triggers};
+                `SAD_COUNTER_WIDTH: reg_datao = pSAD_COUNTER_WIDTH;
+                `SAD_MULTIPLE_TRIGGERS: reg_datao = multiple_triggers_reg[reg_bytecnt*8 +: 8];
                 default: reg_datao = 0;
             endcase
         end
@@ -89,7 +110,6 @@ module sad #(
             threshold <= 0;
             clear_status_r <= 0;
             multiple_triggers <= 0;
-            maxdev <= 0;
         end 
         else begin
             clear_status_r <= clear_status;
@@ -97,7 +117,6 @@ module sad #(
                 case (reg_address)
                     `SAD_REFERENCE: refsamples[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_THRESHOLD: threshold[reg_bytecnt*8 +: 8] <= reg_datai;
-                    `SAD_MAX_DEV: maxdev[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_MULTIPLE_TRIGGERS: multiple_triggers <= reg_datai[0];
                     default: ;
                 endcase
@@ -118,75 +137,54 @@ module sad #(
    );
 
     always @(posedge adc_sampleclk) begin
-        if (reset)
+        if (clear_status_adc || (armed_and_ready_adc && ~armed_and_ready_adc_r)) begin
             triggered <= 1'b0;
-        else begin
-            if (clear_status_adc)
-                triggered <= 1'b0;
-            else if (trigger)
-                triggered <= 1'b1;
+            num_triggers <= 0;
+        end
+        else if (trigger) begin
+            triggered <= 1'b1;
+            num_triggers <= num_triggers + 1;
         end
     end
 
-    reg individual_trigger [0:pREF_SAMPLES-1];
-    // TODO: these need to be wider than pBITS_PER_SAMPLE since we're adding many pBITS_PER_SAMPLE-wide numbers... hard-coded here for pBITS_PER_SAMPLE=8, pREF_SAMPLES=128
-    reg [15:0] sad_counter [0:pREF_SAMPLES-1];
-    reg [15:0] counter_incr [0:pREF_SAMPLES-1];
-
-    integer c;
-
-    wire armed_and_ready_adc;
     cdc_simple U_armed_and_ready_cdc (
         .reset          (reset),
         .clk            (adc_sampleclk),
         .data_in        (armed_and_ready),
         .data_out       (armed_and_ready_adc),
-        .data_out_r     ()
+        .data_out_r     (armed_and_ready_adc_r)
     );
 
-    reg ready2trigger0;
-    reg [pREF_SAMPLES-1:1] ready2trigger_1andup;
-    wire [pREF_SAMPLES-1:0] ready2trigger_all = {ready2trigger_1andup, ready2trigger0};
-
     always @(posedge adc_sampleclk) begin
-        if (reset) begin
-            master_counter <= 0;
-            ready2trigger0 <= 0;
-            ready2trigger_1andup <= 0;
+        ready2trigger_1andup <= {ready2trigger_1andup[pREF_SAMPLES-2:1], ready2trigger0};
+        if (armed_and_ready_adc && active) begin
+            resetter <= {resetter[pREF_SAMPLES-2:0], resetter[pREF_SAMPLES-1]};
+            if (master_counter == pREF_SAMPLES-1) begin
+                ready2trigger0 <= 1;
+                master_counter <= 0;
+            end
+            else
+                master_counter <= master_counter + 1;
         end
         else begin
-            ready2trigger_1andup <= {ready2trigger_1andup[pREF_SAMPLES-2:1], ready2trigger0};
-            if (armed_and_ready_adc && active) begin
-                if (master_counter == pREF_SAMPLES-1) begin
-                    ready2trigger0 <= 1;
-                    master_counter <= 0;
-                end
-                else
-                    master_counter <= master_counter + 1;
-            end
-            else begin
-                master_counter <= 0;
-                ready2trigger0 <= 0;
-            end
+            master_counter <= 0;
+            ready2trigger0 <= 0;
+            resetter <= {3'b0, 1'b1, {(pREF_SAMPLES-3){1'b0}}};
         end
     end
 
+    integer c;
     always @(posedge adc_sampleclk) begin
         if (~active || ~armed_and_ready_adc)
             trigger <= 1'b0;
         else begin
             trigger <= 1'b0;
             for (c = 0; c < pREF_SAMPLES; c = c + 1) begin
-                if (individual_trigger[c] && ready2trigger_all[c]) trigger <= 1'b1;
+                if (individual_trigger[c] && ready2trigger_all[c] && ~(triggered && ~multiple_triggers)) trigger <= 1'b1;
             end
         end
     end
 
-    // TODO: multiple triggers
-
-    reg [pBITS_PER_SAMPLE-1:0]  nextrefsample [0:pREF_SAMPLES-1];
-    wire [pBITS_PER_SAMPLE-1:0]  refsample [0:pREF_SAMPLES-1];
-    reg [pBITS_PER_SAMPLE-1:0] adc_datain_r;
     always @(posedge adc_sampleclk) adc_datain_r <= adc_datain;
 
     // instantiate counters and do most of the heavy lifting:
@@ -196,18 +194,27 @@ module sad #(
             assign refsample[i] =  refsamples[i*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
 
             always @(posedge adc_sampleclk) begin
-                nextrefsample[i] <=  refsample[(master_counter+pREF_SAMPLES-i)%pREF_SAMPLES];
+                if (i == 0)
+                    nextrefsample[i] <=  refsample[master_counter];
+                else
+                    nextrefsample[i] <=  nextrefsample[i-1];
+                nextrefsample_r[i] <=  nextrefsample[i];
+                adc_datain_rpr <= adc_datain_r;
+                adc_datain_rmr <= -adc_datain_r;
 
                 if (adc_datain_r > nextrefsample[i])
-                    counter_incr[i] <= adc_datain_r - nextrefsample[i];
+                    decision[i] <= 1'b1;
                 else
-                    counter_incr[i] <= nextrefsample[i] - adc_datain_r;
+                    decision[i] <= 1'b0;
 
-                if (~armed_and_ready_adc) // TODO: appropriate?
-                    sad_counter[i] <= 0;
-                else if ((master_counter + pREF_SAMPLES - 2) % pREF_SAMPLES == i)
-                    sad_counter[i] <= counter_incr[i];
+                if (decision[i])
+                    counter_incr[i] <= adc_datain_rpr - nextrefsample_r[i];
                 else
+                    counter_incr[i] <= adc_datain_rmr + nextrefsample_r[i];
+
+                if (resetter[i])
+                    sad_counter[i] <= counter_incr[i];
+                else if (~sad_counter[i][pSAD_COUNTER_WIDTH-1]) // MSB of counter is used to indicate saturation
                     sad_counter[i] <= sad_counter[i] + counter_incr[i];
             end
 
@@ -221,7 +228,9 @@ module sad #(
         end
     endgenerate
 
-    // for debug; constant width so it doesn't disappear from gtkwave when changing pBITS_PER_SAMPLE:
+    // for debug only:
+    // verilator lint_off UNUSED
+    // verilator lint_off WIDTH
     wire [11:0] refsample0 = refsamples[0*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
     wire [11:0] refsample1 = refsamples[1*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
     wire [11:0] refsample2 = refsamples[2*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
@@ -236,80 +245,44 @@ module sad #(
     wire [11:0] nextrefsample10 = nextrefsample[10];
     wire [11:0] nextrefsample18 = nextrefsample[18];
 
-    wire [15:0] sad_counter0  = sad_counter[0 ];
-    wire [15:0] sad_counter1  = sad_counter[1 ];
-    wire [15:0] sad_counter2  = sad_counter[2 ];
-    wire [15:0] sad_counter3  = sad_counter[3 ];
-    wire [15:0] sad_counter4  = sad_counter[4 ];
-    wire [15:0] sad_counter5  = sad_counter[5 ];
-    wire [15:0] sad_counter6  = sad_counter[6 ];
-    wire [15:0] sad_counter7  = sad_counter[7 ];
-    wire [15:0] sad_counter8  = sad_counter[8 ];
-    wire [15:0] sad_counter9  = sad_counter[9 ];
-    wire [15:0] sad_counter10 = sad_counter[10];
-    wire [15:0] sad_counter11 = sad_counter[11];
-    wire [15:0] sad_counter12 = sad_counter[12];
-    wire [15:0] sad_counter13 = sad_counter[13];
-    wire [15:0] sad_counter14 = sad_counter[14];
-    wire [15:0] sad_counter15 = sad_counter[15];
-    wire [15:0] sad_counter16 = sad_counter[16];
-    wire [15:0] sad_counter17 = sad_counter[17];
-    wire [15:0] sad_counter18 = sad_counter[18];
-    wire [15:0] sad_counter19 = sad_counter[19];
-    wire [15:0] sad_counter20 = sad_counter[20];
-    wire [15:0] sad_counter21 = sad_counter[21];
-    wire [15:0] sad_counter22 = sad_counter[22];
-    wire [15:0] sad_counter23 = sad_counter[23];
-    wire [15:0] sad_counter24 = sad_counter[24];
-    wire [15:0] sad_counter25 = sad_counter[25];
-    wire [15:0] sad_counter26 = sad_counter[26];
-    wire [15:0] sad_counter27 = sad_counter[27];
-    wire [15:0] sad_counter28 = sad_counter[28];
-    wire [15:0] sad_counter29 = sad_counter[29];
-    wire [15:0] sad_counter30 = sad_counter[30];
-    wire [15:0] sad_counter31 = sad_counter[31];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter0  = sad_counter[0 ];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter1  = sad_counter[1 ];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter2  = sad_counter[2 ];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter3  = sad_counter[3 ];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter4  = sad_counter[4 ];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter5  = sad_counter[5 ];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter6  = sad_counter[6 ];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter7  = sad_counter[7 ];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter8  = sad_counter[8 ];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter9  = sad_counter[9 ];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter10 = sad_counter[10];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter11 = sad_counter[11];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter12 = sad_counter[12];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter13 = sad_counter[13];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter14 = sad_counter[14];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter15 = sad_counter[15];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter16 = sad_counter[16];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter17 = sad_counter[17];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter18 = sad_counter[18];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter19 = sad_counter[19];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter20 = sad_counter[20];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter21 = sad_counter[21];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter22 = sad_counter[22];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter23 = sad_counter[23];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter24 = sad_counter[24];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter25 = sad_counter[25];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter26 = sad_counter[26];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter27 = sad_counter[27];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter28 = sad_counter[28];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter29 = sad_counter[29];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter30 = sad_counter[30];
+    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter31 = sad_counter[31];
 
-    wire [15:0] counter_incr0 = counter_incr[0];
-    wire [15:0] counter_incr8 = counter_incr[8];
-    wire [15:0] counter_incr9 = counter_incr[9];
-    wire [15:0] counter_incr10 = counter_incr[10];
-    wire [15:0] counter_incr18 = counter_incr[18];
-
-    /*
-    wire [31:0] potential_trigger_debug =   {potential_trigger[31],
-                                             potential_trigger[30],
-                                             potential_trigger[29],
-                                             potential_trigger[28],
-                                             potential_trigger[27],
-                                             potential_trigger[26],
-                                             potential_trigger[25],
-                                             potential_trigger[24],
-                                             potential_trigger[23],
-                                             potential_trigger[22],
-                                             potential_trigger[21],
-                                             potential_trigger[20],
-                                             potential_trigger[19],
-                                             potential_trigger[18],
-                                             potential_trigger[17],
-                                             potential_trigger[16],
-                                             potential_trigger[15],
-                                             potential_trigger[14],
-                                             potential_trigger[13],
-                                             potential_trigger[12],
-                                             potential_trigger[11],
-                                             potential_trigger[10],
-                                             potential_trigger[9],
-                                             potential_trigger[8],
-                                             potential_trigger[7],
-                                             potential_trigger[6],
-                                             potential_trigger[5],
-                                             potential_trigger[4],
-                                             potential_trigger[3],
-                                             potential_trigger[2],
-                                             potential_trigger[1],
-                                             potential_trigger[0]};
-    */
-
+    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr0 = counter_incr[0];
+    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr8 = counter_incr[8];
+    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr9 = counter_incr[9];
+    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr10 = counter_incr[10];
+    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr18 = counter_incr[18];
 
     wire [31:0] individual_trigger_debug =  {individual_trigger[31],
                                              individual_trigger[30],
@@ -343,6 +316,8 @@ module sad #(
                                              individual_trigger[2],
                                              individual_trigger[1],
                                              individual_trigger[0]};
+    // verilator lint_on UNUSED
+    // verilator lint_on WIDTH
 
    `ifdef ILA_SAD
        ila_sad U_ila_sad (
