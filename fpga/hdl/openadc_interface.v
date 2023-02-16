@@ -386,8 +386,9 @@ module openadc_interface #(
 
    sad #(
        .pBYTECNT_SIZE           (pBYTECNT_SIZE),
-       .pREF_SAMPLES            (32),
-       .pBITS_PER_SAMPLE        (8)
+       .pREF_SAMPLES            (128),
+       .pBITS_PER_SAMPLE        (8),
+       .pSAD_COUNTER_WIDTH      (12)
    ) U_sad (
        .reset                   (reset        ),
        .adc_datain              (ADC_data_tofifo[11:4]),
@@ -518,7 +519,9 @@ module openadc_interface #(
 
    assign amp_gain = PWM_accumulator[8];
 
-
+`ifdef SAD_ONLY
+   assign armed_and_ready = 1'b1;
+`else
    fifo_top_husky U_fifo(
       .reset                    (reset),
 
@@ -571,6 +574,7 @@ module openadc_interface #(
       .fifo_rst                 (fifo_rst),
       .debug                    (fifo_debug)
    );
+`endif // SAD_ONLY
 
 
 endmodule
