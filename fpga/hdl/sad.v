@@ -30,7 +30,7 @@ module sad #(
     parameter pBYTECNT_SIZE = 7,
     parameter pREF_SAMPLES = 32, 
     parameter pBITS_PER_SAMPLE = 8,
-    parameter pSAD_COUNTER_WIDTH = 12
+    parameter pSAD_COUNTER_WIDTH = 16
 )(
     input wire          reset,
 
@@ -54,6 +54,12 @@ module sad #(
     output reg          trigger
 );
 
+    localparam pMASTER_COUNTER_WIDTH = (pREF_SAMPLES <= 32)?  5 :
+                                       (pREF_SAMPLES <= 64)?  6 :
+                                       (pREF_SAMPLES <= 128)? 7 :
+                                       (pREF_SAMPLES <= 256)? 8 :
+                                       (pREF_SAMPLES <= 512)? 9 : 10;
+
     reg  triggered;
     reg [15:0] num_triggers;
     reg clear_status;
@@ -62,8 +68,8 @@ module sad #(
 
     reg multiple_triggers;
     reg [pREF_SAMPLES*pBITS_PER_SAMPLE-1:0] refsamples;
-    reg [31:0] threshold; // must be wide enough so it doesn't overflow (must hold addition of pREF_SAMPLES numbers that are each pBITS_PER_SAMPLE bits wide)
-    reg [7:0] master_counter; // must be wide enough to count to pREF_SAMPLES-1
+    reg [pSAD_COUNTER_WIDTH-1:0] threshold;
+    reg [pMASTER_COUNTER_WIDTH-1:0] master_counter;
     reg [pREF_SAMPLES-1:0] resetter;
 
     reg individual_trigger [0:pREF_SAMPLES-1];
@@ -83,7 +89,8 @@ module sad #(
     wire [pBITS_PER_SAMPLE-1:0]  refsample [0:pREF_SAMPLES-1];
     reg [pSAD_COUNTER_WIDTH-1:0] adc_datain_rpr, adc_datain_rmr; // sign extend
     reg [pBITS_PER_SAMPLE-1:0] adc_datain_r;
-    wire [23:0] multiple_triggers_reg = {num_triggers, 7'b0, multiple_triggers};
+    wire [23:0] status_reg = {num_triggers, 7'b0, triggered};
+    reg sad_short;
 
     // register reads:
     always @(*) begin
@@ -91,11 +98,11 @@ module sad #(
             case (reg_address)
                 `SAD_REFERENCE: reg_datao = refsamples[reg_bytecnt*8 +: 8];
                 `SAD_THRESHOLD: reg_datao = threshold[reg_bytecnt*8 +: 8];
-                `SAD_STATUS: reg_datao = {7'b0, triggered};
+                `SAD_STATUS: reg_datao = status_reg[reg_bytecnt*8 +: 8];
                 `SAD_BITS_PER_SAMPLE: reg_datao = pBITS_PER_SAMPLE;
                 `SAD_REF_SAMPLES: reg_datao = pREF_SAMPLES;
                 `SAD_COUNTER_WIDTH: reg_datao = pSAD_COUNTER_WIDTH;
-                `SAD_MULTIPLE_TRIGGERS: reg_datao = multiple_triggers_reg[reg_bytecnt*8 +: 8];
+                `SAD_MULTIPLE_TRIGGERS: reg_datao = {7'b0, multiple_triggers};
                 default: reg_datao = 0;
             endcase
         end
@@ -110,6 +117,7 @@ module sad #(
             threshold <= 0;
             clear_status_r <= 0;
             multiple_triggers <= 0;
+            sad_short <= 0;
         end 
         else begin
             clear_status_r <= clear_status;
@@ -118,6 +126,7 @@ module sad #(
                     `SAD_REFERENCE: refsamples[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_THRESHOLD: threshold[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_MULTIPLE_TRIGGERS: multiple_triggers <= reg_datai[0];
+                    `SAD_SHORT: sad_short <= reg_datai[0];
                     default: ;
                 endcase
                 if (reg_address == `SAD_STATUS)
@@ -155,11 +164,13 @@ module sad #(
         .data_out_r     (armed_and_ready_adc_r)
     );
 
+    wire [pMASTER_COUNTER_WIDTH-1:0] master_counter_top = (sad_short)? pREF_SAMPLES/2-1 : pREF_SAMPLES-1;
+
     always @(posedge adc_sampleclk) begin
-        ready2trigger_1andup <= {ready2trigger_1andup[pREF_SAMPLES-2:1], ready2trigger0};
         if (armed_and_ready_adc && active) begin
+            ready2trigger_1andup <= {ready2trigger_1andup[pREF_SAMPLES-2:1], ready2trigger0};
             resetter <= {resetter[pREF_SAMPLES-2:0], resetter[pREF_SAMPLES-1]};
-            if (master_counter == pREF_SAMPLES-1) begin
+            if (master_counter == master_counter_top) begin
                 ready2trigger0 <= 1;
                 master_counter <= 0;
             end
@@ -169,7 +180,11 @@ module sad #(
         else begin
             master_counter <= 0;
             ready2trigger0 <= 0;
-            resetter <= {3'b0, 1'b1, {(pREF_SAMPLES-3){1'b0}}};
+            ready2trigger_1andup <= 0;
+            if (sad_short)
+                resetter <= {2{2'b0, 1'b1, {(pREF_SAMPLES/2-3){1'b0}}}};
+            else
+                resetter <= {2'b0, 1'b1, {(pREF_SAMPLES-3){1'b0}}};
         end
     end
 
@@ -199,8 +214,8 @@ module sad #(
                 else
                     nextrefsample[i] <=  nextrefsample[i-1];
                 nextrefsample_r[i] <=  nextrefsample[i];
-                adc_datain_rpr <= adc_datain_r;
-                adc_datain_rmr <= -adc_datain_r;
+                adc_datain_rpr <= {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_r};
+                adc_datain_rmr <= -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_r};
 
                 if (adc_datain_r > nextrefsample[i])
                     decision[i] <= 1'b1;
@@ -219,7 +234,7 @@ module sad #(
             end
 
             always @ (posedge adc_sampleclk) begin
-                if ((sad_counter[i] <= threshold) && (master_counter == (i + 1)%pREF_SAMPLES))
+                if ((sad_counter[i] <= threshold) && resetter[i])
                     individual_trigger[i] <= 1'b1;
                 else
                     individual_trigger[i] <= 1'b0;
@@ -231,19 +246,23 @@ module sad #(
     // for debug only:
     // verilator lint_off UNUSED
     // verilator lint_off WIDTH
-    wire [11:0] refsample0 = refsamples[0*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
-    wire [11:0] refsample1 = refsamples[1*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
-    wire [11:0] refsample2 = refsamples[2*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
-    wire [11:0] refsample3 = refsamples[3*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
+    wire [pBITS_PER_SAMPLE-1:0] refsample0 = refsample[0];
+    wire [pBITS_PER_SAMPLE-1:0] refsample1 = refsample[1];
+    wire [pBITS_PER_SAMPLE-1:0] refsample2 = refsample[2];
+    wire [pBITS_PER_SAMPLE-1:0] refsample3 = refsample[3];
 
-    wire [11:0] nextrefsample0 = nextrefsample[0];
-    wire [11:0] nextrefsample1 = nextrefsample[1];
-    wire [11:0] nextrefsample2 = nextrefsample[2];
-    wire [11:0] nextrefsample3 = nextrefsample[3];
-    wire [11:0] nextrefsample8 = nextrefsample[8];
-    wire [11:0] nextrefsample9 = nextrefsample[9];
-    wire [11:0] nextrefsample10 = nextrefsample[10];
-    wire [11:0] nextrefsample18 = nextrefsample[18];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample0 = nextrefsample[0];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample1 = nextrefsample[1];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample2 = nextrefsample[2];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample3 = nextrefsample[3];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample4 = nextrefsample[4];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample5 = nextrefsample[5];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample6 = nextrefsample[6];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample7 = nextrefsample[7];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample8 = nextrefsample[8];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample9 = nextrefsample[9];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample10 = nextrefsample[10];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample18 = nextrefsample[18];
 
     wire [pSAD_COUNTER_WIDTH-1:0] sad_counter0  = sad_counter[0 ];
     wire [pSAD_COUNTER_WIDTH-1:0] sad_counter1  = sad_counter[1 ];
@@ -279,6 +298,7 @@ module sad #(
     wire [pSAD_COUNTER_WIDTH-1:0] sad_counter31 = sad_counter[31];
 
     wire [pSAD_COUNTER_WIDTH-1:0] counter_incr0 = counter_incr[0];
+    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr3 = counter_incr[3];
     wire [pSAD_COUNTER_WIDTH-1:0] counter_incr8 = counter_incr[8];
     wire [pSAD_COUNTER_WIDTH-1:0] counter_incr9 = counter_incr[9];
     wire [pSAD_COUNTER_WIDTH-1:0] counter_incr10 = counter_incr[10];
@@ -316,6 +336,7 @@ module sad #(
                                              individual_trigger[2],
                                              individual_trigger[1],
                                              individual_trigger[0]};
+
     // verilator lint_on UNUSED
     // verilator lint_on WIDTH
 
