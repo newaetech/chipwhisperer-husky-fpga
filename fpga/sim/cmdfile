@@ -14,7 +14,6 @@
 ../hdl/cwhusky_top.v
 ../hdl/openadc_interface.v
 ../hdl/clock_managment_advanced.v
-../hdl/cdc_pulse.v
 ../hdl/reg_husky_adc.v
 ../hdl/reg_mmcm_drp.v
 ../hdl/xadc.v
@@ -24,10 +23,12 @@
 ../hdl/sad.v
 ../hdl/edge_trigger.v
 ../hdl/trigger_pulse_cdc.v
+../fpga-common/hdl/cdc_pulse.v
+../fpga-common/hdl/cdc_bus.v
+../fpga-common/hdl/cdc_simple.v
 ../tracewhisperer/hdl/trace_top.v
 ../tracewhisperer/hdl/reg_trace.v
 ../tracewhisperer/hdl/fe_capture_trace.v
-../tracewhisperer/hdl/cdc_bus.v
 ../tracewhisperer/hdl/uart_core.v
 ../tracewhisperer/hdl/simple_trigger.v
 ../tracewhisperer/phywhisperer-common/hardware/hdl/fifo.v

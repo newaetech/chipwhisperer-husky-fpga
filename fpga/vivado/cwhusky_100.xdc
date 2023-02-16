@@ -3,18 +3,21 @@ set_property CONFIG_VOLTAGE 3.3 [current_design]
 
 
 create_clock -period 10.400 -name clk_usb -waveform {0.000 5.200} [get_nets clk_usb]
-create_clock -period 5.000 -name ADC_clk_fb -waveform {0.000 2.500} [get_nets ADC_clk_fb]
-create_clock -period 5.000 -name pll_fpga_clk -waveform {0.000 2.500} [get_nets pll_fpga_clk]
+create_clock -period 3.000 -name ADC_clk_fb -waveform {0.000 1.500} [get_nets ADC_clk_fb]
+create_clock -period 3.000 -name pll_fpga_clk -waveform {0.000 1.500} [get_nets pll_fpga_clk]
 
 create_clock -period 20.000 -name target_hs1 -waveform {0.000 10.000} [get_nets target_hs1]
 create_clock -period 20.000 -name AUXIO -waveform {0.000 10.500} [get_nets AUXIO]
 
 create_clock -period 40.000 -name TRACECLOCK -waveform {0.000 20.000} [get_nets USERIO_CLK_IBUF]
 
-set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets {USERIO_CLK_IBUF}]
-set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets {U_trace_top/VCC_2}]
-set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets U_trace_top/fe_clk_pre]
 
+# this is confirmed to be required:
+set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets {U_trace_top/VCC_2}]
+
+# these may or may not be required, haven't tried omitting them yet:
+set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets {USERIO_CLK_IBUF}]
+set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets U_trace_top/fe_clk_pre]
 set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets {U_trace_top/U_trace_clock_drp/SR[0]}]
 set_property CLOCK_DEDICATED_ROUTE BACKBONE [get_nets reg_clockglitch/U_clockglitch/glitch_mmcm1_clk_out]
 set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets U_trace_top/trace_clk_selected]

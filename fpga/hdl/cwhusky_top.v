@@ -540,6 +540,7 @@ module cwhusky_top(
    );
 
 
+`ifndef SAD_ONLY
    reg_clockglitch #(
         .pBYTECNT_SIZE  (pBYTECNT_SIZE)
    ) reg_clockglitch (
@@ -638,6 +639,7 @@ module cwhusky_top(
        assign read_data_la = 0;
        assign la_exists = 0;
    `endif
+`endif // SAD_ONLY
 
    wire target_highz = target_npower;
    assign target_poweron = ~target_npower;
@@ -836,6 +838,7 @@ module cwhusky_top(
    wire [8:0] trace_debug;
    wire fe_clk;
 
+`ifndef SAD_ONLY
    `ifdef TRACE
 
        wire TRACECLOCK = USERIO_CLK;
@@ -861,6 +864,7 @@ module cwhusky_top(
           .trace_clk_in                 (TRACECLOCK),
           .fe_clk                       (fe_clk),
           .usb_clk                      (clk_usb_buf),
+          .fifo_rd_clk                  (clk_usb_buf),
           .reset_pin                    (reg_rst),
           .fpga_reset                   (),
           .I_external_arm               (cmd_arm_usb),
@@ -1032,8 +1036,7 @@ module cwhusky_top(
     );
 `endif
 
-
-
+`endif // SAD_ONLY
 
 endmodule
 `default_nettype wire
