@@ -94,12 +94,13 @@ module sad #(
     wire [23:0] status_reg = {num_triggers, 7'b0, triggered};
     reg sad_short;
     wire [31:0] wide_threshold_reg = {{(32-pSAD_COUNTER_WIDTH){1'b0}}, threshold}; // having a variable-width register isn't very convenient for Python
+    reg [7:0] refbase;
 
     // register reads:
     always @(*) begin
         if (reg_read) begin
             case (reg_address)
-                `SAD_REFERENCE: reg_datao = refsamples[reg_bytecnt*8 +: 8];
+                `SAD_REFERENCE: reg_datao = refsamples[{refbase, reg_bytecnt}*8 +: 8];
                 `SAD_THRESHOLD: reg_datao = wide_threshold_reg[reg_bytecnt*8 +: 8];
                 `SAD_STATUS: reg_datao = status_reg[reg_bytecnt*8 +: 8];
                 `SAD_BITS_PER_SAMPLE: reg_datao = pBITS_PER_SAMPLE;
@@ -122,15 +123,17 @@ module sad #(
             clear_status_r <= 0;
             multiple_triggers <= 0;
             sad_short <= 0;
+            refbase <= 0;
         end 
         else begin
             clear_status_r <= clear_status;
             if (reg_write) begin
                 case (reg_address)
-                    `SAD_REFERENCE: refsamples[reg_bytecnt*8 +: 8] <= reg_datai;
+                    `SAD_REFERENCE: refsamples[{refbase, reg_bytecnt}*8 +: 8] <= reg_datai;
                     `SAD_THRESHOLD: threshold[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_MULTIPLE_TRIGGERS: multiple_triggers <= reg_datai[0];
                     `SAD_SHORT: sad_short <= reg_datai[0];
+                    `SAD_REFERENCE_BASE: refbase <= reg_datai;
                     default: ;
                 endcase
                 if (reg_address == `SAD_STATUS)
