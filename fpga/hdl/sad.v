@@ -49,8 +49,10 @@ module sad #(
     input  wire         reg_read,     // Read flag
     input  wire         reg_write,    // Write flag
 
+    // verilator lint_off UNUSED
     input  wire         ext_trigger,  // debug only
     input  wire         io4,  // debug only
+    // verilator lint_on UNUSED
     output reg          trigger
 );
 
@@ -91,18 +93,20 @@ module sad #(
     reg [pBITS_PER_SAMPLE-1:0] adc_datain_r;
     wire [23:0] status_reg = {num_triggers, 7'b0, triggered};
     reg sad_short;
+    wire [31:0] wide_threshold_reg = {{(32-pSAD_COUNTER_WIDTH){1'b0}}, threshold}; // having a variable-width register isn't very convenient for Python
 
     // register reads:
     always @(*) begin
         if (reg_read) begin
             case (reg_address)
                 `SAD_REFERENCE: reg_datao = refsamples[reg_bytecnt*8 +: 8];
-                `SAD_THRESHOLD: reg_datao = threshold[reg_bytecnt*8 +: 8];
+                `SAD_THRESHOLD: reg_datao = wide_threshold_reg[reg_bytecnt*8 +: 8];
                 `SAD_STATUS: reg_datao = status_reg[reg_bytecnt*8 +: 8];
                 `SAD_BITS_PER_SAMPLE: reg_datao = pBITS_PER_SAMPLE;
                 `SAD_REF_SAMPLES: reg_datao = pREF_SAMPLES;
                 `SAD_COUNTER_WIDTH: reg_datao = pSAD_COUNTER_WIDTH;
                 `SAD_MULTIPLE_TRIGGERS: reg_datao = {7'b0, multiple_triggers};
+                `SAD_SHORT: reg_datao = {7'b0, sad_short};
                 default: reg_datao = 0;
             endcase
         end
