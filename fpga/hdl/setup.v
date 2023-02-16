@@ -7,4 +7,3 @@
 `define LOGIC_ANALYZER
 `define USERIO_DEBUG
 `define TRACE
-//`define SAD_ONLY

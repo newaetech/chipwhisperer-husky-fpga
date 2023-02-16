@@ -172,7 +172,6 @@ module openadc_interface #(
    end
 
    wire freq_measure_adc;
-   wire freq_measure_pll;
    wire freq_measure_ext;
    wire freq_measure_back;
    cdc_pulse U_freq_measure_adc (
@@ -181,14 +180,6 @@ module openadc_interface #(
       .src_pulse     (freq_measure),
       .dst_clk       (ADC_clk_sample),
       .dst_pulse     (freq_measure_adc)
-   );
-
-   cdc_pulse U_freq_measure_pll (
-      .reset_i       (reset),
-      .src_clk       (clk_usb),
-      .src_pulse     (freq_measure),
-      .dst_clk       (pll_fpga_clk),
-      .dst_pulse     (freq_measure_pll)
    );
 
    cdc_pulse U_freq_measure_ext (
@@ -211,10 +202,8 @@ module openadc_interface #(
 
    reg [31:0] extclk_frequency_int;
    reg [31:0] adcclk_frequency_int;
-   reg [31:0] pllclk_frequency_int;
    reg [31:0] extclk_frequency;
    reg [31:0] adcclk_frequency;
-   reg [31:0] pllclk_frequency;
 
    always @(posedge DUT_CLK_i) begin
       if (freq_measure_ext) begin
@@ -227,7 +216,7 @@ module openadc_interface #(
 
       if (extclk_monitor_disabled)
          extclk_change <= 1'b0;
-      else if (freq_measure_ext && (extclk_frequency_int > 0) &&
+      else if (freq_measure_ext && extclk_frequency_int &&
                ( (extclk_frequency > extclk_frequency_int)?  ((extclk_frequency - extclk_frequency_int) > extclk_limit) :
                                                              ((extclk_frequency_int - extclk_frequency) > extclk_limit) )
               )
@@ -251,17 +240,6 @@ module openadc_interface #(
          adcclk_frequency_int <= adcclk_frequency_int + 32'd1;
       end
    end
-
-   always @(posedge pll_fpga_clk) begin
-      if (freq_measure_pll) begin
-         pllclk_frequency_int <= 32'd1;
-         pllclk_frequency <= pllclk_frequency_int;
-      end 
-      else begin
-         pllclk_frequency_int <= pllclk_frequency_int + 32'd1;
-      end
-   end
-
 
 
    reg [11:0] ADC_data_tofifo_pre;
@@ -386,9 +364,8 @@ module openadc_interface #(
 
    sad #(
        .pBYTECNT_SIZE           (pBYTECNT_SIZE),
-       .pREF_SAMPLES            (128),
-       .pBITS_PER_SAMPLE        (8),
-       .pSAD_COUNTER_WIDTH      (12)
+       .pREF_SAMPLES            (32),
+       .pBITS_PER_SAMPLE        (8)
    ) U_sad (
        .reset                   (reset        ),
        .adc_datain              (ADC_data_tofifo[11:4]),
@@ -452,7 +429,6 @@ module openadc_interface #(
       .trigger_length               (trigger_length),
       .extclk_frequency             (extclk_frequency),
       .adcclk_frequency             (adcclk_frequency),
-      .pllclk_frequency             (pllclk_frequency),
       .presamples_o                 (presamples),
       .maxsamples_i                 (maxsamples_limit),
       .maxsamples_o                 (maxsamples),
@@ -519,9 +495,7 @@ module openadc_interface #(
 
    assign amp_gain = PWM_accumulator[8];
 
-`ifdef SAD_ONLY
-   assign armed_and_ready = 1'b1;
-`else
+
    fifo_top_husky U_fifo(
       .reset                    (reset),
 
@@ -574,7 +548,6 @@ module openadc_interface #(
       .fifo_rst                 (fifo_rst),
       .debug                    (fifo_debug)
    );
-`endif // SAD_ONLY
 
 
 endmodule
