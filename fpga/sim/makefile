@@ -32,7 +32,6 @@ DOWNSAMPLE=0
 LINEAR_RAMP=1
 INPUTS_FROM_FILE=0
 REF_SAMPLES=8
-SHORT_SAD=0
 BITS_PER_SAMPLE=12
 EDGES=0
 TRIGGERS=1
@@ -47,12 +46,9 @@ all_edge: compile_edge run
 compile_sad:
 	iverilog \
 	../hdl/sad.v \
-	../hdl/sad_v2.v \
-	../hdl/sad_v3_baseline.v \
 	../hdl/sad_wrapper.v \
 	../hdl/usb_reg_main.v \
-	../fpga-common/hdl/cdc_pulse.v \
-	../fpga-common/hdl/cdc_simple.v \
+	../hdl/cdc_pulse.v \
 	sad_tb.v \
 	vivado/sad_fifo_sim_netlist.v \
 	-y/tools/Xilinx/Vivado/2020.2/ids_lite/ISE/verilog/src/unisims/ \
@@ -63,7 +59,6 @@ compile_sad:
 	-P sad_tb.pLINEAR_RAMP=$(LINEAR_RAMP) \
 	-P sad_tb.pINPUTS_FROM_FILE=$(INPUTS_FROM_FILE) \
 	-P sad_tb.pREF_SAMPLES=$(REF_SAMPLES) \
-	-P sad_tb.pSHORT_SAD=$(SHORT_SAD) \
 	-P sad_tb.pBITS_PER_SAMPLE=$(BITS_PER_SAMPLE) \
 	-P sad_tb.pTHRESHOLD=$(THRESHOLD) \
 	-P sad_tb.pTRIGGERS=$(TRIGGERS) \
@@ -79,7 +74,7 @@ sad_nofifo:
 	../hdl/sad.v \
 	../hdl/sad_wrapper.v \
 	../hdl/usb_reg_main.v \
-	../fpga-common/hdl/cdc_pulse.v \
+	../hdl/cdc_pulse.v \
 	sad_tb.v \
 	-g2005-sv \
 	-DNOFIFO \
@@ -98,7 +93,7 @@ compile_edge:
 	../hdl/edge_trigger.v \
 	../hdl/edge_wrapper.v \
 	../hdl/usb_reg_main.v \
-	../fpga-common/hdl/cdc_pulse.v \
+	../hdl/cdc_pulse.v \
 	edge_tb.v \
 	-y/tools/Xilinx/Vivado/2020.2/ids_lite/ISE/verilog/src/unisims/ \
 	-g2005-sv \
@@ -183,22 +178,6 @@ lint:
 	-DTRACE \
 	--top-module cwhusky_top \
 	2>&1 | tee lint.out \
-
-lint_sad:
-	verilator --lint-only -Wall \
-	--error-limit 0 \
-	-Wno-PINCONNECTEMPTY \
-	-Wno-ASSIGNDLY \
-	-I../hdl/ \
-	-D__ICARUS__ \
-	-DNOFIFO \
-	-DTRACE \
-	../hdl/sad.v \
-	../fpga-common/hdl/cdc_pulse.v \
-	../fpga-common/hdl/cdc_simple.v \
-	--top-module sad \
-	2>&1 | tee lint.sad \
-
 
 fifo:
 	iverilog \
