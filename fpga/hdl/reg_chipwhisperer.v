@@ -75,6 +75,14 @@ module reg_chipwhisperer #(
    inout  wire        targetio3_io,
    inout  wire        targetio4_io,
 
+   /* solely for the ability to read their state: */
+   input  wire        target_PDID,
+   input  wire        target_PDIC,
+   input  wire        target_nRST,
+   input  wire        target_MISO,
+   input  wire        target_MOSI,
+   input  wire        target_SCK,
+
    output wire        hsglitcha_o,
    output wire        hsglitchb_o,
 
@@ -230,7 +238,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    reg [15:0] registers_cwtrigsrc; // note: for CW-Lite/Pro, this is an 8-bit register
    reg [7:0] registers_cwtrigmod;
    reg [63:0] registers_iorouting;
-   reg [3:0] registers_ioread;
+   reg [9:0] registers_ioread;
    reg reg_external_clock;
    reg [pUSERIO_WIDTH-1:0] reg_userio_cwdriven;
 
@@ -540,10 +548,12 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
       if (reset) begin
          registers_ioread <= 4'b0000;
       end else begin
+         registers_ioread[9:8] <= {target_SCK, target_nRST};
+         registers_ioread[7:4] <= {target_PDID, target_PDIC, target_MISO, target_MOSI};
          registers_ioread[3:0] <= {targetio4_io, targetio3_io, targetio2_io, targetio1_io};
       end
    end
-  
+
 
    reg [7:0] reg_datao_reg;
    assign reg_datao = reg_datao_reg;
@@ -557,7 +567,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
            `CW_TRIGSRC_ADDR:            reg_datao_reg = registers_cwtrigsrc[reg_bytecnt*8 +: 8]; 
            `CW_TRIGMOD_ADDR:            reg_datao_reg = registers_cwtrigmod; 
            `CW_IOROUTE_ADDR:            reg_datao_reg = registers_iorouting[reg_bytecnt*8 +: 8];
-           `CW_IOREAD_ADDR:             reg_datao_reg = {4'b0000, registers_ioread};
+           `CW_IOREAD_ADDR:             reg_datao_reg = registers_ioread[reg_bytecnt*8 +: 8];
 
            `USERIO_CW_DRIVEN:           reg_datao_reg = userio_cwdriven[reg_bytecnt*8 +: 8];
            `USERIO_DEBUG_DRIVEN:        reg_datao_reg = {5'b0, userio_target_debug_swd, userio_target_debug, userio_fpga_debug};

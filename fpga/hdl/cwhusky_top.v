@@ -483,6 +483,13 @@ module cwhusky_top(
         .targetio3_io           (target_io3),
         .targetio4_io           (target_io4),
 
+        .target_PDID            (target_PDID),
+        .target_PDIC            (target_PDIC),
+        .target_nRST            (target_nRST),
+        .target_MISO            (target_MISO),
+        .target_MOSI            (target_MOSI),
+        .target_SCK             (target_SCK),
+
         .hsglitcha_o            (glitchout_highpwr),
         .hsglitchb_o            (glitchout_lowpwr),
 
