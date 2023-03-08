@@ -77,7 +77,7 @@ class Harness(object):
         await self.registers.write(28, [0])
 
     async def ddr_done_writing(self):
-        raw = await self.registers.read(105)
+        raw = await self.registers.read(125)
         if raw[0] >> 7:
             return True
         else:

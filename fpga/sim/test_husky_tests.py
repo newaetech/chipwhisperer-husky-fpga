@@ -342,9 +342,9 @@ class LATest(GenericTest):
         await self.registers.write(77, self.registers.to_bytes(samples, 4))
         await self.registers.write(78, [downsample])
         if bits_per_sample == 8:
-            await self.registers.write(76, [0x86])   # LA_CAPTURE_GROUP: group 6 in 4-bit capture mode
+            await self.registers.write(76, [0x87])   # LA_CAPTURE_GROUP: group 6 in 4-bit capture mode
         else:
-            await self.registers.write(76, [0x06])   # LA_CAPTURE_GROUP: group 6 in 9-bit capture mode
+            await self.registers.write(76, [0x07])   # LA_CAPTURE_GROUP: group 6 in 9-bit capture mode
         return {"samples": samples, "bits_per_sample": bits_per_sample, "trigger_type": trigger_type, "downsample": downsample}
 
     async def _job_external_source_mods(self, source, job) -> dict:

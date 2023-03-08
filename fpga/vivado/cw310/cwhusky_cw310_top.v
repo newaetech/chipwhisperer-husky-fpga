@@ -272,6 +272,7 @@ module cwhusky_cw310_top (
 
    wire [8:0] tu_la_debug;
    wire [7:0] fifo_debug;
+   wire [7:0] edge_trigger_debug;
    wire [7:0] clockglitch_debug1;
    wire [7:0] clockglitch_debug2;
 
@@ -448,6 +449,7 @@ module cwhusky_cw310_top (
                                  (userio_fpga_debug_select == 4'b0101)?  clockglitch_debug2 :
                                  (userio_fpga_debug_select == 4'b0110)?  usb_debug1 :
                                  (userio_fpga_debug_select == 4'b0111)?  usb_debug2 : usb_debug3;
+                                 (userio_fpga_debug_select == 4'b1000)?  usb_debug3 : edge_trigger_debug;
 
    `else
       assign userio_debug_data[7:0] = 8'bz;
@@ -565,7 +567,8 @@ module cwhusky_cw310_top (
         .slow_fifo_wr           (slow_fifo_wr),
         .slow_fifo_rd           (slow_fifo_rd),
         .la_debug               (tu_la_debug),
-        .fifo_debug             (fifo_debug)
+        .fifo_debug             (fifo_debug),
+        .edge_trigger_debug     (edge_trigger_debug)
 
    );
 

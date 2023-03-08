@@ -339,9 +339,10 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define SAD_STATUS              102
 `define SAD_BITS_PER_SAMPLE     103
 `define SAD_REF_SAMPLES         104
+`define SAD_COUNTER_WIDTH       105
 `define SAD_MULTIPLE_TRIGGERS   106
-`define SAD_DEBUG_TRIGGER_INDEX 107
-`define SAD_DEBUG_FIFO_RD       108
+`define SAD_SHORT               107
+`define SAD_REFERENCE_BASE      108
 
 `define FIFO_STATE              110
 `define CLOCKGLITCH_POWERED_DOWN 111
@@ -362,7 +363,7 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define REG_DDR_SINGLE_RW_DATA  124
 `define REG_DDR_LA_START_ADDR   116
 `define REG_DDR_TRACE_START_ADDR 119
-`define REG_DDR_START_READ      105
+`define REG_DDR_START_READ      125
 
 // list of holes in the register address space (to be used for new features):
 //`define UNUSED_ADDRESS 12
@@ -385,7 +386,6 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 //`define UNUSED_ADDRESS 84
 //`define UNUSED_ADDRESS 85
 //`define UNUSED_ADDRESS 91
-//`define UNUSED_ADDRESS 125
 //`define UNUSED_ADDRESS 126
 //`define UNUSED_ADDRESS 127
 

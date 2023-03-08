@@ -31,6 +31,7 @@ parameter pDUMP = 0;
 parameter pLINEAR_RAMP = 0;
 parameter pINPUTS_FROM_FILE = 0;
 parameter pREF_SAMPLES = 8;
+parameter pSHORT_SAD = 0;
 parameter pBITS_PER_SAMPLE = 12;
 parameter pTHRESHOLD = 0;
 parameter pADDR_WIDTH = 8;
@@ -89,6 +90,8 @@ integer itrig;
 wire usb_clk = clk_usb;
 `include "tb_reg_tasks.v"
 
+integer pattern_samples = (pSHORT_SAD)? pREF_SAMPLES/2 : pREF_SAMPLES;
+
 // initialization thread:
 initial begin
     seed = pSEED;
@@ -100,6 +103,7 @@ initial begin
     $display("pLINEAR_RAMP      = %d", pLINEAR_RAMP);    
     $display("pINPUTS_FROM_FILE = %d", pINPUTS_FROM_FILE);    
     $display("pREF_SAMPLES      = %d", pREF_SAMPLES);   
+    $display("pSHORT_SAD        = %d", pSHORT_SAD);   
     $display("pBITS_PER_SAMPLE  = %d", pBITS_PER_SAMPLE);
     $display("pTHRESHOLD        = %d", pTHRESHOLD);
     $display("pVERBOSE          = %d", pVERBOSE);
@@ -130,12 +134,12 @@ initial begin
         // randomly pick starting value, increment:
         pattern[0] = $urandom_range(0, 2**pBITS_PER_SAMPLE-1);
         linear_increment = $urandom_range(1, 2**pBITS_PER_SAMPLE-4);
-        for (i = 1; i < pREF_SAMPLES; i = i + 1) begin
+        for (i = 1; i < pattern_samples; i = i + 1) begin
             pattern[i] = pattern[i-1] + linear_increment;
         end
     end
     else begin
-        for (i = 0; i < pREF_SAMPLES; i = i + 1) begin
+        for (i = 0; i < pattern_samples; i = i + 1) begin
             pattern[i] = $urandom_range(0, 2**pBITS_PER_SAMPLE-1);
         end
     end
@@ -154,7 +158,7 @@ initial begin
 
     // TODO: assuming 8-bit width for now (12 is cumbersome!)
     rw_lots_bytes(`SAD_REFERENCE);
-    for (i = 0; i < pREF_SAMPLES; i = i + 1) begin
+    for (i = 0; i < pattern_samples; i = i + 1) begin
         write_next_byte(pattern[i]);
     end
 
@@ -163,6 +167,9 @@ initial begin
     write_next_byte((threshold & 32'h0000_FF00)>>8);
     write_next_byte((threshold & 32'h00FF_0000)>>16);
     write_next_byte((threshold & 32'hFF00_0000)>>24);
+
+    if (pSHORT_SAD)
+        write_byte(`SAD_SHORT, 1);
 
     if (pFLUSH)
         write_1byte(`SAD_MULTIPLE_TRIGGERS, 0);
@@ -180,14 +187,14 @@ initial begin
     #1;
     while (armed_and_ready == 1'b0)
         @(posedge clk_adc) adc_datain = $urandom_range(0, 2**pBITS_PER_SAMPLE-1);
-    repeat($urandom_range(1,4*pREF_SAMPLES))
+    repeat($urandom_range(1,4*pattern_samples))
         @(posedge clk_adc) adc_datain = $urandom_range(0, 2**pBITS_PER_SAMPLE-1);
 
     if (pINPUTS_FROM_FILE == 0) begin
     // apply a pattern that's close, but (probably) over the threshold:
-    for (i = 0; i < pREF_SAMPLES; i = i + 1) begin
+    for (i = 0; i < pattern_samples; i = i + 1) begin
         @(posedge clk_adc);
-        if ($urandom_range(0, pREF_SAMPLES/8) == 0) begin // deviate from pattern or not
+        if ($urandom_range(0, pattern_samples/8) == 0) begin // deviate from pattern or not
             if ($urandom_range(0,1)) begin // positive delta
                 delta = $urandom_range(0, 2**pBITS_PER_SAMPLE-1 - pattern[i]);
                 total_delta += delta;
@@ -196,7 +203,6 @@ initial begin
             else begin // negative delta
                 delta = -$urandom_range(0, pattern[i]);
                 total_delta -= delta;
-                //$display("NEGATIVE!");
             end
         end
         else
@@ -225,16 +231,16 @@ initial begin
     end
     // more random stuff to make sure we don't get a trigger from the end of the last modified pattern + start
     // of the next less-modified pattern:
-    repeat(2+$urandom_range(4,10*pREF_SAMPLES))
+    repeat(2+$urandom_range(4,10*pattern_samples))
         @(posedge clk_adc) adc_datain = $urandom_range(0, 2**pBITS_PER_SAMPLE-1);
 
     // now apply a pattern that's definitely under the threshold:
     repeat (pTRIGGERS) begin // do it more than once to make sure we recover after the first
         done_altering = 0;
         total_delta = 0;
-        for (i = 0; i < pREF_SAMPLES; i = i + 1) begin
+        for (i = 0; i < pattern_samples; i = i + 1) begin
             @(posedge clk_adc);
-            if ((done_altering == 0) && ($urandom_range(0, pREF_SAMPLES/2) == 0)) begin // deviate from pattern or not
+            if ((done_altering == 0) && ($urandom_range(0, pattern_samples/2) == 0)) begin // deviate from pattern or not
                 if (pVERBOSE)
                     $display("Deviating for sample %d", i);
                 abs_delta = threshold;
@@ -266,7 +272,7 @@ initial begin
             $display("Total delta: %d", total_delta);
             $display("Threshold:   %d", threshold);
         end
-        repeat($urandom_range(3*pREF_SAMPLES, 5*pREF_SAMPLES))
+        repeat($urandom_range(3*pattern_samples, 5*pattern_samples))
             @(posedge clk_adc) adc_datain = $urandom_range(0, 2**pBITS_PER_SAMPLE-1);
     end
 
@@ -280,7 +286,7 @@ initial begin
             adc_datain = adcin[i];
         end
         trigger_expected = 1'b1;
-        repeat($urandom_range(8,4*pREF_SAMPLES))
+        repeat($urandom_range(8,4*pattern_samples))
             @(posedge clk_adc) adc_datain = $urandom_range(0, 2**pBITS_PER_SAMPLE-1);
         trigger_expected = 1'b0;
     end
@@ -288,16 +294,23 @@ initial begin
 
 end
 
-reg [4:0] trigger_expected_pipe;
+reg [5:0] trigger_expected_pipe;
 always @(posedge clk_adc)
-    trigger_expected_pipe <= {trigger_expected_pipe[3:0], trigger_expected};
-assign trigger_expected_delayed = trigger_expected_pipe[4];
+    trigger_expected_pipe <= {trigger_expected_pipe[4:0], trigger_expected};
+assign trigger_expected_delayed = trigger_expected_pipe[5];
 
 // trigger check thread:
 initial begin
     wait (setup_done);
     @(posedge clk_usb) armed_and_ready = 1'b1;
     for (itrig = 0; itrig < pTRIGGERS; itrig += 1) begin
+        if (pFLUSH) begin
+            repeat(pattern_samples) @(posedge clk_adc);
+            armed_and_ready = 1'b0;
+            repeat(pattern_samples) @(posedge clk_adc);
+            armed_and_ready = 1'b1;
+        end
+
         wait (trigger || trigger_expected_delayed);
         #1;
         if (trigger && trigger_expected_delayed) begin
@@ -319,39 +332,22 @@ initial begin
             end
         end
 
-        #(pCLK_ADC_PERIOD);
-        if (pFLUSH) begin
-            repeat(pREF_SAMPLES) @(posedge clk_adc);
-            armed_and_ready = 1'b0;
-            repeat(pREF_SAMPLES) @(posedge clk_adc);
-            armed_and_ready = 1'b1;
-        end
-
+        #(pCLK_ADC_PERIOD*2);
         wait (~(trigger || trigger_expected_delayed));
     end
 
-    repeat(pREF_SAMPLES*2) #(pCLK_ADC_PERIOD);
+    repeat(pattern_samples*2) #(pCLK_ADC_PERIOD);
 
-    read_1byte(`SAD_STATUS, rdata);
-    if (rdata == 8'd1)
-        $display("SAD_STATUS ok.");
-    else begin
-        if (~rdata[0]) begin
-            errors += 1;
-            $display("ERROR: SAD_STATUS shows that no trigger occured!");
-        end
-        if (rdata[1]) begin
-            errors += 1;
-            $display("ERROR: SAD_STATUS shows that FIFO underflow occured!");
-        end
-        if (rdata[2]) begin
-            errors += 1;
-            $display("ERROR: SAD_STATUS shows that FIFO overflow occured!");
-        end
-        if (rdata[3]) begin
-            errors += 1;
-            $display("ERROR: SAD_STATUS shows that FIFO is not empty when it should be!");
-        end
+    rw_lots_bytes(`SAD_STATUS);
+    read_next_byte(rdata);
+    if (rdata != 8'd1) begin
+        $display("ERROR: SAD_STATUS.triggered is not set.");
+        errors += 1;
+    end
+    read_next_byte(rdata);
+    if (rdata != ((pFLUSH)? 1 : pTRIGGERS)) begin
+        $display("ERROR: incorrect number of triggers reported (%d).", rdata);
+        errors += 1;
     end
 
     if (errors)

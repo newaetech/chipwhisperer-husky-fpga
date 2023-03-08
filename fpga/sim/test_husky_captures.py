@@ -220,8 +220,8 @@ class ADCCapture(GenericCapture):
     async def _initiate_read(self) -> None:
         #self.dut._log.info("issuing initiate read command...")
         # 1. initiate the read:
-        await self.harness.registers.write(105, [0])
-        await self.harness.registers.write(105, [1])
+        await self.harness.registers.write(125, [0])
+        await self.harness.registers.write(125, [1])
         await ClockCycles(self.clk, 50)
         await self.harness.wait_flush('ADC') # if previous read wasn't complete, wait for post-DDR to get flushed
         # wait for read FIFO to be not empty:
@@ -314,8 +314,8 @@ class LACapture(GenericCapture):
     async def _initiate_read(self) -> None:
         #self.dut._log.info("issuing initiate read command...")
         # 1. initiate the read:
-        await self.harness.registers.write(105, [0])
-        await self.harness.registers.write(105, [2])
+        await self.harness.registers.write(125, [0])
+        await self.harness.registers.write(125, [2])
         await ClockCycles(self.clk, 50)
         await self.harness.wait_flush('LA') # if previous read wasn't complete, wait for post-DDR to get flushed
         # wait for read FIFO to be not empty:
@@ -417,8 +417,8 @@ class TraceCapture(GenericCapture):
     async def _initiate_read(self) -> None:
         #self.dut._log.info("issuing initiate read command...")
         # 1. initiate the read:
-        await self.harness.registers.write(105, [0])
-        await self.harness.registers.write(105, [4])
+        await self.harness.registers.write(125, [0])
+        await self.harness.registers.write(125, [4])
         await ClockCycles(self.clk, 50)
         await self.harness.wait_flush('trace') # if previous read wasn't complete, wait for post-DDR to get flushed
         # wait for read FIFO to be not empty:

@@ -34,6 +34,7 @@ DOWNSAMPLE=0
 LINEAR_RAMP=1
 INPUTS_FROM_FILE=0
 REF_SAMPLES=8
+SHORT_SAD=0
 BITS_PER_SAMPLE=12
 EDGES=0
 TRIGGERS=1
@@ -73,9 +74,12 @@ endif
 compile_sad:
 	iverilog \
 	../hdl/sad.v \
+	../hdl/sad_v2.v \
+	../hdl/sad_v3_baseline.v \
 	../hdl/sad_wrapper.v \
 	../hdl/usb_reg_main.v \
 	../fpga-common/hdl/cdc_pulse.v \
+	../fpga-common/hdl/cdc_simple.v \
 	sad_tb.v \
 	vivado/sad_fifo_sim_netlist.v \
 	-y/$(VIVADO_PATH)/$(VIVADO_VERSION)/ids_lite/ISE/verilog/src/unisims/ \
@@ -86,6 +90,7 @@ compile_sad:
 	-P sad_tb.pLINEAR_RAMP=$(LINEAR_RAMP) \
 	-P sad_tb.pINPUTS_FROM_FILE=$(INPUTS_FROM_FILE) \
 	-P sad_tb.pREF_SAMPLES=$(REF_SAMPLES) \
+	-P sad_tb.pSHORT_SAD=$(SHORT_SAD) \
 	-P sad_tb.pBITS_PER_SAMPLE=$(BITS_PER_SAMPLE) \
 	-P sad_tb.pTHRESHOLD=$(THRESHOLD) \
 	-P sad_tb.pTRIGGERS=$(TRIGGERS) \
@@ -239,22 +244,36 @@ lint:
 
 lint_pro:
 	verilator --lint-only -Wall \
-	--error-limit 0 \
-	-Wno-PINCONNECTEMPTY \
-	-Wno-ASSIGNDLY \
-	-f cmdfile_coco_nofifo \
-	-I../hdl/ \
-	-I../tracewhisperer/hdl/ \
-	-D__ICARUS__ \
-	-DPRO \
-	-DNOXILINXFIFO \
-	-DFASTFIFOSIM \
-	-DLINT \
-	-DTRACE \
-	--top-module cwhusky_cw310_top \
-	2>&1 | tee lint.out \
+        --error-limit 0 \
+        -Wno-PINCONNECTEMPTY \
+        -Wno-ASSIGNDLY \
+        -f cmdfile_coco_nofifo \
+        -I../hdl/ \
+        -I../tracewhisperer/hdl/ \
+        -D__ICARUS__ \
+        -DPRO \
+        -DNOXILINXFIFO \
+        -DFASTFIFOSIM \
+        -DLINT \
+        -DTRACE \
+        --top-module cwhusky_cw310_top \
+        2>&1 | tee lint.out \
 
-
+lint_sad:
+	verilator --lint-only -Wall \
+        --error-limit 0 \
+        -Wno-PINCONNECTEMPTY \
+        -Wno-ASSIGNDLY \
+        -I../hdl/ \
+        -D__ICARUS__ \
+        -DNOFIFO \
+        -DTRACE \
+        ../hdl/sad.v \
+        ../fpga-common/hdl/cdc_pulse.v \
+        ../fpga-common/hdl/cdc_simple.v \
+        --top-module sad \
+        2>&1 | tee lint.sad \
+        
 fifo:
 	iverilog \
 	../hdl/fifo_top_husky.v \
