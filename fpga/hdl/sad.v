@@ -207,7 +207,11 @@ module sad #(
         end
     end
 
-    always @(posedge adc_sampleclk) adc_datain_r <= adc_datain;
+    always @(posedge adc_sampleclk) begin
+        adc_datain_r <= adc_datain;
+        adc_datain_rpr <= {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_r};
+        adc_datain_rmr <= -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_r};
+    end
 
     // instantiate counters and do most of the heavy lifting:
     genvar i;
@@ -221,8 +225,6 @@ module sad #(
                 else
                     nextrefsample[i] <=  nextrefsample[i-1];
                 nextrefsample_r[i] <=  nextrefsample[i];
-                adc_datain_rpr <= {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_r};
-                adc_datain_rmr <= -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_r};
 
                 if (adc_datain_r > nextrefsample[i])
                     decision[i] <= 1'b1;
