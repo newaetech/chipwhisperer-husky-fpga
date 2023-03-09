@@ -245,7 +245,9 @@ module cwhusky_cw310_top (
    //always @(*) read_data_reg = read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc | read_data_la;
    assign read_data = (reg_address == `ADCREAD_ADDR)? fifo_dout : read_data_reg;
 
-   wire ext_trigger;
+   wire trigger_capture;
+   wire trigger_glitch;
+   wire trigger_trace;
    wire extclk_mux;
    wire target_clk;
    wire glitchclk;
@@ -275,6 +277,7 @@ module cwhusky_cw310_top (
    wire [7:0] edge_trigger_debug;
    wire [7:0] clockglitch_debug1;
    wire [7:0] clockglitch_debug2;
+   wire [7:0] clockglitch_debug3;
 
    wire flash_pattern;
 
@@ -443,13 +446,15 @@ module cwhusky_cw310_top (
                                                                          glitch_mmcm2_clk_out,
                                                                          glitchclk,
                                                                          glitch_enable,
-                                                                         ext_trigger,
+                                                                         trigger_capture,
                                                                          cmd_arm_usb} :
                                  (userio_fpga_debug_select == 4'b0100)?  clockglitch_debug1 : 
                                  (userio_fpga_debug_select == 4'b0101)?  clockglitch_debug2 :
                                  (userio_fpga_debug_select == 4'b0110)?  usb_debug1 :
-                                 (userio_fpga_debug_select == 4'b0111)?  usb_debug2 : usb_debug3;
-                                 (userio_fpga_debug_select == 4'b1000)?  usb_debug3 : edge_trigger_debug;
+                                 (userio_fpga_debug_select == 4'b0111)?  usb_debug2 :
+                                 (userio_fpga_debug_select == 4'b1000)?  usb_debug3 :
+                                 (userio_fpga_debug_select == 4'b1001)?  edge_trigger_debug :
+                                 (userio_fpga_debug_select == 4'b1010)?  {cmd_arm_usb, clockglitch_debug3[6:0]} : 8'b0;
 
    `else
       assign userio_debug_data[7:0] = 8'bz;
@@ -492,7 +497,7 @@ module cwhusky_cw310_top (
         .pll_fpga_clk           (pll_fpga_clk),
         .PLL_STATUS             (PLL_STATUS),
         .DUT_CLK_i              (extclk_mux),
-        .DUT_trigger_i          (ext_trigger),
+        .DUT_trigger_i          (trigger_capture),
         .trigger_io4_i          (target_io4),
         .trigger_adc            (trigger_adc),
         .trigger_sad            (trigger_sad),
@@ -636,11 +641,21 @@ module cwhusky_cw310_top (
         .trigger_edge_i         (trigger_edge_counter),
         .pll_fpga_clk           (pll_fpga_clk),
         .glitchclk              (glitchclk),
+        .glitch_mmcm1_clk_out   (glitch_mmcm1_clk_out),
+        .adc_sample_clk         (ADC_clk_fb),
+        .trace_fe_clk           (fe_clk),
 
         .targetio1_io           (target_io1),
         .targetio2_io           (target_io2),
         .targetio3_io           (target_io3),
         .targetio4_io           (target_io4),
+
+        .target_PDID            (target_PDID),
+        .target_PDIC            (target_PDIC),
+        .target_nRST            (target_nRST),
+        .target_MISO            (target_MISO),
+        .target_MOSI            (target_MOSI),
+        .target_SCK             (target_SCK),
 
         .hsglitcha_o            (glitchout_highpwr),
         .hsglitchb_o            (glitchout_lowpwr),
@@ -672,10 +687,11 @@ module cwhusky_cw310_top (
         .trace_exists           (trace_exists),
         .la_exists              (la_exists),
 
-        .cw310_adc_clk_sel      (cw310_adc_clk_sel), // CW310 only
-
-        .trigger_o              (ext_trigger),
-        .trig_glitch_o          (TRIG_GLITCHOUT)
+        .trigger_capture        (trigger_capture),
+        .trigger_glitch         (trigger_glitch),
+        .trigger_trace          (trigger_trace),
+        .trig_glitch_o_mcx      (TRIG_GLITCHOUT),
+        .cw310_adc_clk_sel      (cw310_adc_clk_sel)  // CW310 only
    );
 
    assign userio_drive_data = userio_target_debug? {target_MOSI, // carries TDI on USERIO_D7
@@ -717,13 +733,14 @@ module cwhusky_cw310_top (
         .glitch_mmcm1_clk_out (glitch_mmcm1_clk_out),
         .glitch_mmcm2_clk_out (glitch_mmcm2_clk_out),
         .glitch_enable  (glitch_enable),
-        .exttrigger     (ext_trigger),
+        .exttrigger     (trigger_glitch),
         .glitch_go      (glitch_go),
         .glitch_trigger (glitch_trigger),
         .glitch_trigger_manual_sourceclock (glitch_trigger_manual_sourceclock),
         .led_glitch     (led_glitch),
         .debug1         (clockglitch_debug1),
-        .debug2         (clockglitch_debug2)
+        .debug2         (clockglitch_debug2),
+        .debug3         (clockglitch_debug3)
    );
 
 
@@ -776,7 +793,9 @@ module cwhusky_cw310_top (
         .userio6                (USERIO_D[6]),
         .userio7                (USERIO_D[7]),
         .userio_clk             (USERIO_CLK),
+        .trigger_glitch         (trigger_glitch),
 
+        .clockglitch_debug      (clockglitch_debug3),
         .tu_la_debug            (tu_la_debug),
         .trace_data             (trace_data_sdr),
         .trace_debug            (trace_debug),
@@ -1052,7 +1071,7 @@ module cwhusky_cw310_top (
           .trace_data                   (TRACEDATA),
           .swo                          (serial_in),
           .O_trace_trig_out             (trace_trig_out),
-          .m3_trig                      (ext_trigger),
+          .m3_trig                      (trigger_trace),
           .O_soft_trig_passthru         (),     // N/A, used for CW305 DST only
 
           .target_clk                   (target_clk),

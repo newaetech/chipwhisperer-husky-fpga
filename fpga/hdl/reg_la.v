@@ -444,18 +444,6 @@ module reg_la #(
            end
 
            6: begin
-               capture0_source <= ramp_pattern[0];
-               capture1_source <= ramp_pattern[1];
-               capture2_source <= ramp_pattern[2];
-               capture3_source <= ramp_pattern[3];
-               capture4_source <= ramp_pattern[4];
-               capture5_source <= ramp_pattern[5];
-               capture6_source <= ramp_pattern[6];
-               capture7_source <= ramp_pattern[7];
-               capture8_source <= ramp_pattern[8];
-           end
-
-           7: begin
                capture0_source <= clockglitch_debug[0];
                capture1_source <= clockglitch_debug[1];
                capture2_source <= clockglitch_debug[2];
@@ -465,6 +453,18 @@ module reg_la #(
                capture6_source <= clockglitch_debug[6];
                capture7_source <= clockglitch_debug[7];
                capture8_source <= hs2;
+           end
+
+           7: begin
+               capture0_source <= ramp_pattern[0];
+               capture1_source <= ramp_pattern[1];
+               capture2_source <= ramp_pattern[2];
+               capture3_source <= ramp_pattern[3];
+               capture4_source <= ramp_pattern[4];
+               capture5_source <= ramp_pattern[5];
+               capture6_source <= ramp_pattern[6];
+               capture7_source <= ramp_pattern[7];
+               capture8_source <= ramp_pattern[8];
            end
 
            default: begin
@@ -538,7 +538,7 @@ module reg_la #(
    end
 
    always @(*) begin
-       if (capture_group_reg == 6)
+       if (capture_group_reg == 7)
            // for easier visualization / validation of ramp pattern;
            // if this makes timing closure harder, remove it!
            fifo_wr_data = {capture8_reg[1], 

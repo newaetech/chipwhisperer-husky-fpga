@@ -33,9 +33,11 @@ set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets reg_clockglitch/mux1
 #set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets reg_la/observer_clk_prebuf]
 
 set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets ADC_clk_fb]
-set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets reg_la/observer_clk]
-set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets U_trace_top/fe_clk]
-set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets U_trace_top/src_clk]
+#set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets reg_la/observer_clk]
+#set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets U_trace_top/fe_clk]
+#set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets U_trace_top/src_clk]
+
+set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets U_trace_top/dst_clk]
 
 set_case_analysis 1 [get_pins reg_clockglitch/sourceclk_mux1/S]
 set_case_analysis 0 [get_pins reg_clockglitch/sourceclk_mux2/S]
@@ -51,7 +53,7 @@ create_generated_clock -name trace_clk_shifted [get_pins U_trace_top/U_trace_clo
 set_case_analysis 1 [get_pins U_trace_top/U_fe_clock_mux2/S]
 set_case_analysis 1 [get_pins BUFG_ADC_clk_fb/S]
 
-set_case_analysis 1 [get_pins U_fifo_clk_mux/S]
+#set_case_analysis 1 [get_pins U_fifo_clk_mux/S]
 
 #set_clock_groups -logically_exclusive -group clk_usb -group TRACECLOCK -group target_hs1
 #set_clock_groups -logically_exclusive -group pll_fpga_clk -group glitchclk
