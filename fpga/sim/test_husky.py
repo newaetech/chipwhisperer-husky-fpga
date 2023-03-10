@@ -12,6 +12,8 @@ from test_husky_tests import ADCTest, LATest, TraceTest, GlitchTest
 import numpy as np
 import logging
 import os
+import re
+import io
 
 # Note: this could also be place in individual test functions by replacing root_logger by dut._log.
 root_logger = logging.getLogger()
@@ -25,6 +27,7 @@ class Harness(object):
     def __init__(self, dut, registers):
         self.dut = dut
         self.registers = registers
+        self.slurp_defines(['../hdl/registers.v', '../tracewhisperer/hdl/defines_trace.v', '../tracewhisperer/hdl/defines_pw.v'])
         self.tests = []
         self.errors = 0
         self.allow_downstream_triggers = True
@@ -51,18 +54,89 @@ class Harness(object):
         # TODO: initialize all DUT input values
         self.dut.errors.value = 0
 
+    def slurp_defines(self, defines_files=None):
+        """ Parse Verilog defines file so we can access register and bit
+        definitions by name and avoid 'magic numbers'.
+
+        Args:
+            defines_files (list): list of Verilog define files to parse
+
+        """
+        self.verilog_define_matches = 0
+        self.reg_addr = {} # dictionary where all the register addresses go
+
+        if (defines_files is None) or (type(defines_files) != list):
+            raise ValueError('defines_files must be provided as a list (even if it contains a single element)')
+
+        for i,defines_file in enumerate(defines_files):
+            if type(defines_file) == io.BytesIO:
+                defines = io.TextIOWrapper(defines_file)
+            else:
+                if not os.path.isfile(defines_file):
+                    self.dut._log.error('Cannot find %s.' % defines_files)
+                defines = open(defines_file, 'r', encoding='utf-8')
+            define_regex_comment = re.compile(r'\s*?/[/*]')
+            define_regex_base  =   re.compile(r'`define')
+            define_regex_reg   =   re.compile(r'`define\s+?REG_')
+            define_regex_radix =   re.compile(r'`define\s+?(\w+).+?\'([bdh])([0-9a-fA-F]+)')
+            define_regex_noradix = re.compile(r'`define\s+?(\w+?)\s+?(\d+)')
+            if 'defines_trace.v' in defines_file:
+                block_offset = self.reg_addr['TW_TRACE_REG_SELECT'] << 6
+            elif 'defines_pw.v' in defines_file:
+                block_offset = self.reg_addr['TW_MAIN_REG_SELECT'] << 6
+            else:
+                block_offset = 0
+            for define in defines:
+                if define_regex_comment.search(define):
+                    continue
+                if define_regex_base.search(define):
+                    reg = define_regex_reg.search(define)
+                    match = define_regex_radix.search(define)
+                    if match:
+                        self.verilog_define_matches += 1
+                        if match.group(2) == 'b':
+                            radix = 2
+                        elif match.group(2) == 'h':
+                            radix = 16
+                        else:
+                            radix = 10
+                        self.dut._log.debug("REG %s:\t%d" % (match.group(1), int(match.group(3),radix)))
+                        name = match.group(1)
+                        value = int(match.group(3),radix) + block_offset
+                    else:
+                        match = define_regex_noradix.search(define)
+                        if match:
+                            self.verilog_define_matches += 1
+                            self.dut._log.debug("REG %s:\t%d (%s)" % (match.group(1), int(match.group(2),10), match.group(2)))
+                            name = match.group(1)
+                            value = int(match.group(2),10) + block_offset
+                        else:
+                            self.dut._log.warning("Couldn't parse line: %s", define)
+                    if match:
+                        if ('defines_trace.v' in defines_file or 'defines_pw.v' in defines_file) and not name.startswith('REG_'):
+                            continue
+                        if name in self.reg_addr:
+                            self.dut._log.warning("Register slurp warning: key %s already exists; replacing old value (%d) with %d" % (name, self.reg_addr[name], value))
+                        if value in self.reg_addr.values() and name not in ['REGISTER_VERSION', 'TW_MAIN_REG_SELECT', 'TW_TRACE_REG_SELECT']:
+                            old_key = list(self.reg_addr.keys())[list(self.reg_addr.values()).index(value)]
+                            self.dut._log.warning("Register slurp warning: address %s already exists on key %s; new key %s getting the same address" % (value, old_key, name))
+                        self.reg_addr[name] = value
+            defines.close()
+        self.dut._log.debug("Slurped %d defines." % self.verilog_define_matches)
+        self.dut._log.debug("Register addresses: %s" % self.reg_addr)
+
 
     async def initialize_dut(self):
         self.dut.target_io4.value = 0
         await self.reset()
         # the reset will cause target_io4 to "lose" the 0 we'd assigned to it... possibly a simulator/cocotb bug?
         self.dut.target_io4.value = 0
-        await self.registers.write(51, [0,0,0,0,0,0xcc,0,1])  # CLOCKGLITCH_SETTINGS: set source to clk_usb (otherwise, X's propagate)
-        #await self.registers.write(51, [0,0,0,0,0,0x4c,0,1])  # CLOCKGLITCH_SETTINGS: set source to clk_usb (otherwise, X's propagate)
+        await self.registers.write(self.reg_addr['CLOCKGLITCH_SETTINGS'], [0,0,0,0,0,0xcc,0,1])  # set source to clk_usb (otherwise, X's propagate)
+        #await self.registers.write(self.reg_addr['CLOCKGLITCH_SETTINGS'], [0,0,0,0,0,0x4c,0,1])  # set source to clk_usb (otherwise, X's propagate)
         self.dut.U_dut.reg_clockglitch.U_clockglitch.glitch_go.value = Force(0)
         await ClockCycles(self.dut.clk_usb, 10)
         self.dut.U_dut.reg_clockglitch.U_clockglitch.glitch_go.value = Release()
-        await self.registers.write(45, [3]) # NO_CLIP_ERRORS: disable gain errors
+        await self.registers.write(self.reg_addr['NO_CLIP_ERRORS'], [3]) # disable gain errors
 
     async def reset(self):
         # NOTE: the Xilinx FIFO simulation models are quite sensitive to the reset timing. They can misbehave and refuse
@@ -71,13 +145,13 @@ class Harness(object):
         # reset begins, and how long it is held for, can return correct behaviour.
         await ClockCycles(self.dut.clk_usb, 30)
         #self.dut.U_dut.oadc.U_reg_openadc.reset_fromreg.value = Force(1) # experimenting with iverilog 11.0 FIFO problems...
-        await self.registers.write(28, [1])
+        await self.registers.write(self.reg_addr['RESET'], [1])
         #self.dut.U_dut.oadc.U_reg_openadc.reset_fromreg.value = Release()
         await ClockCycles(self.dut.clk_usb, 10)
-        await self.registers.write(28, [0])
+        await self.registers.write(self.reg_addr['RESET'], [0])
 
     async def ddr_done_writing(self):
-        raw = await self.registers.read(125)
+        raw = await self.registers.read(self.reg_addr['REG_DDR_START_READ'])
         if raw[0] >> 7:
             return True
         else:
@@ -94,7 +168,7 @@ class Harness(object):
         await ClockCycles(self.dut.clk_usb, 5) # give time for flushing to begin
         while flushing:
             self.dut._log.debug("...waiting for flush to complete...")
-            flushing = (await self.registers.read(44, 3))[2] & bitmask
+            flushing = (await self.registers.read(self.reg_addr['FIFO_STAT'], 3))[2] & bitmask
 
     def register_test(self, test):
         """ Add to list of running tests, so that we can later wait for all of
@@ -167,9 +241,9 @@ async def reg_rw(dut, wait_cycles=1000):
     harness = Harness(dut, registers)
     await harness.reset()
     await ClockCycles(dut.clk_usb, 10)
-    reg_thread1 = cocotb.start_soon(harness.register_rw_thread(4, 8))
-    reg_thread2 = cocotb.start_soon(harness.register_rw_thread(16, 4))
-    reg_thread4 = cocotb.start_soon(harness.register_rw_thread(0, 1))
+    reg_thread1 = cocotb.start_soon(harness.register_rw_thread(self.harness.reg_addr['ECHO_ADDR'], 8))
+    reg_thread2 = cocotb.start_soon(harness.register_rw_thread(self.harness.reg_addr['SAMPLES_ADDR'], 4))
+    reg_thread4 = cocotb.start_soon(harness.register_rw_thread(self.harness.reg_addr['GAIN_ADDR'], 1))
     await ClockCycles(dut.clk_usb, wait_cycles)
 
 

@@ -9,6 +9,7 @@ import numpy as np
 
 class GenericTest(object):
     def __init__(self, dut, harness, registers):
+        self.reg_addr = harness.reg_addr
         self.clk = dut.clk_usb
         self.dut = dut
         self.harness = harness
@@ -215,7 +216,7 @@ class ADCTest(GenericTest):
 
     async def _job_setup(self) -> dict:
         samples = random.randint(self.capture_min, self.capture_max)
-        await self.registers.write(16, self.registers.to_bytes(samples, 4))
+        await self.registers.write(self.reg_addr['SAMPLES_ADDR'], self.registers.to_bytes(samples, 4))
         bits_per_sample = 12
         if random.randint(0,1):
             trigger_type = 'manual'
@@ -224,7 +225,7 @@ class ADCTest(GenericTest):
         return {"samples": samples, "bits_per_sample": bits_per_sample, "trigger_type": trigger_type}
 
     async def _initial_setup(self) -> None:
-        await self.registers.write(121, [1]) # use DDR and set ADC ramp mode
+        await self.registers.write(self.reg_addr['FIFO_CONFIG'], [1]) # use DDR and set ADC ramp mode
 
     async def _wait_capture_done(self, job: dict) -> None:
         samples = job['samples']
@@ -237,8 +238,8 @@ class ADCTest(GenericTest):
             not_done_writing = not await self.harness.ddr_done_writing()
 
     async def _arm(self) -> None:
-        await self.registers.write(1, [0x24]) # disarm
-        await self.registers.write(1, [0x0c]) # arm
+        await self.registers.write(self.reg_addr['SETTINGS_ADDR'], [0x24]) # disarm
+        await self.registers.write(self.reg_addr['SETTINGS_ADDR'], [0x0c]) # arm
         await self.harness.wait_flush('ADC')  # allow for any flushes (triggered by arming) to complete before triggering
 
     async def _trigger(self, job) -> None:
@@ -251,7 +252,7 @@ class ADCTest(GenericTest):
         # TODO: code more trigger options
 
     async def trigger_now(self) -> None:
-        await self.registers.write(1, [0x4c]) # trigger
+        await self.registers.write(self.reg_addr['SETTINGS_ADDR'], [0x4c]) # trigger
 
     async def trigger_io4(self) -> None:
         self.dut.target_io4.value = 1
@@ -339,18 +340,18 @@ class LATest(GenericTest):
             bits_per_sample = 9
         trigger_type = 'manual'
         downsample = 0 # TODO: randomize later
-        await self.registers.write(77, self.registers.to_bytes(samples, 4))
-        await self.registers.write(78, [downsample])
+        await self.registers.write(self.reg_addr['LA_CAPTURE_DEPTH'], self.registers.to_bytes(samples, 4))
+        await self.registers.write(self.reg_addr['LA_DOWNSAMPLE'], [downsample])
         if bits_per_sample == 8:
-            await self.registers.write(76, [0x87])   # LA_CAPTURE_GROUP: group 6 in 4-bit capture mode
+            await self.registers.write(self.reg_addr['LA_CAPTURE_GROUP'], [0x87])   # group 7 in 4-bit capture mode
         else:
-            await self.registers.write(76, [0x07])   # LA_CAPTURE_GROUP: group 6 in 9-bit capture mode
+            await self.registers.write(self.reg_addr['LA_CAPTURE_GROUP'], [0x07])   # group 7 in 9-bit capture mode
         return {"samples": samples, "bits_per_sample": bits_per_sample, "trigger_type": trigger_type, "downsample": downsample}
 
     async def _job_external_source_mods(self, source, job) -> dict:
         if source.name == 'ADC':
             job['trigger_type'] = 'ADC'
-            await self.registers.write(72, [1]) # LA_TRIGGER_SOURCE
+            await self.registers.write(self.reg_addr['LA_TRIGGER_SOURCE'], [1])
         else:
             raise ValueError
         return job
@@ -358,11 +359,11 @@ class LATest(GenericTest):
     async def _post_job(self) -> None:
         """ reset LA_TRIGGER_SOURCE to something that won't fire so it doesn't inadvertently trigger later!
         """
-        await self.registers.write(72, [0]) # LA_TRIGGER_SOURCE
+        await self.registers.write(self.reg_addr['LA_TRIGGER_SOURCE'], [0])
 
     async def _initial_setup(self) -> None:
-        await self.registers.write(71, [1])   # LA_CLOCK_SOURCE: select USB clock
-        await self.registers.write(99, [1])   # LA_ENABLED
+        await self.registers.write(self.reg_addr['LA_CLOCK_SOURCE'], [1])   # select USB clock
+        await self.registers.write(self.reg_addr['LA_ENABLED'], [1])
 
     async def _wait_capture_done(self, job: dict) -> None:
         samples = job['samples']
@@ -375,8 +376,8 @@ class LATest(GenericTest):
             not_done_writing = not await self.harness.ddr_done_writing()
 
     async def _arm(self) -> None:
-        await self.registers.write(98, [0])   # LA disarm
-        await self.registers.write(98, [1])   # LA arm
+        await self.registers.write(self.reg_addr['LA_ARM'], [0])   # disarm
+        await self.registers.write(self.reg_addr['LA_ARM'], [1])   # arm
         await self.harness.wait_flush('LA')   # allow for any flushes (triggered by arming) to complete before triggering
 
     async def _trigger(self, job) -> None:
@@ -389,8 +390,8 @@ class LATest(GenericTest):
         # TODO: code more trigger options
 
     async def trigger_now(self) -> None:
-        await self.registers.write(75, [1])   # LA_MANUAL_CAPTURE
-        await self.registers.write(75, [0])   # LA_MANUAL_CAPTURE
+        await self.registers.write(self.reg_addr['LA_MANUAL_CAPTURE'], [1])
+        await self.registers.write(self.reg_addr['LA_MANUAL_CAPTURE'], [0])
 
     async def preddr_watch(self) -> None:
         while True:
@@ -421,20 +422,20 @@ class TraceTest(GenericTest):
     async def _job_external_source_mods(self, source, job) -> dict:
         if source.name == 'ADC':
             job['trigger_type'] = 'ADC'
-            await self.registers.write(0xc7, [1]) # REG_SOFT_TRIG_PASSTHRU
-            await self.registers.write(0xc8, [1]) # REG_SOFT_TRIG_ENABLE
+            await self.registers.write(self.reg_addr['REG_SOFT_TRIG_PASSTHRU'], [1])
+            await self.registers.write(self.reg_addr['REG_SOFT_TRIG_ENABLE'], [1])
         else:
             raise ValueError
         return job
 
     async def _initial_setup(self) -> None:
-        await self.registers.write(0x91, [1]) # trace reset
-        await self.registers.write(0x91, [0]) 
-        await self.registers.write(0xed, [1]) # REG_TRACE_EN: enable trace
-        await self.registers.write(0xe5, [2])   # REG_FE_CLOCK_SEL: select USB clock
-        await self.registers.write(0x8b, [1])   # REG_COUNT_WRITES
-        await self.registers.write(0xf6, [1])   # REG_TRACE_TEST
-        await self.registers.write(0xc8, [0])   # REG_SOFT_TRIG_ENABLE: disable, X's otherwise
+        await self.registers.write(self.reg_addr['REG_RESET_REG'], [1])
+        await self.registers.write(self.reg_addr['REG_RESET_REG'], [0]) 
+        await self.registers.write(self.reg_addr['REG_TRACE_EN'], [1]) # enable trace
+        await self.registers.write(self.reg_addr['REG_FE_CLOCK_SEL'], [2]) # select USB clock
+        await self.registers.write(self.reg_addr['REG_COUNT_WRITES'], [1]) 
+        await self.registers.write(self.reg_addr['REG_TRACE_TEST'], [1])
+        await self.registers.write(self.reg_addr['REG_SOFT_TRIG_ENABLE'], [0])
 
     async def _wait_capture_done(self, job: dict) -> None:
         samples = job['samples']
@@ -447,8 +448,8 @@ class TraceTest(GenericTest):
             not_done_writing = not await self.harness.ddr_done_writing()
 
     async def _arm(self) -> None:
-        await self.registers.write(0x84, [0])   # trace disarm
-        await self.registers.write(0x84, [1])   # trace arm
+        await self.registers.write(self.reg_addr['REG_ARM'], [0])   # disarm
+        await self.registers.write(self.reg_addr['REG_ARM'], [1])   # arm
         await self.harness.wait_flush('trace')# allow for any flushes (triggered by arming) to complete before triggering
 
     async def _trigger(self, job) -> None:
@@ -461,13 +462,13 @@ class TraceTest(GenericTest):
         # TODO: code more trigger options
 
     async def trigger_now(self) -> None:
-        await self.registers.write(0x84, [3])   # capture now
+        await self.registers.write(self.reg_addr['REG_ARM'], [3])   # capture now
 
     async def _post_job(self) -> None:
         """ reset trigger settings to something that won't fire so it doesn't inadvertently trigger later!
         """
-        await self.registers.write(0xc7, [0]) # REG_SOFT_TRIG_PASSTHRU
-        await self.registers.write(0xc8, [0]) # REG_SOFT_TRIG_ENABLE
+        await self.registers.write(self.reg_addr['REG_SOFT_TRIG_PASSTHRU'], [0])
+        await self.registers.write(self.reg_addr['REG_SOFT_TRIG_ENABLE'], [0])
 
     async def preddr_watch(self) -> None:
         while True:
@@ -490,7 +491,7 @@ class GlitchTest(GenericTest):
         self.name = 'glitch'
 
     async def _initial_setup(self) -> None:
-        await self.registers.write(49, [0])   # CLOCKGLITCH_POWERDOWN off
+        await self.registers.write(self.reg_addr['CLOCKGLITCH_POWERDOWN'], [0])
         # simulation artifact: prevent glitch output being X:
         self.dut.U_dut.reg_clockglitch.U_clockglitch.glitch_go.value = Force(0)
         await ClockCycles(self.dut.clk_usb, 10)
@@ -504,8 +505,8 @@ class GlitchTest(GenericTest):
         glitches = 1 # TODO: more glitches
         offset = random.randint(0, 10) # TODO: randomize over legal range
         repeats = random.randint(1, 10) # TODO: randomize over legal range
-        await self.registers.write(52, [glitches-1])
-        await self.registers.write(25, self.registers.to_bytes(offset, 4))
+        await self.registers.write(self.reg_addr['CLOCKGLITCH_NUM_GLITCHES'], [glitches-1])
+        await self.registers.write(self.reg_addr['CLOCKGLITCH_OFFSET'], self.registers.to_bytes(offset, 4))
         # setting the repeats value is messy:
         settings = [0]*8
         settings[5] = 0x4c
@@ -516,7 +517,7 @@ class GlitchTest(GenericTest):
         settings[6] = (repeats-1) & 0xff
         settings[7] = (((repeats-1)>>8) << 2) + 1   # use USB clock, otherwise there will be a +/- 1 cycle uncertainty on
                                                     # the glitch output timing, which would complicate verification
-        await self.registers.write(51, settings)
+        await self.registers.write(self.reg_addr['CLOCKGLITCH_SETTINGS'], settings)
         return {"glitches": glitches, "offset": offset, "repeats": repeats, "trigger_type": trigger_type}
 
     async def _wait_capture_done(self, job: dict) -> None:
@@ -533,16 +534,16 @@ class GlitchTest(GenericTest):
         # TODO: code more trigger options
 
     async def trigger_now(self) -> None:
-        settings = await self.harness.registers.read(51, 8)
+        settings = await self.harness.registers.read(self.reg_addr['CLOCKGLITCH_SETTINGS'], 8)
         settings[5] |= 0x80 # set manual trigger bit
         settings[5] |= 0x80 # set trigger source to manual
-        await self.registers.write(51, settings)
+        await self.registers.write(self.reg_addr['CLOCKGLITCH_SETTINGS'], settings)
 
     async def _post_job(self) -> None:
         """ reset trigger settings to something that won't fire so it doesn't inadvertently trigger later!
         """
-        settings = await self.harness.registers.read(51, 8)
+        settings = await self.harness.registers.read(self.reg_addr['CLOCKGLITCH_SETTINGS'], 8)
         settings[5] &= 0x7f # clear manual trigger bit in case it was set; no harm if it wasn't
-        await self.registers.write(51, settings[:6])
+        await self.registers.write(self.reg_addr['CLOCKGLITCH_SETTINGS'], settings[:6])
 
 

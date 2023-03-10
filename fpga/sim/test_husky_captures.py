@@ -8,6 +8,7 @@ import numpy as np
 
 class GenericCapture(object):
     def __init__(self, dut, harness, dut_reading_signal):
+        self.reg_addr = harness.reg_addr
         self.clk = dut.clk_usb
         self.dut = dut
         self.harness = harness
@@ -204,7 +205,7 @@ class ADCCapture(GenericCapture):
         else:
             bytes_to_read = samples
             dut._log.error("Unsupported! (yet)")
-        raw = list(await self.harness.registers.read(3, bytes_to_read))
+        raw = list(await self.harness.registers.read(self.reg_addr['ADCREAD_ADDR'], bytes_to_read))
         return raw
 
     async def _pre_read_wait(self, job) -> None:
@@ -220,8 +221,8 @@ class ADCCapture(GenericCapture):
     async def _initiate_read(self) -> None:
         #self.dut._log.info("issuing initiate read command...")
         # 1. initiate the read:
-        await self.harness.registers.write(125, [0])
-        await self.harness.registers.write(125, [1])
+        await self.harness.registers.write(self.reg_addr['REG_DDR_START_READ'], [0])
+        await self.harness.registers.write(self.reg_addr['REG_DDR_START_READ'], [1])
         await ClockCycles(self.clk, 50)
         await self.harness.wait_flush('ADC') # if previous read wasn't complete, wait for post-DDR to get flushed
         # wait for read FIFO to be not empty:
@@ -229,7 +230,7 @@ class ADCCapture(GenericCapture):
         empty = True
         while empty:
             await ClockCycles(self.clk, 50)
-            empty = (await self.harness.registers.read(44, 2))[1] & 32
+            empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 2))[1] & 32
 
     async def _read_samples(self, job) -> list:
         samples = self._limit_read(job)
@@ -314,8 +315,8 @@ class LACapture(GenericCapture):
     async def _initiate_read(self) -> None:
         #self.dut._log.info("issuing initiate read command...")
         # 1. initiate the read:
-        await self.harness.registers.write(125, [0])
-        await self.harness.registers.write(125, [2])
+        await self.harness.registers.write(self.reg_addr['REG_DDR_START_READ'], [0])
+        await self.harness.registers.write(self.reg_addr['REG_DDR_START_READ'], [2])
         await ClockCycles(self.clk, 50)
         await self.harness.wait_flush('LA') # if previous read wasn't complete, wait for post-DDR to get flushed
         # wait for read FIFO to be not empty:
@@ -323,7 +324,7 @@ class LACapture(GenericCapture):
         empty = True
         while empty:
             await ClockCycles(self.clk, 50)
-            empty = (await self.harness.registers.read(44, 2))[1] & 32
+            empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 2))[1] & 32
 
     async def _read_samples(self, job) -> list:
         samples = self._limit_read(job)
@@ -334,7 +335,7 @@ class LACapture(GenericCapture):
             bytes_to_read = math.ceil(samples*9/8)
         else:
             raise ValueError("Unsupported capture width")
-        data = list(await self.harness.registers.read(3, bytes_to_read))
+        data = list(await self.harness.registers.read(self.reg_addr['ADCREAD_ADDR'], bytes_to_read))
         self.raw_read_data = data
         if bits_per_sample == 9:
             data = self.process9bitRawData(data)
@@ -417,8 +418,8 @@ class TraceCapture(GenericCapture):
     async def _initiate_read(self) -> None:
         #self.dut._log.info("issuing initiate read command...")
         # 1. initiate the read:
-        await self.harness.registers.write(125, [0])
-        await self.harness.registers.write(125, [4])
+        await self.harness.registers.write(self.reg_addr['REG_DDR_START_READ'], [0])
+        await self.harness.registers.write(self.reg_addr['REG_DDR_START_READ'], [4])
         await ClockCycles(self.clk, 50)
         await self.harness.wait_flush('trace') # if previous read wasn't complete, wait for post-DDR to get flushed
         # wait for read FIFO to be not empty:
@@ -426,13 +427,13 @@ class TraceCapture(GenericCapture):
         empty = True
         while empty:
             await ClockCycles(self.clk, 50)
-            empty = (await self.harness.registers.read(44, 2))[1] & 32
+            empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 2))[1] & 32
 
     async def _read_samples(self, job) -> list:
         samples = self._limit_read(job)
         samples = job['samples']
         bytes_to_read = math.ceil(samples*18/8)
-        self.raw_read_data = list(await self.harness.registers.read(3, bytes_to_read))
+        self.raw_read_data = list(await self.harness.registers.read(self.reg_addr['ADCREAD_ADDR'], bytes_to_read))
         data = self.process18bitRawData(self.raw_read_data)
         return data
 
