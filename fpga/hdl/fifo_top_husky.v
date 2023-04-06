@@ -847,17 +847,19 @@ module fifo_top_husky(
       end
    end
 
+   reg [31:0] total_samples;
    always @(posedge clk_usb) begin
       if (fifo_rst) begin
          read_count <= 0;
          stream_segment_available <= 1'b0;
       end
       else begin
+         total_samples <= max_samples_i * num_segments;
          if (slow_fifo_rd)
             read_count <= read_count + 3;
          if (read_update_usb) begin
             if (write_count_to_usb > read_count)
-               stream_segment_available <= ( (write_count_to_usb - read_count > stream_segment_threshold) || (write_count_to_usb >= max_samples_i) );
+               stream_segment_available <= ( (write_count_to_usb - read_count > stream_segment_threshold) || (write_count_to_usb >= total_samples) );
             else
                stream_segment_available <= 1'b0;
          end
