@@ -774,7 +774,6 @@ module fifo_top_husky(
           .overflow     (fast_fifo_overflow),
           .underflow    (fast_fifo_underflow)
        );
-
        tiny_usb_slow_fifo U_usb_slow_fifo(
           .rst          (fifo_rst),
           .wr_clk       (adc_sampleclk),
@@ -789,6 +788,32 @@ module fifo_top_husky(
           .underflow    (slow_fifo_underflow)
        );
 
+    `elsif SEMIPRO
+       adc_fast_fifo_semipro U_adc_fast_fifo(
+          .clk          (adc_sampleclk),
+          .rst          (fifo_rst),
+          .din          (adc_datain),
+          .wr_en        (fast_fifo_wr),
+          .rd_en        (fast_fifo_rd),
+          .dout         (fast_fifo_dout),
+          .full         (fast_fifo_full),
+          .empty        (fast_fifo_empty),
+          .overflow     (fast_fifo_overflow),
+          .underflow    (fast_fifo_underflow)
+       );
+       usb_slow_fifo_semipro U_usb_slow_fifo(
+          .rst          (fifo_rst),
+          .wr_clk       (adc_sampleclk),
+          .rd_clk       (clk_usb),
+          .din          (slow_fifo_din),
+          .wr_en        (slow_fifo_wr),
+          .rd_en        (slow_fifo_rd),
+          .dout         (slow_fifo_dout),
+          .full         (slow_fifo_full),
+          .empty        (slow_fifo_empty),
+          .overflow     (slow_fifo_overflow),
+          .underflow    (slow_fifo_underflow)
+       );
 
     `else
        //normal case
@@ -804,7 +829,6 @@ module fifo_top_husky(
           .overflow     (fast_fifo_overflow),
           .underflow    (fast_fifo_underflow)
        );
-
        usb_slow_fifo U_usb_slow_fifo(
           .rst          (fifo_rst),
           .wr_clk       (adc_sampleclk),

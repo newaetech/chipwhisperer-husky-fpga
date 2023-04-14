@@ -18,6 +18,7 @@ parser.add_argument("--exclude", help="Exclude tests whose name contains TESTS",
 parser.add_argument("--list", help="List available tests.", action='store_true')
 parser.add_argument("--dump", help="Enable waveform dumping.", action='store_true')
 parser.add_argument("--proc", type=int, help="Maximum number of parallel jobs to dispatch.", default=32)
+parser.add_argument("--variant", help="Husky variant (regular/semi/pro)", default='regular')
 args = parser.parse_args()
 
 # Define testcases:
@@ -238,7 +239,7 @@ tests.append(dict(name  = 'downsample',
 tests.append(dict(name  = 'sad',
              frequency = 2,
              BITS_PER_SAMPLE = 8,
-             REF_SAMPLES = 64, # caution: increasing this slows down simulation *a lot*
+             REF_SAMPLES = 32, # caution: increasing this slows down simulation *a lot*
              SHORT_SAD = [0,1],
              THRESHOLD = [20,100], # keep threshold low to avoid unintentional triggers - testbench isn't smart enough
              TRIGGERS = 4,
@@ -355,10 +356,19 @@ seed_regex = re.compile(r'^Running with pSEED=(\d+)$')
 test_regex = re.compile(args.tests)
 exclude_regex = re.compile(args.exclude)
 
+if args.variant == 'semi':
+    variant = 'VARIANT=SEMIPRO'
+elif args.variant == 'pro':
+    variant = 'VARIANT=PRO'
+elif args.variant == 'regular':
+    variant = 'VARIANT=REGULAR'
+else:
+    raise ValueError('Variant not recognized (%s)' % args.variant)
+
 # Check once that compile passes:
 outfile = open('regress.out', 'w')
 for compile_target in ['compile', 'compile_edge']:
-    makeargs = ['make', compile_target]
+    makeargs = ['make', compile_target, variant]
     result = subprocess.run(makeargs, stdout=outfile, stderr=outfile)
     if result.returncode:
        print ("Compilation for target %s failed (return code: %d), check regress.out." % (compile_target, result.returncode))

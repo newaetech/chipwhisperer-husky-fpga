@@ -3,8 +3,10 @@ set_property CONFIG_VOLTAGE 3.3 [current_design]
 
 
 create_clock -period 10.400 -name clk_usb -waveform {0.000 5.200} [get_nets clk_usb]
-create_clock -period 3.000 -name ADC_clk_fb -waveform {0.000 1.500} [get_nets ADC_clk_fb]
-create_clock -period 3.000 -name pll_fpga_clk -waveform {0.000 1.500} [get_nets pll_fpga_clk]
+#create_clock -period 3.334 -name ADC_clk_fb -waveform {0.000 1.667} [get_nets ADC_clk_fb]
+#create_clock -period 3.334 -name pll_fpga_clk -waveform {0.000 1.667} [get_nets pll_fpga_clk]
+create_clock -period 4.000 -name ADC_clk_fb -waveform {0.000 2.000} [get_nets ADC_clk_fb]
+create_clock -period 4.000 -name pll_fpga_clk -waveform {0.000 2.000} [get_nets pll_fpga_clk]
 
 create_clock -period 20.000 -name target_hs1 -waveform {0.000 10.000} [get_nets target_hs1]
 create_clock -period 20.000 -name AUXIO -waveform {0.000 10.500} [get_nets AUXIO]

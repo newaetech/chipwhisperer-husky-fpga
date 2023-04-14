@@ -91,7 +91,7 @@ sad #(
     .pBYTECNT_SIZE      (7),
     .pREF_SAMPLES       (pREF_SAMPLES),
     .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE)
-) U_big_dut (
+) U_base_dut (
     .reset              (reset),
     .adc_datain         (adc_datain_r[pBITS_PER_SAMPLE-1:0]),
     .adc_sampleclk      (clk_adc),
@@ -109,12 +109,13 @@ sad #(
     .trigger            (trigger)
 );
 
-wire trigger_baseline;
-sad_v3_baseline #(
+
+wire trigger_v4;
+sad_v6 #(
     .pBYTECNT_SIZE      (7),
     .pREF_SAMPLES       (pREF_SAMPLES),
     .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE)
-) U_baseline_dut (
+) U_new_dut (
     .reset              (reset),
     .adc_datain         (adc_datain_r[pBITS_PER_SAMPLE-1:0]),
     .adc_sampleclk      (clk_adc),
@@ -129,56 +130,8 @@ sad_v3_baseline #(
     .reg_write          (reg_write),
     .ext_trigger        (1'b0), // debug only
     .io4                (1'b0), // debug only
-    .trigger            (trigger_baseline)
+    .trigger            (trigger_v4)
 );
-
-
-wire trigger_v2;
-sad_v2 #(
-    .pBYTECNT_SIZE      (7),
-    .pREF_SAMPLES       (pREF_SAMPLES),
-    .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE)
-) U_working_dut (
-    .reset              (reset),
-    .adc_datain         (adc_datain_r[pBITS_PER_SAMPLE-1:0]),
-    .adc_sampleclk      (clk_adc),
-    .armed_and_ready    (armed_and_ready),
-    .active             (1'b1),
-    .clk_usb            (clk_usb),
-    .reg_address        (reg_address),
-    .reg_bytecnt        (reg_bytecnt),
-    .reg_datai          (write_data),
-    .reg_datao          (),
-    .reg_read           (reg_read),
-    .reg_write          (reg_write),
-    .ext_trigger        (1'b0), // debug only
-    .io4                (1'b0), // debug only
-    .trigger            (trigger_v2)
-);
-
-
-/* instantiate alongside known-working area-optimized version for debug:
-slowsad #(
-    .pBYTECNT_SIZE      (7),
-    .pREF_SAMPLES       (pREF_SAMPLES),
-    .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE)
-) U_slow_dut (
-    .reset              (reset),
-    .adc_datain         (adc_datain_r[pBITS_PER_SAMPLE-1:0]),
-    .adc_sampleclk      (clk_adc),
-    .arm_i              (arm_i),
-    .active             (1'b1),
-    .clk_usb            (clk_usb),
-    .reg_address        (reg_address),
-    .reg_bytecnt        (reg_bytecnt),
-    .reg_datai          (write_data),
-    .reg_datao          (read_data_sad),
-    .reg_read           (reg_read),
-    .reg_write          (reg_write),
-    .ext_trigger        (1'b0),
-    .trigger            (trigger)
-);
-*/
 
 
 

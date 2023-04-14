@@ -386,9 +386,14 @@ module openadc_interface #(
 
    sad #(
        .pBYTECNT_SIZE           (pBYTECNT_SIZE),
+`ifdef SEMIPRO
+       .pREF_SAMPLES            (256),
+       .pSAD_COUNTER_WIDTH      (13),
+`else
        .pREF_SAMPLES            (128),
-       .pBITS_PER_SAMPLE        (8),
-       .pSAD_COUNTER_WIDTH      (12)
+       .pSAD_COUNTER_WIDTH      (12),
+`endif
+       .pBITS_PER_SAMPLE        (8)
    ) U_sad (
        .reset                   (reset        ),
        .adc_datain              (ADC_data_tofifo[11:4]),
