@@ -21,6 +21,7 @@
 ../hdl/reg_la.v
 ../hdl/userio.v
 ../hdl/sad.v
+../hdl/sad_x2_slowclock.v
 ../hdl/edge_trigger.v
 ../hdl/trigger_pulse_cdc.v
 ../fpga-common/hdl/cdc_pulse.v

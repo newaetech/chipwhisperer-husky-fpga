@@ -239,13 +239,14 @@ tests.append(dict(name  = 'downsample',
 tests.append(dict(name  = 'sad',
              frequency = 2,
              BITS_PER_SAMPLE = 8,
-             REF_SAMPLES = 32, # caution: increasing this slows down simulation *a lot*
+             REF_SAMPLES = 128, # caution: large values can lead to slow simulation
              SHORT_SAD = [0,1],
              THRESHOLD = [20,100], # keep threshold low to avoid unintentional triggers - testbench isn't smart enough
              TRIGGERS = 4,
              FLUSH = [0,1],
              LINEAR_RAMP = 0,
              TIMEOUT_CYCLES = 5000,
+             SAD = 'SAD_X2',
              TOP = 'sad_tb.v',
              description = 'SAD block-level test.'))
 

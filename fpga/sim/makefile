@@ -40,6 +40,7 @@ FLUSH=0
 THRESHOLD=0
 VERBOSE=0
 VARIANT=REGULAR
+SAD=SAD_X2
 
 all: compile run
 all_sad: compile_sad run
@@ -48,7 +49,7 @@ all_edge: compile_edge run
 compile_sad:
 	iverilog \
 	../hdl/sad.v \
-	../hdl/sad_v6.v \
+	../hdl/sad_x2_slowclock.v \
 	../hdl/sad_wrapper.v \
 	../hdl/usb_reg_main.v \
 	../fpga-common/hdl/cdc_pulse.v \
@@ -61,6 +62,7 @@ compile_sad:
 	-Wportbind \
 	-Wselect-range \
 	-D$(VARIANT) \
+	-D$(SAD) \
 	-P sad_tb.pLINEAR_RAMP=$(LINEAR_RAMP) \
 	-P sad_tb.pINPUTS_FROM_FILE=$(INPUTS_FROM_FILE) \
 	-P sad_tb.pREF_SAMPLES=$(REF_SAMPLES) \
@@ -85,6 +87,7 @@ sad_nofifo:
 	-g2005-sv \
 	-DNOFIFO \
 	-D$(VARIANT) \
+	-D$(SAD) \
 	-I../hdl \
 	-Wportbind \
 	-Wselect-range \
@@ -108,6 +111,7 @@ compile_edge:
 	-Wportbind \
 	-Wselect-range \
 	-D$(VARIANT) \
+	-D$(SAD) \
 	-P edge_tb.pEDGES=$(EDGES) \
 	-P edge_tb.pDUMP=$(DUMP) \
 	-P edge_tb.pSEED=$(SEED) \
@@ -126,6 +130,7 @@ compile:
 	-D$(FIFOSIZE) \
 	-DTRACE \
 	-D$(VARIANT) \
+	-D$(SAD) \
 	-I../tracewhisperer/hdl/ \
 	-P cwhusky_tb.pADC_LOW_RES=$(ADC_LOW_RES) \
 	-P cwhusky_tb.pSLOW_ADC=$(SLOW_ADC) \
@@ -186,6 +191,7 @@ lint:
 	-DNOFIFO \
 	-DTRACE \
 	-D$(VARIANT) \
+	-D$(SAD) \
 	--top-module cwhusky_top \
 	2>&1 | tee lint.out \
 
@@ -199,6 +205,7 @@ lint_sad:
 	-DNOFIFO \
 	-DTRACE \
 	-D$(VARIANT) \
+	-D$(SAD) \
 	../hdl/sad.v \
 	../fpga-common/hdl/cdc_pulse.v \
 	../fpga-common/hdl/cdc_simple.v \
@@ -215,6 +222,7 @@ fifo:
 	-I../hdl \
 	-DTRACE \
 	-D$(VARIANT) \
+	-D$(SAD) \
 	-g2005-sv \
 	-Wportbind \
 	-Wselect-range \

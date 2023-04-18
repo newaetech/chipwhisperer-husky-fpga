@@ -87,6 +87,7 @@ module sad_wrapper #(
    );
 
 
+wire trigger_base;
 sad #(
     .pBYTECNT_SIZE      (7),
     .pREF_SAMPLES       (pREF_SAMPLES),
@@ -106,12 +107,17 @@ sad #(
     .reg_write          (reg_write),
     .ext_trigger        (1'b0), // debug only
     .io4                (1'b0), // debug only
-    .trigger            (trigger)
+    .trigger            (trigger_base)
 );
 
+reg ADC_slow_clk_even = 1'b0;
+reg ADC_slow_clk_odd  = 1'b1;
+always @(posedge clk_adc) ADC_slow_clk_even <= ~ADC_slow_clk_even;
+always @(posedge clk_adc) ADC_slow_clk_odd  <= ~ADC_slow_clk_odd;
 
-wire trigger_v4;
-sad_v6 #(
+
+wire trigger_x2;
+sad_x2_slowclock #(
     .pBYTECNT_SIZE      (7),
     .pREF_SAMPLES       (pREF_SAMPLES),
     .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE)
@@ -119,6 +125,8 @@ sad_v6 #(
     .reset              (reset),
     .adc_datain         (adc_datain_r[pBITS_PER_SAMPLE-1:0]),
     .adc_sampleclk      (clk_adc),
+    .slow_clk_even      (ADC_slow_clk_even),
+    .slow_clk_odd       (ADC_slow_clk_odd),
     .armed_and_ready    (armed_and_ready),
     .active             (1'b1),
     .clk_usb            (clk_usb),
@@ -130,9 +138,14 @@ sad_v6 #(
     .reg_write          (reg_write),
     .ext_trigger        (1'b0), // debug only
     .io4                (1'b0), // debug only
-    .trigger            (trigger_v4)
+    .trigger            (trigger_x2)
 );
 
+`ifdef SAD_X2
+    assign trigger = trigger_x2;
+`else
+    assign trigger = trigger_base;
+`endif
 
 
 endmodule

@@ -3,8 +3,8 @@
 // Tool Version: Vivado v.2020.2 (lin64) Build 3064766 Wed Nov 18 09:12:47 MST 2020
 // Date        : Thu Apr 13 12:17:38 2023
 // Host        : red running 64-bit Ubuntu 18.04.6 LTS
-// Command     : write_verilog -force -mode synth_stub
-//               /home/jpnewae/git/cw_husky/fpga/vivado/cwhusky_semipro.srcs/sources_1/ip/fifo_generator_semipro/fifo_generator_semipro_stub.v
+// Command     : write_verilog -force -mode synth_stub -rename_top fifo_generator_semipro -prefix
+//               fifo_generator_semipro_ fifo_generator_semipro_stub.v
 // Design      : fifo_generator_semipro
 // Purpose     : Stub declaration of top-level module interface
 // Device      : xc7a100tftg256-3

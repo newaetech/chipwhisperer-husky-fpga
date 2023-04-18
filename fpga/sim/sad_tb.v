@@ -86,6 +86,12 @@ reg expect_fail;
 integer unexpected;
 integer itrig;
 
+`ifdef SAD_X2
+    integer sad_x2 = 1;
+`else
+    integer sad_x2 = 0;
+`endif
+
 wire usb_clk = clk_usb;
 `include "tb_reg_tasks.v"
 
@@ -97,6 +103,7 @@ initial begin
     $display("Running with seed=%0d", seed);
     rdata = $urandom(seed);
 
+    $display("SAD_X2            = %d", sad_x2);    
     $display("pTRIGGERS         = %d", pTRIGGERS);    
     $display("pFLUSH            = %d", pFLUSH);    
     $display("pLINEAR_RAMP      = %d", pLINEAR_RAMP);    
@@ -230,7 +237,7 @@ initial begin
     end
     // more random stuff to make sure we don't get a trigger from the end of the last modified pattern + start
     // of the next less-modified pattern:
-    repeat(2+$urandom_range(4,10*pattern_samples))
+    repeat(2+$urandom_range(32,10*pattern_samples))
         @(posedge clk_adc) adc_datain = $urandom_range(0, 2**pBITS_PER_SAMPLE-1);
 
     // now apply a pattern that's definitely under the threshold:
@@ -293,10 +300,14 @@ initial begin
 
 end
 
-reg [5:0] trigger_expected_pipe;
+reg [9:0] trigger_expected_pipe;
 always @(posedge clk_adc)
-    trigger_expected_pipe <= {trigger_expected_pipe[4:0], trigger_expected};
-assign trigger_expected_delayed = trigger_expected_pipe[5];
+    trigger_expected_pipe <= {trigger_expected_pipe[8:0], trigger_expected};
+`ifdef SAD_X2
+    assign trigger_expected_delayed = trigger_expected_pipe[9];
+`else
+    assign trigger_expected_delayed = trigger_expected_pipe[5];
+`endif
 
 // trigger check thread:
 initial begin
