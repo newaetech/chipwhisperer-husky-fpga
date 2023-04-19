@@ -245,6 +245,7 @@ tests.append(dict(name  = 'sad',
              FLUSH = [0,1],
              LINEAR_RAMP = 0,
              TIMEOUT_CYCLES = 5000,
+             SAD = 'SAD_OG',
              TOP = 'sad_tb.v',
              description = 'SAD block-level test.'))
 

@@ -39,6 +39,7 @@ TRIGGERS=1
 FLUSH=0
 THRESHOLD=0
 VERBOSE=0
+SAD=SAD_X2
 
 all: compile run
 all_sad: compile_sad run
@@ -47,8 +48,7 @@ all_edge: compile_edge run
 compile_sad:
 	iverilog \
 	../hdl/sad.v \
-	../hdl/sad_v2.v \
-	../hdl/sad_v3_baseline.v \
+	../hdl/sad_x2_slowclock.v \
 	../hdl/sad_wrapper.v \
 	../hdl/usb_reg_main.v \
 	../fpga-common/hdl/cdc_pulse.v \
@@ -60,6 +60,7 @@ compile_sad:
 	-I../hdl \
 	-Wportbind \
 	-Wselect-range \
+	-D$(SAD) \
 	-P sad_tb.pLINEAR_RAMP=$(LINEAR_RAMP) \
 	-P sad_tb.pINPUTS_FROM_FILE=$(INPUTS_FROM_FILE) \
 	-P sad_tb.pREF_SAMPLES=$(REF_SAMPLES) \
@@ -77,12 +78,14 @@ compile_sad:
 sad_nofifo:
 	iverilog \
 	../hdl/sad.v \
+	../hdl/sad_x2_slowclock.v \
 	../hdl/sad_wrapper.v \
 	../hdl/usb_reg_main.v \
 	../fpga-common/hdl/cdc_pulse.v \
 	sad_tb.v \
 	-g2005-sv \
 	-DNOFIFO \
+	-D$(SAD) \
 	-I../hdl \
 	-Wportbind \
 	-Wselect-range \
@@ -121,6 +124,7 @@ compile:
 	-Wportbind \
 	-Wselect-range \
 	-D$(FIFOSIZE) \
+	-D$(SAD) \
 	-DTRACE \
 	-I../tracewhisperer/hdl/ \
 	-P cwhusky_tb.pADC_LOW_RES=$(ADC_LOW_RES) \
@@ -193,7 +197,9 @@ lint_sad:
 	-D__ICARUS__ \
 	-DNOFIFO \
 	-DTRACE \
+	-D$(SAD) \
 	../hdl/sad.v \
+	../hdl/sad_x2_slowclock.v \
 	../fpga-common/hdl/cdc_pulse.v \
 	../fpga-common/hdl/cdc_simple.v \
 	--top-module sad \
@@ -208,6 +214,7 @@ fifo:
         -y/mnt/c/Xilinx/Vivado/2019.2/ids_lite/ISE/verilog/src/unisims/ \
 	-I../hdl \
 	-DTRACE \
+	-D$(SAD) \
 	-g2005-sv \
 	-Wportbind \
 	-Wselect-range \
