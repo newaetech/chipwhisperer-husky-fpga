@@ -389,9 +389,8 @@ module openadc_interface #(
 `ifdef SAD_X2
        sad_x2_slowclock #(
            .pBYTECNT_SIZE           (pBYTECNT_SIZE),
+           .pREF_SAMPLES            (192),
            //.pREF_SAMPLES            (160),
-           //.pSAD_COUNTER_WIDTH      (13),
-           .pREF_SAMPLES            (128),
            .pSAD_COUNTER_WIDTH      (12),
            .pBITS_PER_SAMPLE        (8)
        ) U_sad (
