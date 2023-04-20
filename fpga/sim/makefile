@@ -80,6 +80,7 @@ compile_sad:
 sad_nofifo:
 	iverilog \
 	../hdl/sad.v \
+	../hdl/sad_x2_slowclock.v \
 	../hdl/sad_wrapper.v \
 	../hdl/usb_reg_main.v \
 	../fpga-common/hdl/cdc_pulse.v \
@@ -128,6 +129,7 @@ compile:
 	-Wportbind \
 	-Wselect-range \
 	-D$(FIFOSIZE) \
+	-D$(SAD) \
 	-DTRACE \
 	-D$(VARIANT) \
 	-D$(SAD) \
@@ -207,6 +209,7 @@ lint_sad:
 	-D$(VARIANT) \
 	-D$(SAD) \
 	../hdl/sad.v \
+	../hdl/sad_x2_slowclock.v \
 	../fpga-common/hdl/cdc_pulse.v \
 	../fpga-common/hdl/cdc_simple.v \
 	--top-module sad \

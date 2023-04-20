@@ -538,22 +538,40 @@ module fifo_top_husky(
           slow_fifo_underflow_masked = slow_fifo_underflow && ~no_underflow_errors && (slow_fifo_underflow_count == pMAX_UNDERFLOWS);
     end
 
+    wire slow_fifo_underflow_masked_adc;
+    cdc_simple U_slow_fifo_underflow_masked_cdc (
+        .reset          (reset),
+        .clk            (adc_sampleclk),
+        .data_in        (slow_fifo_underflow_masked),
+        .data_out       (slow_fifo_underflow_masked_adc),
+        .data_out_r     ()
+    );
+
+    wire fifo_rst_start_adc;
+    cdc_pulse U_fifo_rst_start_cdc (
+       .reset_i       (reset),
+       .src_clk       (clk_usb),
+       .src_pulse     (fifo_rst_start && ~fifo_rst_start_r),
+       .dst_clk       (adc_sampleclk),
+       .dst_pulse     (fifo_rst_start_adc)
+    );
+
     function [8:0] error_bits (input [8:0] current_error);
        begin
           error_bits = current_error;
-          if (gain_error)                    error_bits[8] = 1'b1;
-          if (segment_error)                 error_bits[7] = 1'b1;
-          if (downsample_error)              error_bits[6] = 1'b1;
-          if (clip_error)                    error_bits[5] = 1'b1;
-          if (presamp_error)                 error_bits[4] = 1'b1;
-          if (fast_fifo_overflow)            error_bits[3] = 1'b1;
-          if (fast_fifo_underflow)           error_bits[2] = 1'b1;
-          if (slow_fifo_overflow)            error_bits[1] = 1'b1;
-          if (slow_fifo_underflow_masked)    error_bits[0] = 1'b1;
+          if (gain_error)                       error_bits[8] = 1'b1;
+          if (segment_error)                    error_bits[7] = 1'b1;
+          if (downsample_error)                 error_bits[6] = 1'b1;
+          if (clip_error)                       error_bits[5] = 1'b1;
+          if (presamp_error)                    error_bits[4] = 1'b1;
+          if (fast_fifo_overflow)               error_bits[3] = 1'b1;
+          if (fast_fifo_underflow)              error_bits[2] = 1'b1;
+          if (slow_fifo_overflow)               error_bits[1] = 1'b1;
+          if (slow_fifo_underflow_masked_adc)   error_bits[0] = 1'b1;
        end
     endfunction
 
-    always @(posedge clk_usb) begin
+    always @(posedge adc_sampleclk) begin
        if (reset) begin
           error_flag <= 0;
           error_stat <= 0;
@@ -562,7 +580,7 @@ module fifo_top_husky(
           first_error_state <= pS_IDLE;
        end
        else begin
-          if (fifo_rst_start_r || clear_fifo_errors) begin
+          if (fifo_rst_start_adc || clear_fifo_errors_adc) begin
              error_stat <= 0;
              first_error_stat <= 0;
              error_flag <= 0;
@@ -571,7 +589,7 @@ module fifo_top_husky(
           end
           else begin
              if (gain_error || segment_error || downsample_error || clip_error || presamp_error || 
-                 fast_fifo_overflow || fast_fifo_underflow || slow_fifo_overflow || slow_fifo_underflow_masked) begin
+                 fast_fifo_overflow || fast_fifo_underflow || slow_fifo_overflow || slow_fifo_underflow_masked_adc) begin
                 error_flag <= 1;
                 if (!error_flag) begin
                    first_error_stat <= error_bits(first_error_stat);
@@ -581,7 +599,7 @@ module fifo_top_husky(
 
              error_stat <= error_bits(error_stat);
 
-             if (slow_fifo_underflow_masked && (underflow_count != 8'hFF))
+             if (slow_fifo_underflow_masked_adc && (underflow_count != 8'hFF))
                 underflow_count <= underflow_count + 1;
           end
        end

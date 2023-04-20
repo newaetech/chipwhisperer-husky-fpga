@@ -26,8 +26,8 @@ module openadc_interface #(
    parameter pBYTECNT_SIZE = 7
 )(
     input  wire                         clk_usb, // 96 MHz
-    input  wire                         ADC_slow_clk_even,
-    input  wire                         ADC_slow_clk_odd,
+    input  wire                         ADC_slow_clk_even,      // used by sad_x2_slowclock only
+    input  wire                         ADC_slow_clk_odd,       // used by sad_x2_slowclock only
     output wire                         reset_o,
 
     output reg                          LED_armed, // Armed LED
@@ -386,18 +386,14 @@ module openadc_interface #(
 
    assign reg_datao = reg_datao_oadc | reg_datao_fifo | reg_datao_sad | reg_datao_edge;
 
-
 `ifdef SAD_X2
        sad_x2_slowclock #(
            .pBYTECNT_SIZE           (pBYTECNT_SIZE),
     `ifdef SEMIPRO
-           //.pREF_SAMPLES            (256),
-           //.pSAD_COUNTER_WIDTH      (13),
-           //.pREF_SAMPLES            (512),
            .pREF_SAMPLES            (320),
            .pSAD_COUNTER_WIDTH      (12),
     `else
-           .pREF_SAMPLES            (128),
+           .pREF_SAMPLES            (192),
            .pSAD_COUNTER_WIDTH      (12),
     `endif
            .pBITS_PER_SAMPLE        (8)

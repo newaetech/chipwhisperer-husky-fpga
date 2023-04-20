@@ -70,8 +70,6 @@ module sad_x2_slowclock #(
     reg  triggered_even;
     reg  triggered_odd;
     reg [15:0] num_triggers;
-    reg [15:0] num_triggers_even;
-    reg [15:0] num_triggers_odd;
     reg clear_status;
     reg clear_status_r;
     wire clear_status_adc;
@@ -126,6 +124,14 @@ module sad_x2_slowclock #(
     wire [31:0] wide_threshold_reg = {{(32-pSAD_COUNTER_WIDTH){1'b0}}, threshold}; // having a variable-width register isn't very convenient for Python
     reg [7:0] refbase;
 
+    // These are a property of this module; used here to make sure Python
+    // knows what it's talking to, in case there may be different SAD modules
+    // used in different targets or builds.
+    // Format: 2 MSB = version code (00: sad.v, 01: sad_x2_slowclock.v)
+    //         6 LSB = trigger latency
+    wire [7:0] version_bits = {2'b01, 6'd14};
+    wire [15:0] ref_samples = pREF_SAMPLES;
+
     // register reads:
     always @(*) begin
         if (reg_read) begin
@@ -134,10 +140,11 @@ module sad_x2_slowclock #(
                 `SAD_THRESHOLD: reg_datao = wide_threshold_reg[reg_bytecnt*8 +: 8];
                 `SAD_STATUS: reg_datao = status_reg[reg_bytecnt*8 +: 8];
                 `SAD_BITS_PER_SAMPLE: reg_datao = pBITS_PER_SAMPLE;
-                `SAD_REF_SAMPLES: reg_datao = pREF_SAMPLES;
+                `SAD_REF_SAMPLES: reg_datao = ref_samples[reg_bytecnt*8 +: 8];
                 `SAD_COUNTER_WIDTH: reg_datao = pSAD_COUNTER_WIDTH;
                 `SAD_MULTIPLE_TRIGGERS: reg_datao = {7'b0, multiple_triggers};
                 `SAD_SHORT: reg_datao = {7'b0, sad_short};
+                `SAD_VERSION: reg_datao = version_bits;
                 default: reg_datao = 0;
             endcase
         end
@@ -201,18 +208,20 @@ module sad_x2_slowclock #(
 
 
     integer c;
+    reg trigger_r;
     always @(posedge adc_sampleclk) begin
         if (clear_status_adc || (armed_and_ready_adc && ~armed_and_ready_adc_r)) begin
             triggered <= 1'b0;
             num_triggers <= 0;
         end
-        else if (trigger) begin
+        else if (trigger && ~trigger_r) begin
             triggered <= 1'b1;
             num_triggers <= num_triggers + 1;
         end
 
         // TODO: active check? would it be redundant?
         trigger <= 1'b0;
+        trigger_r <= trigger;
         for (c = 0; c < pREF_SAMPLES; c = c + 1) begin
             if (individual_trigger[c] && ~(triggered && ~multiple_triggers)) 
                 trigger <= 1'b1;
@@ -556,23 +565,75 @@ module sad_x2_slowclock #(
     // verilator lint_on UNUSED
     // verilator lint_on WIDTH
 
-   `ifdef ILA_SAD
-       ila_sad U_ila_sad (
-          .clk            (clk_usb),              // input wire clk
-          .probe0         (adc_datain),           // input wire [7:0]  probe0 
-          .probe1         (state),                // input wire [1:0]  probe1 
-          .probe2         (individual_trigger_debug),// input wire [31:0]  probe2 
-          .probe3         (trigger),              // input wire [0:0]  probe3 
-          .probe4         (sad_counter0),         // input wire [15:0]  probe4 
-          .probe5         (sad_counter1),         // input wire [15:0]  probe5 
-          .probe6         (refsamples[31:0]),     // input wire [31:0]  probe6 
-          .probe7         (counter_counter0),     // input wire [6:0]  probe7 
-          .probe8         (arm_i),                // input wire [0:0]  probe8 
-          .probe9         (ext_trigger)           // input wire [0:0]  probe9
-       );
-   `endif
-   //
+   `ifdef ILA_SAD_X2
+       ila_sad_x2 U_ila_sad (
+          .clk            (adc_sampleclk),
+          .probe0         (slow_clk_even),              // 1
+          .probe1         (slow_clk_odd),               // 1
+          .probe2         (trigger),                    // 1
+          .probe3         (triggered),                  // 1
+          .probe4         (individual_trigger_debug),   // 32
+          .probe5         (sad_counter0),               // 8
+          .probe6         (sad_counter1),               // 8
+          .probe7         (sad_counter2),               // 8
+          .probe8         (sad_counter3),               // 8
+          .probe9         (sad_counter4),               // 8
+          .probe10        (sad_counter5),               // 8
+          .probe11        (sad_counter6),               // 8
+          .probe12        (sad_counter7),               // 8
+          .probe13        (counter_incr_a0),            // 8
+          .probe14        (counter_incr_a1),            // 8
+          .probe15        (counter_incr_a2),            // 8
+          .probe16        (counter_incr_a3),            // 8
+          .probe17        (counter_incr_b0),            // 8
+          .probe18        (counter_incr_b1),            // 8
+          .probe19        (counter_incr_b2),            // 8
+          .probe20        (counter_incr_b3),            // 8
+          .probe21        (adc_datain),                 // 8
+          .probe22        (adc_datain_r),               // 8
+          .probe23        (adc_datain_r2),              // 8
+          .probe24        (adc_datain_even_r),          // 8
+          .probe25        (adc_datain_even_r2),         // 8
+          .probe26        (adc_datain_odd_r),           // 8
+          .probe27        (adc_datain_odd_r2)           // 8
+      );
 
+       ila_sad_x2_slowclk U_ila_sad_even (
+          .clk            (slow_clk_even),              // 1
+          .probe0         (trigger),                    // 1
+          .probe1         (triggered),                  // 1
+          .probe2         (individual_trigger_debug),   // 32
+          .probe3         (sad_counter0),               // 8
+          .probe4         (sad_counter2),               // 8
+          .probe5         (sad_counter4),               // 8
+          .probe6         (sad_counter6),               // 8
+          .probe7         (counter_incr_a0),            // 8
+          .probe8         (counter_incr_a2),            // 8
+          .probe9         (counter_incr_b0),            // 8
+          .probe10        (counter_incr_b2),            // 8
+          .probe11        (adc_datain_even_r),          // 8
+          .probe12        (adc_datain_even_r2)          // 8
+      );
+
+       ila_sad_x2_slowclk U_ila_sad_odd (
+          .clk            (slow_clk_odd),               // 1
+          .probe0         (trigger),                    // 1
+          .probe1         (triggered),                  // 1
+          .probe2         (individual_trigger_debug),   // 32
+          .probe3         (sad_counter0),               // 8
+          .probe4         (sad_counter2),               // 8
+          .probe5         (sad_counter4),               // 8
+          .probe6         (sad_counter6),               // 8
+          .probe7         (counter_incr_a0),            // 8
+          .probe8         (counter_incr_a2),            // 8
+          .probe9         (counter_incr_b0),            // 8
+          .probe10        (counter_incr_b2),            // 8
+          .probe11        (adc_datain_odd_r),           // 8
+          .probe12        (adc_datain_odd_r2)           // 8
+      );
+
+
+   `endif
 
 endmodule
 `default_nettype wire
