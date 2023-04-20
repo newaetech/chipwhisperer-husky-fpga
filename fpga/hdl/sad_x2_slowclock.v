@@ -70,8 +70,6 @@ module sad_x2_slowclock #(
     reg  triggered_even;
     reg  triggered_odd;
     reg [15:0] num_triggers;
-    reg [15:0] num_triggers_even;
-    reg [15:0] num_triggers_odd;
     reg clear_status;
     reg clear_status_r;
     wire clear_status_adc;
@@ -210,18 +208,20 @@ module sad_x2_slowclock #(
 
 
     integer c;
+    reg trigger_r;
     always @(posedge adc_sampleclk) begin
         if (clear_status_adc || (armed_and_ready_adc && ~armed_and_ready_adc_r)) begin
             triggered <= 1'b0;
             num_triggers <= 0;
         end
-        else if (trigger) begin
+        else if (trigger && ~trigger_r) begin
             triggered <= 1'b1;
             num_triggers <= num_triggers + 1;
         end
 
         // TODO: active check? would it be redundant?
         trigger <= 1'b0;
+        trigger_r <= trigger;
         for (c = 0; c < pREF_SAMPLES; c = c + 1) begin
             if (individual_trigger[c] && ~(triggered && ~multiple_triggers)) 
                 trigger <= 1'b1;
