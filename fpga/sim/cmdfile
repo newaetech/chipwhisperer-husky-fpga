@@ -38,6 +38,9 @@
 ../tracewhisperer/phywhisperer-common/hardware/hdl/pw_trigger.v
 ../tracewhisperer/sim/vivado/fifo_generator_0_sim_netlist.v
 ../tracewhisperer/sim/vivado/fifo_generator_tiny_sim_netlist.v
+../tracewhisperer/sim/vivado/fifo_generator_semipro_sim_netlist.v
+vivado/adc_fast_fifo_semipro_sim_netlist.v
+vivado/usb_slow_fifo_semipro_sim_netlist.v
 vivado/adc_fast_fifo_sim_netlist.v
 vivado/usb_slow_fifo_sim_netlist.v
 vivado/tiny_adc_fast_fifo_sim_netlist.v
