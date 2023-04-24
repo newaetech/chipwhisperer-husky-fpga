@@ -27,6 +27,8 @@
 ../fpga-common/hdl/cdc_pulse.v
 ../fpga-common/hdl/cdc_bus.v
 ../fpga-common/hdl/cdc_simple.v
+../fpga-common/hdl/fifo_async.v
+../fpga-common/hdl/fifo_sync.v
 ../tracewhisperer/hdl/trace_top.v
 ../tracewhisperer/hdl/reg_trace.v
 ../tracewhisperer/hdl/fe_capture_trace.v
@@ -39,6 +41,7 @@
 ../tracewhisperer/sim/vivado/fifo_generator_0_sim_netlist.v
 ../tracewhisperer/sim/vivado/fifo_generator_tiny_sim_netlist.v
 ../tracewhisperer/sim/vivado/fifo_generator_semipro_sim_netlist.v
+vivado/xpm_memory.sv
 vivado/adc_fast_fifo_semipro_sim_netlist.v
 vivado/usb_slow_fifo_semipro_sim_netlist.v
 vivado/adc_fast_fifo_sim_netlist.v

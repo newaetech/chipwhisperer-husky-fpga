@@ -18,6 +18,7 @@ parser.add_argument("--exclude", help="Exclude tests whose name contains TESTS",
 parser.add_argument("--list", help="List available tests.", action='store_true')
 parser.add_argument("--dump", help="Enable waveform dumping.", action='store_true')
 parser.add_argument("--proc", type=int, help="Maximum number of parallel jobs to dispatch.", default=32)
+parser.add_argument("--fast_fifo_sim", help="Force FIFOs to use flopped version, for considerably faster run times.", action='store_true')
 parser.add_argument("--variant", help="Husky variant (regular/semi/pro)", default='regular')
 args = parser.parse_args()
 
@@ -127,7 +128,7 @@ tests.append(dict(name  = 'both_fifos',
              OFFSET_ENABLE = [0,1],
              SHORT_TRIGGER = [0,1],
              TIMEOUT_CYCLES = 500000,
-             FIFO_SAMPLES = 4096))
+             FIFO_SAMPLES = 4095)) # TODO: used to be 4096 but that fails with NOXILINXFIFO
 
 tests.append(dict(name  = 'presamp_error',
              frequency = 10,
@@ -405,6 +406,8 @@ for test in tests:
       makeargs.append("SEED=%d" % seed)
       if args.dump:
          makeargs.append('DUMP=1')
+      if args.fast_fifo_sim:
+          makeargs.append('FAST_FIFO_SIM=FAST_FIFO_SIM')
       for key in test.keys():
          if key == 'name':
             logfile = "results/%s%d.log" % (test[key], i) 

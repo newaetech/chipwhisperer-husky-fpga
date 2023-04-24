@@ -26,6 +26,7 @@ SEED=1
 TIMEOUT_CYCLES=50000
 DUMP=0
 FIFOSIZE=REGULARFIFO
+FAST_FIFO_SIM=NOFASTFIFO
 ERRORS_OK=0
 PRESAMP_ERROR=0
 DOWNSAMPLE=0
@@ -125,14 +126,16 @@ compile:
 	iverilog -ccmdfile \
 	cwhusky_tb.v \
 	-g2005-sv \
+	-gsupported-assertions \
 	-I../hdl \
 	-Wportbind \
 	-Wselect-range \
 	-D$(FIFOSIZE) \
+	-D$(FAST_FIFO_SIM) \
 	-D$(SAD) \
 	-DTRACE \
 	-D$(VARIANT) \
-	-D$(SAD) \
+	-DNOXILINXFIFO \
 	-I../tracewhisperer/hdl/ \
 	-P cwhusky_tb.pADC_LOW_RES=$(ADC_LOW_RES) \
 	-P cwhusky_tb.pSLOW_ADC=$(SLOW_ADC) \
@@ -179,6 +182,7 @@ nofifo:
 	-Wportbind \
 	-Wselect-range \
 	-DNOFIFO \
+	-DNOXILINXFIFO \
 	-DTRACE \
 
 lint:
@@ -191,6 +195,7 @@ lint:
 	-I../tracewhisperer/hdl/ \
 	-D__ICARUS__ \
 	-DNOFIFO \
+	-DNOXILINXFIFO \
 	-DTRACE \
 	-D$(VARIANT) \
 	-D$(SAD) \
