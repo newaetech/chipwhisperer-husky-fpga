@@ -408,6 +408,7 @@ for test in tests:
          makeargs.append('DUMP=1')
       if args.fast_fifo_sim:
           makeargs.append('FAST_FIFO_SIM=FAST_FIFO_SIM')
+      makeargs.append(variant)
       for key in test.keys():
          if key == 'name':
             logfile = "results/%s%d.log" % (test[key], i) 
