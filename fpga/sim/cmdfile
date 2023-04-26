@@ -10,6 +10,7 @@
 ../hdl/trigger_unit.v
 ../hdl/usb_reg_main.v
 ../hdl/fifo_top_husky.v
+../hdl/semipro_slow_fifo.v
 ../hdl/reg_clockglitch.v
 ../hdl/cwhusky_top.v
 ../hdl/openadc_interface.v
@@ -43,7 +44,9 @@
 ../tracewhisperer/sim/vivado/fifo_generator_semipro_sim_netlist.v
 vivado/xpm_memory.sv
 vivado/adc_fast_fifo_semipro_sim_netlist.v
+vivado/usb_slow_fifo1_semipro_sim_netlist.v
 vivado/usb_slow_fifo_semipro_sim_netlist.v
+vivado/tiny_usb_slow_fifo1_semipro_sim_netlist.v
 vivado/adc_fast_fifo_sim_netlist.v
 vivado/usb_slow_fifo_sim_netlist.v
 vivado/tiny_adc_fast_fifo_sim_netlist.v

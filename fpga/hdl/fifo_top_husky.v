@@ -779,9 +779,12 @@ module fifo_top_husky(
         `ifdef TINYFIFO
             localparam pADC_DEPTH = 1024;
             localparam pUSB_DEPTH = 1024;
+            localparam pUSB_DEPTH1 = 512;
+            localparam pUSB_DEPTH2 = 1024;
         `elsif SEMIPRO
-            localparam pADC_DEPTH = 131072;
-            localparam pUSB_DEPTH = 131072;
+            localparam pADC_DEPTH = 32768;
+            localparam pUSB_DEPTH1 = 32768;
+            localparam pUSB_DEPTH2 = 65536;
         `else
             localparam pADC_DEPTH = 32768;
             localparam pUSB_DEPTH = 32768;
@@ -812,118 +815,160 @@ module fifo_top_husky(
             .almost_full    (),
             .underflow      (fast_fifo_underflow)
         );
-
-        fifo_async #(
-            .pDATA_WIDTH    (36),
-            .pDEPTH         (pUSB_DEPTH),
-            .pFALLTHROUGH   (1),
-            .pFLOPS         (0),
-            .pDISTRIBUTED   (0),
-            .pBRAM          (1)
-        ) U_usb_slow_fifo (
-            .wclk                   (adc_sampleclk),
-            .rclk                   (clk_usb),
-            .wrst_n                 (~fifo_rst),
-            .rrst_n                 (~fifo_rst),
-            .wfull_threshold_value  (0),
-            .rempty_threshold_value (0),
-            .wen                    (slow_fifo_wr),
-            .wdata                  (slow_fifo_din),
-            .wfull                  (slow_fifo_full),
-            .walmost_full           (),
-            .woverflow              (slow_fifo_overflow),
-            .wfull_threshold        (),
-            .ren                    (slow_fifo_rd),
-            .rdata                  (slow_fifo_dout),
-            .rempty                 (slow_fifo_empty),
-            .ralmost_empty          (),
-            .rempty_threshold       (),
-            .runderflow             (slow_fifo_underflow)
-        );
+        `ifdef SEMIPRO
+            semipro_slow_fifo #(
+                .pDEPTH1        (pUSB_DEPTH1),
+                .pDEPTH2        (pUSB_DEPTH2)
+            ) U_usb_slow_fifo (
+                .streaming              (stream_mode),
+                .wclk                   (adc_sampleclk),
+                .rclk                   (clk_usb),
+                .rst_n                  (~fifo_rst),
+                .wr                     (slow_fifo_wr),
+                .din                    (slow_fifo_din),
+                .full                   (slow_fifo_full),
+                .overflow               (slow_fifo_overflow),
+                .rd                     (slow_fifo_rd),
+                .dout                   (slow_fifo_dout),
+                .empty                  (slow_fifo_empty),
+                .underflow              (slow_fifo_underflow),
+                .fast_fifo_wr           (fast_fifo_wr),
+                .fast_fifo_full         (fast_fifo_full)
+            );
+        `else
+            fifo_async #(
+                .pDATA_WIDTH    (36),
+                .pDEPTH         (pUSB_DEPTH),
+                .pFALLTHROUGH   (1),
+                .pFLOPS         (0),
+                .pDISTRIBUTED   (0),
+                .pBRAM          (1)
+            ) U_usb_slow_fifo (
+                .wclk                   (adc_sampleclk),
+                .rclk                   (clk_usb),
+                .wrst_n                 (~fifo_rst),
+                .rrst_n                 (~fifo_rst),
+                .wfull_threshold_value  (0),
+                .rempty_threshold_value (0),
+                .wen                    (slow_fifo_wr),
+                .wdata                  (slow_fifo_din),
+                .wfull                  (slow_fifo_full),
+                .walmost_full           (),
+                .woverflow              (slow_fifo_overflow),
+                .wfull_threshold        (),
+                .ren                    (slow_fifo_rd),
+                .rdata                  (slow_fifo_dout),
+                .rempty                 (slow_fifo_empty),
+                .ralmost_empty          (),
+                .rempty_threshold       (),
+                .runderflow             (slow_fifo_underflow)
+            );
+        `endif
 
     `else
-        `ifdef TINYFIFO
-           //for faster corner case simulation
-           tiny_adc_fast_fifo U_adc_fast_fifo(
-              .clk          (adc_sampleclk),
-              .rst          (fifo_rst),
-              .din          (adc_datain),
-              .wr_en        (fast_fifo_wr),
-              .rd_en        (fast_fifo_rd),
-              .dout         (fast_fifo_dout),
-              .full         (fast_fifo_full),
-              .empty        (fast_fifo_empty),
-              .overflow     (fast_fifo_overflow),
-              .underflow    (fast_fifo_underflow)
-           );
-           tiny_usb_slow_fifo U_usb_slow_fifo(
-              .rst          (fifo_rst),
-              .wr_clk       (adc_sampleclk),
-              .rd_clk       (clk_usb),
-              .din          (slow_fifo_din),
-              .wr_en        (slow_fifo_wr),
-              .rd_en        (slow_fifo_rd),
-              .dout         (slow_fifo_dout),
-              .full         (slow_fifo_full),
-              .empty        (slow_fifo_empty),
-              .overflow     (slow_fifo_overflow),
-              .underflow    (slow_fifo_underflow)
+
+        `ifdef SEMIPRO
+           `ifdef TINYFIFO
+               tiny_adc_fast_fifo U_adc_fast_fifo(
+                  .clk          (adc_sampleclk),
+                  .rst          (fifo_rst),
+                  .din          (adc_datain),
+                  .wr_en        (fast_fifo_wr),
+                  .rd_en        (fast_fifo_rd),
+                  .dout         (fast_fifo_dout),
+                  .full         (fast_fifo_full),
+                  .empty        (fast_fifo_empty),
+                  .overflow     (fast_fifo_overflow),
+                  .underflow    (fast_fifo_underflow)
+               );
+           `else
+               adc_fast_fifo U_adc_fast_fifo(
+                  .clk          (adc_sampleclk),
+                  .rst          (fifo_rst),
+                  .din          (adc_datain),
+                  .wr_en        (fast_fifo_wr),
+                  .rd_en        (fast_fifo_rd),
+                  .dout         (fast_fifo_dout),
+                  .full         (fast_fifo_full),
+                  .empty        (fast_fifo_empty),
+                  .overflow     (fast_fifo_overflow),
+                  .underflow    (fast_fifo_underflow)
+               );
+           `endif
+           semipro_slow_fifo U_usb_slow_fifo (
+               .streaming              (stream_mode),
+               .wclk                   (adc_sampleclk),
+               .rclk                   (clk_usb),
+               .rst_n                  (~fifo_rst),
+               .wr                     (slow_fifo_wr),
+               .din                    (slow_fifo_din),
+               .full                   (slow_fifo_full),
+               .overflow               (slow_fifo_overflow),
+               .rd                     (slow_fifo_rd),
+               .dout                   (slow_fifo_dout),
+               .empty                  (slow_fifo_empty),
+               .underflow              (slow_fifo_underflow),
+               .fast_fifo_wr           (fast_fifo_wr),
+               .fast_fifo_full         (fast_fifo_full)
            );
 
-        `elsif SEMIPRO
-           adc_fast_fifo_semipro U_adc_fast_fifo(
-              .clk          (adc_sampleclk),
-              .rst          (fifo_rst),
-              .din          (adc_datain),
-              .wr_en        (fast_fifo_wr),
-              .rd_en        (fast_fifo_rd),
-              .dout         (fast_fifo_dout),
-              .full         (fast_fifo_full),
-              .empty        (fast_fifo_empty),
-              .overflow     (fast_fifo_overflow),
-              .underflow    (fast_fifo_underflow)
-           );
-           usb_slow_fifo_semipro U_usb_slow_fifo(
-              .rst          (fifo_rst),
-              .wr_clk       (adc_sampleclk),
-              .rd_clk       (clk_usb),
-              .din          (slow_fifo_din),
-              .wr_en        (slow_fifo_wr),
-              .rd_en        (slow_fifo_rd),
-              .dout         (slow_fifo_dout),
-              .full         (slow_fifo_full),
-              .empty        (slow_fifo_empty),
-              .overflow     (slow_fifo_overflow),
-              .underflow    (slow_fifo_underflow)
-           );
+        `else // regular Husky
+            `ifdef TINYFIFO
+               //for faster corner case simulation
+               tiny_adc_fast_fifo U_adc_fast_fifo(
+                  .clk          (adc_sampleclk),
+                  .rst          (fifo_rst),
+                  .din          (adc_datain),
+                  .wr_en        (fast_fifo_wr),
+                  .rd_en        (fast_fifo_rd),
+                  .dout         (fast_fifo_dout),
+                  .full         (fast_fifo_full),
+                  .empty        (fast_fifo_empty),
+                  .overflow     (fast_fifo_overflow),
+                  .underflow    (fast_fifo_underflow)
+               );
+               tiny_usb_slow_fifo U_usb_slow_fifo(
+                  .rst          (fifo_rst),
+                  .wr_clk       (adc_sampleclk),
+                  .rd_clk       (clk_usb),
+                  .din          (slow_fifo_din),
+                  .wr_en        (slow_fifo_wr),
+                  .rd_en        (slow_fifo_rd),
+                  .dout         (slow_fifo_dout),
+                  .full         (slow_fifo_full),
+                  .empty        (slow_fifo_empty),
+                  .overflow     (slow_fifo_overflow),
+                  .underflow    (slow_fifo_underflow)
+               );
 
-        `else
-           //normal case
-           adc_fast_fifo U_adc_fast_fifo(
-              .clk          (adc_sampleclk),
-              .rst          (fifo_rst),
-              .din          (adc_datain),
-              .wr_en        (fast_fifo_wr),
-              .rd_en        (fast_fifo_rd),
-              .dout         (fast_fifo_dout),
-              .full         (fast_fifo_full),
-              .empty        (fast_fifo_empty),
-              .overflow     (fast_fifo_overflow),
-              .underflow    (fast_fifo_underflow)
-           );
-           usb_slow_fifo U_usb_slow_fifo(
-              .rst          (fifo_rst),
-              .wr_clk       (adc_sampleclk),
-              .rd_clk       (clk_usb),
-              .din          (slow_fifo_din),
-              .wr_en        (slow_fifo_wr),
-              .rd_en        (slow_fifo_rd),
-              .dout         (slow_fifo_dout),
-              .full         (slow_fifo_full),
-              .empty        (slow_fifo_empty),
-              .overflow     (slow_fifo_overflow),
-              .underflow    (slow_fifo_underflow)
-           );
+            `else
+               //normal case
+               adc_fast_fifo U_adc_fast_fifo(
+                  .clk          (adc_sampleclk),
+                  .rst          (fifo_rst),
+                  .din          (adc_datain),
+                  .wr_en        (fast_fifo_wr),
+                  .rd_en        (fast_fifo_rd),
+                  .dout         (fast_fifo_dout),
+                  .full         (fast_fifo_full),
+                  .empty        (fast_fifo_empty),
+                  .overflow     (fast_fifo_overflow),
+                  .underflow    (fast_fifo_underflow)
+               );
+               usb_slow_fifo U_usb_slow_fifo(
+                  .rst          (fifo_rst),
+                  .wr_clk       (adc_sampleclk),
+                  .rd_clk       (clk_usb),
+                  .din          (slow_fifo_din),
+                  .wr_en        (slow_fifo_wr),
+                  .rd_en        (slow_fifo_rd),
+                  .dout         (slow_fifo_dout),
+                  .full         (slow_fifo_full),
+                  .empty        (slow_fifo_empty),
+                  .overflow     (slow_fifo_overflow),
+                  .underflow    (slow_fifo_underflow)
+               );
+            `endif
         `endif
 
     `endif
@@ -1060,6 +1105,7 @@ module fifo_top_husky(
        `endif
 
 
+       /*
        ila_slow_fifo U_ila_slow_fifo (
           .clk            (clk_usb),              // input wire clk
           .probe0         (reset),                // input wire [0:0]  probe0  
@@ -1079,6 +1125,7 @@ module fifo_top_husky(
           .probe14        (stream_segment_available), // input wire [0:0]  probe14
           .probe15        (fast_fifo_read_mode)   // input wire [0:0]  probe15
        );
+       */
 
        /*
        ila_long_fifo U_ila_long_fifo (

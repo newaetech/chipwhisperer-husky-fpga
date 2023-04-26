@@ -262,12 +262,12 @@ set_property -dict { PACKAGE_PIN E3   IOSTANDARD LVCMOS33 }  [get_ports glitchou
 
 
 # No spec for these, seems sensible:
-set_input_delay -clock clk_usb 2.000 [get_ports USB_ALEn]
-set_input_delay -clock clk_usb 2.000 [get_ports USB_CEn]
-set_input_delay -clock clk_usb 2.000 [get_ports USB_RDn]
-set_input_delay -clock clk_usb 2.000 [get_ports USB_WRn]
-set_input_delay -clock clk_usb 2.000 [get_ports USB_Data]
-set_input_delay -clock clk_usb 2.000 [get_ports USB_Addr]
+set_input_delay -clock clk_usb 4.000 [get_ports USB_ALEn]
+set_input_delay -clock clk_usb 4.000 [get_ports USB_CEn]
+set_input_delay -clock clk_usb 4.000 [get_ports USB_RDn]
+set_input_delay -clock clk_usb 4.000 [get_ports USB_WRn]
+set_input_delay -clock clk_usb 4.000 [get_ports USB_Data]
+set_input_delay -clock clk_usb 4.000 [get_ports USB_Addr]
 
 set_output_delay -clock clk_usb 0.000 [get_ports USB_SPARE0]
 set_false_path -to [get_ports USB_SPARE0]

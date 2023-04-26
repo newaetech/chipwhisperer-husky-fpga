@@ -43,6 +43,19 @@ tests.append(dict(name  = 'fast_adc',
              description = 'Fast ADC clock.',
              FAST_ADC = 1))
 
+tests.append(dict(name  = 'semipro_combo_fifo',
+             frequency = 5,
+             FIFOSIZE = "TINYFIFO",
+             READ_DELAY = 100,
+             FIFO_SAMPLES = 5631,
+             PRESAMPLES = 0,
+             TRIGGER_NOW = 1,
+             ADC_LOW_RES = 1,
+             OFFSET_ENABLE = 0,
+             SHORT_TRIGGER = 1,
+             description = 'Stress test of the semipro combo (slow) fifo.',
+             FAST_ADC = 1))
+
 tests.append(dict(name  = 'nom_adc',
              frequency = 5,
              TRIGGER_NOW = [0,1],
