@@ -9,7 +9,7 @@ OFFSET_MIN = 0
 OFFSET_MAX = 1000
 SHORT_TRIGGER = 0
 TRIGGER_DELAY=1500
-READ_DELAY=100
+READ_DELAY=150
 NUM_SEGMENTS = 1
 NUM_GLITCHES = 1
 MAX_GLITCH_REPEATS = 0
@@ -42,6 +42,7 @@ THRESHOLD=0
 VERBOSE=0
 VARIANT=REGULAR
 SAD=SAD_X2
+FIFO_TYPE=NOXILINXFIFO
 
 all: compile run
 all_sad: compile_sad run
@@ -135,7 +136,7 @@ compile:
 	-D$(SAD) \
 	-DTRACE \
 	-D$(VARIANT) \
-	-DNOXILINXFIFO \
+	-D$(FIFO_TYPE) \
 	-I../tracewhisperer/hdl/ \
 	-P cwhusky_tb.pADC_LOW_RES=$(ADC_LOW_RES) \
 	-P cwhusky_tb.pSLOW_ADC=$(SLOW_ADC) \
