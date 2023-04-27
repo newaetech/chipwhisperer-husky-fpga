@@ -33,6 +33,7 @@ module sad #(
     parameter pSAD_COUNTER_WIDTH = 16
 )(
     input wire          reset,
+    input wire          xadc_error,
 
     //ADC Sample Input
     input wire [pBITS_PER_SAMPLE-1:0] adc_datain,
@@ -185,7 +186,7 @@ module sad #(
     wire [pMASTER_COUNTER_WIDTH-1:0] master_counter_top = (sad_short)? pREF_SAMPLES/2-1 : pREF_SAMPLES-1;
 
     always @(posedge adc_sampleclk) begin
-        if (armed_and_ready_adc && active) begin
+        if (armed_and_ready_adc && active && ~xadc_error) begin
             ready2trigger_1andup <= {ready2trigger_1andup[pREF_SAMPLES-2:1], ready2trigger0};
             resetter <= {resetter[pREF_SAMPLES-2:0], resetter[pREF_SAMPLES-1]};
             if (master_counter == master_counter_top) begin

@@ -29,6 +29,7 @@ module openadc_interface #(
     input  wire                         ADC_slow_clk_even,      // used by sad_x2_slowclock only
     input  wire                         ADC_slow_clk_odd,       // used by sad_x2_slowclock only
     output wire                         reset_o,
+    input  wire                         xadc_error,
 
     output reg                          LED_armed, // Armed LED
     output reg                          LED_capture, // Capture in Progress LED (only illuminate during capture, very quick)
@@ -399,6 +400,7 @@ module openadc_interface #(
            .pBITS_PER_SAMPLE        (8)
        ) U_sad (
            .reset                   (reset        ),
+           .xadc_error              (xadc_error   ),
            .adc_datain              (ADC_data_tofifo[11:4]),
            .adc_sampleclk           (ADC_clk_sample),
            .slow_clk_even           (ADC_slow_clk_even),
@@ -432,6 +434,7 @@ module openadc_interface #(
            .pBITS_PER_SAMPLE        (8)
        ) U_sad (
            .reset                   (reset        ),
+           .xadc_error              (xadc_error   ),
            .adc_datain              (ADC_data_tofifo[11:4]),
            .adc_sampleclk           (ADC_clk_sample),
            .armed_and_ready         (armed_and_ready),

@@ -33,6 +33,7 @@ module sad_x2_slowclock #(
     parameter pSAD_COUNTER_WIDTH = 16
 )(
     input wire          reset,
+    input wire          xadc_error,
 
     //ADC Sample Input
     input wire [pBITS_PER_SAMPLE-1:0] adc_datain,
@@ -287,7 +288,7 @@ module sad_x2_slowclock #(
         for (i = 0; i < pREF_SAMPLES; i = i + 2) begin: gen_sad_even_counters
             assign refsample[i+0] = refsamples[(i+0)*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
             always @(posedge slow_clk_even) begin
-                if (armed_and_ready_adc_even && active) begin
+                if (armed_and_ready_adc_even && active && ~xadc_error) begin
                     if (i > 0) ready2trigger_even[i] <= ready2trigger_even[i-2];
                     else if (master_counter_even == master_counter_top) ready2trigger_even[0] <= 1;
                     if (i == 0) resetter_even[i] <= resetter_even[pREF_SAMPLES-2];
@@ -371,7 +372,7 @@ module sad_x2_slowclock #(
         for (j = 1; j < pREF_SAMPLES-0; j = j + 2) begin: gen_sad_odd_counters
             assign refsample[j+0] = refsamples[(j+0)*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
             always @(posedge slow_clk_odd) begin
-                if (armed_and_ready_adc_odd && active) begin
+                if (armed_and_ready_adc_odd && active && ~xadc_error) begin
                     if (j > 1) ready2trigger_odd[j] <= ready2trigger_odd[j-2];
                     else if (master_counter_odd >= master_counter_top) ready2trigger_odd[1] <= 1;
 

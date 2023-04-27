@@ -377,6 +377,7 @@ module cwhusky_top(
         .ADC_slow_clk_even      (ADC_slow_clk_even),
         .ADC_slow_clk_odd       (ADC_slow_clk_odd),
         .reset_o                (reg_rst),
+        .xadc_error             (xadc_error_flag),
 
         .LED_capture            (cw_led_cap),
         .LED_armed              (cw_led_armed),
