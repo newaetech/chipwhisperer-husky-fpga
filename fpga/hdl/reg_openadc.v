@@ -51,6 +51,7 @@ module reg_openadc #(
    output reg  [11:0]  trigger_adclevel,
    output wire         trigger_now,
    output wire [31:0]  trigger_offset,
+   output reg          trigger_filter,
    input  wire [31:0]  trigger_length,
 
    /* Measurement of external clock frequency */
@@ -242,6 +243,7 @@ module reg_openadc #(
             `EXTCLK_MONITOR_DISABLED: extclk_monitor_disabled <= reg_datai[0];
             `EXTCLK_CHANGE_LIMIT: extclk_limit[reg_bytecnt*8 +: 8] <= reg_datai;
             `ADC_TRIGGER_LEVEL: trigger_adclevel[reg_bytecnt*8 +: 8] <= reg_datai;
+            `TRIGGER_DUR_ADDR: trigger_filter <= reg_datai[0];
             default: ;
          endcase
       end

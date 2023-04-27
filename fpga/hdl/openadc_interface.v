@@ -74,6 +74,7 @@ module openadc_interface #(
     output wire                         slow_fifo_wr,
     output wire                         slow_fifo_rd,
     output wire [8:0]                   la_debug,
+    output wire [3:0]                   la_debug2,
     output wire [7:0]                   fifo_debug,
     output wire [7:0]                   edge_trigger_debug
 
@@ -290,6 +291,7 @@ module openadc_interface #(
    wire trigger_now;
    wire [31:0] trigger_offset;
    wire [31:0] trigger_length;
+   wire trigger_filter;
 
    trigger_unit tu_inst(
       .reset                (reset),
@@ -302,6 +304,7 @@ module openadc_interface #(
       .arm_i                (cmd_arm_adc),
       .arm_o                (armed),
       .trigger_offset_i     (trigger_offset),
+      .trigger_filter_i     (trigger_filter),
       .trigger_length_o     (trigger_length),
       .capture_active_o     (capture_active),
       .capture_go_o         (capture_go),
@@ -310,7 +313,8 @@ module openadc_interface #(
 
       .fifo_rst             (fifo_rst),
       .cmd_arm_usb          (cmd_arm_usb),
-      .la_debug             (la_debug)
+      .la_debug             (la_debug),
+      .la_debug2            (la_debug2)
    );
    
    reg trigger_adc_allowed;
@@ -481,6 +485,7 @@ module openadc_interface #(
       .trigger_adclevel             (trigger_adclevel),
       .trigger_now                  (trigger_now),
       .trigger_offset               (trigger_offset),
+      .trigger_filter               (trigger_filter),
       .trigger_length               (trigger_length),
       .extclk_frequency             (extclk_frequency),
       .adcclk_frequency             (adcclk_frequency),

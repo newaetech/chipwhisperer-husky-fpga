@@ -181,6 +181,7 @@ module cwhusky_top(
    wire [7:0] fifo_dout;
 
    wire [8:0] tu_la_debug;
+   wire [3:0] tu_la_debug2;
    wire [7:0] fifo_debug;
    wire [7:0] edge_trigger_debug;
    wire [7:0] clockglitch_debug1;
@@ -335,7 +336,8 @@ module cwhusky_top(
                                  (userio_fpga_debug_select == 4'b0111)?  usb_debug2 : 
                                  (userio_fpga_debug_select == 4'b1000)?  usb_debug3 :
                                  (userio_fpga_debug_select == 4'b1001)?  edge_trigger_debug :
-                                 (userio_fpga_debug_select == 4'b1010)?  {cmd_arm_usb, clockglitch_debug3[6:0]} : 8'b0;
+                                 (userio_fpga_debug_select == 4'b1010)?  {cmd_arm_usb, clockglitch_debug3[6:0]} :
+                                 (userio_fpga_debug_select == 4'b1011)?  {1'b0, fifo_error_flag, fifo_debug[7], fifo_debug[3], tu_la_debug2} : 8'b0;
                                  //(userio_fpga_debug_select == 4'b1010)?  clockglitch_debug3 : 8'b0;
 
    `else
@@ -407,6 +409,7 @@ module cwhusky_top(
         .slow_fifo_wr           (slow_fifo_wr),
         .slow_fifo_rd           (slow_fifo_rd),
         .la_debug               (tu_la_debug),
+        .la_debug2              (tu_la_debug2),
         .edge_trigger_debug     (edge_trigger_debug),
         .fifo_debug             (fifo_debug)
 

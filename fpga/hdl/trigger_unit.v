@@ -37,6 +37,7 @@ module trigger_unit(
     output reg               arm_o,              //Status of internal arm logic
 
     input wire [31:0]        trigger_offset_i,   //Delays the capture_go_o by this many ADC clock cycles
+    input wire               trigger_filter_i,   //don't trigger unless it's active for several consecutive clock cycles
     output reg  [31:0]       trigger_length_o,   //Length of trigger pulse in ADC samples (only valid AFTER trigger happened)
 
     output reg               capture_active_o,     //1 = trigger conditions met, stays high until 'capture_done_i' goes high
@@ -46,7 +47,8 @@ module trigger_unit(
 
     input wire               fifo_rst,             // for debug only
     input wire               cmd_arm_usb,          // for debug only
-    output wire [8:0]        la_debug              // for debug only
+    output wire [8:0]        la_debug,             // for debug only
+    output wire [3:0]        la_debug2             // for debug only
     );
 
    //**** Trigger Logic *****
@@ -64,6 +66,16 @@ module trigger_unit(
    reg trigger_now_r2;
    wire trigger_now;
    reg triggered;
+
+   localparam pFILTER_STAGES = 3;
+   (* ASYNC_REG = "TRUE" *) reg[1:0] trigger_filter_pipe1;
+   reg [pFILTER_STAGES-1:0] trigger_filter_pipe2;
+
+   always @(posedge adc_clk)
+       {trigger_filter_pipe2, trigger_filter_pipe1} <= {trigger_filter_pipe2[pFILTER_STAGES-2:0], trigger_filter_pipe1, trigger_asserted_raw};
+
+   wire trigger_asserted_raw = (trigger == trigger_level_i);
+   wire trigger_asserted = (trigger_filter_i)? &trigger_filter_pipe2 : trigger_asserted_raw;
 
    always @(posedge adc_clk) begin
       if (reset) begin
@@ -103,7 +115,7 @@ module trigger_unit(
       if (reset) begin
          reset_arm <= 0;
       end else begin
-         if (((trigger == trigger_level_i) & armed) | trigger_now) begin
+         if ((trigger_asserted & armed) | trigger_now) begin
             reset_arm <= 1;
          end else if ((arm_i == 0) & (capture_active_o == 0)) begin
             reset_arm <= 0;
@@ -120,9 +132,9 @@ module trigger_unit(
          capture_go_start <= 1'b0;
          triggered <= 1'b0;
       end else begin
-         if (((trigger == trigger_level_i) & armed) | trigger_now)
+         if ((trigger_asserted & armed) | trigger_now)
             capture_active_o <= 1;
-         if ((((trigger == trigger_level_i) & (capture_active_o || armed)) | trigger_now) && !triggered)
+         if (((trigger_asserted & (capture_active_o || armed)) | trigger_now) && !triggered)
             capture_go_start <= 1'b1;
          else if (capture_go_o)
             capture_go_start <= 1'b0;
@@ -133,7 +145,7 @@ module trigger_unit(
       // like the best solution
       if (capture_go_start)
           triggered <= 1'b1;
-      else if (trigger != trigger_level_i)
+      else if (~trigger_asserted)
           triggered <= 1'b0;
    end
 
@@ -144,7 +156,7 @@ module trigger_unit(
    always @(posedge adc_clk)
       if (resetarm) begin
          armed <= 0;
-      end else if (armed_and_ready & ((trigger != trigger_level_i) | (trigger_wait_i == 0))) begin
+      end else if (armed_and_ready & (~trigger_asserted | (trigger_wait_i == 0))) begin
          armed <= 1;
       end
 
@@ -165,7 +177,7 @@ module trigger_unit(
    always @(posedge adc_clk) begin
       // don't count in the case of adc_trigger: it makes timing more difficult, it's not
       // likely useful, and it could be calculated by the host
-      if (trigger == trigger_level_i)
+      if (trigger_asserted)
          trigger_length_o <= trigger_length_o + 32'd1;
       else if (arm_i & ~arm_i_dly)
          trigger_length_o <= 0;
@@ -180,6 +192,11 @@ module trigger_unit(
                        armed,
                        trigger,
                        cmd_arm_usb };
+
+   assign la_debug2 = { triggered, 
+                        capture_active_o,
+                        trigger_asserted, // either filtered or not
+                        armed };
 
 
    `ifdef ILA_TRIG
