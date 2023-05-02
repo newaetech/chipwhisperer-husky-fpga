@@ -223,6 +223,7 @@ module reg_openadc #(
          extclk_monitor_disabled <= 1;
          extclk_limit <= 32'd9; // corresponds to ~100 kHz tolerance
          trigger_adclevel <= 12'd0;
+         trigger_filter <= 1'b0;
       end else if (reg_write) begin
          case (reg_address)
             `GAIN_ADDR: registers_gain <= reg_datai;
