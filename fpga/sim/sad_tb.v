@@ -304,7 +304,7 @@ reg [9:0] trigger_expected_pipe;
 always @(posedge clk_adc)
     trigger_expected_pipe <= {trigger_expected_pipe[8:0], trigger_expected};
 `ifdef SAD_X2
-    assign trigger_expected_delayed = trigger_expected_pipe[9];
+    assign trigger_expected_delayed = trigger_expected_pipe[7];
 `else
     assign trigger_expected_delayed = trigger_expected_pipe[5];
 `endif

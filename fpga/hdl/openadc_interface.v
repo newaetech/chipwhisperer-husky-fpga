@@ -391,8 +391,8 @@ module openadc_interface #(
        sad_x2_slowclock #(
            .pBYTECNT_SIZE           (pBYTECNT_SIZE),
     `ifdef SEMIPRO
-           .pREF_SAMPLES            (320),
-           .pSAD_COUNTER_WIDTH      (12),
+           .pREF_SAMPLES            (384),
+           .pSAD_COUNTER_WIDTH      (14),
     `else
            .pREF_SAMPLES            (192),
            .pSAD_COUNTER_WIDTH      (12),
