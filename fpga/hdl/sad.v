@@ -33,6 +33,7 @@ module sad #(
     parameter pSAD_COUNTER_WIDTH = 16
 )(
     input wire          reset,
+    input wire          xadc_error,
 
     //ADC Sample Input
     input wire [pBITS_PER_SAMPLE-1:0] adc_datain,
@@ -84,6 +85,8 @@ module sad #(
     reg ready2trigger0;
     reg [pREF_SAMPLES-1:1] ready2trigger_1andup;
     wire [pREF_SAMPLES-1:0] ready2trigger_all = {ready2trigger_1andup, ready2trigger0};
+    //reg ready2trigger_pre;
+    //reg ready2trigger;
 
     reg  decision [0:pREF_SAMPLES-1];
     reg [pBITS_PER_SAMPLE-1:0]  nextrefsample [0:pREF_SAMPLES-1];
@@ -183,12 +186,18 @@ module sad #(
     wire [pMASTER_COUNTER_WIDTH-1:0] master_counter_top = (sad_short)? pREF_SAMPLES/2-1 : pREF_SAMPLES-1;
 
     always @(posedge adc_sampleclk) begin
-        if (armed_and_ready_adc && active) begin
+        if (armed_and_ready_adc && active && ~xadc_error) begin
             ready2trigger_1andup <= {ready2trigger_1andup[pREF_SAMPLES-2:1], ready2trigger0};
             resetter <= {resetter[pREF_SAMPLES-2:0], resetter[pREF_SAMPLES-1]};
             if (master_counter == master_counter_top) begin
                 ready2trigger0 <= 1;
                 master_counter <= 0;
+                /* for better timing (see NOTE comment below on trigger assignment)
+                if (ready2trigger_pre)
+                    ready2trigger <= 1;
+                else
+                    ready2trigger_pre <= 1;
+                */
             end
             else
                 master_counter <= master_counter + 1;
@@ -197,6 +206,10 @@ module sad #(
             master_counter <= 0;
             ready2trigger0 <= 0;
             ready2trigger_1andup <= 0;
+            /*
+            ready2trigger_pre <= 0;
+            ready2trigger <= 0;
+            */
             if (sad_short)
                 resetter <= {2{2'b0, 1'b1, {(pREF_SAMPLES/2-3){1'b0}}}};
             else
@@ -211,7 +224,11 @@ module sad #(
         else begin
             trigger <= 1'b0;
             for (c = 0; c < pREF_SAMPLES; c = c + 1) begin
-                if (individual_trigger[c] && ready2trigger_all[c] && ~(triggered && ~multiple_triggers)) trigger <= 1'b1;
+                if (individual_trigger[c] && ~(triggered && ~multiple_triggers)) trigger <= 1'b1;
+                // NOTE: the alternative below results in better timing, but in the case of multiple triggers it
+                // *can* result in missed triggers if they are too close together. If trying this, also remove
+                // the ready2trigger_all condition onthe individual_trigger assignment (in a later block).
+                //if (individual_trigger[c] && ready2trigger && ~(triggered && ~multiple_triggers)) trigger <= 1'b1;
             end
         end
     end
@@ -252,7 +269,7 @@ module sad #(
             end
 
             always @ (posedge adc_sampleclk) begin
-                if ((sad_counter[i] <= threshold) && resetter[i])
+                if ((sad_counter[i] <= threshold) && resetter[i] && ready2trigger_all[i])
                     individual_trigger[i] <= 1'b1;
                 else
                     individual_trigger[i] <= 1'b0;
@@ -316,7 +333,9 @@ module sad #(
     wire [pSAD_COUNTER_WIDTH-1:0] sad_counter31 = sad_counter[31];
 
     wire [pSAD_COUNTER_WIDTH-1:0] counter_incr0 = counter_incr[0];
+    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr1 = counter_incr[1];
     wire [pSAD_COUNTER_WIDTH-1:0] counter_incr3 = counter_incr[3];
+    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr7 = counter_incr[7];
     wire [pSAD_COUNTER_WIDTH-1:0] counter_incr8 = counter_incr[8];
     wire [pSAD_COUNTER_WIDTH-1:0] counter_incr9 = counter_incr[9];
     wire [pSAD_COUNTER_WIDTH-1:0] counter_incr10 = counter_incr[10];

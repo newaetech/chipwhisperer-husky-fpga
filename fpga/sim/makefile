@@ -9,7 +9,7 @@ OFFSET_MIN = 0
 OFFSET_MAX = 1000
 SHORT_TRIGGER = 0
 TRIGGER_DELAY=1500
-READ_DELAY=100
+READ_DELAY=150
 NUM_SEGMENTS = 1
 NUM_GLITCHES = 1
 MAX_GLITCH_REPEATS = 0
@@ -26,6 +26,7 @@ SEED=1
 TIMEOUT_CYCLES=50000
 DUMP=0
 FIFOSIZE=REGULARFIFO
+FAST_FIFO_SIM=NOFASTFIFO
 ERRORS_OK=0
 PRESAMP_ERROR=0
 DOWNSAMPLE=0
@@ -39,7 +40,9 @@ TRIGGERS=1
 FLUSH=0
 THRESHOLD=0
 VERBOSE=0
+VARIANT=REGULAR
 SAD=SAD_X2
+FIFO_TYPE=NOXILINXFIFO
 
 all: compile run
 all_sad: compile_sad run
@@ -60,6 +63,7 @@ compile_sad:
 	-I../hdl \
 	-Wportbind \
 	-Wselect-range \
+	-D$(VARIANT) \
 	-D$(SAD) \
 	-P sad_tb.pLINEAR_RAMP=$(LINEAR_RAMP) \
 	-P sad_tb.pINPUTS_FROM_FILE=$(INPUTS_FROM_FILE) \
@@ -85,6 +89,7 @@ sad_nofifo:
 	sad_tb.v \
 	-g2005-sv \
 	-DNOFIFO \
+	-D$(VARIANT) \
 	-D$(SAD) \
 	-I../hdl \
 	-Wportbind \
@@ -108,6 +113,8 @@ compile_edge:
 	-I../hdl \
 	-Wportbind \
 	-Wselect-range \
+	-D$(VARIANT) \
+	-D$(SAD) \
 	-P edge_tb.pEDGES=$(EDGES) \
 	-P edge_tb.pDUMP=$(DUMP) \
 	-P edge_tb.pSEED=$(SEED) \
@@ -120,12 +127,16 @@ compile:
 	iverilog -ccmdfile \
 	cwhusky_tb.v \
 	-g2005-sv \
+	-gsupported-assertions \
 	-I../hdl \
 	-Wportbind \
 	-Wselect-range \
 	-D$(FIFOSIZE) \
+	-D$(FAST_FIFO_SIM) \
 	-D$(SAD) \
 	-DTRACE \
+	-D$(VARIANT) \
+	-D$(FIFO_TYPE) \
 	-I../tracewhisperer/hdl/ \
 	-P cwhusky_tb.pADC_LOW_RES=$(ADC_LOW_RES) \
 	-P cwhusky_tb.pSLOW_ADC=$(SLOW_ADC) \
@@ -172,6 +183,7 @@ nofifo:
 	-Wportbind \
 	-Wselect-range \
 	-DNOFIFO \
+	-DNOXILINXFIFO \
 	-DTRACE \
 
 lint:
@@ -184,7 +196,10 @@ lint:
 	-I../tracewhisperer/hdl/ \
 	-D__ICARUS__ \
 	-DNOFIFO \
+	-DNOXILINXFIFO \
 	-DTRACE \
+	-D$(VARIANT) \
+	-D$(SAD) \
 	--top-module cwhusky_top \
 	2>&1 | tee lint.out \
 
@@ -197,6 +212,7 @@ lint_sad:
 	-D__ICARUS__ \
 	-DNOFIFO \
 	-DTRACE \
+	-D$(VARIANT) \
 	-D$(SAD) \
 	../hdl/sad.v \
 	../hdl/sad_x2_slowclock.v \
@@ -214,6 +230,7 @@ fifo:
         -y/mnt/c/Xilinx/Vivado/2019.2/ids_lite/ISE/verilog/src/unisims/ \
 	-I../hdl \
 	-DTRACE \
+	-D$(VARIANT) \
 	-D$(SAD) \
 	-g2005-sv \
 	-Wportbind \

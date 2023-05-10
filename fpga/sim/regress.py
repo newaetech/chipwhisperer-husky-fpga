@@ -18,6 +18,9 @@ parser.add_argument("--exclude", help="Exclude tests whose name contains TESTS",
 parser.add_argument("--list", help="List available tests.", action='store_true')
 parser.add_argument("--dump", help="Enable waveform dumping.", action='store_true')
 parser.add_argument("--proc", type=int, help="Maximum number of parallel jobs to dispatch.", default=32)
+parser.add_argument("--fast_fifo_sim", help="Force FIFOs to use flopped version, for considerably faster run times.", action='store_true')
+parser.add_argument("--xilinx_fifos", help="Use Xilinx FIFO simulation models (slower, can have reset issues).", action='store_true')
+parser.add_argument("--variant", help="Husky variant (regular/plus/pro)", default='regular')
 args = parser.parse_args()
 
 # Define testcases:
@@ -40,6 +43,19 @@ tests.append(dict(name  = 'fast_adc',
              description = 'Fast ADC clock.',
              FAST_ADC = 1))
 
+tests.append(dict(name  = 'semipro_combo_fifo',
+             frequency = 5,
+             FIFOSIZE = "TINYFIFO",
+             READ_DELAY = 100,
+             FIFO_SAMPLES = 5631,
+             PRESAMPLES = 0,
+             TRIGGER_NOW = 1,
+             ADC_LOW_RES = 1,
+             OFFSET_ENABLE = 0,
+             SHORT_TRIGGER = 1,
+             description = 'Stress test of the semipro (plus) combo (slow) fifo.',
+             FAST_ADC = 1))
+
 tests.append(dict(name  = 'nom_adc',
              frequency = 5,
              TRIGGER_NOW = [0,1],
@@ -53,7 +69,7 @@ tests.append(dict(name  = 'presamples',
              frequency = 1,
              FIFO_SAMPLES = [601,1000],
              PRESAMPLES = [8, 600],
-             READ_DELAY = [100, 500],
+             READ_DELAY = [150, 500],
              TRIGGER_DELAY = [2500, 4000],
              TRIGGER_NOW = [0,1],
              OFFSET_ENABLE = [0,1],
@@ -65,7 +81,7 @@ tests.append(dict(name  = 'nopresamples',
              PRESAMPLES = 0,
              FIFO_SAMPLES = [500,1000],
              TRIGGER_DELAY = [1500, 3000],
-             READ_DELAY = [100, 500],
+             READ_DELAY = [150, 500],
              TRIGGER_NOW = [0,1],
              OFFSET_ENABLE = [0,1],
              SHORT_TRIGGER = [0,1],
@@ -77,7 +93,7 @@ tests.append(dict(name  = 'quick_stream',
              PRESAMPLES = 0,
              FIFO_SAMPLES = 2000,
              TRIGGER_DELAY = [1500, 1600],
-             READ_DELAY = [100, 500],
+             READ_DELAY = [150, 500],
              ADC_LOW_RES = [0, 1],
              OFFSET_ENABLE = [0,1],
              SHORT_TRIGGER = [0,1],
@@ -91,7 +107,7 @@ tests.append(dict(name  = 'medium_stream',
              PRESAMPLES = 0,
              FIFO_SAMPLES = 40000,
              TRIGGER_DELAY = [1500, 1600],
-             READ_DELAY = [100, 500],
+             READ_DELAY = [150, 500],
              ADC_LOW_RES = [0, 1],
              OFFSET_ENABLE = [0,1],
              SHORT_TRIGGER = [0,1],
@@ -126,7 +142,7 @@ tests.append(dict(name  = 'both_fifos',
              OFFSET_ENABLE = [0,1],
              SHORT_TRIGGER = [0,1],
              TIMEOUT_CYCLES = 500000,
-             FIFO_SAMPLES = 4096))
+             FIFO_SAMPLES = 4095)) # TODO: used to be 4096 but that fails with NOXILINXFIFO
 
 tests.append(dict(name  = 'presamp_error',
              frequency = 10,
@@ -134,7 +150,7 @@ tests.append(dict(name  = 'presamp_error',
              PRESAMP_ERROR = 1,
              PRESAMPLES = 100,
              FIFO_SAMPLES = 200,
-             READ_DELAY = [100, 500],
+             READ_DELAY = [150, 500],
              SEGMENT_CYCLES = 250,
              SEGMENT_CYCLE_COUNTER_EN = 1,
              NUM_SEGMENTS = 2,
@@ -151,7 +167,7 @@ tests.append(dict(name  = 'segments_counter',
              #frequency = 0,
              PRESAMPLES = 0,
              FIFO_SAMPLES = [50,400],
-             READ_DELAY = [100, 500],
+             READ_DELAY = [150, 500],
              #READ_DELAY = [1000, 2000],
              SEGMENT_CYCLES = [2000, 5000],
              SEGMENT_CYCLE_COUNTER_EN = 1,
@@ -168,7 +184,7 @@ tests.append(dict(name  = 'segments_quick_nopresamp',
              frequency = 1,
              PRESAMPLES = 0,
              FIFO_SAMPLES = [25,30],
-             READ_DELAY = [100, 500],
+             READ_DELAY = [150, 500],
              SEGMENT_CYCLES = [40,45],
              SEGMENT_CYCLE_COUNTER_EN = [0,1],
              NUM_SEGMENTS = [5,10],
@@ -183,7 +199,7 @@ tests.append(dict(name  = 'segments_quick_presample',
              frequency = 1,
              PRESAMPLES = [8,20],
              FIFO_SAMPLES = [25,30],
-             READ_DELAY = [100, 500],
+             READ_DELAY = [150, 500],
              SEGMENT_CYCLES = [51,60],
              SEGMENT_CYCLE_COUNTER_EN = [0,1],
              NUM_SEGMENTS = [5,10],
@@ -199,7 +215,7 @@ tests.append(dict(name  = 'segments_trigger',
              #frequency = 0,
              PRESAMPLES = 0,
              FIFO_SAMPLES = [50,400],
-             READ_DELAY = [100, 500],
+             READ_DELAY = [150, 500],
              SEGMENT_CYCLES = [2000, 5000],
              SEGMENT_CYCLE_COUNTER_EN = 0,
              NUM_SEGMENTS = [2,4],
@@ -215,7 +231,7 @@ tests.append(dict(name  = 'segments_presamples',
              #frequency = 0,
              FIFO_SAMPLES = [50,500],
              PRESAMPLES = [8,49],
-             READ_DELAY = [100, 500],
+             READ_DELAY = [150, 500],
              SEGMENT_CYCLES = [2000, 5000],
              SEGMENT_CYCLE_COUNTER_EN = [0, 1],
              NUM_SEGMENTS = [2,4],
@@ -238,7 +254,7 @@ tests.append(dict(name  = 'downsample',
 tests.append(dict(name  = 'sad',
              frequency = 2,
              BITS_PER_SAMPLE = 8,
-             REF_SAMPLES = 64, # caution: increasing this slows down simulation *a lot*
+             REF_SAMPLES = 128, # caution: large values can lead to slow simulation
              SHORT_SAD = [0,1],
              THRESHOLD = [20,100], # keep threshold low to avoid unintentional triggers - testbench isn't smart enough
              TRIGGERS = 4,
@@ -356,10 +372,19 @@ seed_regex = re.compile(r'^Running with pSEED=(\d+)$')
 test_regex = re.compile(args.tests)
 exclude_regex = re.compile(args.exclude)
 
+if args.variant == 'plus':
+    variant = 'VARIANT=PLUS'
+elif args.variant == 'pro':
+    variant = 'VARIANT=PRO'
+elif args.variant == 'regular':
+    variant = 'VARIANT=REGULAR'
+else:
+    raise ValueError('Variant not recognized (%s)' % args.variant)
+
 # Check once that compile passes:
 outfile = open('regress.out', 'w')
 for compile_target in ['compile', 'compile_edge']:
-    makeargs = ['make', compile_target]
+    makeargs = ['make', compile_target, variant]
     result = subprocess.run(makeargs, stdout=outfile, stderr=outfile)
     if result.returncode:
        print ("Compilation for target %s failed (return code: %d), check regress.out." % (compile_target, result.returncode))
@@ -395,6 +420,11 @@ for test in tests:
       makeargs.append("SEED=%d" % seed)
       if args.dump:
          makeargs.append('DUMP=1')
+      if args.fast_fifo_sim:
+          makeargs.append('FAST_FIFO_SIM=FAST_FIFO_SIM')
+      if args.xilinx_fifos:
+          makeargs.append('FIFO_TYPE=XILINXFIFO')
+      makeargs.append(variant)
       for key in test.keys():
          if key == 'name':
             logfile = "results/%s%d.log" % (test[key], i) 

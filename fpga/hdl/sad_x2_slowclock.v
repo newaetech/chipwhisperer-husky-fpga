@@ -33,6 +33,7 @@ module sad_x2_slowclock #(
     parameter pSAD_COUNTER_WIDTH = 16
 )(
     input wire          reset,
+    input wire          xadc_error,
 
     //ADC Sample Input
     input wire [pBITS_PER_SAMPLE-1:0] adc_datain,
@@ -109,15 +110,24 @@ module sad_x2_slowclock #(
     wire [pBITS_PER_SAMPLE-1:0]  refsample [0:pREF_SAMPLES-1];
     reg [pBITS_PER_SAMPLE-1:0] adc_datain_r, adc_datain_r2;
 
-    reg [pSAD_COUNTER_WIDTH-1:0] adc_datain_even_rpr,  adc_datain_even_rmr; // sign extend
-    reg [pSAD_COUNTER_WIDTH-1:0] adc_datain_even_rpr2, adc_datain_even_rmr2; // sign extend
     reg [pBITS_PER_SAMPLE-1:0] adc_datain_even_r;
     reg [pBITS_PER_SAMPLE-1:0] adc_datain_even_r2;
 
-    reg [pSAD_COUNTER_WIDTH-1:0] adc_datain_odd_rpr,  adc_datain_odd_rmr; // sign extend
-    reg [pSAD_COUNTER_WIDTH-1:0] adc_datain_odd_rpr2, adc_datain_odd_rmr2; // sign extend
     reg [pBITS_PER_SAMPLE-1:0] adc_datain_odd_r;
     reg [pBITS_PER_SAMPLE-1:0] adc_datain_odd_r2;
+
+    // sign extension:
+    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain_even_rpr  =  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_even_r};
+    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain_even_rmr  = -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_even_r};
+    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain_even_rpr2 =  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_even_r2};
+    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain_even_rmr2 = -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_even_r2};
+
+    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain_odd_rpr  =  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_odd_r};
+    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain_odd_rmr  = -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_odd_r};
+    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain_odd_rpr2 =  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_odd_r2};
+    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain_odd_rmr2 = -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_odd_r2};
+
+
 
     wire [23:0] status_reg = {num_triggers, 7'b0, triggered};
     reg sad_short;
@@ -129,7 +139,7 @@ module sad_x2_slowclock #(
     // used in different targets or builds.
     // Format: 2 MSB = version code (00: sad.v, 01: sad_x2_slowclock.v)
     //         6 LSB = trigger latency
-    wire [7:0] version_bits = {2'b01, 6'd14};
+    wire [7:0] version_bits = {2'b01, 6'd12};
     wire [15:0] ref_samples = pREF_SAMPLES;
 
     // register reads:
@@ -264,19 +274,11 @@ module sad_x2_slowclock #(
     always @(posedge slow_clk_even) begin
         adc_datain_even_r    <= adc_datain_r;
         adc_datain_even_r2   <= adc_datain_r2;
-        adc_datain_even_rpr  <=  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_even_r};
-        adc_datain_even_rmr  <= -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_even_r};
-        adc_datain_even_rpr2 <=  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_even_r2};
-        adc_datain_even_rmr2 <= -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_even_r2};
     end
 
     always @(posedge slow_clk_odd) begin
         adc_datain_odd_r    <= adc_datain_r;
         adc_datain_odd_r2   <= adc_datain_r2;
-        adc_datain_odd_rpr  <=  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_odd_r};
-        adc_datain_odd_rmr  <= -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_odd_r};
-        adc_datain_odd_rpr2 <=  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_odd_r2};
-        adc_datain_odd_rmr2 <= -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_odd_r2};
     end
 
 
@@ -287,7 +289,7 @@ module sad_x2_slowclock #(
         for (i = 0; i < pREF_SAMPLES; i = i + 2) begin: gen_sad_even_counters
             assign refsample[i+0] = refsamples[(i+0)*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
             always @(posedge slow_clk_even) begin
-                if (armed_and_ready_adc_even && active) begin
+                if (armed_and_ready_adc_even && active && ~xadc_error) begin
                     if (i > 0) ready2trigger_even[i] <= ready2trigger_even[i-2];
                     else if (master_counter_even == master_counter_top) ready2trigger_even[0] <= 1;
                     if (i == 0) resetter_even[i] <= resetter_even[pREF_SAMPLES-2];
@@ -304,13 +306,13 @@ module sad_x2_slowclock #(
                     ready2trigger_even[i] <= 0;
                     if (sad_short) begin
                         // TODO-note: this seems to work for pREF_SAMPLES >= 32;
-                        if ((i == pREF_SAMPLES-6) ||
-                            (i == pREF_SAMPLES/2-6)) resetter_even[i] <= 1'b1;
+                        if ((i == pREF_SAMPLES-4) ||
+                            (i == pREF_SAMPLES/2-4)) resetter_even[i] <= 1'b1;
                         else                         resetter_even[i] <= 1'b0;
                     end
                     else begin
                         // TODO-note: there seems to be an issue when pREF_SAMPLES isn't a power of 2
-                        if (i == pREF_SAMPLES - 6) resetter_even[i] <= 1'b1;
+                        if (i == pREF_SAMPLES - 4) resetter_even[i] <= 1'b1;
                         else                       resetter_even[i] <= 1'b0;
                     end
 
@@ -328,25 +330,17 @@ module sad_x2_slowclock #(
                 nextrefsample_r_a[i] <= nextrefsample_a[i];
                 nextrefsample_r_b[i] <= nextrefsample_b[i];
 
+
                 if (adc_datain_even_r2 > nextrefsample_b[i])
-                    decision_a[i] <= 1'b1;
+                    counter_incr_a[i] <= wadc_datain_even_rpr2 - nextrefsample_b[i];
                 else
-                    decision_a[i] <= 1'b0;
+                    counter_incr_a[i] <= wadc_datain_even_rmr2 + nextrefsample_b[i];
 
                 if (adc_datain_even_r > nextrefsample_a[i])
-                    decision_b[i] <= 1'b1;
+                    counter_incr_b[i] <= wadc_datain_even_rpr - nextrefsample_a[i];
                 else
-                    decision_b[i] <= 1'b0;
+                    counter_incr_b[i] <= wadc_datain_even_rmr + nextrefsample_a[i];
 
-                if (decision_a[i])
-                    counter_incr_a[i] <= adc_datain_even_rpr2 - nextrefsample_r_b[i];
-                else
-                    counter_incr_a[i] <= adc_datain_even_rmr2 + nextrefsample_r_b[i];
-
-                if (decision_b[i])
-                    counter_incr_b[i] <= adc_datain_even_rpr - nextrefsample_r_a[i];
-                else
-                    counter_incr_b[i] <= adc_datain_even_rmr + nextrefsample_r_a[i];
 
                 // finally we get to the actual SAD counters:
                 if (resetter_even[i])
@@ -371,7 +365,7 @@ module sad_x2_slowclock #(
         for (j = 1; j < pREF_SAMPLES-0; j = j + 2) begin: gen_sad_odd_counters
             assign refsample[j+0] = refsamples[(j+0)*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
             always @(posedge slow_clk_odd) begin
-                if (armed_and_ready_adc_odd && active) begin
+                if (armed_and_ready_adc_odd && active && ~xadc_error) begin
                     if (j > 1) ready2trigger_odd[j] <= ready2trigger_odd[j-2];
                     else if (master_counter_odd >= master_counter_top) ready2trigger_odd[1] <= 1;
 
@@ -390,12 +384,12 @@ module sad_x2_slowclock #(
                     ready2trigger_odd[j] <= 0;
                     // NOTE: see comments in corresponding "even" code block
                     if (sad_short) begin
-                        if ((j == pREF_SAMPLES-5) || 
-                            (j == pREF_SAMPLES/2-5)) resetter_odd[j] <= 1'b1;
+                        if ((j == pREF_SAMPLES-3) || 
+                            (j == pREF_SAMPLES/2-3)) resetter_odd[j] <= 1'b1;
                         else                         resetter_odd[j] <= 1'b0;
                     end
                     else begin
-                        if (j == pREF_SAMPLES - 5) resetter_odd[j] <= 1'b1;
+                        if (j == pREF_SAMPLES - 3) resetter_odd[j] <= 1'b1;
                         else                       resetter_odd[j] <= 1'b0;
                     end
 
@@ -413,25 +407,17 @@ module sad_x2_slowclock #(
                 nextrefsample_r_a[j] <= nextrefsample_a[j];
                 nextrefsample_r_b[j] <= nextrefsample_b[j];
 
+
                 if (adc_datain_odd_r2 > nextrefsample_b[j])
-                    decision_a[j] <= 1'b1;
+                    counter_incr_a[j] <= wadc_datain_odd_rpr2 - nextrefsample_b[j];
                 else
-                    decision_a[j] <= 1'b0;
+                    counter_incr_a[j] <= wadc_datain_odd_rmr2 + nextrefsample_b[j];
 
                 if (adc_datain_odd_r > nextrefsample_a[j])
-                    decision_b[j] <= 1'b1;
+                    counter_incr_b[j] <= wadc_datain_odd_rpr - nextrefsample_a[j];
                 else
-                    decision_b[j] <= 1'b0;
+                    counter_incr_b[j] <= wadc_datain_odd_rmr + nextrefsample_a[j];
 
-                if (decision_a[j])
-                    counter_incr_a[j] <= adc_datain_odd_rpr2 - nextrefsample_r_b[j];
-                else
-                    counter_incr_a[j] <= adc_datain_odd_rmr2 + nextrefsample_r_b[j];
-
-                if (decision_b[j])
-                    counter_incr_b[j] <= adc_datain_odd_rpr - nextrefsample_r_a[j];
-                else
-                    counter_incr_b[j] <= adc_datain_odd_rmr + nextrefsample_r_a[j];
 
                 // finally we get to the actual SAD counters:
                 if (resetter_odd[j])
@@ -527,6 +513,8 @@ module sad_x2_slowclock #(
     wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_b5 = counter_incr_b[5];
     wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_b6 = counter_incr_b[6];
     wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_b7 = counter_incr_b[7];
+
+    wire ready2trigger_debug = ready2trigger_even[pREF_SAMPLES-2];
 
     wire [31:0] individual_trigger_debug =  {individual_trigger[31],
                                              individual_trigger[30],

@@ -94,6 +94,7 @@ sad #(
     .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE)
 ) U_base_dut (
     .reset              (reset),
+    .xadc_error         (1'b0),
     .adc_datain         (adc_datain_r[pBITS_PER_SAMPLE-1:0]),
     .adc_sampleclk      (clk_adc),
     .armed_and_ready    (armed_and_ready),
@@ -123,6 +124,7 @@ sad_x2_slowclock #(
     .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE)
 ) U_new_dut (
     .reset              (reset),
+    .xadc_error         (1'b0),
     .adc_datain         (adc_datain_r[pBITS_PER_SAMPLE-1:0]),
     .adc_sampleclk      (clk_adc),
     .slow_clk_even      (ADC_slow_clk_even),

@@ -10,6 +10,7 @@
 ../hdl/trigger_unit.v
 ../hdl/usb_reg_main.v
 ../hdl/fifo_top_husky.v
+../hdl/semipro_slow_fifo.v
 ../hdl/reg_clockglitch.v
 ../hdl/cwhusky_top.v
 ../hdl/openadc_interface.v
@@ -27,6 +28,8 @@
 ../fpga-common/hdl/cdc_pulse.v
 ../fpga-common/hdl/cdc_bus.v
 ../fpga-common/hdl/cdc_simple.v
+../fpga-common/hdl/fifo_async.v
+../fpga-common/hdl/fifo_sync.v
 ../tracewhisperer/hdl/trace_top.v
 ../tracewhisperer/hdl/reg_trace.v
 ../tracewhisperer/hdl/fe_capture_trace.v
@@ -38,6 +41,12 @@
 ../tracewhisperer/phywhisperer-common/hardware/hdl/pw_trigger.v
 ../tracewhisperer/sim/vivado/fifo_generator_0_sim_netlist.v
 ../tracewhisperer/sim/vivado/fifo_generator_tiny_sim_netlist.v
+../tracewhisperer/sim/vivado/fifo_generator_semipro_sim_netlist.v
+vivado/xpm_memory.sv
+vivado/adc_fast_fifo_semipro_sim_netlist.v
+vivado/usb_slow_fifo1_semipro_sim_netlist.v
+vivado/usb_slow_fifo_semipro_sim_netlist.v
+vivado/tiny_usb_slow_fifo1_semipro_sim_netlist.v
 vivado/adc_fast_fifo_sim_netlist.v
 vivado/usb_slow_fifo_sim_netlist.v
 vivado/tiny_adc_fast_fifo_sim_netlist.v

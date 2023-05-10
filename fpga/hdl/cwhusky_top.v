@@ -269,9 +269,17 @@ module cwhusky_top(
                              USB_WRn,           // D6
                              USB_CEn,           // D5
                              clk_usb_buf,       // D4
+                             USB_Data[7:4]      // D3:0
+                           };
+
+   wire [7:0] usb_debug2 = { USB_RDn,           // D7
+                             USB_WRn,           // D6
+                             USB_CEn,           // D5
+                             clk_usb_buf,       // D4
                              USB_Data[3:0]      // D3:0
                            };
 
+   /*
    wire [7:0] usb_debug2 = { USB_RDn,           // D7
                              USB_WRn,           // D6
                              USB_CEn,           // D5
@@ -280,6 +288,7 @@ module cwhusky_top(
                              reg_write,         // D2
                              USB_Addr[1:0]      // D1:0
                            };
+   */
 
    wire [7:0] usb_debug3 = { reg_write,         // D7
                              USB_Data[6:0]      // D6:0
@@ -368,6 +377,7 @@ module cwhusky_top(
         .ADC_slow_clk_even      (ADC_slow_clk_even),
         .ADC_slow_clk_odd       (ADC_slow_clk_odd),
         .reset_o                (reg_rst),
+        .xadc_error             (xadc_error_flag),
 
         .LED_capture            (cw_led_cap),
         .LED_armed              (cw_led_armed),
@@ -715,7 +725,6 @@ module cwhusky_top(
       reg ADC_slow_clk_odd  = 1'b1;
       always @(posedge ADC_clk_fb) ADC_slow_clk_even <= ~ADC_slow_clk_even;
       always @(posedge ADC_clk_fb) ADC_slow_clk_odd  <= ~ADC_slow_clk_odd;
-
 
    `else
       wire ADC_clk_fb_prebuf;
