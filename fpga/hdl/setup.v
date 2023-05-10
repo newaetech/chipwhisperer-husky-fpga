@@ -1,6 +1,6 @@
-`ifdef SEMIPRO
-    `define MAX_SAMPLES 327792
-    `define MAX_SEGMENT_SAMPLES 196704
+`ifdef PLUS
+    `define MAX_SAMPLES 327828
+    `define MAX_SEGMENT_SAMPLES 295056
     `define HW_TYPE 11
 `else
     `define MAX_SAMPLES 131124
