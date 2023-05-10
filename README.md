@@ -3,7 +3,8 @@ This repository contains the FPGA design and test files for
 ChipWhisperer-Husky.
 
 # Implementation
-Husky uses a Xilinx XC7A35 FPGA. Implementation is done with Vivado 2020.2.
+Husky uses a Xilinx XC7A35 FPGA; Husky Plus uses an XC7A100.  Implementation is
+done with Vivado 2020.2.
 
 Implementation should run cleanly (no setup or hold timing violations) but
 timing is tight and small timing failures can occur if you're unlucky. The
@@ -41,6 +42,16 @@ The only critical warnings in the implementation log file should relate to
 inconsequential missing IP modules (e.g. ILAs) and the the last three
 `dbg_hub` commands.
 
+The SAD module is by far the largest. If you are short on LUTs, you can
+reduce its size by adjusting its `pREF_SAMPLES` and/or `pSAD_COUNTER_WIDTH`
+instantiation parameters. The only (known) limitation is that `pREF_SAMPLES`
+must be even. Conversely if you wish to increase these parameters, be aware
+that the resulting size increase will make timing closure more difficult; it
+can also drive up power consumption to the point where the current draw
+might be too great at higher clock frequencies (this would typically result
+in `scope.XADC` VCC alarms and/or Husky dying and requiring a hard power
+cycle).
+
 # Testing
 
 CW-Husky is tested in two ways:
@@ -62,6 +73,8 @@ Testcases are defined in the `regress.py` script. Run `regress.py --list` to
 lists available testcases. 
 
 To run a particular testcase: `regress.py --test <testcase>`. 
+
+Add the `--variant plus` argument to simulate the Husky Plus variant.
 
 Many things are randomized when a testcase is run. To re-run a testcase with
 the same randomizations, specify a `--seed <integer>`. 
@@ -126,10 +139,11 @@ To hunt down bugs on the FPGA, you can either:
 * use Xilinx ILAs.
 
 ILAs require BRAM, and Husky uses 48 of the 50 available BRAMs for storage
-of ADC samples, trace samples, and `scope.LA` samples. To free up more, you
-can rebuild Husky with `TINYFIFO` defined: this reduces the size of the
-sample, trace, and logic analyzer FIFOs. Just be aware that you won't be
-able to do long captures. 
+of ADC samples, trace samples, and `scope.LA` samples (on Husky Plus there
+is a little bit more BRAM left to play with). To free up more, you can
+rebuild Husky with `TINYFIFO` defined: this reduces the size of the sample,
+trace, and logic analyzer FIFOs. Just be aware that you won't be able to do
+long captures. 
 
 If your issue involves streaming, things are a bit more complicated, since
 streaming requires deep storage to function properly (the SAM3U reads in
