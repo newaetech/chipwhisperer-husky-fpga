@@ -20,7 +20,7 @@ parser.add_argument("--dump", help="Enable waveform dumping.", action='store_tru
 parser.add_argument("--proc", type=int, help="Maximum number of parallel jobs to dispatch.", default=32)
 parser.add_argument("--fast_fifo_sim", help="Force FIFOs to use flopped version, for considerably faster run times.", action='store_true')
 parser.add_argument("--xilinx_fifos", help="Use Xilinx FIFO simulation models (slower, can have reset issues).", action='store_true')
-parser.add_argument("--variant", help="Husky variant (regular/semi/pro)", default='regular')
+parser.add_argument("--variant", help="Husky variant (regular/plus/pro)", default='regular')
 args = parser.parse_args()
 
 # Define testcases:
@@ -53,7 +53,7 @@ tests.append(dict(name  = 'semipro_combo_fifo',
              ADC_LOW_RES = 1,
              OFFSET_ENABLE = 0,
              SHORT_TRIGGER = 1,
-             description = 'Stress test of the semipro combo (slow) fifo.',
+             description = 'Stress test of the semipro (plus) combo (slow) fifo.',
              FAST_ADC = 1))
 
 tests.append(dict(name  = 'nom_adc',
@@ -372,8 +372,8 @@ seed_regex = re.compile(r'^Running with pSEED=(\d+)$')
 test_regex = re.compile(args.tests)
 exclude_regex = re.compile(args.exclude)
 
-if args.variant == 'semi':
-    variant = 'VARIANT=SEMIPRO'
+if args.variant == 'plus':
+    variant = 'VARIANT=PLUS'
 elif args.variant == 'pro':
     variant = 'VARIANT=PRO'
 elif args.variant == 'regular':

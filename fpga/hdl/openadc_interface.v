@@ -390,7 +390,7 @@ module openadc_interface #(
 `ifdef SAD_X2
        sad_x2_slowclock #(
            .pBYTECNT_SIZE           (pBYTECNT_SIZE),
-    `ifdef SEMIPRO
+    `ifdef PLUS
            .pREF_SAMPLES            (384),
            .pSAD_COUNTER_WIDTH      (14),
     `else
@@ -422,11 +422,9 @@ module openadc_interface #(
 `else
        sad #(
            .pBYTECNT_SIZE           (pBYTECNT_SIZE),
-    `ifdef SEMIPRO
-           //.pREF_SAMPLES            (256),
-           //.pSAD_COUNTER_WIDTH      (13),
-           .pREF_SAMPLES            (512),
-           .pSAD_COUNTER_WIDTH      (14),
+    `ifdef PLUS
+           .pREF_SAMPLES            (256),
+           .pSAD_COUNTER_WIDTH      (13),
     `else
            .pREF_SAMPLES            (128),
            .pSAD_COUNTER_WIDTH      (12),

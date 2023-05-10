@@ -781,7 +781,7 @@ module fifo_top_husky(
             localparam pUSB_DEPTH = 1024;
             localparam pUSB_DEPTH1 = 512;
             localparam pUSB_DEPTH2 = 1024;
-        `elsif SEMIPRO
+        `elsif PLUS
             localparam pADC_DEPTH = 32768;
             localparam pUSB_DEPTH1 = 32768;
             localparam pUSB_DEPTH2 = 65536;
@@ -815,7 +815,7 @@ module fifo_top_husky(
             .almost_full    (),
             .underflow      (fast_fifo_underflow)
         );
-        `ifdef SEMIPRO
+        `ifdef PLUS
             semipro_slow_fifo #(
                 .pDEPTH1        (pUSB_DEPTH1),
                 .pDEPTH2        (pUSB_DEPTH2)
@@ -867,7 +867,7 @@ module fifo_top_husky(
 
     `else
 
-        `ifdef SEMIPRO
+        `ifdef PLUS
            `ifdef TINYFIFO
                tiny_adc_fast_fifo U_adc_fast_fifo(
                   .clk          (adc_sampleclk),
