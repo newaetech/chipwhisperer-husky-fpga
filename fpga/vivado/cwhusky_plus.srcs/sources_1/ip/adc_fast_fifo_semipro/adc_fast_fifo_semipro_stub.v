@@ -1,11 +1,11 @@
 // Copyright 1986-2020 Xilinx, Inc. All Rights Reserved.
 // --------------------------------------------------------------------------------
 // Tool Version: Vivado v.2020.2 (lin64) Build 3064766 Wed Nov 18 09:12:47 MST 2020
-// Date        : Mon Apr 10 13:37:32 2023
-// Host        : red running 64-bit Ubuntu 18.04.6 LTS
-// Command     : write_verilog -force -mode synth_stub -rename_top adc_fast_fifo_semipro -prefix
-//               adc_fast_fifo_semipro_ adc_fast_fifo_stub.v
-// Design      : adc_fast_fifo
+// Date        : Wed May 10 15:02:54 2023
+// Host        : red running 64-bit Ubuntu 20.04.6 LTS
+// Command     : write_verilog -force -mode synth_stub
+//               /home/jpnewae/git/cw_husky/fpga/vivado/cwhusky_plus.srcs/sources_1/ip/adc_fast_fifo_semipro/adc_fast_fifo_semipro_stub.v
+// Design      : adc_fast_fifo_semipro
 // Purpose     : Stub declaration of top-level module interface
 // Device      : xc7a100tftg256-3
 // --------------------------------------------------------------------------------

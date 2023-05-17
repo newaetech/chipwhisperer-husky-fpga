@@ -241,6 +241,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    reg [9:0] registers_ioread;
    reg reg_external_clock;
    reg [pUSERIO_WIDTH-1:0] reg_userio_cwdriven;
+   reg [63:0] reg_softpower_control;
 
    wire targetio_highz;
 
@@ -318,53 +319,66 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
    assign enable_avrprog = registers_iorouting[40];
 
-   /* Target Power */
-   reg reg_targetpower_off;
-   always @(posedge clk_usb) begin
-      reg_targetpower_off <= registers_iorouting[41];
-   end
+   // Target Power: switched ON from OFF state using PWM for programmable soft-start.
+   // Soft-start is enabled by default via registers_iorouting[42].
+   // PWM parameters are from reg_softpower_control:
+   // - softpower_pwm_cycles1 + softpower_pwm_cycles2: number of PWM on/off cycles before power is fully on
+   // - softpower_pwm_period: number of cycles in PWM period
+   // - softpower_pwm_off_time1: number of cycles in PWM period where power is off, for the first softpower_pwm_cycles1
+   // - softpower_pwm_off_time2: number of cycles in PWM period where power is off, for the next softpower_pwm_cycles2
+   //
+   wire targetpower_slow = ~registers_iorouting[42];
+   wire reg_targetpower_off = registers_iorouting[41];
+   wire [7:0] softpower_pwm_cycles1 = reg_softpower_control[7:0];
+   wire [7:0] softpower_pwm_cycles2 = reg_softpower_control[15:8];
+   wire [15:0] softpower_pwm_period = reg_softpower_control[31:16];
+   wire [15:0] softpower_pwm_off_time1 = reg_softpower_control[47:32];
+   wire [15:0] softpower_pwm_off_time2 = reg_softpower_control[63:48];
+   reg  [15:0] softpower_pwm_off_time;
 
-   /* Target power switched ON from OFF state using PWM for programmable soft-start.
-       Only in CW1200 currently. */
-`ifdef SUPPORT_SOFTPOWER
    reg targetpower_soft_on;
    reg reg_targetpower_off_prev;
    always @(posedge clk_usb) begin
-          reg_targetpower_off_prev <= reg_targetpower_off;
-          if ((reg_targetpower_off == 1'b0) && (reg_targetpower_off_prev == 1'b1)) begin
-             targetpower_soft_on <= 1'b1;
-          end else if (reg_targetpower_off == 1'b1) begin
-             targetpower_soft_on <= 1'b0;
-          end
+       reg_targetpower_off_prev <= reg_targetpower_off;
+       if ((reg_targetpower_off == 1'b0) && (reg_targetpower_off_prev == 1'b1))
+           targetpower_soft_on <= 1'b1;
+       else if (reg_targetpower_off == 1'b1)
+           targetpower_soft_on <= 1'b0;
    end
 
-   reg [10:0] soft_start_pwm;
+   reg [15:0] soft_start_pwm = 0;
    always @(posedge clk_usb) begin
-          soft_start_pwm <= soft_start_pwm + 11'd1;
+       if ((soft_start_pwm == softpower_pwm_period) || ~targetpower_soft_on)
+           soft_start_pwm <= 0;
+       else
+           soft_start_pwm <= soft_start_pwm + 16'd1;
    end
 
    reg output_src_pwm;
-   reg [13:0] soft_start_cnt;
+   reg [15:0] soft_start_cnt;
    always @(posedge clk_usb) begin
-          if (targetpower_soft_on == 1'b0) begin
-             soft_start_cnt <= 0;
-             output_src_pwm <= 1'b0;
-          end else if (soft_start_cnt == 14'd16383) begin
-             output_src_pwm <= 1'b0;
-          end else if (soft_start_pwm == 0) begin
-             soft_start_cnt <= soft_start_cnt + 14'd1;
-             output_src_pwm <= 1'b1;
-          end
+       if (targetpower_soft_on == 1'b0) begin
+           soft_start_cnt <= 0;
+           output_src_pwm <= 1'b0;
+           softpower_pwm_off_time <= softpower_pwm_off_time1;
+       end
+       else begin
+           if (soft_start_cnt == softpower_pwm_cycles1) begin
+               softpower_pwm_off_time <= softpower_pwm_off_time2;
+               soft_start_cnt <= soft_start_cnt + 16'd1;
+           end
+           else if (soft_start_cnt == softpower_pwm_cycles1 + softpower_pwm_cycles2)
+               output_src_pwm <= 1'b0;
+           else begin
+               output_src_pwm <= 1'b1;
+               if (soft_start_pwm == 0)
+                   soft_start_cnt <= soft_start_cnt + 16'd1;
+           end
+       end
    end
 
-   wire targetpower_slow = ~registers_iorouting[42];
-   assign targetpower_off_pwm = (soft_start_pwm < 1400) ? 1'b1 : 1'b0; 
+   wire targetpower_off_pwm = (soft_start_pwm < softpower_pwm_off_time) ? 1'b1 : 1'b0; 
    assign targetpower_off = (output_src_pwm & targetpower_slow) ? targetpower_off_pwm : reg_targetpower_off;
-
-`else
-   assign targetpower_off = reg_targetpower_off;
-
-`endif
 
    assign targetio_highz = reg_targetpower_off;
 
@@ -529,7 +543,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
                          registers_iorouting[24 + 0] ? uart_tx_i :
                          registers_iorouting[24 + 7] ? registers_iorouting[24 + 6] :
                          1'bZ;
- 
+
    assign uart_rx_o = registers_iorouting[0 + 1] ? targetio1_io :
                       registers_iorouting[8 + 1] ? targetio2_io :
                       registers_iorouting[16 + 1] ? targetio3_io :
@@ -576,6 +590,8 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
            `EXTERNAL_CLOCK:             reg_datao_reg = reg_external_clock;
            `COMPONENTS_EXIST:           reg_datao_reg = {6'b0, trace_exists, la_exists};
+
+           `SOFTPOWER_CONTROL:          reg_datao_reg = reg_softpower_control[reg_bytecnt*8 +: 8];
            default: reg_datao_reg = 0;
          endcase
       end
@@ -597,6 +613,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
          userio_fpga_debug_select <= 4'b0;
          reg_external_clock <= 1'b0;
          registers_cwauxio <= 2'b0;
+         reg_softpower_control <= {16'd0, 16'd1995, 16'd2000, 8'd0, 8'd35};
       end else if (reg_write) begin
          case (reg_address)
            `CW_AUX_IO: registers_cwauxio <= reg_datai[1:0];
@@ -611,6 +628,8 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
            `USERIO_DRIVE_DATA: userio_drive_data[reg_bytecnt*8 +: 8] <= reg_datai;
 
            `EXTERNAL_CLOCK: reg_external_clock <= reg_datai[0];
+
+           `SOFTPOWER_CONTROL: reg_softpower_control[reg_bytecnt*8 +: 8] <= reg_datai;
            default: ;
          endcase
       end
