@@ -1,8 +1,8 @@
 -- Copyright 1986-2020 Xilinx, Inc. All Rights Reserved.
 -- --------------------------------------------------------------------------------
 -- Tool Version: Vivado v.2020.2 (lin64) Build 3064766 Wed Nov 18 09:12:47 MST 2020
--- Date        : Thu Nov 11 10:14:17 2021
--- Host        : red running 64-bit Ubuntu 18.04.6 LTS
+-- Date        : Wed May 17 16:08:22 2023
+-- Host        : red running 64-bit Ubuntu 20.04.6 LTS
 -- Command     : write_vhdl -force -mode funcsim
 --               /home/jpnewae/git/cw_husky/fpga/vivado/cwhusky.srcs/sources_1/ip/xadc_wiz_0/xadc_wiz_0_sim_netlist.vhdl
 -- Design      : xadc_wiz_0
@@ -69,12 +69,12 @@ inst: unisim.vcomponents.XADC
       INIT_4E => X"0000",
       INIT_4F => X"0000",
       INIT_50 => X"B363",
-      INIT_51 => X"57E4",
+      INIT_51 => X"5999",
       INIT_52 => X"A147",
-      INIT_53 => X"B873",
+      INIT_53 => X"B5E3",
       INIT_54 => X"A93A",
-      INIT_55 => X"52C6",
-      INIT_56 => X"9555",
+      INIT_55 => X"5111",
+      INIT_56 => X"91EB",
       INIT_57 => X"A93A",
       INIT_58 => X"5999",
       INIT_59 => X"0000",
