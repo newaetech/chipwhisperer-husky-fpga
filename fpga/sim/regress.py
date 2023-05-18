@@ -54,6 +54,7 @@ tests.append(dict(name  = 'semipro_combo_fifo',
              OFFSET_ENABLE = 0,
              SHORT_TRIGGER = 1,
              description = 'Stress test of the semipro (plus) combo (slow) fifo.',
+             variants = ['plus'],
              FAST_ADC = 1))
 
 tests.append(dict(name  = 'nom_adc',
@@ -433,6 +434,8 @@ for test in tests:
             makeargs.append("EXEFILE=%s" % exefile)
          elif key == 'description':
             pass
+         elif key == 'variants' and variant not in test[key]:
+            run_test = False
          elif key == 'frequency':
             if test[key] == 0:
                run_test = False
