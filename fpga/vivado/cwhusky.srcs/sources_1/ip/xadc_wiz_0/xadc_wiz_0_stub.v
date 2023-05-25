@@ -1,8 +1,8 @@
 // Copyright 1986-2020 Xilinx, Inc. All Rights Reserved.
 // --------------------------------------------------------------------------------
 // Tool Version: Vivado v.2020.2 (lin64) Build 3064766 Wed Nov 18 09:12:47 MST 2020
-// Date        : Thu Nov 11 10:14:17 2021
-// Host        : red running 64-bit Ubuntu 18.04.6 LTS
+// Date        : Wed May 17 16:08:21 2023
+// Host        : red running 64-bit Ubuntu 20.04.6 LTS
 // Command     : write_verilog -force -mode synth_stub
 //               /home/jpnewae/git/cw_husky/fpga/vivado/cwhusky.srcs/sources_1/ip/xadc_wiz_0/xadc_wiz_0_stub.v
 // Design      : xadc_wiz_0

@@ -4,12 +4,13 @@
 ../hdl/reg_chipwhisperer.v
 ../hdl/reg_openadc.v
 ../hdl/reg_openadc_adcfifo.v
-../hdl/fifo_top_husky.v
 ../hdl/registers.v
 ../hdl/setup.v
 ../hdl/trigger_resync.v
 ../hdl/trigger_unit.v
 ../hdl/usb_reg_main.v
+../hdl/fifo_top_husky.v
+../hdl/semipro_slow_fifo.v
 ../hdl/reg_clockglitch.v
 ../hdl/cwhusky_top.v
 ../hdl/openadc_interface.v
@@ -21,6 +22,7 @@
 ../hdl/reg_la.v
 ../hdl/userio.v
 ../hdl/sad.v
+../hdl/sad_x2_slowclock.v
 ../hdl/edge_trigger.v
 ../fpga-common/hdl/fifo_sync.v
 ../fpga-common/hdl/fifo_async.v
@@ -28,6 +30,8 @@
 ../fpga-common/hdl/cdc_pulse.v
 ../fpga-common/hdl/cdc_bus.v
 ../fpga-common/hdl/cdc_simple.v
+../fpga-common/hdl/fifo_async.v
+../fpga-common/hdl/fifo_sync.v
 ../tracewhisperer/hdl/trace_top.v
 ../tracewhisperer/hdl/reg_trace.v
 ../tracewhisperer/hdl/fe_capture_trace.v

@@ -9,7 +9,7 @@ OFFSET_MIN = 0
 OFFSET_MAX = 1000
 SHORT_TRIGGER = 0
 TRIGGER_DELAY=1500
-READ_DELAY=100
+READ_DELAY=150
 NUM_SEGMENTS = 1
 NUM_GLITCHES = 1
 MAX_GLITCH_REPEATS = 0
@@ -51,6 +51,9 @@ MIN_SIZE=30
 MAX_SIZE=100
 NO_DOWNSTREAM_TRIGGERS=0
 VIVADO_VERSION=2020.2
+VARIANT=REGULAR
+SAD=SAD_X2
+FIFO_TYPE=NOXILINXFIFO
 
 all: compile run
 all_sad: compile_sad run
@@ -74,8 +77,7 @@ endif
 compile_sad:
 	iverilog \
 	../hdl/sad.v \
-	../hdl/sad_v2.v \
-	../hdl/sad_v3_baseline.v \
+	../hdl/sad_x2_slowclock.v \
 	../hdl/sad_wrapper.v \
 	../hdl/usb_reg_main.v \
 	../fpga-common/hdl/cdc_pulse.v \
@@ -87,6 +89,8 @@ compile_sad:
 	-I../hdl \
 	-Wportbind \
 	-Wselect-range \
+	-D$(VARIANT) \
+	-D$(SAD) \
 	-P sad_tb.pLINEAR_RAMP=$(LINEAR_RAMP) \
 	-P sad_tb.pINPUTS_FROM_FILE=$(INPUTS_FROM_FILE) \
 	-P sad_tb.pREF_SAMPLES=$(REF_SAMPLES) \
@@ -104,12 +108,15 @@ compile_sad:
 sad_nofifo:
 	iverilog \
 	../hdl/sad.v \
+	../hdl/sad_x2_slowclock.v \
 	../hdl/sad_wrapper.v \
 	../hdl/usb_reg_main.v \
 	../fpga-common/hdl/cdc_pulse.v \
 	sad_tb.v \
 	-g2005-sv \
 	-DNOFIFO \
+	-D$(VARIANT) \
+	-D$(SAD) \
 	-I../hdl \
 	-Wportbind \
 	-Wselect-range \
@@ -132,6 +139,8 @@ compile_edge:
 	-I../hdl \
 	-Wportbind \
 	-Wselect-range \
+	-D$(VARIANT) \
+	-D$(SAD) \
 	-P edge_tb.pEDGES=$(EDGES) \
 	-P edge_tb.pDUMP=$(DUMP) \
 	-P edge_tb.pSEED=$(SEED) \
@@ -144,12 +153,18 @@ compile:
 	iverilog -ccmdfile \
 	-y/$(VIVADO_PATH)/$(VIVADO_VERSION)/ids_lite/ISE/verilog/src/unisims/ \
 	-g2005-sv \
+	-gsupported-assertions \
 	-I../hdl \
 	-I../tracewhisperer/hdl/ \
 	-Wportbind \
 	-Wselect-range \
 	-D$(FIFOSIZE) \
+	-D$(FAST_FIFO_SIM) \
+	-D$(SAD) \
 	-DTRACE \
+	-D$(VARIANT) \
+	-D$(FIFO_TYPE) \
+	-I../tracewhisperer/hdl/ \
 	-P cwhusky_tb.pADC_LOW_RES=$(ADC_LOW_RES) \
 	-P cwhusky_tb.pSLOW_ADC=$(SLOW_ADC) \
 	-P cwhusky_tb.pFAST_ADC=$(FAST_ADC) \
@@ -238,13 +253,17 @@ lint:
 	-DNOXILINXFIFO \
 	-DFASTFIFOSIM \
 	-DLINT \
+	-DNOFIFO \
+	-DNOXILINXFIFO \
 	-DTRACE \
+	-D$(VARIANT) \
+	-D$(SAD) \
 	--top-module cwhusky_top \
 	2>&1 | tee lint.out \
 
 lint_pro:
 	verilator --lint-only -Wall \
-        --error-limit 0 \
+	--error-limit 0 \
         -Wno-PINCONNECTEMPTY \
         -Wno-ASSIGNDLY \
         -f cmdfile_coco_nofifo \
@@ -256,6 +275,8 @@ lint_pro:
         -DFASTFIFOSIM \
         -DLINT \
         -DTRACE \
+	-D$(VARIANT) \
+	-D$(SAD) \
         --top-module cwhusky_cw310_top \
         2>&1 | tee lint.out \
 
@@ -282,6 +303,8 @@ fifo:
 	-y/$(VIVADO_PATH)/$(VIVADO_VERSION)/ids_lite/ISE/verilog/src/unisims/ \
 	-I../hdl \
 	-DTRACE \
+	-D$(VARIANT) \
+	-D$(SAD) \
 	-g2005-sv \
 	-Wportbind \
 	-Wselect-range \

@@ -269,9 +269,17 @@ module cwhusky_top(
                              USB_WRn,           // D6
                              USB_CEn,           // D5
                              clk_usb_buf,       // D4
+                             USB_Data[7:4]      // D3:0
+                           };
+
+   wire [7:0] usb_debug2 = { USB_RDn,           // D7
+                             USB_WRn,           // D6
+                             USB_CEn,           // D5
+                             clk_usb_buf,       // D4
                              USB_Data[3:0]      // D3:0
                            };
 
+   /*
    wire [7:0] usb_debug2 = { USB_RDn,           // D7
                              USB_WRn,           // D6
                              USB_CEn,           // D5
@@ -280,6 +288,7 @@ module cwhusky_top(
                              reg_write,         // D2
                              USB_Addr[1:0]      // D1:0
                            };
+   */
 
    wire [7:0] usb_debug3 = { reg_write,         // D7
                              USB_Data[6:0]      // D6:0
@@ -365,7 +374,10 @@ module cwhusky_top(
         .pBYTECNT_SIZE  (pBYTECNT_SIZE)
    ) oadc (
         .clk_usb                (clk_usb_buf),
+        .ADC_slow_clk_even      (ADC_slow_clk_even),
+        .ADC_slow_clk_odd       (ADC_slow_clk_odd),
         .reset_o                (reg_rst),
+        .xadc_error             (xadc_error_flag),
 
         .LED_capture            (cw_led_cap),
         .LED_armed              (cw_led_armed),
@@ -739,6 +751,12 @@ module cwhusky_top(
    `ifdef __ICARUS__
       assign ADC_clk_fb = ADC_clk_fbp;
 
+      // for SAD:
+      reg ADC_slow_clk_even = 1'b0;
+      reg ADC_slow_clk_odd  = 1'b1;
+      always @(posedge ADC_clk_fb) ADC_slow_clk_even <= ~ADC_slow_clk_even;
+      always @(posedge ADC_clk_fb) ADC_slow_clk_odd  <= ~ADC_slow_clk_odd;
+
    `else
       wire ADC_clk_fb_prebuf;
       IBUFDS #(
@@ -755,6 +773,32 @@ module cwhusky_top(
          .O(ADC_clk_fb),
          .I(ADC_clk_fb_prebuf)
       );
+
+      `ifdef SAD_X2
+          // for SAD:
+          // reference: https://support.xilinx.com/s/question/0D52E00006hpe4DSAQ/how-to-divide-a-clock-by-2-with-a-simple-primitive-without-clock-wizard-artix7?language=en_US)
+          // except they suggest sourcing the BUFGCE input clock from the BUFG_adc_clk *input*, but Vivado doesn't recognize that as a clock,
+          // so we're using the output instead...
+          wire ADC_slow_clk_even;
+          wire ADC_slow_clk_odd;
+          reg bufgce_count = 1'b0;
+          always @(posedge ADC_clk_fb) bufgce_count <= ~bufgce_count;
+          BUFGCE U_slow_adc_even (
+              //.I    (ADC_clk_fb_prebuf),
+              .I    (ADC_clk_fb),
+              .CE   (bufgce_count),
+              .O    (ADC_slow_clk_even)
+          );
+          BUFGCE U_slow_adc_odd (
+              //.I    (ADC_clk_fb_prebuf),
+              .I    (ADC_clk_fb),
+              .CE   (~bufgce_count),
+              .O    (ADC_slow_clk_odd)
+          );
+      `else
+          wire ADC_slow_clk_even = 1'b0;
+          wire ADC_slow_clk_odd = 1'b0;
+      `endif
 
    `endif
 

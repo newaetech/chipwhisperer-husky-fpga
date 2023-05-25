@@ -3,8 +3,10 @@ set_property CONFIG_VOLTAGE 3.3 [current_design]
 
 
 create_clock -period 10.400 -name clk_usb -waveform {0.000 5.200} [get_nets clk_usb]
-create_clock -period 3.000 -name ADC_clk_fb -waveform {0.000 1.500} [get_nets ADC_clk_fb]
-create_clock -period 3.000 -name pll_fpga_clk -waveform {0.000 1.500} [get_nets pll_fpga_clk]
+#create_clock -period 3.334 -name ADC_clk_fb -waveform {0.000 1.667} [get_nets ADC_clk_fb]
+#create_clock -period 3.334 -name pll_fpga_clk -waveform {0.000 1.667} [get_nets pll_fpga_clk]
+create_clock -period 4.000 -name ADC_clk_fb -waveform {0.000 2.000} [get_nets ADC_clk_fb]
+create_clock -period 4.000 -name pll_fpga_clk -waveform {0.000 2.000} [get_nets pll_fpga_clk]
 
 create_clock -period 20.000 -name target_hs1 -waveform {0.000 10.000} [get_nets target_hs1]
 create_clock -period 20.000 -name AUXIO -waveform {0.000 10.500} [get_nets AUXIO]
@@ -29,6 +31,9 @@ set_case_analysis 1 [get_pins reg_la/sourceclk_mux1/S]
 set_case_analysis 0 [get_pins reg_la/sourceclk_mux2/S]
 set_case_analysis 0 [get_pins reg_la/sourceclk_mux3/S]
 
+create_generated_clock -name adc_slow_clk_even -source [get_pins BUFG_adc_clk/O] -divide_by 2 [get_pins U_slow_adc_even/O]
+create_generated_clock -name adc_slow_clk_odd  -source [get_pins BUFG_adc_clk/O] -divide_by 2 [get_pins U_slow_adc_odd/O]
+
 create_generated_clock -name fe_clk -source [get_pins U_trace_top/U_fe_clock_mux2/I1] -combinational [get_pins U_trace_top/U_fe_clock_mux2/O]
 create_generated_clock -name trace_clk_selected -source [get_pins U_trace_top/U_traceclk_sel/I0] -combinational [get_pins U_trace_top/U_traceclk_sel/O]
 create_generated_clock -name trace_clk_shifted [get_pins U_trace_top/U_trace_clock_mmcm/CLKOUT0]
@@ -47,6 +52,10 @@ set_max_delay 15 -through [get_pins USB_Data_IOBUF*inst/T]
 set_max_delay 15 -through [get_pins U_usb_reg_main/reg_address_reg*/Q]
 set_max_delay 15 -through [get_pins oadc/U_fifo/fifo_read_count_reg*/Q]
 set_max_delay 15 -through [get_pins oadc/U_reg_openadc_adcfifo/fast_fifo_read_mode_reg/Q]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks clk_usb ] \
+                 -group [get_clocks {adc_slow_clk_even adc_slow_clk_odd}]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks clk_usb ] \
@@ -253,12 +262,12 @@ set_property -dict { PACKAGE_PIN E3   IOSTANDARD LVCMOS33 }  [get_ports glitchou
 
 
 # No spec for these, seems sensible:
-set_input_delay -clock clk_usb 2.000 [get_ports USB_ALEn]
-set_input_delay -clock clk_usb 2.000 [get_ports USB_CEn]
-set_input_delay -clock clk_usb 2.000 [get_ports USB_RDn]
-set_input_delay -clock clk_usb 2.000 [get_ports USB_WRn]
-set_input_delay -clock clk_usb 2.000 [get_ports USB_Data]
-set_input_delay -clock clk_usb 2.000 [get_ports USB_Addr]
+set_input_delay -clock clk_usb 4.000 [get_ports USB_ALEn]
+set_input_delay -clock clk_usb 4.000 [get_ports USB_CEn]
+set_input_delay -clock clk_usb 4.000 [get_ports USB_RDn]
+set_input_delay -clock clk_usb 4.000 [get_ports USB_WRn]
+set_input_delay -clock clk_usb 4.000 [get_ports USB_Data]
+set_input_delay -clock clk_usb 4.000 [get_ports USB_Addr]
 
 set_output_delay -clock clk_usb 0.000 [get_ports USB_SPARE0]
 set_false_path -to [get_ports USB_SPARE0]

@@ -165,12 +165,12 @@ XADC #(
         .INIT_4E(16'h0000), // Sequencer Acq time selection
         .INIT_4F(16'h0000), // Sequencer Acq time selection
         .INIT_50(16'hB363), // Temp alarm trigger
-        .INIT_51(16'h57E4), // Vccint upper alarm limit
+        .INIT_51(16'h5999), // Vccint upper alarm limit
         .INIT_52(16'hA147), // Vccaux upper alarm limit
-        .INIT_53(16'hB873),  // Temp alarm OT upper
+        .INIT_53(16'hB5E3),  // Temp alarm OT upper
         .INIT_54(16'hA93A), // Temp alarm reset
-        .INIT_55(16'h52C6), // Vccint lower alarm limit
-        .INIT_56(16'h9555), // Vccaux lower alarm limit
+        .INIT_55(16'h5111), // Vccint lower alarm limit
+        .INIT_56(16'h91EB), // Vccaux lower alarm limit
         .INIT_57(16'hA93A),  // Temp alarm OT reset
         .INIT_58(16'h5999), // VCCBRAM upper alarm limit
         .INIT_5C(16'h5111),  //  VCCBRAM lower alarm limit

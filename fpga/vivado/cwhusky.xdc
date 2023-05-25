@@ -26,6 +26,10 @@ set_case_analysis 1 [get_pins reg_la/sourceclk_mux1/S]
 set_case_analysis 0 [get_pins reg_la/sourceclk_mux2/S]
 set_case_analysis 0 [get_pins reg_la/sourceclk_mux3/S]
 
+create_generated_clock -name adc_slow_clk_even -source [get_pins BUFG_adc_clk/O] -divide_by 2 [get_pins U_slow_adc_even/O]
+create_generated_clock -name adc_slow_clk_odd  -source [get_pins BUFG_adc_clk/O] -divide_by 2 [get_pins U_slow_adc_odd/O]
+
+
 create_generated_clock -name fe_clk -source [get_pins U_trace_top/U_fe_clock_mux2/I1] -combinational [get_pins U_trace_top/U_fe_clock_mux2/O]
 create_generated_clock -name trace_clk_selected -source [get_pins U_trace_top/U_traceclk_sel/I0] -combinational [get_pins U_trace_top/U_traceclk_sel/O]
 create_generated_clock -name trace_clk_shifted [get_pins U_trace_top/U_trace_clock_mmcm/CLKOUT0]
@@ -44,6 +48,10 @@ set_max_delay 15 -through [get_pins USB_Data_IOBUF*inst/T]
 set_max_delay 15 -through [get_pins U_usb_reg_main/reg_address_reg*/Q]
 set_max_delay 15 -through [get_pins oadc/U_fifo/fifo_read_count_reg*/Q]
 set_max_delay 15 -through [get_pins oadc/U_reg_openadc_adcfifo/fast_fifo_read_mode_reg/Q]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks clk_usb ] \
+                 -group [get_clocks {adc_slow_clk_even adc_slow_clk_odd}]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks clk_usb ] \

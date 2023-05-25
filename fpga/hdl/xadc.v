@@ -69,7 +69,7 @@ module xadc #(
    assign xadc_stat[3] = vccaux_alarm_out;
    assign xadc_stat[4] = vbram_alarm_out;
    
-   assign xadc_error = |xadc_stat;
+   assign xadc_error = |xadc_stat_hold;
 
    always @(*) begin
       if (reg_read) begin
