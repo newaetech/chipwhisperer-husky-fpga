@@ -25,7 +25,7 @@ set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets U_trace_top/trace_cl
 
 #set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets pll_fpga_clk]
 set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets reg_clockglitch/mux1out]
-#set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets reg_la/mux1out]
+set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets reg_la/mux1out]
 #set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets reg_la/observer_clk_prebuf]
 
 #set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets ADC_clk_fb]
@@ -37,7 +37,14 @@ set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets ADC_clk_fb]
 #set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets U_trace_top/fe_clk]
 #set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets U_trace_top/src_clk]
 
+create_generated_clock -name adc_slow_clk_even -source [get_pins BUFG_ADC_clk_fb/O] -divide_by 2 [get_pins U_slow_adc_even/O]
+create_generated_clock -name adc_slow_clk_odd  -source [get_pins BUFG_ADC_clk_fb/O] -divide_by 2 [get_pins U_slow_adc_odd/O]
+
+# required with SAD_ONLY:
+set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets U_trace_top/fe_clk]
+
 set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets U_trace_top/dst_clk]
+
 
 set_case_analysis 1 [get_pins reg_clockglitch/sourceclk_mux1/S]
 set_case_analysis 0 [get_pins reg_clockglitch/sourceclk_mux2/S]
@@ -67,6 +74,10 @@ set_max_delay 15 -through [get_pins oadc/U_reg_openadc_adcfifo/fast_fifo_read_mo
 set_clock_groups -asynchronous \
                  -group [get_clocks clk_usb ] \
                  -group [get_clocks target_hs1]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks clk_usb ] \
+                 -group [get_clocks {adc_slow_clk_even adc_slow_clk_odd}]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks {clk_usb ADC_clk_fb pll_clk_x2} ] \

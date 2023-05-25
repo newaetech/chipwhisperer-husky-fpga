@@ -483,11 +483,15 @@ module cwhusky_cw310_top (
        wire tb_ui_clk = 1'b0;
    `endif
 
+  wire ADC_slow_clk_even;
+  wire ADC_slow_clk_odd;
 
    openadc_interface #(
         .pBYTECNT_SIZE          (pBYTECNT_SIZE)
    ) oadc (
         .clk_usb                (clk_usb_buf),
+        .ADC_slow_clk_even      (ADC_slow_clk_even),
+        .ADC_slow_clk_odd       (ADC_slow_clk_odd),
         .reset_o                (reg_rst),
 
         .LED_capture            (cw_led_cap),
@@ -861,6 +865,27 @@ module cwhusky_cw310_top (
        .I1      (pll_clk_x2),
        .S       (cw310_adc_clk_sel)
     );
+
+
+
+`ifdef SAD_X2
+  reg bufgce_count = 1'b0;
+  always @(posedge ADC_clk_fb) bufgce_count <= ~bufgce_count;
+  BUFGCE U_slow_adc_even (
+      .I    (ADC_clk_fb),
+      .CE   (bufgce_count),
+      .O    (ADC_slow_clk_even)
+  );
+  BUFGCE U_slow_adc_odd (
+      .I    (ADC_clk_fb),
+      .CE   (~bufgce_count),
+      .O    (ADC_slow_clk_odd)
+  );
+`else
+  wire ADC_slow_clk_even = 1'b0;
+  wire ADC_slow_clk_odd = 1'b0;
+`endif
+
 
     assign pll_fpga_clk = ADC_clk_fb;
 
