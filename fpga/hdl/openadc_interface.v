@@ -492,6 +492,9 @@ module openadc_interface #(
     `ifdef PLUS
            .pREF_SAMPLES            (384),
            .pSAD_COUNTER_WIDTH      (14),
+    `elsif PRO
+           .pREF_SAMPLES            (512),
+           .pSAD_COUNTER_WIDTH      (15),
     `else
            .pREF_SAMPLES            (192),
            .pSAD_COUNTER_WIDTH      (12),

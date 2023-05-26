@@ -113,7 +113,7 @@ module fifo_top_husky_pro (
     reg  [19:0]         segment_cycle_counter;
 
     reg                 arm_r;
-    reg                 arm_pulse_adc;
+    wire                arm_pulse_adc;
     reg                 arming;
     reg                 capture_go_r;
     reg                 capture_go_r2;
@@ -465,7 +465,7 @@ module fifo_top_husky_pro (
           capture_go_r <= capture_go;
           capture_go_r2 <= capture_go_r;
           arm_r <= arm_i;
-          arm_pulse_adc <= ~arm_r & arm_i;
+          //arm_pulse_adc <= ~arm_r & arm_i;
           if (arm_i && ~arm_r && ~arming) begin
              arming <= 1'b1;
              armed_and_ready <= 1'b0;
@@ -515,10 +515,15 @@ module fifo_top_husky_pro (
     // clean up!
     wire all_preddr_fifo_empty = preddr_fifo_empty && preddr_la_empty && preddr_trace_empty;
 
+    reg arm_usb_r;
+    assign arm_pulse_usb = arm_usb && ~arm_usb_r;
     always @(posedge clk_usb) begin
-        if (reset)
+        if (reset) begin
             flushing <= 1'b0;
+            arm_usb_r <= 1'b0;
+        end
         else begin
+            arm_usb_r <= arm_usb;
             if (arm_pulse_usb)
                 flushing <= 1'b1;
             //else if (fast_fifo_empty_usb && all_preddr_fifo_empty_usb && postddr_fifo_empty)
@@ -526,6 +531,14 @@ module fifo_top_husky_pro (
                 flushing <= 1'b0;
         end
     end
+
+    cdc_pulse U_fifo_rst_start_cdc (
+       .reset_i       (reset),
+       .src_clk       (clk_usb),
+       .src_pulse     (arm_pulse_usb),
+       .dst_clk       (adc_sampleclk),
+       .dst_pulse     (arm_pulse_adc)
+    );
 
     wire flushing_ui;
     cdc_simple U_flushing_ui_cdc (
@@ -536,8 +549,15 @@ module fifo_top_husky_pro (
         .data_out_r     ()
     );
 
-    reg arm_usb_r;
-    assign arm_pulse_usb = arm_usb && ~arm_usb_r;
+
+    wire postddr_fifo_underflow_masked_adc;
+    cdc_simple U_slow_fifo_underflow_masked_cdc (
+        .reset          (reset),
+        .clk            (clk_usb),
+        .data_in        (postddr_fifo_underflow_masked),
+        .data_out       (postddr_fifo_underflow_masked_adc),
+        .data_out_r     ()
+    );
 
     // this may seem awkward; goal is to set new error bits without clearing old ones
     function [12:0] error_bits (input [12:0] current_error);
@@ -555,22 +575,20 @@ module fifo_top_husky_pro (
           if (fast_fifo_overflow)            error_bits[3]  = 1'b1;
           if (fast_fifo_underflow)           error_bits[2]  = 1'b1;
           if (postddr_fifo_overflow)         error_bits[1]  = 1'b1;
-          if (postddr_fifo_underflow_masked) error_bits[0]  = 1'b1;
+          if (postddr_fifo_underflow_masked_adc) error_bits[0]  = 1'b1;
        end
     endfunction
 
-    always @(posedge clk_usb) begin
+    always @(posedge adc_sampleclk) begin
        if (reset) begin
           error_flag <= 0;
           error_stat <= 0;
           first_error_stat <= 0;
           underflow_count <= 0;
           first_error_state <= pS_IDLE;
-          arm_usb_r <= 0;
        end
        else begin
-          arm_usb_r <= arm_usb;
-          if (arm_pulse_usb || clear_fifo_errors) begin
+          if (arm_pulse_adc || clear_fifo_errors) begin
              error_stat <= 0;
              first_error_stat <= 0;
              error_flag <= 0;
@@ -579,7 +597,7 @@ module fifo_top_husky_pro (
           end
           else begin
              if (gain_error || segment_error || downsample_error || clip_error || presamp_error || 
-                 fast_fifo_overflow || fast_fifo_underflow || postddr_fifo_overflow || postddr_fifo_underflow_masked || 
+                 fast_fifo_overflow || fast_fifo_underflow || postddr_fifo_overflow || postddr_fifo_underflow_masked_adc || 
                  preddr_fifo_overflow || preddr_fifo_underflow || reading_too_soon_error || ddr_full_error) begin
                 error_flag <= 1;
                 if (!error_flag) begin
@@ -590,7 +608,7 @@ module fifo_top_husky_pro (
 
              error_stat <= error_bits(error_stat);
 
-             if (postddr_fifo_underflow_masked && (underflow_count != 8'hFF))
+             if (postddr_fifo_underflow_masked_adc && (underflow_count != 8'hFF))
                 underflow_count <= underflow_count + 1;
           end
        end
