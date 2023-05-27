@@ -20,6 +20,7 @@ class GenericCapture(object):
         self.name = None
         self.errors = 0
         self._first_read_sample = None
+        self._actual_first_write = None
         self.raw_read_data = []
 
     def start(self) -> None:
@@ -27,6 +28,7 @@ class GenericCapture(object):
         if self._coro is not None:
             raise RuntimeError("Capture already started")
         self._coro = cocotb.start_soon(self._run())
+        first_write_thread = cocotb.start_soon(self._catch_first_write())
 
     def stop(self) -> None:
         """Stop capture thread"""
@@ -63,6 +65,12 @@ class GenericCapture(object):
         """ Check <data> for errors. Return the number of errors seen.
         """
         self.dut._log.error("_check_samples() must be implemented in child class.")
+
+    def _catch_first_write(self) -> None:
+        """ Monitor DUT internals to catch the actual first write.
+        """
+        self.dut._log.error("_catch_first_write() must be implemented in child class.")
+
 
     def inc_error(self) -> None:
         """ Call this to increase the local class error count, the global
@@ -276,6 +284,10 @@ class ADCCapture(GenericCapture):
         samples = len(data)
         current_count = data[0]
         self.first_read_sample = int(current_count)
+        expected = self._actual_first_write
+        if int(current_count) != expected:
+            self.dut._log.error("%12s First sample: expected %3x got %3x" % (job['job_name'], expected, current_count))
+            self.inc_error()
         first_error = None
         #self.dut._log.info("Checking ramp (%0d samples)" % len(data))
         for i, byte in enumerate(data[1:]):
@@ -292,6 +304,15 @@ class ADCCapture(GenericCapture):
                 current_count += 1
                 if (i+2) % samples == 0:
                     current_count = (current_count + segment_cycles - samples) % MOD
+
+    async def _catch_first_write(self) -> None:
+        while True:
+            await RisingEdge(self.dut.U_dut.oadc.U_fifo.armed_and_ready)
+            self.dut._log.info("%12s armed" % self.name)
+            await RisingEdge(self.dut.U_dut.oadc.U_fifo.state_triggered)
+            await FallingEdge(self.dut.U_dut.oadc.U_fifo.adc_sampleclk)
+            self._actual_first_write = int(self.dut.U_dut.oadc.U_fifo.adc_datain.value)
+            self.dut._log.info("%12s got first write: %0x" % (self.name, self._actual_first_write))
 
 
 
@@ -387,6 +408,15 @@ class LACapture(GenericCapture):
             raise ValueError('Unsupported')
         MOD = 2**job['bits_per_sample']
         self.first_read_sample = int(data[0])
+
+        if job['bits_per_sample'] == 9:
+            expected = (self._actual_first_write & 0x3fe00) >> 9
+        else:
+            expected =  self._actual_first_write & 0xff
+        if int(data[0]) != expected:
+            self.dut._log.error("%12s First sample: expected %3x got %3x" % (job['job_name'], expected, data[0]))
+            self.inc_error()
+
         self.sample_increment = INC
         for i,byte in enumerate(data[1:]):
             expected = (data[0] + INC*(i+1)) % MOD
@@ -395,6 +425,15 @@ class LACapture(GenericCapture):
                 self.dut._log.error("%12s Sample %4d: expected %2x got %2x" % (job['job_name'], i+1, expected, byte))
             else:
                 self.dut._log.debug("%12s Good sample %4d: %2x" % (job['job_name'], i+1, byte))
+
+    async def _catch_first_write(self) -> None:
+        while True:
+            await RisingEdge(self.dut.U_dut.reg_la.armed)
+            self.dut._log.info("%12s armed" % self.name)
+            await RisingEdge(self.dut.U_dut.la_fifo_wr)
+            await FallingEdge(self.dut.U_dut.reg_la.observer_clk)
+            self._actual_first_write = int(self.dut.U_dut.la_wr_data.value)
+            self.dut._log.info("%12s got first write: %0x" % (self.name, self._actual_first_write))
 
 
 
@@ -476,6 +515,10 @@ class TraceCapture(GenericCapture):
 
     def _check_samples(self, job, data) -> None:
         self.first_read_sample = int(data[0])
+        expected = self._actual_first_write
+        if int(data[0]) != expected:
+            self.dut._log.error("%12s First sample: expected %3x got %3x" % (job['job_name'], expected, data[0]))
+            self.inc_error()
         for i,byte in enumerate(data[1:]):
             expected = (data[0] + i + 1) % 2**18
             if expected != byte:
@@ -483,6 +526,16 @@ class TraceCapture(GenericCapture):
                 self.dut._log.error("%12s Sample %4d: expected %5x got %5x" % (job['job_name'], i+1, expected, byte))
             else:
                 self.dut._log.debug("%12s Good sample %4d: %5x" % (job['job_name'], i+1, byte))
+
+    async def _catch_first_write(self) -> None:
+        self._actual_first_write = 0
+        while True:
+            await RisingEdge(self.dut.U_dut.U_trace_top.arm_fe)
+            self.dut._log.info("%12s armed" % self.name)
+            await RisingEdge(self.dut.U_dut.trace_fifo_wr)
+            await FallingEdge(self.dut.U_dut.U_trace_top.fe_clk)
+            self._actual_first_write = int(self.dut.U_dut.trace_wr_data.value)
+            self.dut._log.info("%12s got first write: %0x" % (self.name, self._actual_first_write))
 
 
 
@@ -545,4 +598,7 @@ class GlitchCapture(GenericCapture):
 
     def not_in_a_job(self) -> None:
         self.job_name = '(glitch: no job)'
+
+    async def _catch_first_write(self) -> None:
+        pass
 

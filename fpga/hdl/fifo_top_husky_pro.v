@@ -191,7 +191,7 @@ module fifo_top_husky_pro (
     localparam pS_DONE = 5;
     reg [2:0] state_r;
 
-    // strictly for easier debugging:
+    // for easier debugging; also used by testbench:
     wire state_idle = (state == pS_IDLE);
     wire state_presamp_filling = (state == pS_PRESAMP_FILLING);
     wire state_presamp_full = (state == pS_PRESAMP_FULL);
