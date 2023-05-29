@@ -5,6 +5,7 @@ from cocotb.queue import Queue
 from cocotb.handle import Force, Release
 from test_husky_captures import ADCCapture, LACapture, TraceCapture, GlitchCapture
 import random
+import math
 import numpy as np
 
 class GenericTest(object):
@@ -17,6 +18,7 @@ class GenericTest(object):
         self.num_captures = None
         self.capture_min = None
         self.capture_max = None
+        self.max_presamples = None
         self.checker = None
         self.dut_job_signal = None
         self._coro = None
@@ -106,6 +108,12 @@ class GenericTest(object):
         """
         self.dut._log.error("_initial_setup() must be implemented in child class.")
 
+    async def _pretrigger_wait(self, job) -> None:
+        """ After arming, before triggering: allow for things like presamples, if needed.
+        """
+        pass
+
+
     async def _wait_capture_done(self, job: dict) -> None:
         """ Wait for DUT to finish capturing the job we just dispatched, so
         that we can remove our entry from the harness queue (which is used to
@@ -181,6 +189,7 @@ class GenericTest(object):
             self.dut._log.info("%12s Triggering: %s" %(job_name, job))
             self.dut.current_action.value = self.harness.hexstring("%12s Triggering" % job_name)
             await self._arm()
+            await self._pretrigger_wait(job)
             await self._trigger(job)
             self.trigger_event.set()
             if externally_triggered:
@@ -216,13 +225,18 @@ class ADCTest(GenericTest):
 
     async def _job_setup(self) -> dict:
         samples = random.randint(self.capture_min, self.capture_max)
+        if random.randint(0,3) == 0:
+            presamples = 0  # no presamples a quarter of the time
+        else:
+            presamples = random.randint(8, min(self.max_presamples, samples-2)) # DUT doesn't allow for 1-7 presamples
         await self.registers.write(self.reg_addr['SAMPLES_ADDR'], self.registers.to_bytes(samples, 4))
-        bits_per_sample = 12
+        await self.registers.write(self.reg_addr['PRESAMPLES_ADDR'], self.registers.to_bytes(presamples, 4))
+        bits_per_sample = 12 # TODO
         if random.randint(0,1):
             trigger_type = 'manual'
         else:
             trigger_type = 'io4'
-        return {"samples": samples, "bits_per_sample": bits_per_sample, "trigger_type": trigger_type}
+        return {"samples": samples, "presamples": presamples, "bits_per_sample": bits_per_sample, "trigger_type": trigger_type}
 
     async def _initial_setup(self) -> None:
         await self.registers.write(self.reg_addr['FIFO_CONFIG'], [1]) # use DDR and set ADC ramp mode
@@ -260,6 +274,14 @@ class ADCTest(GenericTest):
     def _untrigger(self, job) -> None:
         if job['trigger_type'] == 'io4':
             self.dut.target_io4.value = 0
+
+    async def _pretrigger_wait(self, job) -> None:
+        presamples = job['presamples']
+        if presamples > 0:
+            min_cycles = math.ceil(self.harness.adc_period / self.harness.usb_period) * presamples + 1
+            wait_cycles = random.randint(min_cycles, min_cycles*4)
+            self.dut._log.info('%12s pre-trigger waiting %d cycles' % (job['job_name'], wait_cycles))
+            await ClockCycles(self.clk, wait_cycles)
 
     async def fifo_watch(self) -> None:
         while True:

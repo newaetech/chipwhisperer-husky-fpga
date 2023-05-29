@@ -46,10 +46,11 @@ class Harness(object):
         # regress.py always specifies the seed so this is fine.
         self.dut._log.info("seed: %d" % int(os.getenv('RANDOM_SEED', '0')))
         #cocotb.start_soon(Clock(dut.clk_usb, 1, units='ns').start())
-        adc_period = random.randint(4, 20)
-        self.dut._log.info("ADC clock randomized to %5.1f MHz" % (1/adc_period*1000))
-        usb_clock_thread = cocotb.start_soon(Clock(dut.clk_usb, 10, units="ns").start())
-        adc_clock_thread = cocotb.start_soon(Clock(dut.PLL_CLK1, adc_period, units="ns").start())
+        self.usb_period = 10
+        self.adc_period = random.randint(4, 20)
+        self.dut._log.info("ADC clock randomized to %5.1f MHz" % (1/self.adc_period*1000))
+        usb_clock_thread = cocotb.start_soon(Clock(dut.clk_usb, self.usb_period, units="ns").start())
+        adc_clock_thread = cocotb.start_soon(Clock(dut.PLL_CLK1, self.adc_period, units="ns").start())
         ui_clock_thread = cocotb.start_soon(Clock(dut.ui_clk, 6, units="ns").start())
         # TODO: initialize all DUT input values
         self.dut.errors.value = 0
@@ -256,6 +257,7 @@ async def capture(dut):
     num_captures = int(os.getenv('NUM_CAPTURES', '3'))
     min_size = int(os.getenv('MIN_SIZE', '30'))
     max_size = int(os.getenv('MAX_SIZE', '100'))
+    max_presamples = int(os.getenv('MAX_PRESAMPLES', '100'))
     min_glitches = int(os.getenv('MIN_GLITCHES', '1'))
     max_glitches = int(os.getenv('MAX_GLITCHES', '5'))
 
@@ -275,6 +277,7 @@ async def capture(dut):
         adctest.num_captures = num_captures
         adctest.capture_min = min_size
         adctest.capture_max = max_size
+        adctest.max_presamples = max_presamples
         harness.register_test(adctest)
 
     if int(os.getenv('TRACE_CAPTURE')):

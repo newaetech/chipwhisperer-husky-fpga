@@ -36,6 +36,7 @@ tests.append(dict(name  = 'adc_capture',
              LA_CAPTURE = 0,
              TRACE_CAPTURE = 0,
              MAX_SIZE = 300,
+             MAX_PRESAMPLES = 300,
              description = 'ADC-only capture.'))
 
 tests.append(dict(name  = 'la_capture',

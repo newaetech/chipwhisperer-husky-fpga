@@ -284,7 +284,7 @@ class ADCCapture(GenericCapture):
         samples = len(data)
         current_count = data[0]
         self.first_read_sample = int(current_count)
-        expected = self._actual_first_write
+        expected = (self._actual_first_write - job['presamples']) % MOD
         if int(current_count) != expected:
             self.dut._log.error("%12s First sample: expected %3x got %3x" % (job['job_name'], expected, current_count))
             self.inc_error()
