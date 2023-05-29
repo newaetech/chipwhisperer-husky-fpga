@@ -17,7 +17,7 @@ parser.add_argument("--tests", help="Run all tests whose name contains TESTS", d
 parser.add_argument("--exclude", help="Exclude tests whose name contains TESTS", default='')
 parser.add_argument("--list", help="List available tests.", action='store_true')
 parser.add_argument("--dump", help="Enable waveform dumping.", action='store_true')
-parser.add_argument("--proc", type=int, help="Maximum number of parallel jobs to dispatch.", default=32)
+parser.add_argument("--proc", type=int, help="Maximum number of parallel jobs to dispatch.")
 parser.add_argument("--cocodebug", help="Cocotb debug level", default='INFO')
 parser.add_argument("--fast_fifo_sim", help="Force FIFOs to use flopped version, for considerably faster run times.", action='store_true')
 parser.add_argument("--compile_once", help="Compile only once for faster regressions. CAUTION: prevents changes to test parameters \
@@ -274,10 +274,17 @@ pbar_finished   = tqdm(total=len(jobs_to_submit), desc='Tests finished ')
 pbar_passed     = tqdm(total=len(jobs_to_submit), desc='Tests passing  ')
 
 # submit first batch of jobs (up to args.proc):
-if args.proc > len(jobs_to_submit):
+if args.proc:
+    procs = args.proc
+elif os.cpu_count():
+    procs = os.cpu_count()
+else:
+    procs = 8
+print("\nXXX using %d procs\n" % procs)
+if procs > len(jobs_to_submit):
     num_first_batch = len(jobs_to_submit)
 else:
-    num_first_batch = args.proc
+    num_first_batch = procs
 for i in range(num_first_batch):
     makeargs, logfile, outfile, seed = jobs_to_submit.pop()
     p = subprocess.Popen(makeargs, stdout=outfile, stderr=outfile)
