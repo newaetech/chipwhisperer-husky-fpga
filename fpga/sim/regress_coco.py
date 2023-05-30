@@ -37,6 +37,7 @@ tests.append(dict(name  = 'adc_capture',
              TRACE_CAPTURE = 0,
              MAX_SIZE = 300,
              MAX_PRESAMPLES = 300,
+             MAX_OFFSET = 1000,
              description = 'ADC-only capture.'))
 
 tests.append(dict(name  = 'la_capture',
@@ -280,7 +281,6 @@ elif os.cpu_count():
     procs = os.cpu_count()
 else:
     procs = 8
-print("\nXXX using %d procs\n" % procs)
 if procs > len(jobs_to_submit):
     num_first_batch = len(jobs_to_submit)
 else:

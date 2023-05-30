@@ -168,7 +168,7 @@ class Harness(object):
         flushing = True
         await ClockCycles(self.dut.clk_usb, 5) # give time for flushing to begin
         while flushing:
-            self.dut._log.debug("...waiting for flush to complete...")
+            self.dut._log.debug("...waiting for %s flush to complete..." % source)
             flushing = (await self.registers.read(self.reg_addr['FIFO_STAT'], 3))[2] & bitmask
 
     def register_test(self, test):
@@ -258,6 +258,7 @@ async def capture(dut):
     min_size = int(os.getenv('MIN_SIZE', '30'))
     max_size = int(os.getenv('MAX_SIZE', '100'))
     max_presamples = int(os.getenv('MAX_PRESAMPLES', '100'))
+    max_offset =  int(os.getenv('MAX_OFFSET', '100'))
     min_glitches = int(os.getenv('MIN_GLITCHES', '1'))
     max_glitches = int(os.getenv('MAX_GLITCHES', '5'))
 
@@ -278,6 +279,7 @@ async def capture(dut):
         adctest.capture_min = min_size
         adctest.capture_max = max_size
         adctest.max_presamples = max_presamples
+        adctest.max_offset = max_offset
         harness.register_test(adctest)
 
     if int(os.getenv('TRACE_CAPTURE')):

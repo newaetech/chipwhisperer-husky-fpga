@@ -37,39 +37,33 @@ class GenericCapture(object):
         self._coro.kill()
         self._coro = None
 
-    async def _pre_read_wait(self, job) -> None:
-        """ Wait time after job is received. Intended to be used to account for
-        the DUT to process the job, before we can go obtain the job result.
-        """
-        self.dut._log.error("_pre_read_wait() must be implemented in child class.")
-
     async def _initiate_read(self) -> None:
         """ Set up the read and ensure that data is available to be read.
         """
-        self.dut._log.error("_initiate_read() must be implemented in child class.")
+        self.dut._log.error("%12s: _initiate_read() must be implemented in child class." % self.name)
 
     async def _read_samples(self, job) -> list:
         """ Read all the samples from DUT. Should return actual samples, not
         raw read data (e.g. a list of 12-bit samples, not a list of bytes that
         encode 12-bit samples)
         """
-        self.dut._log.error("_read_samples() must be implemented in child class.")
+        self.dut._log.error("%12s: _read_samples() must be implemented in child class." % self.name)
 
     async def _check_fifo_errors(self, job_name) -> None:
         """ Check FIFO status and errors. Meant to be called after reading all
         samples. Verifies that FIFO is empty.
         """
-        self.dut._log.error("_check_fifo_errors() must be implemented in child class.")
+        self.dut._log.error("%12s: _check_fifo_errors() must be implemented in child class." % self.name)
 
     def _check_samples(self, job, data) -> None:
         """ Check <data> for errors. Return the number of errors seen.
         """
-        self.dut._log.error("_check_samples() must be implemented in child class.")
+        self.dut._log.error("%12s: _check_samples() must be implemented in child class." % self.name)
 
     def _catch_first_write(self) -> None:
         """ Monitor DUT internals to catch the actual first write.
         """
-        self.dut._log.error("_catch_first_write() must be implemented in child class.")
+        self.dut._log.error("%12s: _catch_first_write() must be implemented in child class." % self.name)
 
 
     def inc_error(self) -> None:
@@ -100,7 +94,7 @@ class GenericCapture(object):
         while True:
             job = await self.jobs.get()
             job_name = job['job_name']
-            #await self._pre_read_wait(job) TODO: no longer needed since _wait_capture_done does the equivalent?
+            # note: used to have a  self._pre_read_wait(job) here but no longer needed since _wait_capture_done does the equivalent
             # see comments around queue definition in Harness for how this queue and lock mechanism works:
             self.dut._log.debug("%12s trying to acquire read_lock..." % job_name)
             await self.harness.read_lock.acquire()
@@ -112,7 +106,7 @@ class GenericCapture(object):
             self.dut.current_action.value = self.harness.hexstring("%12s initread" % job_name)
             await self._initiate_read()
             self.dut_reading_signal.value = 1
-            self.dut._log.info("%12s Starting read for job: %s" % (job_name, job))
+            self.dut._log.info("%12s Starting read" % job_name)
             self.dut.current_action.value = self.harness.hexstring("%12s Reading" % job_name)
             data = await self._read_samples(job)
             self.dut._log.info("%12s Done read" % job_name)
@@ -216,16 +210,6 @@ class ADCCapture(GenericCapture):
         raw = list(await self.harness.registers.read(self.reg_addr['ADCREAD_ADDR'], bytes_to_read))
         return raw
 
-    async def _pre_read_wait(self, job) -> None:
-        samples = job['samples']
-        await ClockCycles(self.clk, samples*4) # UI clock is USB clock, so that's the dominant portion of the capture delay
-        # then, wait for DDR to be done writing:
-        #self.dut._log.info("waiting for DDR writing to be done...")
-        not_done_writing = True
-        while not_done_writing:
-            await ClockCycles(self.clk, 50)
-            not_done_writing = not await self.harness.ddr_done_writing()
-
     async def _initiate_read(self) -> None:
         #self.dut._log.info("issuing initiate read command...")
         # 1. initiate the read:
@@ -321,17 +305,6 @@ class LACapture(GenericCapture):
         super().__init__(dut, harness, dut_reading_signal)
         self.name = 'LA'
         self.sample_increment = None # filled in by each job
-
-    # TODO: I think this is ok?
-    async def _pre_read_wait(self, job) -> None:
-        samples = job['samples']
-        await ClockCycles(self.clk, samples*4) # UI clock is USB clock, so that's the dominant portion of the capture delay
-        # then, wait for DDR to be done writing:
-        #self.dut._log.info("waiting for DDR writing to be done...")
-        not_done_writing = True
-        while not_done_writing:
-            await ClockCycles(self.clk, 50)
-            not_done_writing = not await self.harness.ddr_done_writing()
 
     async def _initiate_read(self) -> None:
         #self.dut._log.info("issuing initiate read command...")
@@ -442,17 +415,6 @@ class TraceCapture(GenericCapture):
         super().__init__(dut, harness, dut_reading_signal)
         self.name = 'trace'
         self.sample_increment = 1
-
-    # TODO: I think this is ok?
-    async def _pre_read_wait(self, job) -> None:
-        samples = job['samples']
-        await ClockCycles(self.clk, samples*4) # UI clock is USB clock, so that's the dominant portion of the capture delay
-        # then, wait for DDR to be done writing:
-        #self.dut._log.info("waiting for DDR writing to be done...")
-        not_done_writing = True
-        while not_done_writing:
-            await ClockCycles(self.clk, 50)
-            not_done_writing = not await self.harness.ddr_done_writing()
 
     async def _initiate_read(self) -> None:
         #self.dut._log.info("issuing initiate read command...")

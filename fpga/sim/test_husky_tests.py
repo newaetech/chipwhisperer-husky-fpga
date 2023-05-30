@@ -19,6 +19,7 @@ class GenericTest(object):
         self.capture_min = None
         self.capture_max = None
         self.max_presamples = None
+        self.max_offset = None
         self.checker = None
         self.dut_job_signal = None
         self._coro = None
@@ -67,14 +68,14 @@ class GenericTest(object):
         Dictionary of values which will be passed to the corresponding
         checker(GenericCapture) instance.
         """
-        self.dut._log.error("_job_setup() must be implemented in child class.")
+        self.dut._log.error("%12s: _job_setup() must be implemented in child class." % self.name)
 
     async def _job_external_source_mods(self, source, job) -> dict:
         """ Change job properties when driven by some external source.
         Takes in the job, modifies the job, takes any required action, and
         returns the modified job.
         """
-        self.dut._log.error("_job_external_source_mods() must be implemented in child class.")
+        self.dut._log.error("%12s: _job_external_source_mods() must be implemented in child class." % self.name)
 
     async def _post_job(self) -> None:
         """ Runs after the job completes.
@@ -91,12 +92,12 @@ class GenericTest(object):
     async def _arm(self) -> None:
         """ Arm the DUT prior to capture.
         """
-        self.dut._log.error("_arm() must be implemented in child class.")
+        self.dut._log.error("%12s: _arm() must be implemented in child class." % self.name)
 
     async def _trigger(self, job) -> None:
         """ Trigger the DUT capture.
         """
-        self.dut._log.error("_trigger() must be implemented in child class.")
+        self.dut._log.error("%12s: _trigger() must be implemented in child class." % self.name)
 
     def _untrigger(self, job) -> None:
         """ De-assert trigger, if needed.
@@ -106,20 +107,33 @@ class GenericTest(object):
     async def _initial_setup(self) -> None:
         """ Initial DUT setup to do prior to the main dispatch loop.
         """
-        self.dut._log.error("_initial_setup() must be implemented in child class.")
+        self.dut._log.error("%12s: _initial_setup() must be implemented in child class." % self.name)
 
     async def _pretrigger_wait(self, job) -> None:
         """ After arming, before triggering: allow for things like presamples, if needed.
         """
         pass
 
+    def _capture_cycles(self, cycles) -> int:
+        """ How many USB clock cycles it takes for "cycles" capture clock cycles.
+        """
+        self.dut._log.error("%12s: _capture_cycles() must be implemented in child class." % self.name)
 
     async def _wait_capture_done(self, job: dict) -> None:
         """ Wait for DUT to finish capturing the job we just dispatched, so
         that we can remove our entry from the harness queue (which is used to
         prevent read attempts during capture).
         """
-        self.dut._log.error("_wait_capture_done() must be implemented in child class.")
+        samples = job['samples']
+        if 'offset' in job.keys():
+            samples += job['offset']
+        await ClockCycles(self.clk, self._capture_cycles(samples)) # UI clock is USB clock, so that's the dominant portion of the capture delay
+        # then, wait for DDR to be done writing:
+        self.dut._log.info("%12s waiting for DDR writing to be done..." % job['job_name'])
+        not_done_writing = True
+        while not_done_writing:
+            await ClockCycles(self.clk, 50)
+            not_done_writing = not await self.harness.ddr_done_writing()
 
     def get_downstream_trigger(self, job) -> list:
         """ If a job triggers another job, returns that second job's Test
@@ -186,10 +200,10 @@ class GenericTest(object):
                 for downstream_trigger in downstream_triggers:
                     self.harness.queue.put_nowait(downstream_trigger.name)
             self.dut._log.debug("%12s pushing to job queue (count = %d)" % (job_name, self.harness.queue.qsize()))
-            self.dut._log.info("%12s Triggering: %s" %(job_name, job))
-            self.dut.current_action.value = self.harness.hexstring("%12s Triggering" % job_name)
             await self._arm()
             await self._pretrigger_wait(job)
+            self.dut._log.info("%12s Triggering: %s" %(job_name, job))
+            self.dut.current_action.value = self.harness.hexstring("%12s Triggering" % job_name)
             await self._trigger(job)
             self.trigger_event.set()
             if externally_triggered:
@@ -228,28 +242,23 @@ class ADCTest(GenericTest):
         if random.randint(0,3) == 0:
             presamples = 0  # no presamples a quarter of the time
         else:
-            presamples = random.randint(8, min(self.max_presamples, samples-2)) # DUT doesn't allow for 1-7 presamples
+            presamples = random.randint(8, min(self.max_presamples, samples-2)) # DUT doesn't allow for 1-7 presamples, and samples must be at least 2 more than presamples
+        if random.randint(0,3) == 0:
+            offset = 0  # no offset a quarter of the time
+        else:
+            offset = random.randint(0, self.max_offset)
         await self.registers.write(self.reg_addr['SAMPLES_ADDR'], self.registers.to_bytes(samples, 4))
-        await self.registers.write(self.reg_addr['PRESAMPLES_ADDR'], self.registers.to_bytes(presamples, 4))
+        await self.registers.write(self.reg_addr['PRESAMPLES_ADDR'], self.registers.to_bytes(presamples, 2))
+        await self.registers.write(self.reg_addr['OFFSET_ADDR'], self.registers.to_bytes(offset, 4))
         bits_per_sample = 12 # TODO
         if random.randint(0,1):
             trigger_type = 'manual'
         else:
             trigger_type = 'io4'
-        return {"samples": samples, "presamples": presamples, "bits_per_sample": bits_per_sample, "trigger_type": trigger_type}
+        return {"samples": samples, "presamples": presamples, "offset": offset, "bits_per_sample": bits_per_sample, "trigger_type": trigger_type}
 
     async def _initial_setup(self) -> None:
         await self.registers.write(self.reg_addr['FIFO_CONFIG'], [1]) # use DDR and set ADC ramp mode
-
-    async def _wait_capture_done(self, job: dict) -> None:
-        samples = job['samples']
-        await ClockCycles(self.clk, samples) # UI clock is USB clock, so that's the dominant portion of the capture delay
-        # then, wait for DDR to be done writing:
-        #self.dut._log.info("waiting for DDR writing to be done...")
-        not_done_writing = True
-        while not_done_writing:
-            await ClockCycles(self.clk, 50)
-            not_done_writing = not await self.harness.ddr_done_writing()
 
     async def _arm(self) -> None:
         await self.registers.write(self.reg_addr['SETTINGS_ADDR'], [0x24]) # disarm
@@ -278,10 +287,13 @@ class ADCTest(GenericTest):
     async def _pretrigger_wait(self, job) -> None:
         presamples = job['presamples']
         if presamples > 0:
-            min_cycles = math.ceil(self.harness.adc_period / self.harness.usb_period) * presamples + 1
+            min_cycles = self._capture_cycles(presamples + 1)
             wait_cycles = random.randint(min_cycles, min_cycles*4)
             self.dut._log.info('%12s pre-trigger waiting %d cycles' % (job['job_name'], wait_cycles))
             await ClockCycles(self.clk, wait_cycles)
+
+    def _capture_cycles(self, cycles) -> int:
+        return math.ceil(self.harness.adc_period / self.harness.usb_period * cycles)
 
     async def fifo_watch(self) -> None:
         while True:
@@ -387,16 +399,6 @@ class LATest(GenericTest):
         await self.registers.write(self.reg_addr['LA_CLOCK_SOURCE'], [1])   # select USB clock
         await self.registers.write(self.reg_addr['LA_ENABLED'], [1])
 
-    async def _wait_capture_done(self, job: dict) -> None:
-        samples = job['samples']
-        await ClockCycles(self.clk, samples) # UI clock is USB clock, so that's the dominant portion of the capture delay
-        # then, wait for DDR to be done writing:
-        #self.dut._log.info("waiting for DDR writing to be done...")
-        not_done_writing = True
-        while not_done_writing:
-            await ClockCycles(self.clk, 50)
-            not_done_writing = not await self.harness.ddr_done_writing()
-
     async def _arm(self) -> None:
         await self.registers.write(self.reg_addr['LA_ARM'], [0])   # disarm
         await self.registers.write(self.reg_addr['LA_ARM'], [1])   # arm
@@ -414,6 +416,10 @@ class LATest(GenericTest):
     async def trigger_now(self) -> None:
         await self.registers.write(self.reg_addr['LA_MANUAL_CAPTURE'], [1])
         await self.registers.write(self.reg_addr['LA_MANUAL_CAPTURE'], [0])
+
+    def _capture_cycles(self, cycles) -> int:
+        # TODO: currently using USB clock to capture; when this changes, this needs to be updated!
+        return cycles
 
     async def preddr_watch(self) -> None:
         while True:
@@ -459,16 +465,6 @@ class TraceTest(GenericTest):
         await self.registers.write(self.reg_addr['REG_TRACE_TEST'], [1])
         await self.registers.write(self.reg_addr['REG_SOFT_TRIG_ENABLE'], [0])
 
-    async def _wait_capture_done(self, job: dict) -> None:
-        samples = job['samples']
-        await ClockCycles(self.clk, samples) # UI clock is USB clock, so that's the dominant portion of the capture delay
-        # then, wait for DDR to be done writing:
-        #self.dut._log.info("waiting for DDR writing to be done...")
-        not_done_writing = True
-        while not_done_writing:
-            await ClockCycles(self.clk, 50)
-            not_done_writing = not await self.harness.ddr_done_writing()
-
     async def _arm(self) -> None:
         await self.registers.write(self.reg_addr['REG_ARM'], [0])   # disarm
         await self.registers.write(self.reg_addr['REG_ARM'], [1])   # arm
@@ -492,6 +488,10 @@ class TraceTest(GenericTest):
         await self.registers.write(self.reg_addr['REG_SOFT_TRIG_PASSTHRU'], [0])
         await self.registers.write(self.reg_addr['REG_SOFT_TRIG_ENABLE'], [0])
 
+    def _capture_cycles(self, cycles) -> int:
+        # TODO: currently using USB clock to capture; when this changes, this needs to be updated!
+        return cycles
+
     async def preddr_watch(self) -> None:
         while True:
             await RisingEdge(self.dut.U_dut.U_trace_converter.error_flag)
@@ -501,7 +501,6 @@ class TraceTest(GenericTest):
             if self.dut.U_dut.U_trace_converter.fifo_overflow_sticky.value:  error_message += "U_trace_converter overflow "
             if self.dut.U_dut.U_trace_converter.fifo_underflow_sticky.value: error_message += "U_trace_converter underflow "
             self.dut._log.error(error_message)
-
 
 
 
@@ -560,6 +559,10 @@ class GlitchTest(GenericTest):
         settings[5] |= 0x80 # set manual trigger bit
         settings[5] |= 0x80 # set trigger source to manual
         await self.registers.write(self.reg_addr['CLOCKGLITCH_SETTINGS'], settings)
+
+    def _capture_cycles(self, cycles) -> int:
+        # TODO: currently using USB clock to capture; when this changes, this needs to be updated!
+        return cycles
 
     async def _post_job(self) -> None:
         """ reset trigger settings to something that won't fire so it doesn't inadvertently trigger later!
