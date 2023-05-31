@@ -125,8 +125,12 @@ class GenericTest(object):
         prevent read attempts during capture).
         """
         samples = job['samples']
-        if 'offset' in job.keys():
-            samples += job['offset']
+        if self.name == 'ADC':
+            if job['segments'] > 1:
+                # TODO: assuming segment_counter_en
+                samples = job['segments'] * job['segment_cycles'] + job['offset']
+            else:
+                samples += job['offset']
         await ClockCycles(self.clk, self._capture_cycles(samples)) # UI clock is USB clock, so that's the dominant portion of the capture delay
         # then, wait for DDR to be done writing:
         self.dut._log.info("%12s waiting for DDR writing to be done..." % job['job_name'])
@@ -233,13 +237,15 @@ class ADCTest(GenericTest):
         self.dut_job_signal = dut_job_signal
         self.checker = ADCCapture(dut, harness, dut_reading_signal)
         self.name = 'ADC'
+        self.max_segments = None
+        self.max_segment_cycles = None
         fifo_watch_thread = cocotb.start_soon(self.fifo_watch())
         ddr_watch_thread = cocotb.start_soon(self.ddr_model_watch())
         self.allowed_downstream_triggers = ['LA', 'trace']
 
     async def _job_setup(self) -> dict:
         samples = random.randint(self.capture_min, self.capture_max)
-        if random.randint(0,3) == 0:
+        if random.randint(0,3) == 0 or self.max_presamples == 0:
             presamples = 0  # no presamples a quarter of the time
         else:
             presamples = random.randint(8, min(self.max_presamples, samples-2)) # DUT doesn't allow for 1-7 presamples, and samples must be at least 2 more than presamples
@@ -247,15 +253,29 @@ class ADCTest(GenericTest):
             offset = 0  # no offset a quarter of the time
         else:
             offset = random.randint(0, self.max_offset)
+        segments = random.randint(1, self.max_segments)
+        if segments > 1:
+            segment_counter_en = 1 # TODO!
+            segment_cycles = random.randint(samples+1, samples+self.max_segment_cycles) # TODO: add in presamples and offset
+        else:
+            segment_counter_en = 0
+            segment_cycles = 0
         await self.registers.write(self.reg_addr['SAMPLES_ADDR'], self.registers.to_bytes(samples, 4))
         await self.registers.write(self.reg_addr['PRESAMPLES_ADDR'], self.registers.to_bytes(presamples, 2))
         await self.registers.write(self.reg_addr['OFFSET_ADDR'], self.registers.to_bytes(offset, 4))
+        await self.registers.write(self.reg_addr['NUM_SEGMENTS'], self.registers.to_bytes(segments, 2))
+        await self.registers.write(self.reg_addr['SEGMENT_CYCLE_COUNTER_EN'], [segment_counter_en])
+        await self.registers.write(self.reg_addr['SEGMENT_CYCLES'], self.registers.to_bytes(segment_cycles, 3))
         bits_per_sample = 12 # TODO
         if random.randint(0,1):
             trigger_type = 'manual'
         else:
             trigger_type = 'io4'
-        return {"samples": samples, "presamples": presamples, "offset": offset, "bits_per_sample": bits_per_sample, "trigger_type": trigger_type}
+        job = {"samples": samples, "presamples": presamples, "offset": offset, "bits_per_sample": bits_per_sample, "trigger_type": trigger_type}
+        job['segments'] = segments
+        job['segment_counter_en'] = segment_counter_en
+        job['segment_cycles'] = segment_cycles
+        return job
 
     async def _initial_setup(self) -> None:
         await self.registers.write(self.reg_addr['FIFO_CONFIG'], [1]) # use DDR and set ADC ramp mode

@@ -40,6 +40,19 @@ tests.append(dict(name  = 'adc_capture',
              MAX_OFFSET = 1000,
              description = 'ADC-only capture.'))
 
+tests.append(dict(name  = 'adc_segments',
+             testcase = 'capture',
+             frequency = 1,
+             LA_CAPTURE = 0,
+             TRACE_CAPTURE = 0,
+             MAX_SIZE = 300,
+             MAX_PRESAMPLES = 0, # TODO: re-add!
+             MAX_OFFSET = 0, # TODO: re-add!
+             MAX_SEGMENTS = 3,
+             MAX_SEGMENT_CYCLES = 1000,
+             NUM_CAPTURES = 3, # TODO: increase
+             description = 'ADC-only capture with segments.'))
+
 tests.append(dict(name  = 'la_capture',
              testcase = 'capture',
              frequency = 3,

@@ -124,6 +124,8 @@ class GenericCapture(object):
         """ To test that the design functions correctly when the full capture is not read back.
         """
         samples = job['samples']
+        if 'segments' in job.keys():
+            samples *= job['segments']
         #1. Read full capture 75% of the time:
         if random.randint(0,3) < 3:
             return samples
@@ -275,6 +277,8 @@ class ADCCapture(GenericCapture):
         first_error = None
         #self.dut._log.info("Checking ramp (%0d samples)" % len(data))
         for i, byte in enumerate(data[1:]):
+            if (i+1) % job['samples'] == 0:
+                current_count += job['segment_cycles'] - job['samples']
             if byte != (current_count+1)%MOD:
                 self.dut._log.error("%12s Sample %4d: expected %3x got %3x" % (job['job_name'], i+1, (current_count+1)%MOD, byte))
                 self.inc_error()
@@ -432,7 +436,6 @@ class TraceCapture(GenericCapture):
 
     async def _read_samples(self, job) -> list:
         samples = self._limit_read(job)
-        samples = job['samples']
         bytes_to_read = math.ceil(samples*18/8)
         self.raw_read_data = list(await self.harness.registers.read(self.reg_addr['ADCREAD_ADDR'], bytes_to_read))
         data = self.process18bitRawData(self.raw_read_data)

@@ -261,6 +261,8 @@ async def capture(dut):
     max_offset =  int(os.getenv('MAX_OFFSET', '100'))
     min_glitches = int(os.getenv('MIN_GLITCHES', '1'))
     max_glitches = int(os.getenv('MAX_GLITCHES', '5'))
+    max_segments = int(os.getenv('MAX_SEGMENTS', '1'))
+    max_segment_cycles = int(os.getenv('MAX_SEGMENT_CYCLES', '1'))
 
     await harness.initialize_dut()
     if int(os.getenv('NO_DOWNSTREAM_TRIGGERS', 0)):
@@ -280,6 +282,8 @@ async def capture(dut):
         adctest.capture_max = max_size
         adctest.max_presamples = max_presamples
         adctest.max_offset = max_offset
+        adctest.max_segments = max_segments
+        adctest.max_segment_cycles = max_segment_cycles
         harness.register_test(adctest)
 
     if int(os.getenv('TRACE_CAPTURE')):

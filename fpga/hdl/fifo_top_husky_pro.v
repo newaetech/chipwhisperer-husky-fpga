@@ -220,7 +220,8 @@ module fifo_top_husky_pro (
     // We're storing 12-bit samples into 64-bit words. If the number of samples is not a multiple of 
     // 16 (because 16 is the smallest number x such that x*12 is a number that can be divided by 64), 
     // then we need to execute dummy/filler ADC reads to fill out the last incomplete 64-bit word.
-    wire filler_read_needed = (max_samples_i[3:0] != 4'b0000);
+    wire [31:0] total_samples = max_samples_i * num_segments;
+    wire filler_read_needed = (total_samples[3:0] != 4'b0000);
 
     always @(posedge adc_sampleclk) begin
         if (segment_cycles > 1) // alternatively, could do this in Python instead  (but why- everything works now)
