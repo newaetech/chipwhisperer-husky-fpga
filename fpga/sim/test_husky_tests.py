@@ -254,9 +254,12 @@ class ADCTest(GenericTest):
         else:
             offset = random.randint(0, self.max_offset)
         segments = random.randint(1, self.max_segments)
+        if samples+1+offset+presamples >= samples+self.max_segment_cycles:
+            segments = 1
         if segments > 1:
             segment_counter_en = 1 # TODO!
-            segment_cycles = random.randint(samples+1, samples+self.max_segment_cycles) # TODO: add in presamples and offset
+            # TODO: this is pessimistic (one segment doesn't last samples+offset+presamples); may want to tighten this?
+            segment_cycles = random.randint(samples+1+offset+presamples, samples+self.max_segment_cycles)
         else:
             segment_counter_en = 0
             segment_cycles = 0
