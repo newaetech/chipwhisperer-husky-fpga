@@ -126,14 +126,14 @@ class GenericTest(object):
         """
         samples = job['samples']
         if self.name == 'ADC':
-            if job['segments'] > 1:
+            if job['segments'] > 1 and job['segment_counter_en']:
                 # TODO: assuming segment_counter_en
                 samples = job['segments'] * job['segment_cycles'] + job['offset']
             else:
                 samples += job['offset']
         await ClockCycles(self.clk, self._capture_cycles(samples)) # UI clock is USB clock, so that's the dominant portion of the capture delay
         # then, wait for DDR to be done writing:
-        self.dut._log.info("%12s waiting for DDR writing to be done..." % job['job_name'])
+        self.dut._log.info("%12s waiting for DDR writing to be done..." % job['name'])
         not_done_writing = True
         while not_done_writing:
             await ClockCycles(self.clk, 50)
@@ -160,7 +160,7 @@ class GenericTest(object):
             job_name = self.name + "_job_" + str(self.dispatch_id)
             self.dut_job_signal.value = self.dispatch_id
             job = await self._job_setup()
-            job['job_name'] = job_name
+            job['name'] = job_name
 
             # this job might be triggered from a different GenericTest instance, in which case we 
             # may have to change some of its properties: (example: LA job triggered by ADC capture)
@@ -220,7 +220,7 @@ class GenericTest(object):
             # which can block activity in other concurrently running instances of this _run method.
             self.checker.jobs.put_nowait(job)
             await self._wait_capture_done(job)
-            self._untrigger(job)
+            self._untrigger(job) # TODO: could be moved up?
             self.harness.queue.get_nowait()
             self.dut._log.debug("%12s popped from job queue (count = %d)" % (job_name, self.harness.queue.qsize()))
             result = await self.checker.results.get()
@@ -254,15 +254,23 @@ class ADCTest(GenericTest):
         else:
             offset = random.randint(0, self.max_offset)
         segments = random.randint(1, self.max_segments)
-        if samples+1+offset+presamples >= samples+self.max_segment_cycles:
-            segments = 1
+        segment_cycles = 0
+        segment_counter_en = 0
+        segment_times = []
         if segments > 1:
-            segment_counter_en = 1 # TODO!
-            # TODO: this is pessimistic (one segment doesn't last samples+offset+presamples); may want to tighten this?
-            segment_cycles = random.randint(samples+1+offset+presamples, samples+self.max_segment_cycles)
-        else:
-            segment_counter_en = 0
-            segment_cycles = 0
+            segment_counter_en = random.randint(0,1)
+            if segment_counter_en:
+                # TODO: this is pessimistic (one segment doesn't last samples+offset+presamples); may want to tighten this?
+                if samples+1+offset+presamples >= samples+self.max_segment_cycles:
+                    segments = 1
+                else:
+                    segment_cycles = random.randint(samples+1+offset+presamples, samples+self.max_segment_cycles)
+            else:
+                for i in range(segments-1):
+                    min_wait_samples = samples + presamples + offset + 1
+                    wait_samples = random.randint(min_wait_samples, min_wait_samples*4)
+                    segment_times.append(wait_samples)
+
         await self.registers.write(self.reg_addr['SAMPLES_ADDR'], self.registers.to_bytes(samples, 4))
         await self.registers.write(self.reg_addr['PRESAMPLES_ADDR'], self.registers.to_bytes(presamples, 2))
         await self.registers.write(self.reg_addr['OFFSET_ADDR'], self.registers.to_bytes(offset, 4))
@@ -270,14 +278,15 @@ class ADCTest(GenericTest):
         await self.registers.write(self.reg_addr['SEGMENT_CYCLE_COUNTER_EN'], [segment_counter_en])
         await self.registers.write(self.reg_addr['SEGMENT_CYCLES'], self.registers.to_bytes(segment_cycles, 3))
         bits_per_sample = 12 # TODO
-        if random.randint(0,1):
-            trigger_type = 'manual'
-        else:
+        if random.randint(0,1) or (segments > 1 and segment_counter_en == 0):
             trigger_type = 'io4'
+        else:
+            trigger_type = 'manual'
         job = {"samples": samples, "presamples": presamples, "offset": offset, "bits_per_sample": bits_per_sample, "trigger_type": trigger_type}
         job['segments'] = segments
         job['segment_counter_en'] = segment_counter_en
         job['segment_cycles'] = segment_cycles
+        job['segment_times'] = segment_times
         return job
 
     async def _initial_setup(self) -> None:
@@ -289,19 +298,34 @@ class ADCTest(GenericTest):
         await self.harness.wait_flush('ADC')  # allow for any flushes (triggered by arming) to complete before triggering
 
     async def _trigger(self, job) -> None:
-        if job['trigger_type'] == 'manual':
-            await self.trigger_now()
-        elif job['trigger_type'] == 'io4':
-            await self.trigger_io4()
+        if job['segment_counter_en'] == 0:
+            iterations = job['segments']
         else:
-            raise ValueError
-        # TODO: code more trigger options
+            iterations = 1
+        for i in range(iterations):
+            if job['trigger_type'] == 'manual':
+                await self.trigger_now()
+            elif job['trigger_type'] == 'io4':
+                await self.trigger_io4()
+            # TODO: code more trigger options
+            else:
+                raise ValueError
+            if iterations > 1:
+                self.dut._log.info('%12s issued trigger %d' % (job['name'], i))
+                if i < iterations - 1:
+                    untrigger_wait = self._capture_cycles(random.randint(1, job['segment_times'][i]-2))
+                    untrigger_thread = cocotb.start_soon(self._untrigger_thread(job, untrigger_wait))
+                    await ClockCycles(self.clk, self._capture_cycles(job['segment_times'][i]))
 
     async def trigger_now(self) -> None:
         await self.registers.write(self.reg_addr['SETTINGS_ADDR'], [0x4c]) # trigger
 
     async def trigger_io4(self) -> None:
         self.dut.target_io4.value = 1
+
+    async def _untrigger_thread(self, job, untrigger_wait) -> None:
+        await ClockCycles(self.clk, untrigger_wait)
+        self._untrigger(job)
 
     def _untrigger(self, job) -> None:
         if job['trigger_type'] == 'io4':
@@ -312,7 +336,7 @@ class ADCTest(GenericTest):
         if presamples > 0:
             min_cycles = self._capture_cycles(presamples + 1)
             wait_cycles = random.randint(min_cycles, min_cycles*4)
-            self.dut._log.info('%12s pre-trigger waiting %d cycles' % (job['job_name'], wait_cycles))
+            self.dut._log.info('%12s pre-trigger waiting %d cycles' % (job['name'], wait_cycles))
             await ClockCycles(self.clk, wait_cycles)
 
     def _capture_cycles(self, cycles) -> int:
@@ -366,7 +390,7 @@ class ADCTest(GenericTest):
                 choice = random.choice(self.downstream_triggers)
                 if choice.can_be_externally_triggered and self.valid_external_trigger_combo(choice, job) and choice not in choices:
                     choices.append(choice)
-        self.dut._log.info("%12s choosing %d downstream triggers" % (job['job_name'], len(choices)))
+        self.dut._log.info("%12s choosing %d downstream triggers" % (job['name'], len(choices)))
         return choices
 
     @staticmethod

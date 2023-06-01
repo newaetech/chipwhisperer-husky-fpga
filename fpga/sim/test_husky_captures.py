@@ -93,7 +93,7 @@ class GenericCapture(object):
         self.job_id = 0
         while True:
             job = await self.jobs.get()
-            job_name = job['job_name']
+            job_name = job['name']
             # note: used to have a  self._pre_read_wait(job) here but no longer needed since _wait_capture_done does the equivalent
             # see comments around queue definition in Harness for how this queue and lock mechanism works:
             self.dut._log.debug("%12s trying to acquire read_lock..." % job_name)
@@ -132,7 +132,7 @@ class GenericCapture(object):
         #2. otherwise randomly reduce the number of samples read to as little as 1:
         else:
             samples = random.randint(1, samples-1)
-            self.dut._log.info("%12s reducing sample read count to %d" % (job['job_name'], samples))
+            self.dut._log.info("%12s reducing sample read count to %d" % (job['name'], samples))
             return samples
 
     def find_bad_words(self, job):
@@ -263,35 +263,35 @@ class ADCCapture(GenericCapture):
 
     def _check_samples(self, job, data) -> None:
         bits_per_sample = job['bits_per_sample']
-        segment_cycles = 0 # TODO
-        verbose = True # TODO?
-        stop = False # TODO?
         MOD = 2**bits_per_sample
         samples = len(data)
         current_count = data[0]
         self.first_read_sample = int(current_count)
         expected = (self._actual_first_write - job['presamples']) % MOD
         if int(current_count) != expected:
-            self.dut._log.error("%12s First sample: expected %3x got %3x" % (job['job_name'], expected, current_count))
+            self.dut._log.error("%12s First sample: expected %3x got %3x" % (job['name'], expected, current_count))
             self.inc_error()
         first_error = None
         #self.dut._log.info("Checking ramp (%0d samples)" % len(data))
+        segment = 0
         for i, byte in enumerate(data[1:]):
+            tolerance = 0
             if (i+1) % job['samples'] == 0:
-                current_count += job['segment_cycles'] - job['samples']
-            if byte != (current_count+1)%MOD:
-                self.dut._log.error("%12s Sample %4d: expected %3x got %3x" % (job['job_name'], i+1, (current_count+1)%MOD, byte))
+                if job['segment_counter_en']:
+                    current_count += job['segment_cycles'] - job['samples']
+                else:
+                    current_count += job['segment_times'][segment] - job['samples']
+                    tolerance = 2 # because of the USB <-> sampling clock conversion
+                segment += 1
+            if abs(byte - (current_count+1)%MOD) > tolerance:
+                self.dut._log.error("%12s Sample %4d: expected %3x got %3x" % (job['name'], i+1, (current_count+1)%MOD, byte))
                 self.inc_error()
-                if stop:
-                    return
                 if not first_error:
                     first_error = i
                 current_count = byte
             else:
-                self.dut._log.debug("%12s Good sample %4d: %2x" % (job['job_name'], i+1, byte))
-                current_count += 1
-                if (i+2) % samples == 0:
-                    current_count = (current_count + segment_cycles - samples) % MOD
+                self.dut._log.debug("%12s Good sample %4d: %2x" % (job['name'], i+1, byte))
+                current_count = byte
 
     async def _catch_first_write(self) -> None:
         while True:
@@ -391,7 +391,7 @@ class LACapture(GenericCapture):
         else:
             expected =  self._actual_first_write & 0xff
         if int(data[0]) != expected:
-            self.dut._log.error("%12s First sample: expected %3x got %3x" % (job['job_name'], expected, data[0]))
+            self.dut._log.error("%12s First sample: expected %3x got %3x" % (job['name'], expected, data[0]))
             self.inc_error()
 
         self.sample_increment = INC
@@ -399,9 +399,9 @@ class LACapture(GenericCapture):
             expected = (data[0] + INC*(i+1)) % MOD
             if expected != byte:
                 self.inc_error()
-                self.dut._log.error("%12s Sample %4d: expected %2x got %2x" % (job['job_name'], i+1, expected, byte))
+                self.dut._log.error("%12s Sample %4d: expected %2x got %2x" % (job['name'], i+1, expected, byte))
             else:
-                self.dut._log.debug("%12s Good sample %4d: %2x" % (job['job_name'], i+1, byte))
+                self.dut._log.debug("%12s Good sample %4d: %2x" % (job['name'], i+1, byte))
 
     async def _catch_first_write(self) -> None:
         while True:
@@ -482,15 +482,15 @@ class TraceCapture(GenericCapture):
         self.first_read_sample = int(data[0])
         expected = self._actual_first_write
         if int(data[0]) != expected:
-            self.dut._log.error("%12s First sample: expected %3x got %3x" % (job['job_name'], expected, data[0]))
+            self.dut._log.error("%12s First sample: expected %3x got %3x" % (job['name'], expected, data[0]))
             self.inc_error()
         for i,byte in enumerate(data[1:]):
             expected = (data[0] + i + 1) % 2**18
             if expected != byte:
                 self.inc_error()
-                self.dut._log.error("%12s Sample %4d: expected %5x got %5x" % (job['job_name'], i+1, expected, byte))
+                self.dut._log.error("%12s Sample %4d: expected %5x got %5x" % (job['name'], i+1, expected, byte))
             else:
-                self.dut._log.debug("%12s Good sample %4d: %5x" % (job['job_name'], i+1, byte))
+                self.dut._log.debug("%12s Good sample %4d: %5x" % (job['name'], i+1, byte))
 
     async def _catch_first_write(self) -> None:
         self._actual_first_write = 0
@@ -525,7 +525,7 @@ class GlitchCapture(GenericCapture):
             self.dut_reading_signal.value = 0
             job = await self.jobs.get()
             self.dut_reading_signal.value = 1
-            job_name = job['job_name']
+            job_name = job['name']
             self.job_name = job_name
             self.dut._log.info("%12s Starting check for job: %s" % (job_name, job))
             self.dut.current_action.value = self.harness.hexstring("%12s verify" % job_name)
