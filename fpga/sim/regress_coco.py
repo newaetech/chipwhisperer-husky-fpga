@@ -38,7 +38,21 @@ tests.append(dict(name  = 'adc_capture',
              MAX_SIZE = 300,
              MAX_PRESAMPLES = 300,
              MAX_OFFSET = 1000,
+             MAX_DOWNSAMPLE = 4,
              description = 'ADC-only capture.'))
+
+# downsamples gets its own testcase because it has restrictions on presamples and segments:
+tests.append(dict(name  = 'adc_downsample',
+             testcase = 'capture',
+             frequency = 5,
+             LA_CAPTURE = 0,
+             TRACE_CAPTURE = 0,
+             MAX_SIZE = 300,
+             MAX_PRESAMPLES = 0,
+             MAX_SEGMENTS = 1,
+             MAX_OFFSET = 1000,
+             MAX_DOWNSAMPLE = 10,
+             description = 'ADC-only capture with downsamples.'))
 
 tests.append(dict(name  = 'adc_segments',
              testcase = 'capture',
@@ -58,6 +72,7 @@ tests.append(dict(name  = 'la_capture',
              ADC_CAPTURE = 0,
              TRACE_CAPTURE = 0,
              MAX_SIZE = 300,
+             MAX_DOWNSAMPLE = 4,
              description = 'LA-only capture.'))
 
 tests.append(dict(name  = 'trace_capture',

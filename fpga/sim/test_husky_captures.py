@@ -283,7 +283,7 @@ class ADCCapture(GenericCapture):
                     current_count += job['segment_times'][segment] - job['samples']
                     tolerance = 2 # because of the USB <-> sampling clock conversion
                 segment += 1
-            if abs(byte - (current_count+1)%MOD) > tolerance:
+            if abs(byte - (current_count + job['downsample']) % MOD) > tolerance:
                 self.dut._log.error("%12s Sample %4d: expected %3x got %3x" % (job['name'], i+1, (current_count+1)%MOD, byte))
                 self.inc_error()
                 if not first_error:
@@ -383,6 +383,7 @@ class LACapture(GenericCapture):
             INC = 1
         else:
             raise ValueError('Unsupported')
+        INC *= job['downsample']
         MOD = 2**job['bits_per_sample']
         self.first_read_sample = int(data[0])
 

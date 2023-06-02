@@ -53,7 +53,6 @@ class Harness(object):
         usb_clock_thread = cocotb.start_soon(Clock(dut.clk_usb, self.usb_period, units="ns").start())
         adc_clock_thread = cocotb.start_soon(Clock(dut.PLL_CLK1, self.adc_period, units="ns").start())
         ui_clock_thread = cocotb.start_soon(Clock(dut.ui_clk, 6, units="ns").start())
-        # TODO: initialize all DUT input values
         self.dut.errors.value = 0
 
     def slurp_defines(self, defines_files=None):
@@ -279,6 +278,7 @@ async def capture(dut):
     max_size = int(os.getenv('MAX_SIZE', '100'))
     max_presamples = int(os.getenv('MAX_PRESAMPLES', '100'))
     max_offset =  int(os.getenv('MAX_OFFSET', '100'))
+    max_downsample =  int(os.getenv('MAX_DOWNSAMPLE', '1'))
     min_glitches = int(os.getenv('MIN_GLITCHES', '1'))
     max_glitches = int(os.getenv('MAX_GLITCHES', '5'))
     max_segments = int(os.getenv('MAX_SEGMENTS', '1'))
@@ -293,6 +293,7 @@ async def capture(dut):
         latest.num_captures = num_captures
         latest.capture_min = min_size
         latest.capture_max = max_size
+        latest.max_downsample = max_downsample
         harness.register_test(latest)
 
     if int(os.getenv('ADC_CAPTURE')):
@@ -302,6 +303,7 @@ async def capture(dut):
         adctest.capture_max = max_size
         adctest.max_presamples = max_presamples
         adctest.max_offset = max_offset
+        adctest.max_downsample = max_downsample
         adctest.max_segments = max_segments
         adctest.max_segment_cycles = max_segment_cycles
         harness.register_test(adctest)

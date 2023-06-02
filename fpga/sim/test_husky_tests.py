@@ -20,6 +20,7 @@ class GenericTest(object):
         self.capture_max = None
         self.max_presamples = None
         self.max_offset = None
+        self.max_downsample = None
         self.checker = None
         self.dut_job_signal = None
         self._coro = None
@@ -140,7 +141,6 @@ class GenericTest(object):
         samples = job['samples']
         if self.name == 'ADC':
             if job['segments'] > 1 and job['segment_counter_en']:
-                # TODO: assuming segment_counter_en
                 samples = job['segments'] * job['segment_cycles'] + job['offset']
             else:
                 samples += job['offset']
@@ -232,8 +232,6 @@ class GenericTest(object):
             # Careful! once the job is pushed to the checker.jobs queue, the checker will try to acquire read_lock, 
             # which can block activity in other concurrently running instances of this _run method.
             self.checker.jobs.put_nowait(job)
-            #timeout = job['capture_time_us'] * 2
-            #timeout = self.harness.active_job_times()
             timeout = self.harness.max_job_times()
             self.dut._log.info('%12s kicking off timer for %d us...' % (job_name, timeout))
             await with_timeout(self._wait_capture_done(job), timeout, 'us')
@@ -291,19 +289,25 @@ class ADCTest(GenericTest):
                     wait_samples = random.randint(min_wait_samples, min_wait_samples*self.segment_time_factor)
                     segment_times.append(wait_samples)
                     capture_samples_time += wait_samples
+        if random.randint(0,1) or presamples or segments > 1:
+            downsample = 1  # downsamples with presamples or segments is not allowed
+        else:
+            downsample = random.randint(1, self.max_downsample)
 
+        await self.registers.write(self.reg_addr['DECIMATE_ADDR'], self.registers.to_bytes(0, 2)) # clear this first because setting e.g. presamples when the previous job had this non-zero will cause an error
         await self.registers.write(self.reg_addr['SAMPLES_ADDR'], self.registers.to_bytes(samples, 4))
         await self.registers.write(self.reg_addr['PRESAMPLES_ADDR'], self.registers.to_bytes(presamples, 2))
         await self.registers.write(self.reg_addr['OFFSET_ADDR'], self.registers.to_bytes(offset, 4))
         await self.registers.write(self.reg_addr['NUM_SEGMENTS'], self.registers.to_bytes(segments, 2))
         await self.registers.write(self.reg_addr['SEGMENT_CYCLE_COUNTER_EN'], [segment_counter_en])
         await self.registers.write(self.reg_addr['SEGMENT_CYCLES'], self.registers.to_bytes(segment_cycles, 3))
+        await self.registers.write(self.reg_addr['DECIMATE_ADDR'], self.registers.to_bytes(downsample-1, 2))
         bits_per_sample = 12 # TODO
         if random.randint(0,1) or (segments > 1 and segment_counter_en == 0):
             trigger_type = 'io4'
         else:
             trigger_type = 'manual'
-        job = {"samples": samples, "presamples": presamples, "offset": offset, "bits_per_sample": bits_per_sample, "trigger_type": trigger_type}
+        job = {"samples": samples, "presamples": presamples, "offset": offset, "downsample": downsample, "bits_per_sample": bits_per_sample, "trigger_type": trigger_type}
         job['segments'] = segments
         job['segment_counter_en'] = segment_counter_en
         job['segment_cycles'] = segment_cycles
@@ -313,10 +317,10 @@ class ADCTest(GenericTest):
 
     def max_job_time(self) -> int:
         if self.max_segments > 1:
-            max_sample_time = max((self.capture_max + self.max_offset + self.max_presamples) * self.max_segments * self.segment_time_factor,
+            max_sample_time = max((self.capture_max + self.max_offset + self.max_presamples) * self.max_downsample * self.max_segments * self.segment_time_factor,
                                   self.max_segment_cycles * self.max_segments)
         else:
-            max_sample_time = self.capture_max + self.max_offset
+            max_sample_time = (self.capture_max + self.max_offset) * self.max_downsample
         return self._capture_time_us(max_sample_time)
 
     async def _initial_setup(self) -> None:
@@ -450,9 +454,12 @@ class LATest(GenericTest):
         else:
             bits_per_sample = 9
         trigger_type = 'manual'
-        downsample = 0 # TODO: randomize later
+        if random.randint(0,3) == 0:
+            downsample = random.randint(1, self.max_downsample)
+        else:
+            downsample = 1  # no downsample most of the time
         await self.registers.write(self.reg_addr['LA_CAPTURE_DEPTH'], self.registers.to_bytes(samples, 4))
-        await self.registers.write(self.reg_addr['LA_DOWNSAMPLE'], [downsample])
+        await self.registers.write(self.reg_addr['LA_DOWNSAMPLE'], [downsample-1])
         if bits_per_sample == 8:
             await self.registers.write(self.reg_addr['LA_CAPTURE_GROUP'], [0x87])   # group 7 in 4-bit capture mode
         else:
@@ -462,7 +469,7 @@ class LATest(GenericTest):
         return job
 
     def max_job_time(self) -> int:
-        return self._capture_time_us(self.capture_max)
+        return self._capture_time_us(self.capture_max * self.max_downsample)
 
     async def _job_external_source_mods(self, source, job) -> dict:
         if source.name == 'ADC':
