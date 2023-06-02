@@ -328,6 +328,7 @@ run_coco:
 	NO_DOWNSTREAM_TRIGGERS=$(NO_DOWNSTREAM_TRIGGERS) \
 	MODULE=test_husky \
 	COCOTB_LOG_LEVEL=$(COCOTB_LOG_LEVEL) \
+	COCOTB_HDL_TIMEUNIT=1ns \
 	LIBPYTHON_LOC=$(shell cocotb-config --libpython) \
 	vvp -M $(shell cocotb-config --lib-dir) \
 	-m $(shell cocotb-config --lib-name vpi icarus) \

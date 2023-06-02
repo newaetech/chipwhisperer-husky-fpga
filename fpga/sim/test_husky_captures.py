@@ -1,5 +1,5 @@
 import cocotb
-from cocotb.triggers import RisingEdge, FallingEdge, Edge, ClockCycles, Join, Lock, Event
+from cocotb.triggers import RisingEdge, FallingEdge, Edge, ClockCycles, Join, Lock, Event, with_timeout
 from cocotb.clock import Clock
 from cocotb.queue import Queue
 import random
@@ -104,7 +104,7 @@ class GenericCapture(object):
                 await ClockCycles(self.clk, 10)
             self.dut._log.debug("%12s empty queue wait done" % job_name)
             self.dut.current_action.value = self.harness.hexstring("%12s initread" % job_name)
-            await self._initiate_read()
+            await with_timeout(self._initiate_read(), 100, 'us')
             self.dut_reading_signal.value = 1
             self.dut._log.info("%12s Starting read" % job_name)
             self.dut.current_action.value = self.harness.hexstring("%12s Reading" % job_name)

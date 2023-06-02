@@ -31,6 +31,7 @@ class Harness(object):
         self.tests = []
         self.errors = 0
         self.allow_downstream_triggers = True
+        self.active_jobs = {}
         self.queue = Queue(maxsize=3)   # maxsize represents the number of concurrent capture sources: ADC, LA, trace
                                         # The purpose of this queue is to enforce concurrency rules, which are a bit tricky:
                                         # 1. Each capture source can be active concurrently.
@@ -200,8 +201,6 @@ class Harness(object):
         for test in self.tests:
             self.dut._log.debug("%s downstream_triggers: %s" % (test.name, test.downstream_triggers))
 
-
-
     def start_tests(self):
         """ Wait for all tests which were registered via register_test() to finish.
         """
@@ -229,6 +228,27 @@ class Harness(object):
         for i,j in enumerate(string[:max_chars]):
             data += (ord(j) << ((max_chars-1-i)*8))
         return data
+
+    # the idea here was to track which jobs are currently active, in order to estimate the worst-case finish time for any
+    # job (and set timeouts accordingly), however this doesn't account for jobs that can be created after currently in-flight jobs
+    # and still impact them, and so this isn't used; saving it in case there's another need for it later
+    def add_job(self, job):
+        self.active_jobs[job['name']] = job
+    def remove_job(self, job):
+        self.active_jobs.pop(job['name'])
+    def active_job_times(self):
+        total = 0
+        for k,j in self.active_jobs.items(): 
+            total += j['capture_time_us']
+        return total * 4 # 4 is fudge factor
+
+    # all registered tests report their maximum job time; here we add them up in order to estimate the worst-case time for
+    # processing a job, in order to set timeouts.
+    def max_job_times(self):
+        time = 0
+        for test in self.tests:
+            time += test.max_job_time()
+        return math.ceil(time*1.5) # 1.5 is fudge factor
 
 
 # skipped by default; to run, specify TESTCASE=reg_rw on command line

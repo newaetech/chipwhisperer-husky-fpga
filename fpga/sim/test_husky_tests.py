@@ -1,5 +1,5 @@
 import cocotb
-from cocotb.triggers import RisingEdge, ClockCycles, Join, Lock, Event
+from cocotb.triggers import RisingEdge, ClockCycles, Join, Lock, Event, with_timeout
 from cocotb.clock import Clock
 from cocotb.queue import Queue
 from cocotb.handle import Force, Release
@@ -119,6 +119,19 @@ class GenericTest(object):
         """
         self.dut._log.error("%12s: _capture_cycles() must be implemented in child class." % self.name)
 
+    def _capture_time_us(self, samples) -> int:
+        # assumes 1ns timeunit, which should be specified in makefile via COCOTB_HDL_TIMEUNIT
+        usb_cycles = self._capture_cycles(samples)
+        time = math.ceil(usb_cycles * self.harness.usb_period * 10**-9 / 10**-6)
+        return time
+
+    def max_job_time(self) -> int:
+        """ Longest possible time for a job in us, given randomization limits. Can be pessimistic but not
+        optimistic. Used to set timeouts.
+        """
+        self.dut._log.error("%12s: max_job_time() must be implemented in child class." % self.name)
+
+
     async def _wait_capture_done(self, job: dict) -> None:
         """ Wait for DUT to finish capturing the job we just dispatched, so
         that we can remove our entry from the harness queue (which is used to
@@ -219,7 +232,11 @@ class GenericTest(object):
             # Careful! once the job is pushed to the checker.jobs queue, the checker will try to acquire read_lock, 
             # which can block activity in other concurrently running instances of this _run method.
             self.checker.jobs.put_nowait(job)
-            await self._wait_capture_done(job)
+            #timeout = job['capture_time_us'] * 2
+            #timeout = self.harness.active_job_times()
+            timeout = self.harness.max_job_times()
+            self.dut._log.info('%12s kicking off timer for %d us...' % (job_name, timeout))
+            await with_timeout(self._wait_capture_done(job), timeout, 'us')
             self._untrigger(job) # TODO: could be moved up?
             self.harness.queue.get_nowait()
             self.dut._log.debug("%12s popped from job queue (count = %d)" % (job_name, self.harness.queue.qsize()))
@@ -239,6 +256,7 @@ class ADCTest(GenericTest):
         self.name = 'ADC'
         self.max_segments = None
         self.max_segment_cycles = None
+        self.segment_time_factor = 4
         fifo_watch_thread = cocotb.start_soon(self.fifo_watch())
         ddr_watch_thread = cocotb.start_soon(self.ddr_model_watch())
         self.allowed_downstream_triggers = ['LA', 'trace']
@@ -257,6 +275,7 @@ class ADCTest(GenericTest):
         segment_cycles = 0
         segment_counter_en = 0
         segment_times = []
+        capture_samples_time = samples + offset
         if segments > 1:
             segment_counter_en = random.randint(0,1)
             if segment_counter_en:
@@ -265,11 +284,13 @@ class ADCTest(GenericTest):
                     segments = 1
                 else:
                     segment_cycles = random.randint(samples+1+offset+presamples, samples+self.max_segment_cycles)
+                    capture_samples_time = segment_cycles * segments
             else:
                 for i in range(segments-1):
                     min_wait_samples = samples + presamples + offset + 1
-                    wait_samples = random.randint(min_wait_samples, min_wait_samples*4)
+                    wait_samples = random.randint(min_wait_samples, min_wait_samples*self.segment_time_factor)
                     segment_times.append(wait_samples)
+                    capture_samples_time += wait_samples
 
         await self.registers.write(self.reg_addr['SAMPLES_ADDR'], self.registers.to_bytes(samples, 4))
         await self.registers.write(self.reg_addr['PRESAMPLES_ADDR'], self.registers.to_bytes(presamples, 2))
@@ -287,7 +308,16 @@ class ADCTest(GenericTest):
         job['segment_counter_en'] = segment_counter_en
         job['segment_cycles'] = segment_cycles
         job['segment_times'] = segment_times
+        job['capture_time_us'] = self._capture_time_us(capture_samples_time)
         return job
+
+    def max_job_time(self) -> int:
+        if self.max_segments > 1:
+            max_sample_time = max((self.capture_max + self.max_offset + self.max_presamples) * self.max_segments * self.segment_time_factor,
+                                  self.max_segment_cycles * self.max_segments)
+        else:
+            max_sample_time = self.capture_max + self.max_offset
+        return self._capture_time_us(max_sample_time)
 
     async def _initial_setup(self) -> None:
         await self.registers.write(self.reg_addr['FIFO_CONFIG'], [1]) # use DDR and set ADC ramp mode
@@ -427,7 +457,12 @@ class LATest(GenericTest):
             await self.registers.write(self.reg_addr['LA_CAPTURE_GROUP'], [0x87])   # group 7 in 4-bit capture mode
         else:
             await self.registers.write(self.reg_addr['LA_CAPTURE_GROUP'], [0x07])   # group 7 in 9-bit capture mode
-        return {"samples": samples, "bits_per_sample": bits_per_sample, "trigger_type": trigger_type, "downsample": downsample}
+        job = {"samples": samples, "bits_per_sample": bits_per_sample, "trigger_type": trigger_type, "downsample": downsample}
+        job['capture_time_us'] = self._capture_time_us(samples)
+        return job
+
+    def max_job_time(self) -> int:
+        return self._capture_time_us(self.capture_max)
 
     async def _job_external_source_mods(self, source, job) -> dict:
         if source.name == 'ADC':
@@ -492,7 +527,12 @@ class TraceTest(GenericTest):
         await self.registers.write(0x8a, self.registers.to_bytes(samples, 3))
         bits_per_sample = 18
         trigger_type = 'manual'
-        return {"samples": samples, "bits_per_sample": bits_per_sample, "trigger_type": trigger_type}
+        job = {"samples": samples, "bits_per_sample": bits_per_sample, "trigger_type": trigger_type}
+        job['capture_time_us'] = self._capture_time_us(samples)
+        return job
+
+    def max_job_time(self) -> int:
+        return self._capture_time_us(self.capture_max)
 
     async def _job_external_source_mods(self, source, job) -> dict:
         if source.name == 'ADC':
@@ -586,7 +626,12 @@ class GlitchTest(GenericTest):
         settings[7] = (((repeats-1)>>8) << 2) + 1   # use USB clock, otherwise there will be a +/- 1 cycle uncertainty on
                                                     # the glitch output timing, which would complicate verification
         await self.registers.write(self.reg_addr['CLOCKGLITCH_SETTINGS'], settings)
-        return {"glitches": glitches, "offset": offset, "repeats": repeats, "trigger_type": trigger_type}
+        job = {"glitches": glitches, "offset": offset, "repeats": repeats, "trigger_type": trigger_type}
+        job['capture_time_us'] = 100 # TODO: calculate
+        return job
+
+    def max_job_time(self) -> int:
+        return 0 # TODO?
 
     async def _wait_capture_done(self, job: dict) -> None:
         pass
