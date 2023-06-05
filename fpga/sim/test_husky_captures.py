@@ -528,7 +528,7 @@ class GlitchCapture(GenericCapture):
             self.dut_reading_signal.value = 1
             job_name = job['name']
             self.job_name = job_name
-            self.dut._log.info("%12s Starting check for job: %s" % (job_name, job))
+            self.dut._log.info("%12s Starting check for job" % job_name)
             self.dut.current_action.value = self.harness.hexstring("%12s verify" % job_name)
             await self.glitch_check(job)
             await ClockCycles(self.clk, 50)
@@ -551,7 +551,7 @@ class GlitchCapture(GenericCapture):
         if job['trigger_type'] == 'manual':
             actual_offset = 0
         else:
-            actual_offset = job['offset']
+            actual_offset = job['offset'] + 3
         await ClockCycles(self.glitch_clock, 3 + actual_offset)
         await FallingEdge(self.glitch_clock)
         self.expect_glitch(1)

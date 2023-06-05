@@ -257,7 +257,7 @@ class ADCTest(GenericTest):
         self.segment_time_factor = 4
         fifo_watch_thread = cocotb.start_soon(self.fifo_watch())
         ddr_watch_thread = cocotb.start_soon(self.ddr_model_watch())
-        self.allowed_downstream_triggers = ['LA', 'trace']
+        self.allowed_downstream_triggers = ['LA', 'trace', 'glitch']
 
     async def _job_setup(self) -> dict:
         samples = random.randint(self.capture_min, self.capture_max)
@@ -424,13 +424,12 @@ class ADCTest(GenericTest):
                 choice = random.choice(self.downstream_triggers)
                 if choice.can_be_externally_triggered and self.valid_external_trigger_combo(choice, job) and choice not in choices:
                     choices.append(choice)
-        self.dut._log.info("%12s choosing %d downstream triggers" % (job['name'], len(choices)))
+        self.dut._log.info("%12s choosing %d downstream triggers: %s" % (job['name'], len(choices), choices))
         return choices
 
-    @staticmethod
-    def valid_external_trigger_combo(choice, job) -> bool:
+    def valid_external_trigger_combo(self, choice, job) -> bool:
         result = False # default response
-        if (job['trigger_type'] == 'io4' and choice.name == 'trace') or (choice.name == 'LA'):
+        if (job['trigger_type'] == 'io4' and ((choice.name == 'trace') or (choice.name == 'glitch'))) or (choice.name == 'LA'):
             result = True
         return result
 
@@ -607,17 +606,13 @@ class GlitchTest(GenericTest):
 
     async def _initial_setup(self) -> None:
         await self.registers.write(self.reg_addr['CLOCKGLITCH_POWERDOWN'], [0])
-        # simulation artifact: prevent glitch output being X:
-        self.dut.U_dut.reg_clockglitch.U_clockglitch.glitch_go.value = Force(0)
-        await ClockCycles(self.dut.clk_usb, 10)
-        self.dut.U_dut.reg_clockglitch.U_clockglitch.glitch_go.value = Release()
-        await ClockCycles(self.dut.clk_usb, 10)
+        await ClockCycles(self.dut.clk_usb, 20)
         self.checker._start_watch_threads()
 
     async def _job_setup(self) -> dict:
         trigger_type = 'manual'
         #glitches = random.randint(self.capture_min, self.capture_max)
-        glitches = 1 # TODO: more glitches
+        glitches = 1 # TODO: more glitches (not all triggers support multiple!)
         offset = random.randint(0, 10) # TODO: randomize over legal range
         repeats = random.randint(1, 10) # TODO: randomize over legal range
         await self.registers.write(self.reg_addr['CLOCKGLITCH_NUM_GLITCHES'], [glitches-1])
@@ -637,6 +632,35 @@ class GlitchTest(GenericTest):
         job['capture_time_us'] = 100 # TODO: calculate
         return job
 
+    async def _job_external_source_mods(self, source, job) -> dict:
+        if source.name == 'ADC':
+            job['trigger_type'] = 'ADC'
+            await self.set_glitch_trigger_type('ext_single')
+            self.dut._log.info('%12s ready for external trigger!' % job['name'])
+        else:
+            raise ValueError
+        return job
+
+    async def set_glitch_trigger_type(self, ttype) -> None:
+        if ttype == 'ext_single':
+            ttype = 3
+        elif ttype == 'continuous':
+            ttype = 2
+        elif ttype == 'ext_continuous':
+            ttype = 1
+        elif ttype == 'manual':
+            ttype = 0
+        else:
+            raise ValueError('unsupported trigger type')
+        settings = await self.registers.read(self.reg_addr['CLOCKGLITCH_SETTINGS'], 8)
+        settings[5] = (settings[5] & ~(0x0C)) | (ttype << 2)
+        await self.registers.write(self.reg_addr['CLOCKGLITCH_SETTINGS'], settings)
+        settings[5] = settings[5] | (1 << 7)
+        await self.registers.write(self.reg_addr['CLOCKGLITCH_SETTINGS'], settings)
+        settings[5] = settings[5] & ~(1 << 7)
+        await self.registers.write(self.reg_addr['CLOCKGLITCH_SETTINGS'], settings)
+
+
     def max_job_time(self) -> int:
         return 0 # TODO?
 
@@ -649,6 +673,8 @@ class GlitchTest(GenericTest):
     async def _trigger(self, job) -> None:
         if job['trigger_type'] == 'manual':
             await self.trigger_now()
+        elif job['trigger_type'] == 'ADC':
+            pass # nothing to do!
         else:
             raise ValueError
         # TODO: code more trigger options
@@ -656,7 +682,6 @@ class GlitchTest(GenericTest):
     async def trigger_now(self) -> None:
         settings = await self.harness.registers.read(self.reg_addr['CLOCKGLITCH_SETTINGS'], 8)
         settings[5] |= 0x80 # set manual trigger bit
-        settings[5] |= 0x80 # set trigger source to manual
         await self.registers.write(self.reg_addr['CLOCKGLITCH_SETTINGS'], settings)
 
     def _capture_cycles(self, cycles) -> int:

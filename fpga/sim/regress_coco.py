@@ -147,12 +147,23 @@ tests.append(dict(name  = 'glitch_only',
              frequency = 1,
              MIN_SIZE = 1,
              MAX_SIZE = 1,
-             NUM_CAPTURES = 1,
+             NUM_CAPTURES = 3,
              ADC_CAPTURE = 0,
              LA_CAPTURE = 0,
              TRACE_CAPTURE = 0,
              GLITCH_CAPTURE = 1,
              description = 'Only glitches.'))
+
+tests.append(dict(name  = 'almost_everything',
+             testcase = 'capture',
+             frequency = 1,
+             NUM_CAPTURES = 3,
+             ADC_CAPTURE = 1,
+             LA_CAPTURE = 1,
+             TRACE_CAPTURE = 0,
+             GLITCH_CAPTURE = 1,
+             description = 'ADC+LA+glitch.'))
+
 
 
 #tests.append(dict(name  = 'adctrig',
