@@ -154,13 +154,13 @@ tests.append(dict(name  = 'glitch_only',
              GLITCH_CAPTURE = 1,
              description = 'Only glitches.'))
 
-tests.append(dict(name  = 'almost_everything',
+tests.append(dict(name  = 'everything',
              testcase = 'capture',
              frequency = 1,
              NUM_CAPTURES = 3,
              ADC_CAPTURE = 1,
              LA_CAPTURE = 1,
-             TRACE_CAPTURE = 0,
+             TRACE_CAPTURE = 1,
              GLITCH_CAPTURE = 1,
              description = 'ADC+LA+glitch.'))
 

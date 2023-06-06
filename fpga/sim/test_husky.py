@@ -32,7 +32,7 @@ class Harness(object):
         self.errors = 0
         self.allow_downstream_triggers = True
         self.active_jobs = {}
-        self.queue = Queue(maxsize=3)   # maxsize represents the number of concurrent capture sources: ADC, LA, trace
+        self.queue = Queue(maxsize=4)   # maxsize represents the number of concurrent capture sources: ADC, LA, trace, glitch
                                         # The purpose of this queue is to enforce concurrency rules, which are a bit tricky:
                                         # 1. Each capture source can be active concurrently.
                                         # 2. No read can occur while another read is occuring or when a capture is occuring.
@@ -42,7 +42,9 @@ class Harness(object):
                                         # queue when the capture is done.
                                         # On the read side, a global read lock is first acquired, and then we must wait until
                                         # this queue is empty (meaning no active captures) before starting the read.
+        self._queue_contents = []
         self.read_lock = Lock()
+        self.trigger_lock = Lock()
         # Actual seed is obtained only if RANDOM_SEED is defined on vvp command line (otherwise you get 0)
         # regress.py always specifies the seed so this is fine.
         self.dut._log.info("seed: %d" % int(os.getenv('RANDOM_SEED', '0')))
@@ -54,6 +56,36 @@ class Harness(object):
         adc_clock_thread = cocotb.start_soon(Clock(dut.PLL_CLK1, self.adc_period, units="ns").start())
         ui_clock_thread = cocotb.start_soon(Clock(dut.ui_clk, 6, units="ns").start())
         self.dut.errors.value = 0
+
+    def queue_push(self, job):
+        """ Wrapper around queue.put_nowait() so we can track what's actually in the queue, to help debugging.
+        """
+        self.queue.put_nowait(job)
+        self._queue_contents.append(job)
+        self.dut._log.debug("queue contents after addition: %s" % self._queue_contents)
+
+    def queue_get(self, job):
+        """ Wrapper around queue.get_nowait() so we can track what's actually in the queue, to help debugging.
+        """
+        self.queue.get_nowait()
+        self._queue_contents.remove(job)
+        self.dut._log.debug("queue contents after removal: %s" % self._queue_contents)
+
+    async def read_lock_acquire(self, job_name):
+        """ Wrapper around read_lock.acquire() to track who has acquired it on the sim waveform
+        """
+        self.dut._log.info("%12s trying to acquire read_lock..." % job_name)
+        await self.read_lock.acquire()
+        self.dut._log.info("%12s read_lock acquired" % job_name)
+        self.dut.current_read_lock.value = self.hexstring("%12s" % job_name)
+
+    def read_lock_release(self):
+        """ Wrapper around read_lock.release() to track who has acquired it on the sim waveform
+        """
+        self.read_lock.release()
+        #self.dut.current_read_lock.value = self.hexstring("released")
+        self.dut.current_read_lock.value = 0
+
 
     def slurp_defines(self, defines_files=None):
         """ Parse Verilog defines file so we can access register and bit
@@ -168,7 +200,7 @@ class Harness(object):
         flushing = True
         await ClockCycles(self.dut.clk_usb, 5) # give time for flushing to begin
         while flushing:
-            self.dut._log.debug("...waiting for %s flush to complete..." % source)
+            self.dut._log.info("...waiting for %s flush to complete..." % source)
             flushing = (await self.registers.read(self.reg_addr['FIFO_STAT'], 3))[2] & bitmask
 
     def register_test(self, test):

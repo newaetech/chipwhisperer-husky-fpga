@@ -3,6 +3,7 @@ from cocotb.triggers import RisingEdge, ClockCycles, Join, Lock, Event, with_tim
 from cocotb.clock import Clock
 from cocotb.queue import Queue
 from cocotb.handle import Force, Release
+from cocotb.result import SimTimeoutError
 from test_husky_captures import ADCCapture, LACapture, TraceCapture, GlitchCapture
 import random
 import math
@@ -151,6 +152,7 @@ class GenericTest(object):
         while not_done_writing:
             await ClockCycles(self.clk, 50)
             not_done_writing = not await self.harness.ddr_done_writing()
+        self.dut._log.info("%12s DDR write done" % job['name'])
 
     def get_downstream_trigger(self, job) -> list:
         """ If a job triggers another job, returns that second job's Test
@@ -190,10 +192,11 @@ class GenericTest(object):
                 externally_triggered = False
 
             # see comments around queue definition in Harness for how this queue and lock mechanism works:
-            self.dut._log.debug("%12s trying to trigger job (waiting for read_lock to be freed)..." % job_name)
+            self.dut._log.info("%12s trying to trigger job (waiting for read_lock to be freed)..." % job_name)
             while self.harness.read_lock.locked:
                 await ClockCycles(self.clk, 10)
-            self.dut._log.debug("%12s trying to trigger job: read_lock freed" % job_name)
+
+            self.dut._log.info("%12s trying to trigger job: read_lock freed" % job_name)
             # decide whether this job also triggers a downstream job:
             downstream_triggers = self.get_downstream_trigger(job)
             if downstream_triggers:
@@ -208,20 +211,35 @@ class GenericTest(object):
                     await ClockCycles(self.clk, 10)
                 self.dut._log.debug("%12s all downstream triggers are good to go!" % job_name)
 
+            # since some time may have passed, check for read_lock again, and this time set a trigger lock to prevent a read lock from "sneaking in"
+            # What we're trying to prevent is that arming and triggering a job entails flushing the post-DDR FIFO and this can mess up a read thread on
+            # a different job. And add a trigger_lock, which the capture _run() thread will check, to be 100% sure that no jobs will be triggered
+            # while the capture thread sets up and executes its read.
+            if not self.harness.trigger_lock.locked:
+                await self.harness.trigger_lock.acquire()
+            self.dut._log.info("%12s waiting for read_lock to be freed: second check" % job_name)
+            while self.harness.read_lock.locked:
+                await ClockCycles(self.clk, 10)
+
             # now we can trigger *this* job:
             if not externally_triggered:
                 # harness.queue tracks the number of currently active capture jobs; if a job
                 # is externally triggered, then it will get accounted for by the *externally triggering job*,
                 # otherwise there's a (small) chance for unfortunate timing where everything locks up.
-                self.harness.queue.put_nowait(self.name)
+                #self.harness.queue.put_nowait(self.name)
+                self.harness.queue_push(self.name)
                 for downstream_trigger in downstream_triggers:
-                    self.harness.queue.put_nowait(downstream_trigger.name)
-            self.dut._log.debug("%12s pushing to job queue (count = %d)" % (job_name, self.harness.queue.qsize()))
+                    #self.harness.queue.put_nowait(downstream_trigger.name)
+                    self.harness.queue_push(downstream_trigger.name)
+                self.dut._log.info("%12s pushed to job queue (count = %d, contents: %s)" % (job_name, self.harness.queue.qsize(), self.harness._queue_contents))
+
             await self._arm()
             await self._pretrigger_wait(job)
             self.dut._log.info("%12s Triggering: %s" %(job_name, job))
             self.dut.current_action.value = self.harness.hexstring("%12s Triggering" % job_name)
             await self._trigger(job)
+            if self.harness.trigger_lock.locked:
+                self.harness.trigger_lock.release()
             self.trigger_event.set()
             if externally_triggered:
                 # let the parent triggering job know that we're good to go:
@@ -233,11 +251,15 @@ class GenericTest(object):
             # which can block activity in other concurrently running instances of this _run method.
             self.checker.jobs.put_nowait(job)
             timeout = self.harness.max_job_times()
-            self.dut._log.info('%12s kicking off timer for %d us...' % (job_name, timeout))
-            await with_timeout(self._wait_capture_done(job), timeout, 'us')
+            self.dut._log.info('%12s kicking off _wait_capture_done() timer for %d us...' % (job_name, timeout))
+            try:
+                await with_timeout(self._wait_capture_done(job), timeout, 'us')
+            except:
+                raise SimTimeoutError('%12s timed out on _wait_capture_done()' % job_name)
             self._untrigger(job) # TODO: could be moved up?
-            self.harness.queue.get_nowait()
-            self.dut._log.debug("%12s popped from job queue (count = %d)" % (job_name, self.harness.queue.qsize()))
+            #self.harness.queue.get_nowait()
+            self.harness.queue_get(self.name)
+            self.dut._log.info("%12s popped from job queue (count = %d, contents: %s)" % (job_name, self.harness.queue.qsize(), self.harness._queue_contents))
             result = await self.checker.results.get()
             await self._post_job()
             #assert result['errors'] == 0 # TODO: optionally assert here, to stop test as soon as errors are found?

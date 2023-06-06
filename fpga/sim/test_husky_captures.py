@@ -2,6 +2,7 @@ import cocotb
 from cocotb.triggers import RisingEdge, FallingEdge, Edge, ClockCycles, Join, Lock, Event, with_timeout
 from cocotb.clock import Clock
 from cocotb.queue import Queue
+from cocotb.result import SimTimeoutError
 import random
 import math
 import numpy as np
@@ -96,21 +97,27 @@ class GenericCapture(object):
             job_name = job['name']
             # note: used to have a  self._pre_read_wait(job) here but no longer needed since _wait_capture_done does the equivalent
             # see comments around queue definition in Harness for how this queue and lock mechanism works:
-            self.dut._log.debug("%12s trying to acquire read_lock..." % job_name)
-            await self.harness.read_lock.acquire()
-            self.dut._log.info("%12s read_lock acquired" % job_name)
-            self.dut._log.debug("%12s awaiting empty queue (count = %d)" % (job_name, self.harness.queue.qsize()))
-            while not self.harness.queue.empty():
+            self.dut._log.info("%12s awaiting freed trigger lock" % job_name)
+            while self.harness.trigger_lock.locked:
                 await ClockCycles(self.clk, 10)
-            self.dut._log.debug("%12s empty queue wait done" % job_name)
+            await self.harness.read_lock_acquire(job_name)
+            self.dut._log.info("%12s awaiting empty queue (count = %d, contents: %s)" % (job_name, self.harness.queue.qsize(), self.harness._queue_contents))
+            while not self.harness.queue.empty():
+            #while self.harness.queue.qsize() != 1:
+                await ClockCycles(self.clk, 10)
+            self.dut._log.info("%12s empty queue wait done" % job_name)
             self.dut.current_action.value = self.harness.hexstring("%12s initread" % job_name)
-            await with_timeout(self._initiate_read(), 100, 'us')
+            try:
+                await with_timeout(self._initiate_read(), 100, 'us')
+            except:
+                # catch timeout to print something about it
+                raise SimTimeoutError('%12s timed out on _initiate_read()' % job_name)
             self.dut_reading_signal.value = 1
             self.dut._log.info("%12s Starting read" % job_name)
             self.dut.current_action.value = self.harness.hexstring("%12s Reading" % job_name)
             data = await self._read_samples(job)
             self.dut._log.info("%12s Done read" % job_name)
-            self.harness.read_lock.release()
+            self.harness.read_lock_release()
             self.dut._log.info("%12s read_lock released" % job_name)
             self.dut_reading_signal.value = 0
             await self._check_fifo_errors(job_name)

@@ -149,6 +149,7 @@ module cwhusky_cw310_cocowrapper(
     input  wire [7:0]   trace_job,
     input  wire [7:0]   glitch_job,
     input  wire [24*8-1:0] current_action,
+    input  wire [24*8-1:0] current_read_lock,
     input  wire [31:0]  errors
 );
 
