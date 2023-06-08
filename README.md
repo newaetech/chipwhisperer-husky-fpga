@@ -6,13 +6,22 @@ ChipWhisperer-Husky.
 Husky uses a Xilinx XC7A35 FPGA; Husky Plus uses an XC7A100.  Implementation is
 done with Vivado 2020.2.
 
+When opening the [project](fpga/vivado/cwhusky.xpr), Vivado will report some
+"errors" about missing IP that are not actually errors and can be safely
+ignored (these relate to ILA modules used in development which are not
+included in the repository, because they're not used in the production
+bitfile).
+
 Implementation should run cleanly (no setup or hold timing violations) but
 timing is tight and small timing failures can occur if you're unlucky. The
 usual culprits are:
 * `ADC_clk_fb` clock: in `fifo_top_husky.v` for logic around counting
-  samples and segments, or writing data from the fast FIFO to the slow FIFO.
+  samples and segments, or writing data from the fast FIFO to the slow FIFO,
+  or related to the SAD module. Since the SAD module is so large, timing
+  here can be eased by reducing its size (see below).
 * `oberver_clk` clock: logic in the TraceWhisperer UART receiver, or in
-  `reg_la.v`.
+  `reg_la.v`. These can be given a pass (or you can reduce the
+  `observer_clk` frequency).
 * `clk_usb` clock
 * setup and/or hold violations on the `ADC_DP` inputs.
 
@@ -42,15 +51,15 @@ The only critical warnings in the implementation log file should relate to
 inconsequential missing IP modules (e.g. ILAs) and the the last three
 `dbg_hub` commands.
 
-The SAD module is by far the largest. If you are short on LUTs, you can
-reduce its size by adjusting its `pREF_SAMPLES` and/or `pSAD_COUNTER_WIDTH`
-instantiation parameters. The only (known) limitation is that `pREF_SAMPLES`
-must be even. Conversely if you wish to increase these parameters, be aware
-that the resulting size increase will make timing closure more difficult; it
-can also drive up power consumption to the point where the current draw
-might be too great at higher clock frequencies (this would typically result
-in `scope.XADC` VCC alarms and/or Husky dying and requiring a hard power
-cycle).
+The SAD module is by far the largest. If you are short on LUTs, or if timing
+closure is proving difficult, you can reduce its size by adjusting its
+`pREF_SAMPLES` and/or `pSAD_COUNTER_WIDTH` instantiation parameters. The
+only (known) limitation is that `pREF_SAMPLES` must be even. Conversely if
+you wish to increase these parameters, be aware that the resulting size
+increase will make timing closure more difficult; it can also drive up power
+consumption to the point where the current draw might be too great at higher
+clock frequencies (this would typically result in `scope.XADC` VCC alarms
+and/or Husky dying and requiring a hard power cycle).
 
 # Testing
 
@@ -95,6 +104,24 @@ primitives) is bypassed with the exception of the FIFOs. This is done with
 can't fully cover all scenarios, especially with regards to different clock
 rates and their interactions. Different clock rates are covered extensively
 by [on-target testing](#on-target-testing).
+
+Simulation models for the Xilinx FIFOs are provided
+[here](fpga/sim/vivado/), however these can sometimes be problematic as they
+are quite finicky about how resets should be applied. The testbench applies
+the reset in a way that should satisfy the Xilinx FIFO requirements but yet
+somehow the FIFOs can sometimes misbehave (X's propagate, status flag remain
+unvalid). 
+
+For this reason, we developed [our own FIFOs](fpga/fpga-common/hdl). Their
+behaviour is **not** idential to the Xilinx FIFOs; in particular status flag
+latency is different (they also do not suffer from reset bugs 🤣), and while
+they are fully functional and *can* be used for implementation, they are (a)
+not guaranteed to be bug-free and (b) fare worse on timing closure. However,
+in addition to not being picky about resets, they simulate *much* faster.
+So, the Xilinx FIFOs are still used in implementation and remain the default
+in simulation; to use the faster FIFOs in simulation, add `--fast_fifo_sim`
+to `regress.py`.
+
 
 ### TraceWhisperer
 Husky's Verilog testbench does not cover trace. For this, run the
