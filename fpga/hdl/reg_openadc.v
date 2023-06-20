@@ -79,7 +79,8 @@ module reg_openadc #(
 
    input  wire        extclk_change,
    output reg         extclk_monitor_disabled,
-   output reg [31:0]  extclk_limit
+   output reg [31:0]  extclk_limit,
+   output reg         O_disable_adc_error
 );
 
    wire reset;
@@ -189,7 +190,7 @@ module reg_openadc #(
                 `LED_SELECT: reg_datao_reg = led_select;
                 `NO_CLIP_ERRORS: reg_datao_reg = {6'b0, no_gain_errors, no_clip_errors};
                 `CLIP_TEST: reg_datao_reg = clip_test;
-                `EXTCLK_MONITOR_DISABLED: reg_datao_reg = extclk_monitor_disabled;
+                `EXTCLK_MONITOR_DISABLED: reg_datao_reg = {6'b0, O_disable_adc_error, extclk_monitor_disabled};
                 `EXTCLK_MONITOR_STAT: reg_datao_reg = extclk_change;
                 `EXTCLK_CHANGE_LIMIT: reg_datao_reg = extclk_limit[reg_bytecnt*8 +: 8];
                 `ADC_TRIGGER_LEVEL: reg_datao_reg = trigger_adclevel[reg_bytecnt*8 +: 8];
@@ -220,6 +221,7 @@ module reg_openadc #(
          no_gain_errors <= 0;
          clip_test <= 0;
          extclk_monitor_disabled <= 1;
+         O_disable_adc_error <= 0;
          extclk_limit <= 32'd9; // corresponds to ~100 kHz tolerance
          trigger_adclevel <= 12'd0;
       end else if (reg_write) begin
@@ -239,7 +241,7 @@ module reg_openadc #(
             `LED_SELECT: led_select <= reg_datai[1:0];
             `NO_CLIP_ERRORS: {no_gain_errors, no_clip_errors} <= reg_datai[1:0];
             `CLIP_TEST: clip_test <= reg_datai[0];
-            `EXTCLK_MONITOR_DISABLED: extclk_monitor_disabled <= reg_datai[0];
+            `EXTCLK_MONITOR_DISABLED: {O_disable_adc_error, extclk_monitor_disabled} <= reg_datai[1:0];
             `EXTCLK_CHANGE_LIMIT: extclk_limit[reg_bytecnt*8 +: 8] <= reg_datai;
             `ADC_TRIGGER_LEVEL: trigger_adclevel[reg_bytecnt*8 +: 8] <= reg_datai;
             default: ;

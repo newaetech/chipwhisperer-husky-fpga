@@ -362,13 +362,22 @@ module cwhusky_top(
    wire trace_capture_on;
    wire [7:0] trace_userio_dir;
    wire freq_measure;
+   wire clear_adc_error;
+   wire disable_adc_error;
+   reg PLL_STATUS_reg = 1'b1;
 
    // fast-flash red LEDs when some internal error has occurred:
-   assign LED_ADC = error_flag? flash_pattern : ~PLL_STATUS;
+   assign LED_ADC = (error_flag)? flash_pattern : ~PLL_STATUS_reg;
    assign LED_GLITCH = error_flag? flash_pattern : led_glitch;
    assign LED_CAP = cw_led_cap;
    assign LED_ARMED = cw_led_armed;
 
+   always @(posedge clk_usb_buf) begin
+       if (clear_adc_error || disable_adc_error)
+           PLL_STATUS_reg <= 1'b1;
+       else if (~PLL_STATUS) // make it sticky!
+           PLL_STATUS_reg <= 1'b0;
+   end
 
    openadc_interface #(
         .pBYTECNT_SIZE  (pBYTECNT_SIZE)
@@ -381,6 +390,8 @@ module cwhusky_top(
 
         .LED_capture            (cw_led_cap),
         .LED_armed              (cw_led_armed),
+        .O_clear_adc_error      (clear_adc_error),
+        .O_disable_adc_error    (disable_adc_error),
         .ADC_data               (ADC_data),
         .ADC_clk_feedback       (ADC_clk_fb),
         .pll_fpga_clk           (pll_fpga_clk),
