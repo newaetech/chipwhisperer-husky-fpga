@@ -233,7 +233,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
  */
 
-   reg [1:0] registers_cwauxio;
+   reg [2:0] registers_cwauxio;
    reg [7:0] registers_cwextclk;
    reg [15:0] registers_cwtrigsrc; // note: for CW-Lite/Pro, this is an 8-bit register
    reg [7:0] registers_cwtrigmod;
@@ -517,7 +517,8 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    assign edge_trigger_active = (registers_cwtrigmod[2:0] == 3'b110);
    assign trigger_ext_o = trigger_ext;
 
-   assign trig_glitch_o_mcx = registers_cwauxio[1] ? glitchclk : trigger_capture;
+   wire trig_glitch_pre = registers_cwauxio[1] ? glitchclk : trigger_capture;
+   assign trig_glitch_o_mcx = registers_cwauxio[2] ? ~trig_glitch_pre : trig_glitch_pre;
 
 
 /* IO Routing */
@@ -576,7 +577,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    always @(*) begin
       if (reg_read) begin
          case (reg_address)
-           `CW_AUX_IO:                  reg_datao_reg = {6'b0, registers_cwauxio};
+           `CW_AUX_IO:                  reg_datao_reg = {5'b0, registers_cwauxio};
            `CW_EXTCLK_ADDR:             reg_datao_reg = registers_cwextclk; 
            `CW_TRIGSRC_ADDR:            reg_datao_reg = registers_cwtrigsrc[reg_bytecnt*8 +: 8]; 
            `CW_TRIGMOD_ADDR:            reg_datao_reg = registers_cwtrigmod; 
@@ -612,11 +613,11 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
          userio_drive_data <= 8'b0;
          userio_fpga_debug_select <= 4'b0;
          reg_external_clock <= 1'b0;
-         registers_cwauxio <= 2'b0;
+         registers_cwauxio <= 3'b0;
          reg_softpower_control <= {16'd0, 16'd1995, 16'd2000, 8'd0, 8'd35};
       end else if (reg_write) begin
          case (reg_address)
-           `CW_AUX_IO: registers_cwauxio <= reg_datai[1:0];
+           `CW_AUX_IO: registers_cwauxio <= reg_datai[2:0];
            `CW_EXTCLK_ADDR: registers_cwextclk <= reg_datai;
            `CW_TRIGSRC_ADDR: registers_cwtrigsrc[reg_bytecnt*8 +: 8] <= reg_datai;
            `CW_TRIGMOD_ADDR: registers_cwtrigmod <= reg_datai;
