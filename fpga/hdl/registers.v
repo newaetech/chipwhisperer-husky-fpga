@@ -351,6 +351,7 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define SAD_SHORT               107
 `define SAD_REFERENCE_BASE      108
 `define SAD_VERSION             114
+`define SAD_ALWAYS_ARMED        116
 
 `define FIFO_STATE              110
 `define CLOCKGLITCH_POWERED_DOWN 111
