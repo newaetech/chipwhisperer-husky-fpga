@@ -357,8 +357,11 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define CLOCKGLITCH_POWERED_DOWN 111
 `define EDGE_TRIGGER_COUNT      113
 `define SOFTPOWER_CONTROL       115
+`define NUM_TRIGGERS_STAT       117
+`define NUM_TRIGGERS_DATA       118
 
 `define REGISTER_VERSION 1
 
 `define TW_MAIN_REG_SELECT      2'b10
 `define TW_TRACE_REG_SELECT     2'b11
+

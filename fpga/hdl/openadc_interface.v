@@ -474,7 +474,13 @@ module openadc_interface #(
    );
 
    reg_openadc #(
-      .pBYTECNT_SIZE    (pBYTECNT_SIZE)
+      .pBYTECNT_SIZE            (pBYTECNT_SIZE),
+      .pTRIGGER_FIFO_WIDTH      (32),
+`ifdef PLUS
+      .pTRIGGER_FIFO_DEPTH      (2048), // TODO: TBD max size
+`else
+      .pTRIGGER_FIFO_DEPTH      (1024)
+`endif
    ) U_reg_openadc (
       .reset_i                      (1'b0),
       .reset_o                      (reset),
@@ -515,6 +521,7 @@ module openadc_interface #(
       .no_clip_errors               (no_clip_errors),
       .no_gain_errors               (no_gain_errors),
       .clip_test                    (clip_test),
+      .trigger_event                (capture_go),
 
       .extclk_change                (extclk_change_usb),
       .extclk_monitor_disabled      (extclk_monitor_disabled),

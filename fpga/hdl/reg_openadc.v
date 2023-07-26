@@ -24,7 +24,9 @@ Author: Colin O'Flynn <coflynn@newae.com>
 *************************************************************************/
 
 module reg_openadc #(
-   parameter pBYTECNT_SIZE = 7
+   parameter pBYTECNT_SIZE = 7,
+   parameter pTRIGGER_FIFO_WIDTH = 32,
+   parameter pTRIGGER_FIFO_DEPTH = 512
 )(
    input  wire         reset_i,
    output wire         reset_o,
@@ -76,6 +78,8 @@ module reg_openadc #(
    output reg         no_clip_errors,
    output reg         no_gain_errors,
    output reg         clip_test,
+
+   input  wire        trigger_event, // capture_go_o from trigger_unit.v, to count cycles between successive triggers
 
    input  wire        extclk_change,
    output reg         extclk_monitor_disabled,
@@ -194,6 +198,8 @@ module reg_openadc #(
                 `EXTCLK_MONITOR_STAT: reg_datao_reg = extclk_change;
                 `EXTCLK_CHANGE_LIMIT: reg_datao_reg = extclk_limit[reg_bytecnt*8 +: 8];
                 `ADC_TRIGGER_LEVEL: reg_datao_reg = trigger_adclevel[reg_bytecnt*8 +: 8];
+                `NUM_TRIGGERS_DATA: reg_datao_reg = trigger_fifo_dout[reg_bytecnt*8 +: 8];
+                `NUM_TRIGGERS_STAT: reg_datao_reg = {5'b0, trigger_fifo_underflow, trigger_fifo_overflow, trigger_fifo_empty};
                 default: reg_datao_reg = 0;
              endcase
           end
@@ -224,28 +230,46 @@ module reg_openadc #(
          O_disable_adc_error <= 0;
          extclk_limit <= 32'd9; // corresponds to ~100 kHz tolerance
          trigger_adclevel <= 12'd0;
-      end else if (reg_write) begin
-         case (reg_address)
-            `GAIN_ADDR: registers_gain <= reg_datai;
-            `SETTINGS_ADDR: registers_settings <= reg_datai;
-            `ECHO_ADDR: registers_echo[reg_bytecnt*8 +: 8] <= reg_datai;
-            `DECIMATE_ADDR:  registers_downsample[reg_bytecnt*8 +: 8] <= reg_datai;
-            `SAMPLES_ADDR: registers_samples[reg_bytecnt*8 +: 8] <= reg_datai;
-            `PRESAMPLES_ADDR: registers_presamples[reg_bytecnt*8 +: 8] <= reg_datai;
-            `OFFSET_ADDR: registers_offset[reg_bytecnt*8 +: 8] <= reg_datai;
-            `ADVCLOCK_ADDR: registers_advclocksettings[reg_bytecnt*8 +: 8] <= reg_datai;
-            `NUM_SEGMENTS: num_segments[reg_bytecnt*8 +: 8] <= reg_datai;
-            `SEGMENT_CYCLES: segment_cycles[reg_bytecnt*8 +: 8] <= reg_datai;
-            `SEGMENT_CYCLE_COUNTER_EN: segment_cycle_counter_en <= reg_datai[0];
-            `DATA_SOURCE_SELECT: data_source_select <= reg_datai[0];
-            `LED_SELECT: led_select <= reg_datai[1:0];
-            `NO_CLIP_ERRORS: {no_gain_errors, no_clip_errors} <= reg_datai[1:0];
-            `CLIP_TEST: clip_test <= reg_datai[0];
-            `EXTCLK_MONITOR_DISABLED: {O_disable_adc_error, extclk_monitor_disabled} <= reg_datai[1:0];
-            `EXTCLK_CHANGE_LIMIT: extclk_limit[reg_bytecnt*8 +: 8] <= reg_datai;
-            `ADC_TRIGGER_LEVEL: trigger_adclevel[reg_bytecnt*8 +: 8] <= reg_datai;
-            default: ;
-         endcase
+         trigger_fifo_clear_usb <= 1'b0;
+         trigger_fifo_rd_usb <= 1'b1;
+      end 
+
+      else begin
+          if (reg_write) begin
+             case (reg_address)
+                `GAIN_ADDR: registers_gain <= reg_datai;
+                `SETTINGS_ADDR: registers_settings <= reg_datai;
+                `ECHO_ADDR: registers_echo[reg_bytecnt*8 +: 8] <= reg_datai;
+                `DECIMATE_ADDR:  registers_downsample[reg_bytecnt*8 +: 8] <= reg_datai;
+                `SAMPLES_ADDR: registers_samples[reg_bytecnt*8 +: 8] <= reg_datai;
+                `PRESAMPLES_ADDR: registers_presamples[reg_bytecnt*8 +: 8] <= reg_datai;
+                `OFFSET_ADDR: registers_offset[reg_bytecnt*8 +: 8] <= reg_datai;
+                `ADVCLOCK_ADDR: registers_advclocksettings[reg_bytecnt*8 +: 8] <= reg_datai;
+                `NUM_SEGMENTS: num_segments[reg_bytecnt*8 +: 8] <= reg_datai;
+                `SEGMENT_CYCLES: segment_cycles[reg_bytecnt*8 +: 8] <= reg_datai;
+                `SEGMENT_CYCLE_COUNTER_EN: segment_cycle_counter_en <= reg_datai[0];
+                `DATA_SOURCE_SELECT: data_source_select <= reg_datai[0];
+                `LED_SELECT: led_select <= reg_datai[1:0];
+                `NO_CLIP_ERRORS: {no_gain_errors, no_clip_errors} <= reg_datai[1:0];
+                `CLIP_TEST: clip_test <= reg_datai[0];
+                `EXTCLK_MONITOR_DISABLED: {O_disable_adc_error, extclk_monitor_disabled} <= reg_datai[1:0];
+                `EXTCLK_CHANGE_LIMIT: extclk_limit[reg_bytecnt*8 +: 8] <= reg_datai;
+                `ADC_TRIGGER_LEVEL: trigger_adclevel[reg_bytecnt*8 +: 8] <= reg_datai;
+                default: ;
+             endcase
+         end
+
+         // "special" registers:
+         if (reg_write && (reg_address == `NUM_TRIGGERS_STAT))
+             trigger_fifo_clear_usb <= 1'b1;
+         else
+             trigger_fifo_clear_usb <= 1'b0;
+
+         if (reg_write && (reg_address == `NUM_TRIGGERS_DATA))
+             trigger_fifo_rd_usb <= 1'b1;
+         else
+             trigger_fifo_rd_usb <= 1'b0;
+
       end
    end
 
@@ -277,6 +301,94 @@ module reg_openadc #(
        );
    `endif
 
+    // Count times between successive triggers:
+    // We have a pTRIGGER_FIFO_WIDTH-bit counter.
+    // Flag counter overflows by keeping it at {pTRIGGER_FIFO_WIDTH{1'b1}}.
+    // Since this FIFO is relatively shallow, keep things simple (instead of
+    // high-performance) for reading it: status register indicates if the FIFO
+    // is empty; writing that status register triggers popping the next FIFO
+    // entry, which the user then reads from another register.
+
+    reg  [pTRIGGER_FIFO_WIDTH-1:0] trigger_fifo_count = 0;
+    reg  trigger_fifo_wr = 1'b0;
+    wire trigger_fifo_full;
+    reg  trigger_fifo_overflow = 1'b0;
+    wire trigger_fifo_rd;
+    wire [pTRIGGER_FIFO_WIDTH-1:0] trigger_fifo_dout;
+    wire trigger_fifo_empty;
+    wire trigger_fifo_underflow;
+    reg  reset_trigger_fifo_count;
+    wire trigger_fifo_clear;
+
+    // TODO: pulses from USB registers
+    reg  trigger_fifo_rd_usb;
+    reg  trigger_fifo_clear_usb;
+
+    always @(posedge adc_sampleclk) begin
+        if (trigger_fifo_clear)
+            trigger_fifo_overflow <= 1'b0;
+        else if (trigger_event) begin
+            if (trigger_fifo_full)
+                trigger_fifo_overflow <= 1'b1;
+            else begin
+                reset_trigger_fifo_count <= 1'b1;
+                trigger_fifo_wr <= 1'b1;
+            end
+        end
+        else begin
+            trigger_fifo_wr <= 1'b0;
+            reset_trigger_fifo_count <= 1'b0;
+            if (reset_trigger_fifo_count)
+                trigger_fifo_count <= 0;
+            else if (trigger_fifo_count <= {pTRIGGER_FIFO_WIDTH{1'b1}})
+                // don't overflow
+                trigger_fifo_count <= trigger_fifo_count + 1;
+        end
+    end
+
+    cdc_pulse U_trigger_fifo_clear_cdc (
+       .reset_i       (reset),
+       .src_clk       (clk_usb),
+       .src_pulse     (trigger_fifo_clear_usb),
+       .dst_clk       (adc_sampleclk),
+       .dst_pulse     (trigger_fifo_clear)
+    );
+
+
+    cdc_pulse U_trigger_fifo_rd_cdc (
+       .reset_i       (reset),
+       .src_clk       (clk_usb),
+       .src_pulse     (trigger_fifo_rd_usb),
+       .dst_clk       (adc_sampleclk),
+       .dst_pulse     (trigger_fifo_rd)
+    );
+
+
+    fifo_sync #(
+        .pDATA_WIDTH    (pTRIGGER_FIFO_WIDTH),
+        .pDEPTH         (pTRIGGER_FIFO_DEPTH),
+        .pFALLTHROUGH   (0),
+        .pFLOPS         (0),
+        .pDISTRIBUTED   (0),
+        .pBRAM          (1)
+    ) U_trigger_fifo (
+        .clk            (adc_sampleclk),
+        .rst_n          (~reset),
+        .full_threshold_value (0),
+        .empty_threshold_value (0),
+        .wen            (trigger_fifo_wr),
+        .wdata          (trigger_fifo_count),
+        .full           (trigger_fifo_full),
+        .overflow       (),
+        .full_threshold (),
+        .empty_threshold(),
+        .ren            (trigger_fifo_rd),
+        .rdata          (trigger_fifo_dout),
+        .empty          (trigger_fifo_empty),
+        .almost_empty   (),
+        .almost_full    (),
+        .underflow      (trigger_fifo_underflow)
+    );
 
 endmodule
 `default_nettype wire
