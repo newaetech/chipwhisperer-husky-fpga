@@ -308,6 +308,8 @@ module reg_openadc #(
     // high-performance) for reading it: status register indicates if the FIFO
     // is empty; writing that status register triggers popping the next FIFO
     // entry, which the user then reads from another register.
+    // Finally, automatically flush the FIFO upon arming, for a better user
+    // experience.
 
     reg  [pTRIGGER_FIFO_WIDTH-1:0] trigger_fifo_count = 0;
     reg  trigger_fifo_wr = 1'b0;
@@ -317,14 +319,23 @@ module reg_openadc #(
     wire [pTRIGGER_FIFO_WIDTH-1:0] trigger_fifo_dout;
     wire trigger_fifo_empty;
     wire trigger_fifo_underflow;
+    reg  trigger_fifo_flush = 1'b0;
     reg  reset_trigger_fifo_count;
+    reg  cmd_arm_adc_r;
     wire trigger_fifo_clear;
 
-    // TODO: pulses from USB registers
     reg  trigger_fifo_rd_usb;
     reg  trigger_fifo_clear_usb;
 
+    wire trigger_fifo_flush_filtered = trigger_fifo_flush && ~trigger_fifo_empty;
+
     always @(posedge adc_sampleclk) begin
+        cmd_arm_adc_r <= cmd_arm_adc;
+        if (trigger_fifo_empty)
+            trigger_fifo_flush <= 1'b0;
+        else if (cmd_arm_adc && ~cmd_arm_adc_r)
+            trigger_fifo_flush <= 1'b1;
+
         if (trigger_fifo_clear)
             trigger_fifo_overflow <= 1'b0;
         else if (trigger_event) begin
@@ -382,7 +393,7 @@ module reg_openadc #(
         .overflow       (),
         .full_threshold (),
         .empty_threshold(),
-        .ren            (trigger_fifo_rd),
+        .ren            (trigger_fifo_rd || trigger_fifo_flush_filtered),
         .rdata          (trigger_fifo_dout),
         .empty          (trigger_fifo_empty),
         .almost_empty   (),
