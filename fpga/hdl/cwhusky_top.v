@@ -344,7 +344,15 @@ module cwhusky_top(
                                  (userio_fpga_debug_select == 4'b0111)?  usb_debug2 : 
                                  (userio_fpga_debug_select == 4'b1000)?  usb_debug3 :
                                  (userio_fpga_debug_select == 4'b1001)?  edge_trigger_debug :
-                                 (userio_fpga_debug_select == 4'b1010)?  {cmd_arm_usb, clockglitch_debug3[6:0]} : 8'b0;
+                                 (userio_fpga_debug_select == 4'b1010)?  {cmd_arm_usb, clockglitch_debug3[6:0]} :
+                                 (userio_fpga_debug_select == 4'b1011)?  {1'b0,
+                                                                         target_io4,
+                                                                         decode_uart_input,
+                                                                         trigger_sad,
+                                                                         trace_trig_out,
+                                                                         trigger_adc,
+                                                                         trigger_edge_counter,
+                                                                         cmd_arm_usb} : 8'b0;
                                  //(userio_fpga_debug_select == 4'b1010)?  clockglitch_debug3 : 8'b0;
 
    `else
