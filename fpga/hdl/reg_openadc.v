@@ -130,6 +130,10 @@ module reg_openadc #(
    wire [31:0] buildtime;
    reg new_reset;
 
+   reg  trigger_fifo_rd_usb;
+   reg  trigger_fifo_clear_usb;
+
+
    assign version_data[47:16] = 32'b0;
    assign version_data[15:11] = 5'd`HW_TYPE;
    assign version_data[10:8] = 3'd`HW_VER;
@@ -323,22 +327,21 @@ module reg_openadc #(
     reg  reset_trigger_fifo_count;
     reg  cmd_arm_adc_r;
     wire trigger_fifo_clear;
-
-    reg  trigger_fifo_rd_usb;
-    reg  trigger_fifo_clear_usb;
+    reg  trigger_event_r;
 
     wire trigger_fifo_flush_filtered = trigger_fifo_flush && ~trigger_fifo_empty;
 
     always @(posedge adc_sampleclk) begin
         cmd_arm_adc_r <= cmd_arm_adc;
+        trigger_event_r <= trigger_event;
         if (trigger_fifo_empty)
             trigger_fifo_flush <= 1'b0;
         else if (cmd_arm_adc && ~cmd_arm_adc_r)
             trigger_fifo_flush <= 1'b1;
 
-        if (trigger_fifo_clear)
+        if (trigger_fifo_clear || (cmd_arm_adc && ~cmd_arm_adc_r))
             trigger_fifo_overflow <= 1'b0;
-        else if (trigger_event) begin
+        else if (trigger_event && ~trigger_event_r) begin
             if (trigger_fifo_full)
                 trigger_fifo_overflow <= 1'b1;
             else begin
