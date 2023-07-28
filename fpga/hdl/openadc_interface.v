@@ -77,6 +77,7 @@ module openadc_interface #(
     output wire                         slow_fifo_wr,
     output wire                         slow_fifo_rd,
     output wire [8:0]                   la_debug,
+    output wire [7:0]                   la_debug2,
     output wire [7:0]                   fifo_debug,
     output wire [7:0]                   edge_trigger_debug
 
@@ -314,6 +315,7 @@ module openadc_interface #(
 
       .fifo_rst             (fifo_rst),
       .cmd_arm_usb          (cmd_arm_usb),
+      .debug2               (la_debug2),
       .la_debug             (la_debug)
    );
    
