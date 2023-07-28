@@ -84,7 +84,14 @@ module trigger_unit(
            capture_go_o <= 0;
        end
        else begin
-           if (capture_go_start && (adc_delay_cnt == trigger_offset_i)) begin
+           if (arm_i & ~arm_i_dly)
+               // this is for the corner case of a large offset with multiple
+               // triggers coming in faster than the offset, post-capture;
+               // without this counter reset, it would end up free-running and
+               // potentially messing up all future captures
+               // https://github.com/newaetech/chipwhisperer-husky-fpga/issues/16
+               adc_delay_cnt <= 0;
+           else if (capture_go_start && (adc_delay_cnt == trigger_offset_i)) begin
                adc_delay_cnt <= 0;
                capture_go_o <= 1'b1;
            end
