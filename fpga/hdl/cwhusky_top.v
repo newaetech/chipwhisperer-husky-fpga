@@ -111,6 +111,8 @@ module cwhusky_top(
     parameter pUSERIO_WIDTH = 8;
     parameter pTRACE_BUFFER_SIZE = 64;
     parameter pTRACE_MATCH_RULES = 8;
+    parameter pSEQUENCER_NUM_TRIGGERS = 2;
+    parameter pSEQUENCER_COUNTER_WIDTH = 16;
 
    wire         target_npower;
    wire         stream_segment_available;
@@ -199,7 +201,8 @@ module cwhusky_top(
    wire [pUSERIO_WIDTH-1:0] userio_drive_data_reg;
    wire [pUSERIO_WIDTH-1:0] userio_debug_data;
 
-   wire decode_uart_input;
+   wire uart_trigger_line;
+   wire edge_trigger_line;
    wire decodeio_active;
    wire sad_active;
    wire edge_trigger_active;
@@ -241,6 +244,7 @@ module cwhusky_top(
    wire           fifo_source_sel;
 
    wire           cmd_arm_usb;
+   wire           armed_and_ready;
 
    assign USB_SPARE0 = enable_avrprog? 1'bz : stream_segment_available;
 
@@ -346,9 +350,9 @@ module cwhusky_top(
                                  (userio_fpga_debug_select == 4'b1000)?  usb_debug3 :
                                  (userio_fpga_debug_select == 4'b1001)?  edge_trigger_debug :
                                  (userio_fpga_debug_select == 4'b1010)?  {cmd_arm_usb, clockglitch_debug3[6:0]} :
-                                 (userio_fpga_debug_select == 4'b1011)?  {1'b0,
+                                 (userio_fpga_debug_select == 4'b1011)?  {edge_trigger_line,
                                                                          target_io4,
-                                                                         decode_uart_input,
+                                                                         uart_trigger_line,
                                                                          trigger_sad,
                                                                          trace_trig_out,
                                                                          trigger_adc,
@@ -417,6 +421,7 @@ module cwhusky_top(
         .amp_gain               (VDBSPWM),
         .fifo_dout              (fifo_dout),
         .cmd_arm_usb            (cmd_arm_usb),
+        .armed_and_ready        (armed_and_ready),
         .freq_measure           (freq_measure),
 
         .reg_address            (reg_address),
@@ -431,7 +436,7 @@ module cwhusky_top(
         .stream_segment_available (stream_segment_available),
 
         .capture_active         (capture_active),
-        .trigger_in             (decode_uart_input),
+        .trigger_in             (edge_trigger_line),
 
         .flash_pattern          (flash_pattern),
 
@@ -474,8 +479,10 @@ module cwhusky_top(
 
 
    reg_chipwhisperer  #(
-        .pBYTECNT_SIZE  (pBYTECNT_SIZE),
-        .pUSERIO_WIDTH  (pUSERIO_WIDTH)
+        .pBYTECNT_SIZE                  (pBYTECNT_SIZE),
+        .pUSERIO_WIDTH                  (pUSERIO_WIDTH),
+        .pSEQUENCER_NUM_TRIGGERS        (pSEQUENCER_NUM_TRIGGERS  ),
+        .pSEQUENCER_COUNTER_WIDTH       (pSEQUENCER_COUNTER_WIDTH )
    ) reg_chipwhisperer (
         .reset_i                (reg_rst),
         .clk_usb                (clk_usb_buf),
@@ -496,7 +503,8 @@ module cwhusky_top(
         .trigger_io3_i          (target_io3),
         .trigger_io4_i          (target_io4),
         .trigger_nrst_i         (target_nRST),
-        .trigger_ext_o          (decode_uart_input),
+        .uart_trigger_line      (uart_trigger_line),
+        .edge_trigger_line      (edge_trigger_line),
         .decodeio_active        (decodeio_active),
         .sad_active             (sad_active),
         .edge_trigger_active    (edge_trigger_active),
@@ -554,6 +562,7 @@ module cwhusky_top(
         .trace_exists           (trace_exists),
         .la_exists              (la_exists),
 
+        .armed_and_ready        (armed_and_ready),
         .trigger_capture        (trigger_capture),
         .trigger_glitch         (trigger_glitch),
         .trigger_trace          (trigger_trace),
@@ -917,8 +926,8 @@ module cwhusky_top(
        wire TRACECLOCK = USERIO_CLK;
 
        wire [3:0] TRACEDATA  = USERIO_D[7:4];
-       wire serial_in = decodeio_active? decode_uart_input : 
-                        trace_en?        USERIO_D[2] : 1'b1;
+       wire serial_in = (decodeio_active)? uart_trigger_line : 
+                        (trace_en)?        USERIO_D[2] : 1'b1;
 
        reg [22:0] count_fe_clock;
        always @(posedge fe_clk) count_fe_clock <= count_fe_clock + 1;

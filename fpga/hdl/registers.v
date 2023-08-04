@@ -360,6 +360,10 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define NUM_TRIGGERS_STAT       117
 `define NUM_TRIGGERS_DATA       118
 
+`define SEQ_TRIGGERS_CONFIG     119
+`define SEQ_TRIGGERS_MINMAX     120
+`define SEQ_TRIGGERS_UART_EDGE_CHOOSER 121
+
 `define REGISTER_VERSION 1
 
 `define TW_MAIN_REG_SELECT      2'b10

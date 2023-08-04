@@ -21,6 +21,7 @@ parser.add_argument("--proc", type=int, help="Maximum number of parallel jobs to
 parser.add_argument("--fast_fifo_sim", help="Force FIFOs to use flopped version, for considerably faster run times.", action='store_true')
 parser.add_argument("--xilinx_fifos", help="Use Xilinx FIFO simulation models (slower, can have reset issues).", action='store_true')
 parser.add_argument("--variant", help="Husky variant (regular/plus/pro)", default='regular')
+parser.add_argument("--cocodebug", help="Cocotb debug level", default='INFO')
 args = parser.parse_args()
 
 # Define testcases:
@@ -321,6 +322,19 @@ tests.append(dict(name  = 'glitches_single',
              MAX_GLITCH_OFFSET = 2010,
              description = 'Test single glitch.'))
 
+tests.append(dict(name  = 'trigger_sequencer_pass',
+             frequency = 2,
+             PASS = 1,
+             TOP = 'trigger_sequencer_cocowrapper.v',
+             description = 'trigger sequencer block-level test.'))
+
+tests.append(dict(name  = 'trigger_sequencer_fail',
+             frequency = 2,
+             FAIL = 1,
+             TOP = 'trigger_sequencer_cocowrapper.v',
+             description = 'trigger sequencer block-level test.'))
+
+
 
 def print_tests():
     print("Available tests:")
@@ -328,25 +342,35 @@ def print_tests():
        print("%s: %s" % (test['name'], test['description']))
     quit()
 
-def check_pass_fail(logfile):
+def check_pass_fail(logfile, cocotb):
     log = open(logfile, 'r')
     passed = None
     warnings = 0
     errors = 0
     for line in log:
-       pass_matches = pass_regex.search(line)
-       fail_matches = fail_regex.search(line)
-       if pass_matches:
-          passed = 1
-          warnings = int(pass_matches.group(1))
-          break
-       elif fail_matches:
-          passed = 0
-          errors = int(fail_matches.group(1))
-          break
+       if cocotb:
+           failed = None
+           stat_matches = cocotb_stat_regex.search(line)
+           if stat_matches:
+              passed = int(stat_matches.group(2))
+              failed = int(stat_matches.group(3))
+              break
+       else:
+           pass_matches = pass_regex.search(line)
+           fail_matches = fail_regex.search(line)
+           if pass_matches:
+              passed = 1
+              warnings = int(pass_matches.group(1))
+              break
+           elif fail_matches:
+              passed = 0
+              errors = int(fail_matches.group(1))
+              break
     log.close()
     if passed is None:
         print("*** parsing error on %s ***" % logfile)
+    if cocotb and failed:
+        errors = 1
     return passed, warnings, errors
 
 
@@ -372,6 +396,8 @@ fail_regex = re.compile(r'^SIMULATION FAILED \((\d+) errors')
 seed_regex = re.compile(r'^Running with pSEED=(\d+)$')
 test_regex = re.compile(args.tests)
 exclude_regex = re.compile(args.exclude)
+cocotb_stat_regex = re.compile(r'TESTS=(\d+) PASS=(\d+) FAIL=(\d+) SKIP=(\d+)')
+
 
 if args.variant == 'plus':
     variant = 'VARIANT=PLUS'
@@ -406,6 +432,7 @@ for test in tests:
       if exclude_regex.search(test['name']) != None:
           continue
 
+   cocotb = False
    for i in range(args.runs):
 
       # set the random seed first, so that both Python and Verilog randomizations are reproducible:
@@ -417,8 +444,8 @@ for test in tests:
 
       run_test = True
       # build make command:
-      makeargs = ['make', 'all', 'VERBOSE=1']
-      makeargs.append("SEED=%d" % seed)
+      makeargs = ['make', 'all', 'VERBOSE=1', 'COCOTB_LOG_LEVEL=%s' % args.cocodebug]
+      
       if args.dump:
          makeargs.append('DUMP=1')
       if args.fast_fifo_sim:
@@ -445,6 +472,9 @@ for test in tests:
              makeargs[1] = 'all_sad'
          elif key == 'TOP' and test[key] == 'edge_tb.v':
              makeargs[1] = 'all_edge'
+         elif key == 'TOP' and test[key] == 'trigger_sequencer_cocowrapper.v':
+             makeargs[1] = 'all_trigger_sequencer'
+             cocotb = True
          else:
             if type(test[key]) == list:
                value = random.randint(test[key][0], test[key][1])
@@ -452,9 +482,14 @@ for test in tests:
                value = test[key]
             makeargs.append("%s=%s" % (key, value))
 
+      if cocotb:
+          makeargs.append("RANDOM_SEED=%d" % seed)
+      else:
+          makeargs.append("SEED=%d" % seed)
+
       # run:
       if run_test:
-         jobs_to_submit.append((makeargs, logfile, outfile, seed))
+         jobs_to_submit.append((makeargs, logfile, outfile, seed, cocotb))
          exefiles.append(exefile)
 
 num_processes = len(jobs_to_submit)
@@ -473,9 +508,9 @@ if args.proc > len(jobs_to_submit):
 else:
     num_first_batch = args.proc
 for i in range(num_first_batch):
-    makeargs, logfile, outfile, seed = jobs_to_submit.pop()
+    makeargs, logfile, outfile, seed, cocotb = jobs_to_submit.pop()
     p = subprocess.Popen(makeargs, stdout=outfile, stderr=outfile)
-    processes.append((p,logfile,seed))
+    processes.append((p,logfile,seed, cocotb))
 
 pbar_dispatched.update(num_first_batch)
 pbar_dispatched.refresh()
@@ -486,21 +521,21 @@ oldpass_count = 0
 fail_count = 0
 pass_count = 0
 while len(processes):
-    for p,l,s in processes:
+    for p,l,s,cocotb in processes:
         if not p.poll() is None:
             finished += 1
-            passed, warnings, errors = check_pass_fail(l)
+            passed, warnings, errors = check_pass_fail(l, cocotb)
             pass_count += passed
             if warnings:
                 warns.append("%s: %0d warnings" % (l, warnings))
             if errors:
                 fail_count += 1
                 fails.append("%s: %d errors (seed=%d)" % (l, errors, s))
-            processes.remove((p,l,s))
+            processes.remove((p,l,s,cocotb))
             if len(jobs_to_submit) > 0:
-                makeargs, logfile, outfile, seed = jobs_to_submit.pop()
+                makeargs, logfile, outfile, seed, cocotb = jobs_to_submit.pop()
                 p = subprocess.Popen(makeargs, stdout=outfile, stderr=outfile)
-                processes.append((p,logfile,seed))
+                processes.append((p,logfile,seed, cocotb))
                 pbar_dispatched.update(1)
                 pbar_dispatched.refresh()
 

@@ -73,6 +73,9 @@ module openadc_interface #(
     // for UART triggering:
     output wire                         cmd_arm_usb,
 
+    // for trigger sequencing:
+    output wire                         armed_and_ready,
+
     // for debug only:
     output wire                         slow_fifo_wr,
     output wire                         slow_fifo_rd,
@@ -104,7 +107,6 @@ module openadc_interface #(
     wire       clip_test;
     wire       clear_fifo_errors;
     wire       capture_done;
-    wire       armed_and_ready;
     wire [2:0] fifo_state;
     wire       fifo_rst;
 
