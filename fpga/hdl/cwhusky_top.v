@@ -111,7 +111,7 @@ module cwhusky_top(
     parameter pUSERIO_WIDTH = 8;
     parameter pTRACE_BUFFER_SIZE = 64;
     parameter pTRACE_MATCH_RULES = 8;
-    parameter pSEQUENCER_NUM_TRIGGERS = 2;
+    parameter pSEQUENCER_NUM_TRIGGERS = 4;
     parameter pSEQUENCER_COUNTER_WIDTH = 16;
 
    wire         target_npower;

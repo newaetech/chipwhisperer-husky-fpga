@@ -43,6 +43,8 @@ module trigger_sequencer #(
 
     wire [pCOUNTER_WIDTH-1:0] min_wait [0:pNUM_TRIGGERS-2];
     wire [pCOUNTER_WIDTH-1:0] max_wait [0:pNUM_TRIGGERS-2];
+    reg  [pCOUNTER_WIDTH-1:0] next_min_wait;
+    reg  [pCOUNTER_WIDTH-1:0] next_max_wait;
 
     genvar i;
     generate 
@@ -68,8 +70,7 @@ module trigger_sequencer #(
     localparam pS_WAIT_FIRST_TRIGGER = 1;
     localparam pS_WAIT_NEXT_TRIGGER = 2;
 
-    assign O_trigger = (I_bypass)? I_trigger[0] : sequence_trigger;
-    //assign O_trigger = (I_bypass)? I_trigger[0] : sequence_trigger_reg;
+    assign O_trigger = (I_bypass)? I_trigger[0] : sequence_trigger_reg;
 
     always @(*) begin
         next_state = pS_IDLE;
@@ -103,7 +104,7 @@ module trigger_sequencer #(
 
             pS_WAIT_NEXT_TRIGGER: begin
                 if (I_trigger[slot]) begin
-                    if (counter >= min_wait[slot-1]) begin
+                    if (counter >= next_min_wait) begin
                         // we don't check max_trigger here  because that's handled later
                         if (slot == I_last_trigger) begin
                             sequence_trigger = 1'b1;
@@ -120,7 +121,7 @@ module trigger_sequencer #(
                         next_state = pS_IDLE;
                     end
                 end
-                else if (counter == max_wait[slot-1]) begin
+                else if (counter == next_max_wait) begin
                     too_late = 1;
                     next_state = pS_IDLE;
                 end
@@ -135,10 +136,16 @@ module trigger_sequencer #(
     always @(posedge adc_clk) begin
         state <= next_state;
         sequence_trigger_reg <= sequence_trigger;
-        if (state == pS_IDLE)
+        if (state == pS_IDLE) begin
             slot <= 0;
-        else if (incr_index)
+            next_min_wait <= min_wait[0];
+            next_max_wait <= max_wait[0];
+        end
+        else if (incr_index) begin
             slot <= slot + 1;
+            next_min_wait <= min_wait[slot];
+            next_max_wait <= max_wait[slot];
+        end
 
         if (reset_counter)
             counter <= 0;

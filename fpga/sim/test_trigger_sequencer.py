@@ -207,6 +207,7 @@ class TriggerSequencerTest(object):
                         if slot == self.num_triggers - 1:
                             # sequence is done! trigger expected
                             self.dut._log.info('Expecting trigger at clock cycle: %d' % timestamp)
+                            await ClockCycles(self.dut.clk, 1)
                             self.expect_trigger(1)
                             await ClockCycles(self.dut.clk, 1)
                             self.expect_trigger(0)
