@@ -1,0 +1,163 @@
+`timescale 1ns / 1ps
+`default_nettype none
+/***********************************************************************
+This file is part of the ChipWhisperer Project. See www.newae.com for more
+details, or the codebase at http://www.chipwhisperer.com
+
+Copyright (c) 2023, NewAE Technology Inc. All rights reserved.
+Author: Jean-Pierre Thibault <jpthibault@newae.com>
+
+  chipwhisperer is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  chipwhisperer is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Lesser General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with chipwhisperer.  If not, see <http://www.gnu.org/licenses/>.
+*************************************************************************/
+
+module trigger_sequencer #(
+    parameter                                           pNUM_TRIGGERS = 4,
+    parameter                                           pCOUNTER_WIDTH = 16
+)(
+    input  wire                                         adc_clk,
+
+    input  wire                                         armed_and_ready,
+    input  wire                                         I_bypass,
+    input  wire [pNUM_TRIGGERS-1:0]                     I_trigger,
+    input  wire [(pNUM_TRIGGERS-1)*pCOUNTER_WIDTH-1:0]  I_min_wait,
+    input  wire [(pNUM_TRIGGERS-1)*pCOUNTER_WIDTH-1:0]  I_max_wait,
+    input  wire [3:0]                                   I_last_trigger,
+    output wire                                         O_trigger
+);
+
+    localparam pTRIGGER_WIDTH = (pNUM_TRIGGERS ==  2)? 1 :
+                                (pNUM_TRIGGERS <=  4)? 2 :
+                                (pNUM_TRIGGERS <=  8)? 3 :
+                                (pNUM_TRIGGERS <= 16)? 4 : 0;
+
+    wire [pCOUNTER_WIDTH-1:0] min_wait [0:pNUM_TRIGGERS-2];
+    wire [pCOUNTER_WIDTH-1:0] max_wait [0:pNUM_TRIGGERS-2];
+
+    genvar i;
+    generate 
+        for (i = 0; i < pNUM_TRIGGERS-1; i = i + 1) begin
+            assign min_wait[i] = I_min_wait[i*pCOUNTER_WIDTH +: pCOUNTER_WIDTH];
+            assign max_wait[i] = I_max_wait[i*pCOUNTER_WIDTH +: pCOUNTER_WIDTH];
+        end
+    endgenerate
+
+    // TODO: remove min_wait/max_wait restrictions with special values (e.g. 0)
+
+    reg [pCOUNTER_WIDTH-1:0] counter;
+    reg [pTRIGGER_WIDTH-1:0] slot;
+    reg incr_index;
+    reg reset_counter;
+    reg sequence_trigger;
+    reg sequence_trigger_reg;
+    reg too_late;
+    reg too_early;
+
+    reg [1:0] state, next_state;
+    localparam pS_IDLE = 0;
+    localparam pS_WAIT_FIRST_TRIGGER = 1;
+    localparam pS_WAIT_NEXT_TRIGGER = 2;
+
+    assign O_trigger = (I_bypass)? I_trigger[0] : sequence_trigger;
+    //assign O_trigger = (I_bypass)? I_trigger[0] : sequence_trigger_reg;
+
+    always @(*) begin
+        next_state = pS_IDLE;
+        incr_index = 0;
+        reset_counter = 0;
+        sequence_trigger = 0;
+        too_late = 0;
+        too_early = 0;
+
+        if (~armed_and_ready)
+            next_state = pS_IDLE;
+
+        case (state)
+
+            pS_IDLE: begin
+                if (armed_and_ready) 
+                    next_state = pS_WAIT_FIRST_TRIGGER;
+                else
+                    next_state = pS_IDLE;
+            end
+
+            pS_WAIT_FIRST_TRIGGER: begin
+                if (I_trigger[0]) begin
+                    reset_counter = 1;
+                    incr_index = 1;
+                    next_state = pS_WAIT_NEXT_TRIGGER;
+                end
+                else
+                    next_state = pS_WAIT_FIRST_TRIGGER;
+            end
+
+            pS_WAIT_NEXT_TRIGGER: begin
+                if (I_trigger[slot]) begin
+                    if (counter >= min_wait[slot-1]) begin
+                        // we don't check max_trigger here  because that's handled later
+                        if (slot == I_last_trigger) begin
+                            sequence_trigger = 1'b1;
+                            next_state = pS_IDLE;
+                        end
+                        else begin
+                            next_state = pS_WAIT_NEXT_TRIGGER;
+                            reset_counter = 1;
+                            incr_index = 1;
+                        end
+                    end
+                    else begin
+                        too_early = 1; // for debug only
+                        next_state = pS_IDLE;
+                    end
+                end
+                else if (counter == max_wait[slot-1]) begin
+                    too_late = 1;
+                    next_state = pS_IDLE;
+                end
+                else
+                    next_state = pS_WAIT_NEXT_TRIGGER;
+            end
+
+        endcase
+    end
+
+
+    always @(posedge adc_clk) begin
+        state <= next_state;
+        sequence_trigger_reg <= sequence_trigger;
+        if (state == pS_IDLE)
+            slot <= 0;
+        else if (incr_index)
+            slot <= slot + 1;
+
+        if (reset_counter)
+            counter <= 0;
+        else if (state == pS_WAIT_NEXT_TRIGGER)
+            counter <= counter + 1;
+    end
+
+
+    // debug only:
+    wire [pCOUNTER_WIDTH-1:0] min_wait0 = min_wait[0];
+    wire [pCOUNTER_WIDTH-1:0] min_wait1 = min_wait[1];
+    wire [pCOUNTER_WIDTH-1:0] min_wait2 = min_wait[2];
+
+    wire [pCOUNTER_WIDTH-1:0] max_wait0 = max_wait[0];
+    wire [pCOUNTER_WIDTH-1:0] max_wait1 = max_wait[1];
+    wire [pCOUNTER_WIDTH-1:0] max_wait2 = max_wait[2];
+
+
+
+endmodule
+`default_nettype wire
+
