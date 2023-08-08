@@ -57,6 +57,7 @@ module trigger_sequencer #(
     // TODO: remove min_wait/max_wait restrictions with special values (e.g. 0)
 
     reg [pNUM_TRIGGERS-1:0] trigger_r;
+    reg [pNUM_TRIGGERS-1:0] trigger_r2;
     reg [pCOUNTER_WIDTH-1:0] counter;
     reg [pTRIGGER_WIDTH-1:0] slot;
     reg incr_index;
@@ -94,7 +95,7 @@ module trigger_sequencer #(
             end
 
             pS_WAIT_FIRST_TRIGGER: begin
-                if (I_trigger[0] && ~trigger_r[0]) begin
+                if (trigger_r[0] && ~trigger_r2[0]) begin
                     reset_counter = 1;
                     incr_index = 1;
                     next_state = pS_WAIT_NEXT_TRIGGER;
@@ -104,7 +105,7 @@ module trigger_sequencer #(
             end
 
             pS_WAIT_NEXT_TRIGGER: begin
-                if (I_trigger[slot] && ~trigger_r[slot]) begin
+                if (trigger_r[slot] && ~trigger_r2[slot]) begin
                     if (counter >= next_min_wait) begin
                         // we don't check max_trigger here  because that's handled later
                         if (slot == I_last_trigger) begin
@@ -139,6 +140,7 @@ module trigger_sequencer #(
         state <= next_state;
         sequence_trigger_reg <= sequence_trigger;
         trigger_r <= I_trigger;
+        trigger_r2 <= trigger_r;
         if (state == pS_IDLE) begin
             slot <= 0;
             next_min_wait <= min_wait[0];
