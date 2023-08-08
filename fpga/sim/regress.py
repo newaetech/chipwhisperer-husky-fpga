@@ -334,6 +334,12 @@ tests.append(dict(name  = 'trigger_sequencer_fail',
              TOP = 'trigger_sequencer_cocowrapper.v',
              description = 'trigger sequencer block-level test.'))
 
+tests.append(dict(name  = 'trigger_sequencer_rand',
+             frequency = 1,
+             RAND = 1,
+             TOP = 'trigger_sequencer_cocowrapper.v',
+             description = 'trigger sequencer block-level test.'))
+
 
 
 def print_tests():
