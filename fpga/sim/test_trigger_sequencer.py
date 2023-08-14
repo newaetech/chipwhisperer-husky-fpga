@@ -140,7 +140,7 @@ class TriggerSequencerTest(object):
         # we catch just before the testcase timeout, and if there are no errors, and if at least one trigger has occured, then that's ok:
         try:
             await with_timeout(self._run(), 999, 'us')
-        except:
+        except SimTimeoutError:
             if self.trigger_expected:
                 self.dut._log.info("Caught the timeout! Trigger(s) occured, all good.")
             else:
@@ -166,9 +166,15 @@ class TriggerSequencerTest(object):
                     self.set_trigger(t, False)
                     if t < self.num_triggers-1:
                         if self.test_type == 'pass' or random.randint(0,1):
-                            cycles = random.randint(self.min_waits[t], self.max_waits[t]-2)
+                            # deal with max_waits = 0 ( = no max)
+                            if self.max_waits[t]:
+                                max_wait = self.max_waits[t]-2
+                            else:
+                                max_wait = self.dut_max_wait
+                            cycles = random.randint(self.min_waits[t], max_wait)
                         else:
                             # for test_type == 'fail'; this will guarantee failure, but there is an escape hatch above which *could* lead to a trigger
+                            # max_waits isn't allowed to be zero for "fail" tests
                             cycles = random.randint(self.max_waits[t], self.max_waits[t]*2)
                         await ClockCycles(self.dut.clk, cycles)
                 await ClockCycles(self.dut.clk, random.randint(1, 20))
@@ -211,8 +217,13 @@ class TriggerSequencerTest(object):
             else:
                 try:
                     timeout = timeout_cycles * self.harness.period
-                    self.dut._log.info('Waiting for trigger with timeout: %d' % timeout)
-                    trigger_ids = [await with_timeout(self.trigger_queue.get(), timeout, 'ns')]
+                    if use_timeout:
+                        self.dut._log.info('Waiting for trigger with timeout: %d' % timeout)
+                        trigger_ids = [await with_timeout(self.trigger_queue.get(), timeout, 'ns')]
+                    else:
+                        self.dut._log.info('Waiting for trigger (no timeout)')
+                        trigger_ids = [await self.trigger_queue.get()]
+                        self.dut._log.info('Got IDs: %s' % trigger_ids)
                     if not self.armed.is_set():
                         self.dut._log.info('DUT disarmed; resetting slot; waiting for re-arm')
                         slot = 0
@@ -248,6 +259,10 @@ class TriggerSequencerTest(object):
                     slot += 1
                     self.dut.expected_slot.value = slot
                     timeout_cycles = self.max_waits[0]
+                    if timeout_cycles:
+                        use_timeout = True
+                    else:
+                        use_timeout = False
                     self.dut._log.info('Setting timeout_cycles: %d' % timeout_cycles)
                 else:
                     # check if this trigger came within the allowed time range to continue building the sequence:
@@ -256,7 +271,7 @@ class TriggerSequencerTest(object):
                         # too soon, but maybe another trigger will come along so keep going
                         self.dut._log.info('Trigger too soon; sequence is still alive')
                         pass
-                    elif cycles_since_last_trigger > self.max_waits[slot-1]:
+                    elif use_timeout and (cycles_since_last_trigger > self.max_waits[slot-1]):
                         # too late: start over
                         self.dut._log.info('Trigger too late! Sequence restarted.')
                         slot = 0
@@ -280,6 +295,10 @@ class TriggerSequencerTest(object):
                             self.dut._log.info('Good trigger %d; moving on' % slot)
                             timestamps[slot] = timestamp
                             timeout_cycles = self.max_waits[slot]
+                            if timeout_cycles:
+                                use_timeout = True
+                            else:
+                                use_timeout = False
                             self.dut._log.info('Setting timeout_cycles: %d' % timeout_cycles)
                             slot += 1
                             self.dut.expected_slot.value = slot
@@ -341,8 +360,15 @@ class TriggerSequencerTest(object):
         mins = 0
         maxs = 0
         for i in range(self.num_triggers-1):
-            imin = random.randint(self.dut_min_wait, self.dut_max_wait-2) # TODO: can make this tighter, but conflicts with await ClockCycles(self.dut.clk, random.randint(self.min_waits[t], self.max_waits[t]-2))
-            imax = random.randint(imin+2, self.dut_max_wait) # TODO: tighten (but watch for failures as above)
+            # a quarter of the time, set min, max to 0 (meaning no constraints)
+            if random.randint(0, 3) or self.test_type == 'fail':
+                imin = random.randint(self.dut_min_wait, self.dut_max_wait-2) # TODO: can make this tighter, but conflicts with await ClockCycles(self.dut.clk, random.randint(self.min_waits[t], self.max_waits[t]-2))
+            else:
+                imin = 0
+            if random.randint(0, 3) or self.test_type == 'fail':
+                imax = random.randint(imin+2, self.dut_max_wait) # TODO: tighten (but watch for failures as above)
+            else:
+                imax = 0
             mins += imin << (i*self.counter_width)
             maxs += imax << (i*self.counter_width)
             self.min_waits[i] = imin

@@ -54,8 +54,6 @@ module trigger_sequencer #(
         end
     endgenerate
 
-    // TODO: remove min_wait/max_wait restrictions with special values (e.g. 0)
-
     reg [pNUM_TRIGGERS-1:0] trigger_r;
     reg [pNUM_TRIGGERS-1:0] trigger_r2;
     reg [pCOUNTER_WIDTH-1:0] counter;
@@ -125,7 +123,7 @@ module trigger_sequencer #(
                         next_state = pS_WAIT_NEXT_TRIGGER; // no, keep waiting!
                     end
                 end
-                else if (counter == next_max_wait) begin
+                else if ((next_max_wait > 0) && (counter == next_max_wait)) begin
                     too_late = 1;
                     next_state = pS_IDLE;
                 end
