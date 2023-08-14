@@ -82,9 +82,6 @@ module trigger_sequencer #(
         too_late = 0;
         too_early = 0;
 
-        if (~armed_and_ready)
-            next_state = pS_IDLE;
-
         case (state)
 
             pS_IDLE: begin
@@ -95,7 +92,9 @@ module trigger_sequencer #(
             end
 
             pS_WAIT_FIRST_TRIGGER: begin
-                if (trigger_r[0] && ~trigger_r2[0]) begin
+                if (~armed_and_ready)
+                    next_state = pS_IDLE;
+                else if (trigger_r[0] && ~trigger_r2[0]) begin
                     reset_counter = 1;
                     incr_index = 1;
                     next_state = pS_WAIT_NEXT_TRIGGER;
@@ -105,7 +104,9 @@ module trigger_sequencer #(
             end
 
             pS_WAIT_NEXT_TRIGGER: begin
-                if (trigger_r[slot] && ~trigger_r2[slot]) begin
+                if (~armed_and_ready)
+                    next_state = pS_IDLE;
+                else if (trigger_r[slot] && ~trigger_r2[slot]) begin
                     if (counter >= next_min_wait) begin
                         // we don't check max_trigger here  because that's handled later
                         if (slot == I_last_trigger) begin

@@ -1,5 +1,5 @@
 import cocotb
-from cocotb.triggers import RisingEdge, Edge, ClockCycles, Join, Lock, Event, with_timeout
+from cocotb.triggers import RisingEdge, Edge, ClockCycles, Join, Lock, Event, with_timeout, First
 from cocotb.clock import Clock
 from cocotb.queue import Queue
 from cocotb.handle import Force, Release
@@ -31,7 +31,7 @@ class Harness(object):
         self.period = 10
         clk_thread = cocotb.start_soon(Clock(dut.clk, self.period, units="ns").start())
         #  initialize all DUT input values:
-        self.dut.armed_and_ready.value = 1 # TODO: randomize dynamically!
+        self.dut.armed_and_ready.value = 1
         self.dut.I_bypass.value = 0
         self.dut.I_trigger.value = 0
         self.dut.I_min_wait.value = 0
@@ -82,9 +82,10 @@ class TriggerSequencerTest(object):
         self.min_waits = [0]*num_triggers
         self.max_waits = [0]*num_triggers
         self.trigger_error = self.dut.trigger_error
-        self.trigger_allowed = True
         self.trigger_expected = False
+        self._trigger_allowed_queue = Queue()
 
+        self.armed = Event()
         self._coro = None
         self._checkcoro = None
         self._trigger_coros = []
@@ -99,6 +100,9 @@ class TriggerSequencerTest(object):
 
         self.dut_min_wait = 10
         self.dut_max_wait = 100
+
+        self.min_disarm = 3000
+        self.max_disarm = 10000
 
         self.dut.I_last_trigger.value = num_triggers-1 # TODO: randomize?
         self.expect_trigger(0)
@@ -147,6 +151,7 @@ class TriggerSequencerTest(object):
         await self.set_min_maxes()
         self._checkcoro = cocotb.start_soon(self._check_thread())
         self._trigger_watch_coro = cocotb.start_soon(self._trigger_watch_thread())
+        self._armed_coro = cocotb.start_soon(self._arm_disarm_thread())
         if self.test_type == 'rand':
             # randomize everything!
             for t in range(self.num_triggers):
@@ -187,8 +192,6 @@ class TriggerSequencerTest(object):
             self.set_trigger(num, False)
 
 
-    # TODO: add randomization of dut.armed_and_ready!
-
     async def _check_thread(self):
         # looks at the randomly sets triggers and figures out whether the DUT should issue a trigger;
         # this is essentially a behavioural model of the DUT!
@@ -197,14 +200,25 @@ class TriggerSequencerTest(object):
         timestamps = [0]*self.num_triggers
         slot = 0
         self.dut.expected_slot.value = 0
+        await self.armed.wait()
         while triggers_done < self.harness.reps:
             if slot == 0:
                 trigger_ids = [await self.trigger_queue.get()]
+                if not self.armed.is_set():
+                    self.dut._log.info('DUT disarmed; waiting for re-arm')
+                    await self.armed.wait()
+                    continue
             else:
                 try:
                     timeout = timeout_cycles * self.harness.period
                     self.dut._log.info('Waiting for trigger with timeout: %d' % timeout)
                     trigger_ids = [await with_timeout(self.trigger_queue.get(), timeout, 'ns')]
+                    if not self.armed.is_set():
+                        self.dut._log.info('DUT disarmed; resetting slot; waiting for re-arm')
+                        slot = 0
+                        self.dut.expected_slot.value = 0
+                        await self.armed.wait()
+                        continue
                 except SimTimeoutError:
                     self.dut._log.info('Timed out! Sequence restarted')
                     slot = 0
@@ -251,6 +265,7 @@ class TriggerSequencerTest(object):
                         # good trigger!
                         if slot == self.num_triggers - 1:
                             # sequence is done! trigger expected
+                            self.trigger_allowed = False # DUT has some triggering latency so let's just hold off until this trigger goes through
                             self.dut._log.info('Expecting trigger at clock cycle: %d' % (timestamp + 2))
                             await ClockCycles(self.dut.clk, 2) # account for DUT latency
                             self.expect_trigger(1)
@@ -259,6 +274,7 @@ class TriggerSequencerTest(object):
                             slot = 0
                             self.dut.expected_slot.value = slot
                             triggers_done += 1
+                            self.trigger_allowed = True
                         else:
                             # keep advancing in the trigger sequence
                             self.dut._log.info('Good trigger %d; moving on' % slot)
@@ -281,6 +297,33 @@ class TriggerSequencerTest(object):
             await Edge(self.trigger_error)
             self.harness.inc_error()
             self.dut._log.error('ERROR: unexpected trigger value!')
+
+    async def _arm_disarm_thread(self) -> None:
+        """ Randomly arm/disarm the scope
+        """
+        self.armed.set()
+        self.dut.armed_and_ready.value = 1
+        while True:
+            await ClockCycles(self.dut.clk, random.randint(self.min_disarm, self.max_disarm))
+            self.trigger_allowed = False
+            self.dut._log.info('DISARMING SCOPE')
+            self.armed.clear()
+            # wait a bit to prevent a race condition (e.g. trigger happening on same cycle gets discarded by DUT but not by testbench):
+            await ClockCycles(self.dut.clk, 2)
+            self.dut.armed_and_ready.value = 0
+            # here we cheat a bit: _check_thread won't see the disarm until it gets a trigger, so
+            # we create one before re-arming:
+            #while not self.trigger_queue.full():
+            trig_num = random.randint(0, self.num_triggers-1)
+            self.set_trigger(trig_num, True)
+            await ClockCycles(self.dut.clk, random.randint(self.min_active_time, self.max_active_time))
+            self.set_trigger(trig_num, False)
+            await ClockCycles(self.dut.clk, 2)
+            self.dut._log.info('RE-ARMING SCOPE')
+            self.armed.set()
+            self.dut.armed_and_ready.value = 1
+            await ClockCycles(self.dut.clk, 2)
+            self.trigger_allowed = True
 
 
     def set_trigger(self, num, val):
@@ -308,6 +351,29 @@ class TriggerSequencerTest(object):
         self.dut.I_min_wait.value = mins
         self.dut.I_max_wait.value = maxs
         await ClockCycles(self.dut.clk, 10)
+
+    @property
+    def trigger_allowed(self):
+        """ trigger_allowed started as a simple True/False property, but now there are multiple
+        threads which can set it, so we use a queue; when the queue is empty, triggering is allowed.
+        The only gotcha is that anyone who sets trigger_allowed to False must eventually set it back
+        to True, otherwise the queue will never empty.
+        """
+        if self._trigger_allowed_queue.empty():
+            return True
+        else:
+            return False
+
+    @trigger_allowed.setter
+    def trigger_allowed(self, value):
+        if value:
+            if not self._trigger_allowed_queue.empty():
+                self._trigger_allowed_queue.get_nowait()
+        else:
+            self._trigger_allowed_queue.put_nowait(None)
+        self.dut._log.info("Trigger allowed queue has %d entries" % self._trigger_allowed_queue.qsize())
+        self.dut.trigger_allowed_q.value = self._trigger_allowed_queue.qsize()
+
 
 
 @cocotb.test(timeout_time=1000, timeout_unit="us")
