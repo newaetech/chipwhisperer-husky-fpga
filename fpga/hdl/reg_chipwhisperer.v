@@ -122,6 +122,8 @@ module reg_chipwhisperer #(
    output wire        trigger_trace,    // Trigger signal to trace
    output wire        trig_glitch_o_mcx,// trig/glitch MCX 
 
+   output wire [7:0]  sequencer_debug,
+
    input  wire        trace_exists,
    input  wire        la_exists
 ); 
@@ -436,7 +438,8 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
        .I_min_wait                     (reg_seq_triggers_minmax[(pSEQUENCER_NUM_TRIGGERS-1)*pSEQUENCER_COUNTER_WIDTH-1:0]),
        .I_max_wait                     (reg_seq_triggers_minmax[(pSEQUENCER_NUM_TRIGGERS-1)*pSEQUENCER_COUNTER_WIDTH*2-1:(pSEQUENCER_NUM_TRIGGERS-1)*pSEQUENCER_COUNTER_WIDTH]),
        .I_last_trigger                 (trigger_sequencer_num_triggers),
-       .O_trigger                      (trigger_sequencer_out)
+       .O_trigger                      (trigger_sequencer_out),
+       .debug                          (sequencer_debug)
    );
 
 
@@ -476,10 +479,10 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    reg trigger_ext_r;
    always @(negedge glitch_mmcm1_clk_out)
        {trigger_ext_r, trigger_ext_pipe} <= {trigger_ext_pipe, trigger_ext[0]};
-   assign trigger_ext_glitch_pulse = trigger_ext & ~trigger_ext_r;
+   assign trigger_ext_glitch_pulse = trigger_ext[0] & ~trigger_ext_r;
 
    assign trigger_glitch = (~trigger_sequencer_on && (registers_cwtrigmod[2:0] == 3'b000))? trigger_ext_glitch_pulse : trigger_glitch_pulse;
-   assign trigger_trace  = (~trigger_sequencer_on && (registers_cwtrigmod[2:0] == 3'b000))? trigger_ext : trigger_trace_pulse;
+   assign trigger_trace  = (~trigger_sequencer_on && (registers_cwtrigmod[2:0] == 3'b000))? trigger_ext[0] : trigger_trace_pulse;
 
 
    assign decodeio_active       = (trigger_sequencer_on)? |tc_decodeio_active : tc_decodeio_active[0];

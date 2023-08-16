@@ -33,7 +33,8 @@ module trigger_sequencer #(
     input  wire [(pNUM_TRIGGERS-1)*pCOUNTER_WIDTH-1:0]  I_min_wait,
     input  wire [(pNUM_TRIGGERS-1)*pCOUNTER_WIDTH-1:0]  I_max_wait,
     input  wire [3:0]                                   I_last_trigger,
-    output wire                                         O_trigger
+    output wire                                         O_trigger,
+    output wire [7:0]                                   debug
 );
 
     localparam pTRIGGER_WIDTH = (pNUM_TRIGGERS ==  2)? 1 :
@@ -72,6 +73,10 @@ module trigger_sequencer #(
 
     assign O_trigger = (I_bypass)? I_trigger[0] : sequence_trigger_reg;
 
+    assign debug = {armed_and_ready, state, I_trigger[1:0], slot[1:0], O_trigger};
+
+    wire sequencer_enabled = armed_and_ready && ~I_bypass;
+
     always @(*) begin
         next_state = pS_IDLE;
         incr_index = 0;
@@ -83,14 +88,14 @@ module trigger_sequencer #(
         case (state)
 
             pS_IDLE: begin
-                if (armed_and_ready) 
+                if (sequencer_enabled) 
                     next_state = pS_WAIT_FIRST_TRIGGER;
                 else
                     next_state = pS_IDLE;
             end
 
             pS_WAIT_FIRST_TRIGGER: begin
-                if (~armed_and_ready)
+                if (~sequencer_enabled)
                     next_state = pS_IDLE;
                 else if (trigger_r[0] && ~trigger_r2[0]) begin
                     reset_counter = 1;
@@ -102,7 +107,7 @@ module trigger_sequencer #(
             end
 
             pS_WAIT_NEXT_TRIGGER: begin
-                if (~armed_and_ready)
+                if (~sequencer_enabled)
                     next_state = pS_IDLE;
                 else if (trigger_r[slot] && ~trigger_r2[slot]) begin
                     if (counter >= next_min_wait) begin
