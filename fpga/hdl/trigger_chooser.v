@@ -41,10 +41,14 @@ module trigger_chooser (
     input  wire         trigger_edge_i,
 
     output wire         O_decodeio_active,
+    output wire         O_trace_active,
     output wire         O_sad_active,
     output wire         O_edge_trigger_active,
+    output wire         O_adc_trigger_active,
+    output wire         O_trace_trigger_in_use,
     output wire         O_trigger,
-    output wire         trigger_ext     // for edge/UART
+    output wire         trigger_ext,    // for edge/UART
+    input  wire         I_active_trigger
 );
 
 // All this used to be in reg_chipwhisperer.v; moved here when added sequenced triggers.
@@ -95,9 +99,15 @@ module trigger_chooser (
                        (I_trigmod[2:0] == 3'b101) ? trigger_adc_i :
                        (I_trigmod[2:0] == 3'b110) ? trigger_edge_i : 1'b0;
 
-   assign O_decodeio_active       = (I_trigmod[2:0] == 3'b011);
-   assign O_sad_active            = (I_trigmod[2:0] == 3'b010);
-   assign O_edge_trigger_active   = (I_trigmod[2:0] == 3'b110);
+   assign O_decodeio_active       = I_active_trigger && (I_trigmod[2:0] == 3'b011);
+   assign O_trace_active          = I_active_trigger && (I_trigmod[2:0] == 3'b100);
+   assign O_sad_active            = I_active_trigger && (I_trigmod[2:0] == 3'b010);
+   assign O_edge_trigger_active   = I_active_trigger && (I_trigmod[2:0] == 3'b110);
+   assign O_adc_trigger_active    = I_active_trigger && (I_trigmod[2:0] == 3'b101);
+
+   // trace is different because it can be used standalone (e.g. not for triggering), 
+   // so we need to know if any trigger is using trace:
+   assign O_trace_trigger_in_use  = (I_trigmod[2:0] == 3'b100);
 
 
 endmodule

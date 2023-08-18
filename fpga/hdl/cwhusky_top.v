@@ -205,8 +205,11 @@ module cwhusky_top(
    wire uart_trigger_line;
    wire edge_trigger_line;
    wire decodeio_active;
+   wire trace_active;
+   wire trace_trigger_in_use;
    wire sad_active;
    wire edge_trigger_active;
+   wire adc_trigger_active;
    wire trace_trig_out;
    wire trigger_adc;
    wire trigger_sad;
@@ -420,6 +423,7 @@ module cwhusky_top(
         .trigger_edge_counter   (trigger_edge_counter),
         .sad_active             (sad_active),
         .edge_trigger_active    (edge_trigger_active),
+        .adc_trigger_active     (adc_trigger_active),
         .amp_gain               (VDBSPWM),
         .fifo_dout              (fifo_dout),
         .cmd_arm_usb            (cmd_arm_usb),
@@ -508,8 +512,11 @@ module cwhusky_top(
         .uart_trigger_line      (uart_trigger_line),
         .edge_trigger_line      (edge_trigger_line),
         .decodeio_active        (decodeio_active),
+        .trace_active           (trace_active),
+        .trace_trigger_in_use   (trace_trigger_in_use),
         .sad_active             (sad_active),
         .edge_trigger_active    (edge_trigger_active),
+        .adc_trigger_active     (adc_trigger_active),
         .trigger_advio_i        (1'b0),
         .trigger_decodedio_i    (trace_trig_out),
         .trigger_trace_i        (trace_trig_out),
@@ -928,10 +935,25 @@ module cwhusky_top(
    `ifdef TRACE
 
        wire TRACECLOCK = USERIO_CLK;
-
        wire [3:0] TRACEDATA  = USERIO_D[7:4];
-       wire serial_in = (decodeio_active)? uart_trigger_line : 
-                        (trace_en)?        USERIO_D[2] : 1'b1;
+
+       // here we choose trace_top's serial input: either SWO (USERIO_D[2]) or
+       // the chosen UART trigger line; also, ensure that the line is held
+       // high if it's not meant to see anything (e.g. in the case of
+       // sequenced triggers, when it's not its turn)
+       reg serial_in;
+       always @ (*) begin
+           if (decodeio_active)
+               serial_in = uart_trigger_line;
+           else if (trace_en) begin
+               if (trace_trigger_in_use)
+                   serial_in = (trace_active)? USERIO_D[2] : 1'b1;
+               else
+                   serial_in = USERIO_D[2];
+           end
+           else
+               serial_in = 1'b1;
+       end
 
        reg [22:0] count_fe_clock;
        always @(posedge fe_clk) count_fe_clock <= count_fe_clock + 1;

@@ -32,8 +32,9 @@ module trigger_sequencer #(
     input  wire [pNUM_TRIGGERS-1:0]                     I_trigger,
     input  wire [(pNUM_TRIGGERS-1)*pCOUNTER_WIDTH-1:0]  I_min_wait,
     input  wire [(pNUM_TRIGGERS-1)*pCOUNTER_WIDTH-1:0]  I_max_wait,
-    input  wire [3:0]                                   I_last_trigger,
+    input  wire [3:0]                                   I_last_trigger,         // when using fewer than pNUM_TRIGGERS
     output wire                                         O_trigger,
+    output reg  [pNUM_TRIGGERS-1:0]                     O_active_trigger,       // indicates which trigger we're waiting for
     output wire [7:0]                                   debug
 );
 
@@ -145,6 +146,12 @@ module trigger_sequencer #(
         sequence_trigger_reg <= sequence_trigger;
         trigger_r <= I_trigger;
         trigger_r2 <= trigger_r;
+        if (I_bypass)
+            O_active_trigger <= {pNUM_TRIGGERS{1'b1}}; // ensure no trigger gets blocked
+        else begin
+            O_active_trigger <= 0;
+            O_active_trigger[slot] <= 1'b1;
+        end
         if (state == pS_IDLE) begin
             slot <= 0;
             next_min_wait <= min_wait[0];

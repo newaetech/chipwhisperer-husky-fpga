@@ -47,6 +47,7 @@ module openadc_interface #(
     input  wire                         trigger_io4_i, // debug only
     input  wire                         sad_active,
     input  wire                         edge_trigger_active,
+    input  wire                         adc_trigger_active,
     output reg                          trigger_adc,
     output wire                         trigger_sad,
     output wire                         trigger_edge_counter,
@@ -321,28 +322,29 @@ module openadc_interface #(
       .la_debug             (la_debug)
    );
    
-   reg trigger_adc_allowed;
+   reg triggered;
    reg armed_and_ready_r;
    // ADC trigger is simple except that we only want a single trigger generated:
    always @(posedge ADC_clk_sample) begin
        if (reset) begin
-           trigger_adc_allowed <= 1'b0;
+           triggered <= 1'b0;
            trigger_adc <= 1'b0;
            armed_and_ready_r <= 1'b0;
        end
        else begin
            armed_and_ready_r <= armed_and_ready;
 
-           if (trigger_adc_allowed)
+           if (~triggered && adc_trigger_active && armed_and_ready_r)
                trigger_adc <= trigger_adclevel[11]? ADC_data_tofifo > trigger_adclevel:
                                                     ADC_data_tofifo < trigger_adclevel;
            else
                trigger_adc <= 1'b0;
 
            if (trigger_adc)
-               trigger_adc_allowed <= 1'b0;
+               triggered <= 1'b1;
            else if (armed_and_ready && ~armed_and_ready_r)
-               trigger_adc_allowed <= 1'b1;
+               triggered <= 1'b0;
+
        end
    end
 
@@ -350,7 +352,7 @@ module openadc_interface #(
        ila_adc_trig U_ila_adc_trig (
           .clk            (clk_usb),              // input wire clk
           .probe0         (trigger_adc),          // input wire [0:0]  probe0 
-          .probe1         (trigger_adc_allowed),  // input wire [0:0]  probe1 
+          .probe1         (triggered),            // input wire [0:0]  probe1 
           .probe2         (trigger_adclevel),     // input wire [11:0]  probe2 
           .probe3         (ADC_data_tofifo),      // input wire [11:0]  probe3 
           .probe4         (armed_and_ready)       // input wire [0:0]  probe4 

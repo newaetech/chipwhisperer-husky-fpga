@@ -57,8 +57,11 @@ module reg_chipwhisperer #(
    output wire        uart_trigger_line,
    output wire        edge_trigger_line,
    output wire        decodeio_active,
+   output wire        trace_active,
+   output wire        trace_trigger_in_use,
    output wire        sad_active,
    output wire        edge_trigger_active,
+   output wire        adc_trigger_active,
    input  wire        trigger_advio_i, 
    input  wire        trigger_decodedio_i,
    input  wire        trigger_trace_i,
@@ -390,9 +393,13 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    assign targetio_highz = reg_targetpower_off;
 
    wire [pSEQUENCER_NUM_TRIGGERS-1:0] tc_decodeio_active;
+   wire [pSEQUENCER_NUM_TRIGGERS-1:0] tc_trace_active;
    wire [pSEQUENCER_NUM_TRIGGERS-1:0] tc_sad_active;
    wire [pSEQUENCER_NUM_TRIGGERS-1:0] tc_edge_trigger_active;
+   wire [pSEQUENCER_NUM_TRIGGERS-1:0] tc_adc_trigger_active;
+   wire [pSEQUENCER_NUM_TRIGGERS-1:0] tc_trace_trigger_in_use;
    wire [pSEQUENCER_NUM_TRIGGERS-1:0] trigger_chooser;
+   wire [pSEQUENCER_NUM_TRIGGERS-1:0] trigger_active;
    wire [pSEQUENCER_NUM_TRIGGERS-1:0] trigger_ext;
 
    genvar i;
@@ -418,9 +425,14 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
                .trigger_edge_i          (trigger_edge_i            ),
                                                               
                .O_decodeio_active       (tc_decodeio_active[i]     ),
+               .O_trace_active          (tc_trace_active[i]        ),
                .O_sad_active            (tc_sad_active[i]          ),
                .O_edge_trigger_active   (tc_edge_trigger_active[i] ),
+               .O_adc_trigger_active    (tc_adc_trigger_active[i]  ),
+               .O_trace_trigger_in_use  (tc_trace_trigger_in_use[i]),
                .O_trigger               (trigger_chooser[i]        ),
+
+               .I_active_trigger        (trigger_active[i]         ),
                .trigger_ext             (trigger_ext[i]            )
            );
        end
@@ -439,6 +451,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
        .I_max_wait                     (reg_seq_triggers_minmax[(pSEQUENCER_NUM_TRIGGERS-1)*pSEQUENCER_COUNTER_WIDTH*2-1:(pSEQUENCER_NUM_TRIGGERS-1)*pSEQUENCER_COUNTER_WIDTH]),
        .I_last_trigger                 (trigger_sequencer_num_triggers),
        .O_trigger                      (trigger_sequencer_out),
+       .O_active_trigger               (trigger_active),
        .debug                          (sequencer_debug)
    );
 
@@ -486,8 +499,11 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
 
    assign decodeio_active       = (trigger_sequencer_on)? |tc_decodeio_active : tc_decodeio_active[0];
+   assign trace_active          = (trigger_sequencer_on)? |tc_trace_active : tc_trace_active[0];
    assign sad_active            = (trigger_sequencer_on)? |tc_sad_active : tc_sad_active[0];
    assign edge_trigger_active   = (trigger_sequencer_on)? |tc_edge_trigger_active : tc_edge_trigger_active[0];
+   assign adc_trigger_active    = (trigger_sequencer_on)? |tc_adc_trigger_active : tc_adc_trigger_active[0];
+   assign trace_trigger_in_use  = (trigger_sequencer_on)? |tc_trace_trigger_in_use : tc_trace_trigger_in_use[0];
 
    wire trig_glitch_pre = registers_cwauxio[1] ? glitchclk : trigger_capture;
    assign trig_glitch_o_mcx = registers_cwauxio[2] ? ~trig_glitch_pre : trig_glitch_pre;
