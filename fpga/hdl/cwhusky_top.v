@@ -186,6 +186,8 @@ module cwhusky_top(
    wire [7:0] la_debug2;
    wire [7:0] fifo_debug;
    wire [7:0] sequencer_debug;
+   wire [4:0] seq_trace_sad_debug;
+   wire [7:0] seq_trace_sad_debug2;
    wire [7:0] edge_trigger_debug;
    wire [7:0] clockglitch_debug1;
    wire [7:0] clockglitch_debug2;
@@ -363,7 +365,8 @@ module cwhusky_top(
                                                                          trigger_edge_counter,
                                                                          cmd_arm_usb} : 
                                  (userio_fpga_debug_select == 4'b1100)?  la_debug2 : 
-                                 (userio_fpga_debug_select == 4'b1101)?  sequencer_debug : 8'b0;
+                                 (userio_fpga_debug_select == 4'b1101)?  sequencer_debug :
+                                 (userio_fpga_debug_select == 4'b1110)?  {seq_trace_sad_debug, 3'b0} : seq_trace_sad_debug2;
                                  //(userio_fpga_debug_select == 4'b1010)?  clockglitch_debug3 : 8'b0;
 
    `else
@@ -572,6 +575,8 @@ module cwhusky_top(
         .la_exists              (la_exists),
 
         .sequencer_debug        (sequencer_debug),
+        .sequencer_debug2       (seq_trace_sad_debug2),
+        .seq_trace_sad_debug    (seq_trace_sad_debug),
 
         .armed_and_ready        (armed_and_ready),
         .trigger_capture        (trigger_capture),

@@ -35,7 +35,9 @@ module trigger_sequencer #(
     input  wire [3:0]                                   I_last_trigger,         // when using fewer than pNUM_TRIGGERS
     output wire                                         O_trigger,
     output reg  [pNUM_TRIGGERS-1:0]                     O_active_trigger,       // indicates which trigger we're waiting for
-    output wire [7:0]                                   debug
+    output wire [7:0]                                   debug,
+    output wire [7:0]                                   debug2,
+    input  wire                                         sad_active              // debug only
 );
 
     localparam pTRIGGER_WIDTH = (pNUM_TRIGGERS ==  2)? 1 :
@@ -75,6 +77,8 @@ module trigger_sequencer #(
     assign O_trigger = (I_bypass)? I_trigger[0] : sequence_trigger_reg;
 
     assign debug = {armed_and_ready, state, I_trigger[1:0], slot[1:0], O_trigger};
+
+    assign debug2 = {state, sad_active, too_early, too_late, I_trigger[2:0]};
 
     wire sequencer_enabled = armed_and_ready && ~I_bypass;
 

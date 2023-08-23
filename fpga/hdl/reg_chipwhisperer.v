@@ -126,6 +126,8 @@ module reg_chipwhisperer #(
    output wire        trig_glitch_o_mcx,// trig/glitch MCX 
 
    output wire [7:0]  sequencer_debug,
+   output wire [7:0]  sequencer_debug2,
+   output wire [4:0]  seq_trace_sad_debug,
 
    input  wire        trace_exists,
    input  wire        la_exists
@@ -452,8 +454,12 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
        .I_last_trigger                 (trigger_sequencer_num_triggers),
        .O_trigger                      (trigger_sequencer_out),
        .O_active_trigger               (trigger_active),
-       .debug                          (sequencer_debug)
+       .debug                          (sequencer_debug),
+       .debug2                         (sequencer_debug2),
+       .sad_active                     (sad_active)
    );
+
+   assign seq_trace_sad_debug = {trigger_chooser[2], trigger_chooser[1], trigger_chooser[0], sad_active, trace_active};
 
 
    wire [3:0] uart_chooser = reg_uart_edge_chooser[7:4];
