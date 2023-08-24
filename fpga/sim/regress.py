@@ -325,18 +325,21 @@ tests.append(dict(name  = 'glitches_single',
 tests.append(dict(name  = 'trigger_sequencer_pass',
              frequency = 2,
              PASS = 1,
+             NUM_TRIGGERS = 2,
              TOP = 'trigger_sequencer_cocowrapper.v',
              description = 'trigger sequencer block-level test.'))
 
 tests.append(dict(name  = 'trigger_sequencer_fail',
              frequency = 2,
              FAIL = 1,
+             NUM_TRIGGERS = 2,
              TOP = 'trigger_sequencer_cocowrapper.v',
              description = 'trigger sequencer block-level test.'))
 
 tests.append(dict(name  = 'trigger_sequencer_rand',
              frequency = 1,
              RAND = 1,
+             NUM_TRIGGERS = 2,
              TOP = 'trigger_sequencer_cocowrapper.v',
              description = 'trigger sequencer block-level test.'))
 

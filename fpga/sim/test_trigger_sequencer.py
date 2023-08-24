@@ -49,7 +49,7 @@ class Harness(object):
         """
         for test in self.tests:
             await test.done()
-        await ClockCycles(self.dut.clk, 10) # to give time for fifo_watch errors to be seen
+        await ClockCycles(self.dut.clk, 2) # let last trigger disappear (but don't wait too long or the next trigger may occur!)
 
     def start_tests(self):
         """ Wait for all tests which were registered via register_test() to finish.

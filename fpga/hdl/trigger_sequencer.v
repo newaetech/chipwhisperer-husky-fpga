@@ -76,9 +76,11 @@ module trigger_sequencer #(
 
     assign O_trigger = (I_bypass)? I_trigger[0] : sequence_trigger_reg;
 
-    assign debug = {armed_and_ready, state, I_trigger[1:0], slot[1:0], O_trigger};
+    //assign debug = {armed_and_ready, state, I_trigger[1:0], slot[1:0], O_trigger};
+    assign debug = {armed_and_ready, state, I_trigger[1:0], too_early, slot, O_trigger};
 
-    assign debug2 = {state, sad_active, too_early, too_late, I_trigger[2:0]};
+    //assign debug2 = {state, sad_active, too_early, too_late, I_trigger[2:0]};
+    assign debug2 = {state, sad_active, too_early, too_late, slot, I_trigger[1:0]};
 
     wire sequencer_enabled = armed_and_ready && ~I_bypass;
 
@@ -163,7 +165,7 @@ module trigger_sequencer #(
         end
         else if (incr_index) begin
             slot <= slot + 1;
-            next_min_wait <= min_wait[slot];
+            next_min_wait <= min_wait[slot]; // note this doesn't get the incremented slot!
             next_max_wait <= max_wait[slot];
         end
 
