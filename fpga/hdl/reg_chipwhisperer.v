@@ -459,7 +459,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
        .sad_active                     (sad_active)
    );
 
-   assign seq_trace_sad_debug = {trigger_chooser[2], trigger_chooser[1], trigger_chooser[0], sad_active, trace_active};
+   assign seq_trace_sad_debug = {trigger_sequencer_out, trigger_chooser[1], trigger_chooser[0], sad_active, trace_active};
 
 
    wire [3:0] uart_chooser = reg_uart_edge_chooser[7:4];
@@ -607,7 +607,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    always @(posedge clk_usb) begin
       if (reset) begin
          registers_cwextclk <= 8'b00000011;
-         registers_cwtrigsrc <= 16'b00100000;
+         registers_cwtrigsrc <= {pSEQUENCER_NUM_TRIGGERS{16'b00100000}}; // default to GPIO4
          registers_cwtrigmod <= 0;
          registers_iorouting <= 64'b00000010_00000001;
          reg_userio_cwdriven <= 8'b0;
