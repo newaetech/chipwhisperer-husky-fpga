@@ -589,7 +589,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
            `SOFTPOWER_CONTROL:          reg_datao_reg = reg_softpower_control[reg_bytecnt*8 +: 8];
 
-           `SEQ_TRIGGERS_CONFIG:        reg_datao_reg = reg_seq_triggers_config;
+           `SEQ_TRIGGERS_CONFIG:        reg_datao_reg = reg_seq_triggers_config_read[reg_bytecnt*8 +: 8];
            `SEQ_TRIGGERS_MINMAX:        reg_datao_reg = reg_seq_triggers_minmax[reg_bytecnt*8 +: 8];
            `SEQ_TRIGGERS_UART_EDGE_CHOOSER: reg_datao_reg = reg_uart_edge_chooser;
 
@@ -601,6 +601,9 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    end
 
    reg [7:0] reg_seq_triggers_config;
+   wire [15:0] reg_seq_triggers_config_read;
+   assign reg_seq_triggers_config_read[15:8] = pSEQUENCER_NUM_TRIGGERS;
+   assign reg_seq_triggers_config_read[7:0] = reg_seq_triggers_config;
    reg [(pSEQUENCER_NUM_TRIGGERS-1)*pSEQUENCER_COUNTER_WIDTH*2 - 1:0]  reg_seq_triggers_minmax;
    reg [7:0] reg_uart_edge_chooser;
 
@@ -619,7 +622,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
          reg_external_clock <= 1'b0;
          registers_cwauxio <= 3'b0;
          reg_softpower_control <= {16'd0, 16'd1995, 16'd2000, 8'd0, 8'd35};
-         reg_seq_triggers_config <= 0;
+         reg_seq_triggers_config <= 1; // default to two triggers, sequencer disabled
       end else if (reg_write) begin
          case (reg_address)
            `CW_AUX_IO: registers_cwauxio <= reg_datai[2:0];
