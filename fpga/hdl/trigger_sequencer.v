@@ -77,10 +77,18 @@ module trigger_sequencer #(
     assign O_trigger = (I_bypass)? I_trigger[0] : sequence_trigger_reg;
 
     //assign debug = {armed_and_ready, state, I_trigger[1:0], slot[1:0], O_trigger};
-    assign debug = {armed_and_ready, state, I_trigger[1:0], too_early, slot, O_trigger};
+    //assign debug = {armed_and_ready, state, I_trigger[1:0], too_early, slot, O_trigger};
+    assign debug = {armed_and_ready, slot[0], O_active_trigger[1], O_trigger, too_late, too_early, I_trigger[1], I_trigger[0]}; 
 
     //assign debug2 = {state, sad_active, too_early, too_late, I_trigger[2:0]};
-    assign debug2 = {state, sad_active, too_early, too_late, slot, I_trigger[1:0]};
+    //assign debug2 = {state, sad_active, too_early, too_late, slot, I_trigger[1:0]};
+
+    generate
+        if (pNUM_TRIGGERS >= 4)
+            assign debug2 = {O_trigger, O_active_trigger[3:1], I_trigger[3:0]};
+        else
+            assign debug2 = 8'b0;
+    endgenerate
 
     wire sequencer_enabled = armed_and_ready && ~I_bypass;
 
@@ -171,7 +179,7 @@ module trigger_sequencer #(
 
         if (reset_counter)
             counter <= 1;
-        else if (state == pS_WAIT_NEXT_TRIGGER)
+        else if ((state == pS_WAIT_NEXT_TRIGGER) && (counter != {pCOUNTER_WIDTH{1'b1}}))
             counter <= counter + 1;
     end
 
