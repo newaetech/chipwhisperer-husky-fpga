@@ -483,7 +483,7 @@ module openadc_interface #(
       .pBYTECNT_SIZE            (pBYTECNT_SIZE),
       .pTRIGGER_FIFO_WIDTH      (32),
 `ifdef PLUS
-      .pTRIGGER_FIFO_DEPTH      (2048), // TODO: TBD max size
+      .pTRIGGER_FIFO_DEPTH      (2048)  // TODO: TBD max size
 `else
       .pTRIGGER_FIFO_DEPTH      (1024)
 `endif
