@@ -435,12 +435,14 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
                .O_trigger               (trigger_chooser[i]        ),
 
                .I_active_trigger        (trigger_active[i]         ),
+               .I_sad_always_active     (trigger_sequencer_sad_always_active),
                .trigger_ext             (trigger_ext[i]            )
            );
        end
    endgenerate
 
    wire trigger_sequencer_out;
+   wire too_late;
    trigger_sequencer #(
        .pNUM_TRIGGERS                  (pSEQUENCER_NUM_TRIGGERS),
        .pCOUNTER_WIDTH                 (pSEQUENCER_COUNTER_WIDTH)
@@ -456,15 +458,15 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
        .O_active_trigger               (trigger_active),
        .debug                          (sequencer_debug),
        .debug2                         (sequencer_debug2),
+       .debug3                         (seq_trace_sad_debug),
        .sad_active                     (sad_active)
    );
-
-   assign seq_trace_sad_debug = {trigger_sequencer_out, trigger_chooser[1], trigger_chooser[0], sad_active, trace_active};
 
 
    wire [3:0] uart_chooser = reg_uart_edge_chooser[7:4];
    wire [3:0] edge_chooser = reg_uart_edge_chooser[3:0];
    wire trigger_sequencer_on = reg_seq_triggers_config[7];
+   wire trigger_sequencer_sad_always_active = reg_seq_triggers_config[6];
    wire [3:0] trigger_sequencer_num_triggers = reg_seq_triggers_config[3:0];
 
    assign uart_trigger_line = (trigger_sequencer_on)? trigger_ext[uart_chooser] : trigger_ext[0];

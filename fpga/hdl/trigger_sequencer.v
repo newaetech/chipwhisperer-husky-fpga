@@ -37,6 +37,7 @@ module trigger_sequencer #(
     output reg  [pNUM_TRIGGERS-1:0]                     O_active_trigger,       // indicates which trigger we're waiting for
     output wire [7:0]                                   debug,
     output wire [7:0]                                   debug2,
+    output wire [4:0]                                   debug3,
     input  wire                                         sad_active              // debug only
 );
 
@@ -68,6 +69,7 @@ module trigger_sequencer #(
     reg sequence_trigger_reg;
     reg too_late;
     reg too_early;
+    reg trigger_allowed;
 
     reg [1:0] state, next_state;
     localparam pS_IDLE = 0;
@@ -76,19 +78,16 @@ module trigger_sequencer #(
 
     assign O_trigger = (I_bypass)? I_trigger[0] : sequence_trigger_reg;
 
-    //assign debug = {armed_and_ready, state, I_trigger[1:0], slot[1:0], O_trigger};
-    //assign debug = {armed_and_ready, state, I_trigger[1:0], too_early, slot, O_trigger};
-    assign debug = {armed_and_ready, slot[0], O_active_trigger[1], O_trigger, too_late, too_early, I_trigger[1], I_trigger[0]}; 
-
-    //assign debug2 = {state, sad_active, too_early, too_late, I_trigger[2:0]};
-    //assign debug2 = {state, sad_active, too_early, too_late, slot, I_trigger[1:0]};
+    assign debug = {armed_and_ready, O_active_trigger[1:0], O_trigger, too_late, too_early, I_trigger[1:0]};
 
     generate
         if (pNUM_TRIGGERS >= 4)
-            assign debug2 = {O_trigger, O_active_trigger[3:1], I_trigger[3:0]};
+            assign debug2 = {O_active_trigger[3:0], I_trigger[3:0]};
         else
             assign debug2 = 8'b0;
     endgenerate
+
+    assign debug3 = {too_late, O_active_trigger[1:0], I_trigger[1:0]};
 
     wire sequencer_enabled = armed_and_ready && ~I_bypass;
 
@@ -155,17 +154,21 @@ module trigger_sequencer #(
     end
 
 
+    always @(*) begin
+        if (I_bypass)
+            O_active_trigger = {pNUM_TRIGGERS{1'b1}}; // ensure no trigger gets blocked
+        else begin
+            O_active_trigger = 0;
+            O_active_trigger[slot] = trigger_allowed;
+        end
+    end
+
     always @(posedge adc_clk) begin
         state <= next_state;
         sequence_trigger_reg <= sequence_trigger;
         trigger_r <= I_trigger;
         trigger_r2 <= trigger_r;
-        if (I_bypass)
-            O_active_trigger <= {pNUM_TRIGGERS{1'b1}}; // ensure no trigger gets blocked
-        else begin
-            O_active_trigger <= 0;
-            O_active_trigger[slot] <= 1'b1;
-        end
+
         if (state == pS_IDLE) begin
             slot <= 0;
             next_min_wait <= min_wait[0];
@@ -181,7 +184,18 @@ module trigger_sequencer #(
             counter <= 1;
         else if ((state == pS_WAIT_NEXT_TRIGGER) && (counter != {pCOUNTER_WIDTH{1'b1}}))
             counter <= counter + 1;
+
+        if (incr_index) // prevent errant pulse
+            trigger_allowed <= 1'b0;
+        else if (slot == 0)
+            trigger_allowed <= 1'b1;
+        else if (next_max_wait == 0)
+            trigger_allowed <= (counter >= next_min_wait);
+        else
+            trigger_allowed <= (counter >= next_min_wait) && (counter <= next_max_wait);
+
     end
+
 
 
     // debug only:

@@ -48,6 +48,7 @@ module trigger_chooser (
     output wire         O_trace_trigger_in_use,
     output wire         O_trigger,
     output wire         trigger_ext,    // for edge/UART
+    input wire          I_sad_always_active,
     input  wire         I_active_trigger
 );
 
@@ -101,7 +102,7 @@ module trigger_chooser (
 
    assign O_decodeio_active       = I_active_trigger && (I_trigmod[2:0] == 3'b011);
    assign O_trace_active          = I_active_trigger && (I_trigmod[2:0] == 3'b100);
-   assign O_sad_active            = I_active_trigger && (I_trigmod[2:0] == 3'b010);
+   assign O_sad_active            = (I_active_trigger || I_sad_always_active) && (I_trigmod[2:0] == 3'b010);
    assign O_edge_trigger_active   = I_active_trigger && (I_trigmod[2:0] == 3'b110);
    assign O_adc_trigger_active    = I_active_trigger && (I_trigmod[2:0] == 3'b101);
 
