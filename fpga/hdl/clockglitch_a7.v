@@ -76,7 +76,8 @@ module clockglitch_a7 #(
 
     input wire [15:0]                   phase_requested,
 
-    input wire                          I_mmcm_powerdown,
+    input wire                          I_mmcm_powerdown_early,
+    input wire                          I_mmcm_powerdown_delay,
 
     output wire                         glitch_mmcm1_clk_out_buf,
     output wire                         glitch_mmcm2_clk_out_buf,
@@ -208,8 +209,12 @@ module clockglitch_a7 #(
       // Careful because it's possible for glitch_trigger to be > 1 cycle.
       // Also note that max_glitches = <number of cycles to glitch> - 1
 
+      if (I_mmcm_powerdown_early) begin // use the early signal so that clock is still there!
+         glitch_go <= 1'b0;
+         glitch_go_r <= 1'b0;
+      end
       // In continuous mode, we need an explicit way to turn it off. Order is important here!
-      if (continuous_mode_r2 && ~continuous_mode_r)
+      else if (continuous_mode_r2 && ~continuous_mode_r)
           glitch_go <= 1'b0;
       else if (continuous_mode_r)
           glitch_go <= 1'b1;
@@ -307,7 +312,7 @@ module clockglitch_a7 #(
       .CLKIN2                       (1'b0),
       // Control Ports: 1-bit (each) input: MMCM control ports
       .CLKINSEL                     (1'b1),
-      .PWRDWN                       (I_mmcm_powerdown),
+      .PWRDWN                       (I_mmcm_powerdown_delay),
       .RST                          (mmcm_rst || drp1_reset),
       // DRP Ports:
       .DADDR                        (drp1_addr),
@@ -365,7 +370,7 @@ module clockglitch_a7 #(
       .CLKIN2                       (1'b0),
       // Control Ports: 1-bit (each) input: MMCM control ports
       .CLKINSEL                     (1'b1),
-      .PWRDWN                       (I_mmcm_powerdown),
+      .PWRDWN                       (I_mmcm_powerdown_delay),
       .RST                          (mmcm_rst || drp2_reset),
       // DRP Ports:
       .DADDR                        (drp2_addr),
