@@ -378,6 +378,7 @@ module reg_openadc #(
     );
 
 
+`ifdef NOXILINXFIFO
     fifo_sync #(
         .pDATA_WIDTH    (pTRIGGER_FIFO_WIDTH),
         .pDEPTH         (pTRIGGER_FIFO_DEPTH),
@@ -403,6 +404,19 @@ module reg_openadc #(
         .almost_full    (),
         .underflow      (trigger_fifo_underflow)
     );
+`else
+    trigger_fifo U_trigger_fifo (
+        .clk            (adc_sampleclk),
+        .rst            (reset),
+        .din            (trigger_fifo_count),
+        .wr_en          (trigger_fifo_wr),
+        .rd_en          (trigger_fifo_rd || trigger_fifo_flush_filtered),
+        .dout           (trigger_fifo_dout),
+        .full           (trigger_fifo_full),
+        .empty          (trigger_fifo_empty),
+        .underflow      (trigger_fifo_underflow)
+    );
+`endif
 
 endmodule
 `default_nettype wire
