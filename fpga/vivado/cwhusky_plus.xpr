@@ -54,13 +54,13 @@
     <Option Name="WTVcsLaunchSim" Val="0"/>
     <Option Name="WTRivieraLaunchSim" Val="0"/>
     <Option Name="WTActivehdlLaunchSim" Val="0"/>
-    <Option Name="WTXSimExportSim" Val="173"/>
-    <Option Name="WTModelSimExportSim" Val="173"/>
-    <Option Name="WTQuestaExportSim" Val="173"/>
-    <Option Name="WTIesExportSim" Val="173"/>
-    <Option Name="WTVcsExportSim" Val="173"/>
-    <Option Name="WTRivieraExportSim" Val="173"/>
-    <Option Name="WTActivehdlExportSim" Val="173"/>
+    <Option Name="WTXSimExportSim" Val="174"/>
+    <Option Name="WTModelSimExportSim" Val="174"/>
+    <Option Name="WTQuestaExportSim" Val="174"/>
+    <Option Name="WTIesExportSim" Val="174"/>
+    <Option Name="WTVcsExportSim" Val="174"/>
+    <Option Name="WTRivieraExportSim" Val="174"/>
+    <Option Name="WTActivehdlExportSim" Val="174"/>
     <Option Name="GenerateIPUpgradeLog" Val="TRUE"/>
     <Option Name="XSimRadix" Val="hex"/>
     <Option Name="XSimTimeUnit" Val="ns"/>
@@ -359,6 +359,20 @@
         </FileInfo>
       </File>
       <File Path="$PPRDIR/../hdl/semipro_slow_fifo.v">
+        <FileInfo>
+          <Attr Name="UsedIn" Val="synthesis"/>
+          <Attr Name="UsedIn" Val="implementation"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+      </File>
+      <File Path="$PPRDIR/../hdl/trigger_chooser.v">
+        <FileInfo>
+          <Attr Name="UsedIn" Val="synthesis"/>
+          <Attr Name="UsedIn" Val="implementation"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+      </File>
+      <File Path="$PPRDIR/../hdl/trigger_sequencer.v">
         <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="implementation"/>
@@ -1161,6 +1175,22 @@
         <Define Name="SAD_X2"/>
       </Config>
     </FileSet>
+    <FileSet Name="trigger_fifo" Type="BlockSrcs" RelSrcDir="$PSRCDIR/trigger_fifo">
+      <File Path="$PSRCDIR/sources_1/ip/trigger_fifo/trigger_fifo.xci">
+        <FileInfo>
+          <Attr Name="UsedIn" Val="synthesis"/>
+          <Attr Name="UsedIn" Val="implementation"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+      </File>
+      <Config>
+        <Option Name="TopModule" Val="trigger_fifo"/>
+        <Option Name="VerilogDir" Val="$PPRDIR/../tracewhisperer/hdl"/>
+        <Option Name="UseBlackboxStub" Val="1"/>
+        <Define Name="PLUS"/>
+        <Define Name="SAD_X2"/>
+      </Config>
+    </FileSet>
   </FileSets>
   <Simulators>
     <Simulator Name="XSim">
@@ -1587,7 +1617,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="synth_384" Type="Ft3:Synth" SrcSet="sources_1" Part="xc7a100tftg256-3" ConstrsSet="constrs_100" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" State="current" Dir="$PRUNDIR/synth_384" IncludeInArchive="true" AutoIncrementalDir="$PPRDIR/../../../cw_husky_semipro/fpga/vivado/cwhusky_semipro.srcs/utils_1/imports/synth_384">
+    <Run Id="synth_384" Type="Ft3:Synth" SrcSet="sources_1" Part="xc7a100tftg256-3" ConstrsSet="constrs_100" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/synth_384" IncludeInArchive="true" AutoIncrementalDir="$PPRDIR/../../../cw_husky_semipro/fpga/vivado/cwhusky_semipro.srcs/utils_1/imports/synth_384">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
         <Step Id="synth_design"/>
@@ -1647,7 +1677,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="adc_fast_fifo_semipro_synth_1" Type="Ft3:Synth" SrcSet="adc_fast_fifo_semipro" Part="xc7a100tftg256-3" ConstrsSet="adc_fast_fifo_semipro" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/adc_fast_fifo_semipro_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/adc_fast_fifo_semipro_synth_1">
+    <Run Id="trigger_fifo_synth_1" Type="Ft3:Synth" SrcSet="trigger_fifo" Part="xc7a100tftg256-3" ConstrsSet="trigger_fifo" Description="Vivado Synthesis Defaults" AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/trigger_fifo_synth_1" IncludeInArchive="true" AutoIncrementalDir="$PSRCDIR/utils_1/imports/trigger_fifo_synth_1">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
         <Step Id="synth_design"/>
@@ -2337,7 +2367,7 @@
       <Report Name="ROUTE_DESIGN.REPORT_METHODOLOGY" Enabled="1"/>
       <RQSFiles/>
     </Run>
-    <Run Id="impl_384" Type="Ft2:EntireDesign" Part="xc7a100tftg256-3" ConstrsSet="constrs_100" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" State="current" Dir="$PRUNDIR/impl_384" SynthRun="synth_384" IncludeInArchive="true" GenFullBitstream="true" AutoIncrementalDir="$PPRDIR/../../../cw_husky_semipro/fpga/vivado/cwhusky_semipro.srcs/utils_1/imports/impl_384">
+    <Run Id="impl_384" Type="Ft2:EntireDesign" Part="xc7a100tftg256-3" ConstrsSet="constrs_100" Description="Default settings for Implementation." AutoIncrementalCheckpoint="false" WriteIncrSynthDcp="false" Dir="$PRUNDIR/impl_384" SynthRun="synth_384" IncludeInArchive="true" GenFullBitstream="true" AutoIncrementalDir="$PPRDIR/../../../cw_husky_semipro/fpga/vivado/cwhusky_semipro.srcs/utils_1/imports/impl_384">
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Implementation Defaults" Flow="Vivado Implementation 2020"/>
         <Step Id="init_design"/>

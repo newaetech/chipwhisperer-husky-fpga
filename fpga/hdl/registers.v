@@ -351,13 +351,21 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define SAD_SHORT               107
 `define SAD_REFERENCE_BASE      108
 `define SAD_VERSION             114
+`define SAD_ALWAYS_ARMED        116
 
 `define FIFO_STATE              110
 `define CLOCKGLITCH_POWERED_DOWN 111
 `define EDGE_TRIGGER_COUNT      113
 `define SOFTPOWER_CONTROL       115
+`define NUM_TRIGGERS_STAT       117
+`define NUM_TRIGGERS_DATA       118
+
+`define SEQ_TRIGGERS_CONFIG     119
+`define SEQ_TRIGGERS_MINMAX     120
+`define SEQ_TRIGGERS_UART_EDGE_CHOOSER 121
 
 `define REGISTER_VERSION 1
 
 `define TW_MAIN_REG_SELECT      2'b10
 `define TW_TRACE_REG_SELECT     2'b11
+
