@@ -1,4 +1,4 @@
-# (c) Copyright 2012-2021 Xilinx, Inc. All rights reserved.
+# (c) Copyright 2012-2023 Xilinx, Inc. All rights reserved.
 # 
 # This file contains confidential and proprietary information
 # of Xilinx, Inc. and is protected under U.S. and
@@ -52,7 +52,7 @@
 # #########################################################
 
 
-create_clock -period 5 -name wr_clk [get_ports wr_clk]
+create_clock -period 10.417 -name wr_clk [get_ports wr_clk]
 
 create_clock -period 10.417 -name rd_clk [get_ports rd_clk]
 

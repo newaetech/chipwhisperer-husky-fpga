@@ -1,7 +1,7 @@
 -- Copyright 1986-2020 Xilinx, Inc. All Rights Reserved.
 -- --------------------------------------------------------------------------------
 -- Tool Version: Vivado v.2020.2 (lin64) Build 3064766 Wed Nov 18 09:12:47 MST 2020
--- Date        : Wed May 10 15:02:52 2023
+-- Date        : Fri Oct 13 09:13:51 2023
 -- Host        : red running 64-bit Ubuntu 20.04.6 LTS
 -- Command     : write_vhdl -force -mode synth_stub
 --               /home/jpnewae/git/cw_husky/fpga/vivado/cwhusky_plus.srcs/sources_1/ip/usb_slow_fifo_semipro/usb_slow_fifo_semipro_stub.vhdl
