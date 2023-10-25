@@ -289,6 +289,9 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define CW_IOROUTE_ADDR         55
 `define CW_IOREAD_ADDR          59
 
+`define CW_ADC_CTRL             60
+`define CW_VMAG_CTRL            61
+
 `define CG1_DRP_ADDR            62
 `define CG1_DRP_DATA            63
 `define CG2_DRP_ADDR            64
