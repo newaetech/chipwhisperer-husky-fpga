@@ -678,9 +678,10 @@ class GlitchTest(GenericTest):
         settings[5] = (settings[5] & ~(0x0C)) | (ttype << 2)
         await self.registers.write(self.reg_addr['CLOCKGLITCH_SETTINGS'], settings)
         settings[5] = settings[5] | (1 << 7)
-        await self.registers.write(self.reg_addr['CLOCKGLITCH_SETTINGS'], settings)
-        settings[5] = settings[5] & ~(1 << 7)
-        await self.registers.write(self.reg_addr['CLOCKGLITCH_SETTINGS'], settings)
+        if ttype != 'ext_continuous': # in this case we don't need to re-arm:
+            await self.registers.write(self.reg_addr['CLOCKGLITCH_SETTINGS'], settings)
+            settings[5] = settings[5] & ~(1 << 7)
+            await self.registers.write(self.reg_addr['CLOCKGLITCH_SETTINGS'], settings)
 
 
     def max_job_time(self) -> int:
@@ -696,7 +697,7 @@ class GlitchTest(GenericTest):
         if job['trigger_type'] == 'manual':
             await self.trigger_now()
         elif job['trigger_type'] == 'ADC':
-            pass # nothing to do!
+            pass # nothing to do! (because externally triggered; TODO!)
         else:
             raise ValueError
         # TODO: code more trigger options
