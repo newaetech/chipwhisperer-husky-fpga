@@ -50,6 +50,7 @@ module reg_openadc_adcfifo #(
    input  wire [7:0]   underflow_count,
    output reg          no_underflow_errors,
    input  wire         capture_done,
+   output reg          O_data_source_select,
 
    // for debug only:
    input  wire [31:0]  fifo_read_count,
@@ -70,6 +71,9 @@ module reg_openadc_adcfifo #(
    assign reg_datao = reg_datao_reg;
 
    wire [9:0] fifo_stat = {fifo_empty, fifo_error_stat};
+   wire [23:0] fifo_first_error_combined;
+   assign fifo_first_error_combined[23:16] = {5'b0, fifo_first_error_state};
+   assign fifo_first_error_combined[15:0] = {7'b0, fifo_first_error_stat};
 
 
    always @(*) begin
@@ -77,8 +81,7 @@ module reg_openadc_adcfifo #(
          case (reg_address)
             `FIFO_STAT:                 reg_datao_reg = fifo_stat[reg_bytecnt*8 +: 8];
             `FIFO_STATE:                reg_datao_reg = {5'b0, fifo_state};
-            `FIFO_FIRST_ERROR:          reg_datao_reg = fifo_first_error_stat[reg_bytecnt*8 +: 8];
-            `FIFO_FIRST_ERROR_STATE:    reg_datao_reg = {5'b0, fifo_first_error_state};
+            `FIFO_FIRST_ERROR:          reg_datao_reg = fifo_first_error_combined[reg_bytecnt*8 +: 8];
             `DEBUG_FIFO_READS:          reg_datao_reg = fifo_read_count[reg_bytecnt*8 +: 8];
             `DEBUG_FIFO_READS_FREEZE:   reg_datao_reg = fifo_read_count_error_freeze[reg_bytecnt*8 +: 8];
             `STREAM_SEGMENT_THRESHOLD:  reg_datao_reg = stream_segment_threshold[reg_bytecnt*8 +: 8];
@@ -86,6 +89,7 @@ module reg_openadc_adcfifo #(
             `FIFO_UNDERFLOW_COUNT:      reg_datao_reg = underflow_count;
             `FIFO_NO_UNDERFLOW_ERROR:   reg_datao_reg = {7'b0, no_underflow_errors};
             `CAPTURE_DONE:              reg_datao_reg = {7'b0, capture_done};
+            `FIFO_CONFIG:               reg_datao_reg = {6'b0, O_data_source_select, 1'b0};
             default:                    reg_datao_reg = 0;
          endcase
       end
@@ -100,6 +104,7 @@ module reg_openadc_adcfifo #(
          clear_fifo_errors <= 1'b0;
          stream_segment_threshold <= 65536;
          no_underflow_errors <= 1'b0;   // disables flagging of *slow* FIFO underflow errors only
+         O_data_source_select <= 1; // default to ADC
       end 
       else if (reg_write) begin
          case (reg_address)
@@ -113,6 +118,7 @@ module reg_openadc_adcfifo #(
                clear_fifo_errors <= reg_datai[0];
             `FIFO_NO_UNDERFLOW_ERROR:
                no_underflow_errors <= reg_datai[0];
+            `FIFO_CONFIG: O_data_source_select <= reg_datai[1]; // for compatibility with Pro
             default: ;
          endcase
       end

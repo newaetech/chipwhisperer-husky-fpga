@@ -208,7 +208,7 @@ module cwhusky_tb();
 
       #(pCLK_USB_PERIOD*1000);
 
-      write_1byte(`DATA_SOURCE_SELECT, 8'h0);
+      write_1byte(`FIFO_CONFIG, 8'h0);
       if (pADC_LOW_RES)
          write_1byte(`ADC_LOW_RES, 3);
       else

@@ -66,7 +66,6 @@ module reg_openadc #(
    output reg         segment_cycle_counter_en,
 
    /* Additional ADC control lines */
-   output reg         data_source_select,
    input  wire        clkblock_dcm_locked_i,
    input  wire        clkblock_gen_locked_i,
    output wire [14:0] presamples_o,
@@ -77,12 +76,11 @@ module reg_openadc #(
    output reg  [1:0]  led_select,
    output reg         no_clip_errors,
    output reg         no_gain_errors,
-   output reg         clip_test,
 
    input  wire        trigger_event, // capture_go_o from trigger_unit.v, to count cycles between successive triggers
 
    input  wire        extclk_change,
-   output reg         extclk_monitor_disabled,
+   output wire        extclk_monitor_disabled,
    output reg [31:0]  extclk_limit,
    output reg         O_disable_adc_error
 );
@@ -171,6 +169,7 @@ module reg_openadc #(
    reg [7:0] reg_datao_reg;
    assign reg_datao = reg_datao_reg;
 
+   assign extclk_monitor_disabled = (extclk_limit == 0);
    always @(*) begin
           if (reg_read) begin
              case (reg_address)
@@ -194,13 +193,9 @@ module reg_openadc #(
                 `NUM_SEGMENTS: reg_datao_reg = num_segments[reg_bytecnt*8 +: 8];
                 `SEGMENT_CYCLES: reg_datao_reg = segment_cycles[reg_bytecnt*8 +: 8];
                 `SEGMENT_CYCLE_COUNTER_EN: reg_datao_reg = {7'b0, segment_cycle_counter_en};
-                `DATA_SOURCE_SELECT: reg_datao_reg = data_source_select;
                 `LED_SELECT: reg_datao_reg = led_select;
                 `NO_CLIP_ERRORS: reg_datao_reg = {6'b0, no_gain_errors, no_clip_errors};
-                `CLIP_TEST: reg_datao_reg = clip_test;
-                `EXTCLK_MONITOR_DISABLED: reg_datao_reg = {6'b0, O_disable_adc_error, extclk_monitor_disabled};
-                `EXTCLK_MONITOR_STAT: reg_datao_reg = extclk_change;
-                `EXTCLK_CHANGE_LIMIT: reg_datao_reg = extclk_limit[reg_bytecnt*8 +: 8];
+                `EXTCLK_MONITOR: reg_datao_reg = extclk_change;
                 `ADC_TRIGGER_LEVEL: reg_datao_reg = trigger_adclevel[reg_bytecnt*8 +: 8];
                 `NUM_TRIGGERS_DATA: reg_datao_reg = trigger_fifo_dout[reg_bytecnt*8 +: 8];
                 `NUM_TRIGGERS_STAT: reg_datao_reg = {5'b0, trigger_fifo_underflow, trigger_fifo_overflow, trigger_fifo_empty};
@@ -222,15 +217,13 @@ module reg_openadc #(
          registers_offset <= 0;
          registers_advclocksettings <= 32'h00000102;
          registers_downsample <= 0;
-         data_source_select <= 1; // default to ADC
          num_segments <= 1;
          segment_cycles <= 0;
          segment_cycle_counter_en <= 0;
          led_select <= 0;
          no_clip_errors <= 0;
          no_gain_errors <= 0;
-         clip_test <= 0;
-         extclk_monitor_disabled <= 1;
+         //extclk_monitor_disabled <= 1;
          O_disable_adc_error <= 0;
          extclk_limit <= 32'd9; // corresponds to ~100 kHz tolerance
          trigger_adclevel <= 12'd0;
@@ -252,13 +245,11 @@ module reg_openadc #(
                 `NUM_SEGMENTS: num_segments[reg_bytecnt*8 +: 8] <= reg_datai;
                 `SEGMENT_CYCLES: segment_cycles[reg_bytecnt*8 +: 8] <= reg_datai;
                 `SEGMENT_CYCLE_COUNTER_EN: segment_cycle_counter_en <= reg_datai[0];
-                `DATA_SOURCE_SELECT: data_source_select <= reg_datai[0];
                 `LED_SELECT: led_select <= reg_datai[1:0];
                 `NO_CLIP_ERRORS: {no_gain_errors, no_clip_errors} <= reg_datai[1:0];
-                `CLIP_TEST: clip_test <= reg_datai[0];
-                `EXTCLK_MONITOR_DISABLED: {O_disable_adc_error, extclk_monitor_disabled} <= reg_datai[1:0];
-                `EXTCLK_CHANGE_LIMIT: extclk_limit[reg_bytecnt*8 +: 8] <= reg_datai;
+                `EXTCLK_MONITOR: extclk_limit[reg_bytecnt*8 +: 8] <= reg_datai;
                 `ADC_TRIGGER_LEVEL: trigger_adclevel[reg_bytecnt*8 +: 8] <= reg_datai;
+                `ADCFREQ_ADDR: O_disable_adc_error <= reg_datai[0];
                 default: ;
              endcase
          end

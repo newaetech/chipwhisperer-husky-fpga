@@ -105,7 +105,6 @@ module openadc_interface #(
     wire [2:0] fifo_first_error_state;
     wire       no_clip_errors;
     wire       no_gain_errors;
-    wire       clip_test;
     wire       clear_fifo_errors;
     wire       capture_done;
     wire [2:0] fifo_state;
@@ -516,7 +515,6 @@ module openadc_interface #(
       .maxsamples_i                 (maxsamples_limit),
       .maxsamples_o                 (maxsamples),
       .downsample_o                 (downsample),
-      .data_source_select           (data_source_select),
       .clkblock_dcm_locked_i        (1'b0),
       .clkblock_gen_locked_i        (1'b0),
       .fifo_stream                  (fifo_stream),
@@ -526,7 +524,6 @@ module openadc_interface #(
       .led_select                   (led_select),
       .no_clip_errors               (no_clip_errors),
       .no_gain_errors               (no_gain_errors),
-      .clip_test                    (clip_test),
       .trigger_event                (capture_go),
 
       .extclk_change                (extclk_change_usb),
@@ -561,7 +558,8 @@ module openadc_interface #(
       .underflow_count      (underflow_count),
       .no_underflow_errors  (no_underflow_errors),
       .clear_fifo_errors    (clear_fifo_errors),
-      .capture_done         (capture_done)
+      .capture_done         (capture_done),
+      .O_data_source_select (data_source_select)
    );
 
 
@@ -621,7 +619,6 @@ module openadc_interface #(
       .stream_segment_available (stream_segment_available),
       .no_clip_errors           (no_clip_errors),
       .no_gain_errors           (no_gain_errors),
-      .clip_test                (clip_test),
       .underflow_count          (underflow_count),
       .no_underflow_errors      (no_underflow_errors),
       .capture_done             (capture_done),
