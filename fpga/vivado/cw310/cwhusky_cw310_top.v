@@ -143,25 +143,24 @@ module cwhusky_cw310_top (
     parameter pUSERIO_WIDTH = 8;
     parameter pTRACE_BUFFER_SIZE = 64;
     parameter pTRACE_MATCH_RULES = 8;
-`ifdef PLUS
-    parameter pSEQUENCER_NUM_TRIGGERS = 4;
+`ifdef PRO
+    parameter pSEQUENCER_NUM_TRIGGERS = 4; // TODO: increase?
 `else
-    parameter pSEQUENCER_NUM_TRIGGERS = 2;
-    // TODO-Pro?
+    `ifdef PLUS
+        parameter pSEQUENCER_NUM_TRIGGERS = 4;
+    `else
+        parameter pSEQUENCER_NUM_TRIGGERS = 2;
+    `endif
 `endif
     parameter pSEQUENCER_COUNTER_WIDTH = 16;
 
     //input wire          PLLFPGAP,
     //input wire          PLLFPGAN,
 
-   wire          FPGA_BONUS1;
-   wire          FPGA_BONUS2;
-   wire          FPGA_BONUS3;
-   wire          FPGA_BONUS4;
    wire          ADC_OVR_SDOUT;
    wire [5:0]    ADC_DP;
    wire [5:0]    ADC_DN;
-   wire          PLL_STATUS;
+   wire          PLL_STATUS = 1'b1;
    wire          FPGA_CDOUT = 1'b0;
    wire          SAM_MOSI;
    wire          SAM_SPCK;
@@ -484,12 +483,23 @@ module cwhusky_cw310_top (
    wire trace_capture_on;
    wire [7:0] trace_userio_dir;
    wire freq_measure;
+   wire clear_adc_error;
+   wire disable_adc_error;
+   reg PLL_STATUS_reg = 1'b1;
 
    // fast-flash red LEDs when some internal error has occurred:
-   assign LED_ADC = error_flag? flash_pattern : ~PLL_STATUS;
+   assign LED_ADC = error_flag? flash_pattern : ~PLL_STATUS_reg;
    assign LED_GLITCH = error_flag? flash_pattern : led_glitch;
    assign LED_CAP = cw_led_cap;
    assign LED_ARMED = cw_led_armed;
+
+   always @(posedge clk_usb_buf) begin
+       if (clear_adc_error || disable_adc_error)
+           PLL_STATUS_reg <= 1'b1;
+       else if (~PLL_STATUS) // make it sticky!
+           PLL_STATUS_reg <= 1'b0;
+   end
+
 
    `ifndef __ICARUS__
        wire tb_ui_clk = 1'b0;
@@ -497,10 +507,6 @@ module cwhusky_cw310_top (
 
   wire ADC_slow_clk_even;
   wire ADC_slow_clk_odd;
-
-  // TODO: use these
-  wire clear_adc_error;
-  wire disable_adc_error;
 
    openadc_interface #(
         .pBYTECNT_SIZE          (pBYTECNT_SIZE)
@@ -596,6 +602,7 @@ module cwhusky_cw310_top (
 
         .slow_fifo_wr           (slow_fifo_wr),
         .slow_fifo_rd           (slow_fifo_rd),
+        .la_debug2              (), // TODO-later
         .la_debug               (tu_la_debug),
         .fifo_debug             (fifo_debug),
         .edge_trigger_debug     (edge_trigger_debug)
@@ -718,12 +725,18 @@ module cwhusky_cw310_top (
         .trace_exists           (trace_exists),
         .la_exists              (la_exists),
 
+        .cw310_adc_clk_sel      (cw310_adc_clk_sel), // CW310 only
+
+        // TODO-later:
+        .sequencer_debug        (),
+        .sequencer_debug2       (),
+        .seq_trace_sad_debug    (),
+
         .armed_and_ready        (armed_and_ready),
         .trigger_capture        (trigger_capture),
         .trigger_glitch         (trigger_glitch),
         .trigger_trace          (trigger_trace),
-        .trig_glitch_o_mcx      (TRIG_GLITCHOUT),
-        .cw310_adc_clk_sel      (cw310_adc_clk_sel)  // CW310 only
+        .trig_glitch_o_mcx      (TRIG_GLITCHOUT)
    );
 
    assign userio_drive_data = userio_target_debug? {target_MOSI, // carries TDI on USERIO_D7

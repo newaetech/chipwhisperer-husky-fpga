@@ -745,7 +745,7 @@ module openadc_interface #(
        wire         preddr_adc_fifo_underflow;
        wire         postddr_fifo_overflow;
        wire         postddr_fifo_underflow_masked;
-       wire         error_flag;
+       wire         error_flag; // TODO: nothing driving this?
        wire         fifo_overflow_noddr;
        wire         arm_pulse_usb;
        wire         reading_too_soon_error;

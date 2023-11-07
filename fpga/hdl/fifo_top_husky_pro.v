@@ -498,6 +498,7 @@ module fifo_top_husky_pro (
         .data_out_r     ()
     );
 
+    // TODO: not needed?
     wire all_preddr_fifo_empty_usb;
     cdc_simple U_all_preddr_fifo_empty_cdc (
         .reset          (reset),
