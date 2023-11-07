@@ -137,6 +137,7 @@ compile_edge:
 	../hdl/edge_wrapper.v \
 	../hdl/usb_reg_main.v \
 	../fpga-common/hdl/cdc_pulse.v \
+	../fpga-common/hdl/cdc_simple.v \
 	edge_tb.v \
 	-y/$(VIVADO_PATH)/$(VIVADO_VERSION)/ids_lite/ISE/verilog/src/unisims/ \
 	-g2005-sv \
@@ -288,6 +289,7 @@ lint_pro:
         -I../tracewhisperer/hdl/ \
         -D__ICARUS__ \
         -DPRO \
+	-DCW310 \
         -DNOXILINXFIFO \
         -DFASTFIFOSIM \
         -DLINT \

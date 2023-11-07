@@ -78,65 +78,16 @@ tests.append(dict(name  = 'presamples',
              SHORT_TRIGGER = [0,1],
              description = 'Randomized pre-trigger samples.'))
 
-tests.append(dict(name  = 'nopresamples_pro',
-             frequency = 1,
+tests.append(dict(name  = 'nopresamples',
+             frequency = 2,
              PRESAMPLES = 0,
-             #FIFO_SAMPLES = [500,1000],
-             #FIFO_SAMPLES = [16,47],
-             FIFO_SAMPLES = [16,200],
+             FIFO_SAMPLES = [500,1000],
              TRIGGER_DELAY = [1500, 3000],
              READ_DELAY = [150, 500],
              TRIGGER_NOW = [0,1],
              OFFSET_ENABLE = [0,1],
              SHORT_TRIGGER = [0,1],
              description = 'No pre-trigger samples.'))
-
-tests.append(dict(name  = 'ddrmax_pro',
-             frequency = 1,
-             PRESAMPLES = 0,
-             FIFO_SAMPLES = [1350,1365],
-             TRIGGER_DELAY = [1500, 3000],
-             READ_DELAY = [100, 500],
-             TRIGGER_NOW = [0,1],
-             OFFSET_ENABLE = [0,1],
-             SHORT_TRIGGER = [0,1],
-             DDRSIZE = "TINYDDR",
-             description = 'Use TINYDDR to reach maximum DDR capacity.'))
-
-tests.append(dict(name  = 'noddrmax_pro',
-             frequency = 6,
-             PRESAMPLES = 0,
-             FIFO_SAMPLES = [6468,6484],
-             TRIGGER_DELAY = [1500, 3000],
-             READ_DELAY = [100, 500],
-             TRIGGER_NOW = [0,1],
-             OFFSET_ENABLE = [0,1],
-             SHORT_TRIGGER = [0,1],
-             FIFOSIZE = "TINYFIFO",
-             BYPASS_DDR = 1,
-             TIMEOUT_CYCLES=200000,
-             description = 'Use TINYFIFO to reach maximum FIFO capacity.'))
-
-tests.append(dict(name  = 'noddr_pro',
-             frequency = 1,
-             PRESAMPLES = 0,
-             FIFO_SAMPLES = [16,200],
-             TRIGGER_DELAY = [1500, 3000],
-             READ_DELAY = [100, 500],
-             TRIGGER_NOW = [0,1],
-             OFFSET_ENABLE = [0,1],
-             SHORT_TRIGGER = [0,1],
-             FIFOSIZE = "TINYFIFO",
-             BYPASS_DDR = 1,
-             description = 'Use TINYFIFO to reach maximum FIFO capacity.'))
-
-tests.append(dict(name  = 'ddr_rwtest_pro',
-             frequency = 20,
-             DDR_TEST = 1,
-             DDR_TEST_LOOPS = [1,3],
-             TIMEOUT_CYCLES=200000,
-             description = 'Run the built-in DDR R/W test.'))
-
 
 tests.append(dict(name  = 'quick_stream',
              frequency = 1,

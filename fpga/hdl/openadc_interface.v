@@ -74,6 +74,7 @@ module openadc_interface #(
     // for UART triggering:
     output wire                         cmd_arm_usb,
 
+`ifdef PRO
     // DDR3 (Pro) stuff:
     output wire                         O_xo_en,
     output wire                         O_vddr_enable,
@@ -97,7 +98,6 @@ module openadc_interface #(
     input  wire [11:0]                  temp_out,
 
     // for LA and trace in Pro:
-`ifdef PRO
     output wire                         ui_clk,
     output wire                         preddr_trace_rd,
     input  wire [63:0]                  preddr_trace_data,
@@ -115,14 +115,14 @@ module openadc_interface #(
     input  wire                         trace_flushing,
     input  wire                         la_flushing,
     input  wire                         tb_ui_clk,
+    `ifdef CW310
+        input wire                      ADC_clk_fbp,
+        input wire                      ADC_clk_fbn,
+    `endif
 `endif
-//
+
     // for trigger sequencing:
     output wire                         armed_and_ready,
-
-    // CW310-specific:
-    input wire                          ADC_clk_fbp,
-    input wire                          ADC_clk_fbn,
 
     // for debug only:
     output wire                         slow_fifo_wr,
@@ -643,6 +643,9 @@ module openadc_interface #(
     wire la_fifo_errors = 1'b0;
     wire la_flushing = 1'b0;
     wire trace_flushing = 1'b0;
+    wire O_xo_en;
+    wire O_vddr_enable;
+    wire I_vddr_pgood = 1'b0;
 `endif
 
    reg_openadc_adcfifo #(
@@ -814,6 +817,7 @@ module openadc_interface #(
        );
 
        wire fifo_overflow_ddr;
+
 
        ddr U_ddr (
           .reset                    (reset),
@@ -993,6 +997,7 @@ module openadc_interface #(
        assign ddr_read_data_done = 0;
        assign ddr_single_done = 0;
        assign ddr_write_data_done = 0;
+       assign postddr_flush = 0;
 
    `endif
 
