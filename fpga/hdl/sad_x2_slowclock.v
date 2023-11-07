@@ -77,6 +77,7 @@ module sad_x2_slowclock #(
     wire clear_status_adc_even;
     wire clear_status_adc_odd;
 
+    reg always_armed;
     reg multiple_triggers;
     reg [pREF_SAMPLES*pBITS_PER_SAMPLE-1:0] refsamples;
     reg [pSAD_COUNTER_WIDTH-1:0] threshold;
@@ -95,6 +96,9 @@ module sad_x2_slowclock #(
     wire armed_and_ready_adc_even_r;
     wire armed_and_ready_adc_odd;
     wire armed_and_ready_adc_odd_r;
+
+    wire active_adc_even;
+    wire active_adc_odd;
 
     reg ready2trigger_even [0:pREF_SAMPLES-1];
     reg ready2trigger_odd  [0:pREF_SAMPLES-1];
@@ -155,6 +159,7 @@ module sad_x2_slowclock #(
                 `SAD_MULTIPLE_TRIGGERS: reg_datao = {7'b0, multiple_triggers};
                 `SAD_SHORT: reg_datao = {7'b0, sad_short};
                 `SAD_VERSION: reg_datao = version_bits;
+                `SAD_ALWAYS_ARMED: reg_datao <= {7'b0, always_armed};
                 default: reg_datao = 0;
             endcase
         end
@@ -171,6 +176,7 @@ module sad_x2_slowclock #(
             multiple_triggers <= 0;
             sad_short <= 0;
             refbase <= 0;
+            always_armed <= 0;
         end 
         else begin
             clear_status_r <= clear_status;
@@ -181,6 +187,7 @@ module sad_x2_slowclock #(
                     `SAD_MULTIPLE_TRIGGERS: multiple_triggers <= reg_datai[0];
                     `SAD_SHORT: sad_short <= reg_datai[0];
                     `SAD_REFERENCE_BASE: refbase <= reg_datai;
+                    `SAD_ALWAYS_ARMED: always_armed <= reg_datai[0];
                     default: ;
                 endcase
                 if (reg_address == `SAD_STATUS)
@@ -263,6 +270,23 @@ module sad_x2_slowclock #(
         .data_out_r     (armed_and_ready_adc_odd_r)
     );
 
+    cdc_simple U_active_cdc_even (
+        .reset          (reset),
+        .clk            (slow_clk_even),
+        .data_in        (active),
+        .data_out       (active_adc_even),
+        .data_out_r     ()
+    );
+
+    cdc_simple U_active_cdc_odd (
+        .reset          (reset),
+        .clk            (slow_clk_odd),
+        .data_in        (active),
+        .data_out       (active_adc_odd),
+        .data_out_r     ()
+    );
+
+
     wire [pMASTER_COUNTER_WIDTH-1:0] master_counter_top = (sad_short)? pREF_SAMPLES/2-2 : pREF_SAMPLES-2;
 
 
@@ -289,7 +313,7 @@ module sad_x2_slowclock #(
         for (i = 0; i < pREF_SAMPLES; i = i + 2) begin: gen_sad_even_counters
             assign refsample[i+0] = refsamples[(i+0)*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
             always @(posedge slow_clk_even) begin
-                if (armed_and_ready_adc_even && active && ~xadc_error) begin
+                if ((armed_and_ready_adc_even || always_armed) && active_adc_even && ~xadc_error) begin
                     if (i > 0) ready2trigger_even[i] <= ready2trigger_even[i-2];
                     else if (master_counter_even == master_counter_top) ready2trigger_even[0] <= 1;
                     if (i == 0) resetter_even[i] <= resetter_even[pREF_SAMPLES-2];
@@ -365,7 +389,7 @@ module sad_x2_slowclock #(
         for (j = 1; j < pREF_SAMPLES-0; j = j + 2) begin: gen_sad_odd_counters
             assign refsample[j+0] = refsamples[(j+0)*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
             always @(posedge slow_clk_odd) begin
-                if (armed_and_ready_adc_odd && active && ~xadc_error) begin
+                if ((armed_and_ready_adc_odd || always_armed) && active_adc_odd && ~xadc_error) begin
                     if (j > 1) ready2trigger_odd[j] <= ready2trigger_odd[j-2];
                     else if (master_counter_odd >= master_counter_top) ready2trigger_odd[1] <= 1;
 

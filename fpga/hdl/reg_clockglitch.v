@@ -344,6 +344,25 @@ module reg_clockglitch #(
       end
    end
 
+   // delay in USB clock domain otherwise the clock won't be able to come back on!
+   // USB = 96 MHz; MMCM glitch clock >= 5 MHz, so this will give at least
+   // 256/(96/5) = 13 clock cycles before the clock goes away
+   localparam pCLOCKGLITCH_POWERDOWN_COUNTER_WIDTH = 8;
+   reg [pCLOCKGLITCH_POWERDOWN_COUNTER_WIDTH-1:0] clockglitch_powerdown_counter;
+   reg clockglitch_powerdown_delayed;
+   always @(posedge clk_usb) begin
+      if (clockglitch_powerdown) begin
+          if (clockglitch_powerdown_counter < {pCLOCKGLITCH_POWERDOWN_COUNTER_WIDTH{1'b1}})
+              clockglitch_powerdown_counter <= clockglitch_powerdown_counter + 1;
+          else
+              clockglitch_powerdown_delayed <= 1'b1;
+      end
+      else begin
+          clockglitch_powerdown_counter <= 0;
+          clockglitch_powerdown_delayed <= 1'b0;
+      end
+   end
+
    trigger_resync #(
       .pMAX_GLITCHES        (pMAX_GLITCHES),
       .pNUM_GLITCH_WIDTH    (pNUM_GLITCH_WIDTH)
@@ -394,7 +413,8 @@ module reg_clockglitch #(
     .mmcm2_locked           (mmcm2_locked),
     .phase1_done            (phase1_done),
     .phase2_done            (phase2_done),
-    .I_mmcm_powerdown       (clockglitch_powerdown || mmcm_shutdown),
+    .I_mmcm_powerdown_early (clockglitch_powerdown || mmcm_shutdown),
+    .I_mmcm_powerdown_delay (clockglitch_powerdown_delayed || mmcm_shutdown),
 
     .glitch_mmcm1_clk_out_buf (glitch_mmcm1_clk_out),
     .glitch_mmcm2_clk_out_buf (glitch_mmcm2_clk_out),

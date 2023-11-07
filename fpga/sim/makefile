@@ -54,10 +54,14 @@ VIVADO_VERSION=2020.2
 VARIANT=REGULAR
 SAD=SAD_X2
 FIFO_TYPE=NOXILINXFIFO
+NUM_TRIGGERS=4
+COUNTER_WIDTH=16
+COCOTB_LOG_LEVEL=INFO
 
 all: compile run
 all_sad: compile_sad run
 all_edge: compile_edge run
+all_trigger_sequencer: compile_trigger_sequencer run_trigger_sequencer
 coco: compile_coco run_coco
 
 ifeq ($(VIVADO_PATH),)
@@ -148,6 +152,19 @@ compile_edge:
 	-P edge_tb.pTIMEOUT_CYCLES=$(TIMEOUT_CYCLES) \
 	-o $(EXEFILE) \
 
+compile_trigger_sequencer:
+	iverilog -g2005-sv \
+	-gsupported-assertions \
+	-s trigger_sequencer_cocowrapper \
+	-Wportbind \
+	-Wselect-range \
+	-DCOCOTB_SIM=1 \
+	-P trigger_sequencer_cocowrapper.pDUMP=$(DUMP) \
+	-P trigger_sequencer_cocowrapper.pNUM_TRIGGERS=$(NUM_TRIGGERS) \
+	-P trigger_sequencer_cocowrapper.pCOUNTER_WIDTH=$(COUNTER_WIDTH) \
+	-o $(EXEFILE) \
+	../hdl/trigger_sequencer.v \
+	trigger_sequencer_cocowrapper.v \
 
 compile:
 	iverilog -ccmdfile \
@@ -334,6 +351,17 @@ run_coco:
 	-m $(shell cocotb-config --lib-name vpi icarus) \
 	-l$(LOGFILE) $(EXEFILE) -$(WAVEFORMAT) \
 
+run_trigger_sequencer:
+	COCOTB_RESOLVE_X=RANDOM \
+	TOPLEVEL=trigger_sequencer_cocowrapper \
+	TOPLEVEL_LANG=verilog \
+	FIFOTEST=$(FIFOTEST) \
+	MODULE=test_trigger_sequencer \
+	COCOTB_LOG_LEVEL=$(COCOTB_LOG_LEVEL) \
+	LIBPYTHON_LOC=$(shell cocotb-config --libpython) \
+	vvp -M $(shell cocotb-config --lib-dir) \
+	-m $(shell cocotb-config --lib-name vpi icarus) \
+	-l$(LOGFILE) $(EXEFILE) -$(WAVEFORMAT) \
 
 clean:
 	rm -f a.out results/*.vvp

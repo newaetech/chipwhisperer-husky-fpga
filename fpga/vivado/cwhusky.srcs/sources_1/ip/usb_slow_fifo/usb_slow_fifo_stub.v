@@ -1,10 +1,10 @@
 // Copyright 1986-2020 Xilinx, Inc. All Rights Reserved.
 // --------------------------------------------------------------------------------
-// Tool Version: Vivado v.2020.2 (win64) Build 3064766 Wed Nov 18 09:12:45 MST 2020
-// Date        : Fri Sep 17 14:05:48 2021
-// Host        : qed running 64-bit major release  (build 9200)
+// Tool Version: Vivado v.2020.2 (lin64) Build 3064766 Wed Nov 18 09:12:47 MST 2020
+// Date        : Thu Oct 12 11:42:18 2023
+// Host        : red running 64-bit Ubuntu 20.04.6 LTS
 // Command     : write_verilog -force -mode synth_stub
-//               c:/Users/jp/GitHub/OpenTitan/husky/fpga/vivado/cwhusky.srcs/sources_1/ip/usb_slow_fifo/usb_slow_fifo_stub.v
+//               /home/jpnewae/git/cw_husky/fpga/vivado/cwhusky.srcs/sources_1/ip/usb_slow_fifo/usb_slow_fifo_stub.v
 // Design      : usb_slow_fifo
 // Purpose     : Stub declaration of top-level module interface
 // Device      : xc7a35tftg256-1

@@ -34,6 +34,8 @@ module openadc_interface #(
     output reg                          LED_armed, // Armed LED
     output reg                          LED_capture, // Capture in Progress LED (only illuminate during capture, very quick)
     output reg                          freq_measure,
+    output wire                         O_clear_adc_error,
+    output wire                         O_disable_adc_error,
 
     // OpenADC Interface Pins
     input  wire [11:0]                  ADC_data,
@@ -45,6 +47,7 @@ module openadc_interface #(
     input  wire                         trigger_io4_i, // debug only
     input  wire                         sad_active,
     input  wire                         edge_trigger_active,
+    input  wire                         adc_trigger_active,
     output reg                          trigger_adc,
     output wire                         trigger_sad,
     output wire                         trigger_edge_counter,
@@ -113,6 +116,9 @@ module openadc_interface #(
     input  wire                         la_flushing,
     input  wire                         tb_ui_clk,
 `endif
+//
+    // for trigger sequencing:
+    output wire                         armed_and_ready,
 
     // CW310-specific:
     input wire                          ADC_clk_fbp,
@@ -122,6 +128,7 @@ module openadc_interface #(
     output wire                         slow_fifo_wr,
     output wire                         slow_fifo_rd,
     output wire [8:0]                   la_debug,
+    output wire [7:0]                   la_debug2,
     output wire [7:0]                   fifo_debug,
     output wire [7:0]                   edge_trigger_debug
 
@@ -145,8 +152,8 @@ module openadc_interface #(
     wire [2:0] fifo_first_error_state;
     wire       no_clip_errors;
     wire       no_gain_errors;
+    wire       clear_fifo_errors;
     wire       capture_done;
-    wire       armed_and_ready;
     wire [2:0] fifo_state;
     wire [2:0] ddr_state;
     wire       adc_flushing;
@@ -174,6 +181,7 @@ module openadc_interface #(
     wire       use_ddr;
 
     assign reset_o = reset;
+    assign O_clear_adc_error = extclk_monitor_disabled;
 
    reg extclk_change;
    reg extclk_change_usb;
@@ -401,31 +409,33 @@ module openadc_interface #(
       .armed_and_ready      (armed_and_ready),
 
       .cmd_arm_usb          (cmd_arm_usb),
+      .debug2               (la_debug2),
       .la_debug             (la_debug)
    );
    
-   reg trigger_adc_allowed;
+   reg triggered;
    reg armed_and_ready_r;
    // ADC trigger is simple except that we only want a single trigger generated:
    always @(posedge ADC_clk_sample) begin
        if (reset) begin
-           trigger_adc_allowed <= 1'b0;
+           triggered <= 1'b0;
            trigger_adc <= 1'b0;
            armed_and_ready_r <= 1'b0;
        end
        else begin
            armed_and_ready_r <= armed_and_ready;
 
-           if (trigger_adc_allowed)
+           if (~triggered && adc_trigger_active && armed_and_ready_r)
                trigger_adc <= trigger_adclevel[11]? ADC_data_tofifo > trigger_adclevel:
                                                     ADC_data_tofifo < trigger_adclevel;
            else
                trigger_adc <= 1'b0;
 
            if (trigger_adc)
-               trigger_adc_allowed <= 1'b0;
+               triggered <= 1'b1;
            else if (armed_and_ready && ~armed_and_ready_r)
-               trigger_adc_allowed <= 1'b1;
+               triggered <= 1'b0;
+
        end
    end
 
@@ -433,7 +443,7 @@ module openadc_interface #(
        ila_adc_trig U_ila_adc_trig (
           .clk            (clk_usb),              // input wire clk
           .probe0         (trigger_adc),          // input wire [0:0]  probe0 
-          .probe1         (trigger_adc_allowed),  // input wire [0:0]  probe1 
+          .probe1         (triggered),            // input wire [0:0]  probe1 
           .probe2         (trigger_adclevel),     // input wire [11:0]  probe2 
           .probe3         (ADC_data_tofifo),      // input wire [11:0]  probe3 
           .probe4         (armed_and_ready)       // input wire [0:0]  probe4 
@@ -573,7 +583,13 @@ module openadc_interface #(
    );
 
    reg_openadc #(
-      .pBYTECNT_SIZE    (pBYTECNT_SIZE)
+      .pBYTECNT_SIZE            (pBYTECNT_SIZE),
+      .pTRIGGER_FIFO_WIDTH      (32),
+`ifdef PLUS
+      .pTRIGGER_FIFO_DEPTH      (2048)  // TODO: TBD max size
+`else
+      .pTRIGGER_FIFO_DEPTH      (1024)
+`endif
    ) U_reg_openadc (
       .reset_i                      (1'b0),
       .reset_o                      (reset),
@@ -613,10 +629,12 @@ module openadc_interface #(
       .led_select                   (led_select),
       .no_clip_errors               (no_clip_errors),
       .no_gain_errors               (no_gain_errors),
+      .trigger_event                (capture_go),
 
       .extclk_change                (extclk_change_usb),
       .extclk_monitor_disabled      (extclk_monitor_disabled),
-      .extclk_limit                 (extclk_limit)
+      .extclk_limit                 (extclk_limit),
+      .O_disable_adc_error          (O_disable_adc_error)
    );
 
 `ifndef PRO

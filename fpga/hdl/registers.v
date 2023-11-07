@@ -253,6 +253,7 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define ADC_TRIGGER_LEVEL       21
 `define CLOCKGLITCH_OFFSET      25
 `define OFFSET_ADDR             26
+`define FIFO_CONFIG             27
 `define RESET                   28
 `define ADC_LOW_RES             29
 
@@ -287,6 +288,9 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define CLOCKGLITCH_MULTIPLE_STATE 53
 `define CW_IOROUTE_ADDR         55
 `define CW_IOREAD_ADDR          59
+
+`define CW_ADC_CTRL             60
+`define CW_VMAG_CTRL            61
 
 `define CG1_DRP_ADDR            62
 `define CG1_DRP_DATA            63
@@ -343,12 +347,20 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define SAD_MULTIPLE_TRIGGERS   106
 `define SAD_SHORT               107
 `define SAD_REFERENCE_BASE      108
-`define SAD_VERSION             85
+`define SAD_VERSION             12 
+`define SAD_ALWAYS_ARMED        13
 
 `define FIFO_STATE              110
 `define CLOCKGLITCH_POWERED_DOWN 111
 `define EDGE_TRIGGER_COUNT      113
 `define SOFTPOWER_CONTROL       91
+
+`define NUM_TRIGGERS_STAT       14
+`define NUM_TRIGGERS_DATA       18
+
+`define SEQ_TRIGGERS_CONFIG     19
+`define SEQ_TRIGGERS_MINMAX     22
+`define SEQ_TRIGGERS_UART_EDGE_CHOOSER 23
 
 `define REG_DDR3_STAT           114
 `define REG_DDR3_TEST_LOOPS     115
@@ -356,7 +368,6 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define REG_DDR3_RW_STATS       118
 
 `define REG_CW310_SPECIFIC      120
-`define FIFO_CONFIG             121
 
 // temporary, for CW310/Pro development:
 `define UIFREQ_ADDR             122
@@ -368,28 +379,19 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define REG_DDR_START_READ      125
 
 // list of holes in the register address space (to be used for new features):
-//`define UNUSED_ADDRESS 12
-//`define UNUSED_ADDRESS 13
-//`define UNUSED_ADDRESS 14
-//`define UNUSED_ADDRESS 18
-//`define UNUSED_ADDRESS 19
-//`define UNUSED_ADDRESS 22
-//`define UNUSED_ADDRESS 23
 //`define UNUSED_ADDRESS 24
-//`define UNUSED_ADDRESS 27
 //`define UNUSED_ADDRESS 54
 //`define UNUSED_ADDRESS 56
 //`define UNUSED_ADDRESS 57
 //`define UNUSED_ADDRESS 58
-//`define UNUSED_ADDRESS 60
-//`define UNUSED_ADDRESS 61
 //`define UNUSED_ADDRESS 70
 //`define UNUSED_ADDRESS 83
 //`define UNUSED_ADDRESS 84
 //`define UNUSED_ADDRESS 126
 //`define UNUSED_ADDRESS 127
 
-`define REGISTER_VERSION 1
+`define REGISTER_VERSION 2
 
 `define TW_MAIN_REG_SELECT      2'b10
 `define TW_TRACE_REG_SELECT     2'b11
+

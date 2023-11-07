@@ -8,6 +8,8 @@
 ../hdl/setup.v
 ../hdl/trigger_resync.v
 ../hdl/trigger_unit.v
+../hdl/trigger_chooser.v
+../hdl/trigger_sequencer.v
 ../hdl/usb_reg_main.v
 ../hdl/fifo_top_husky.v
 ../hdl/semipro_slow_fifo.v
