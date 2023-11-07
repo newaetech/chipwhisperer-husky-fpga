@@ -143,6 +143,13 @@ module cwhusky_cw310_top (
     parameter pUSERIO_WIDTH = 8;
     parameter pTRACE_BUFFER_SIZE = 64;
     parameter pTRACE_MATCH_RULES = 8;
+`ifdef PLUS
+    parameter pSEQUENCER_NUM_TRIGGERS = 4;
+`else
+    parameter pSEQUENCER_NUM_TRIGGERS = 2;
+    // TODO-Pro?
+`endif
+    parameter pSEQUENCER_COUNTER_WIDTH = 16;
 
     //input wire          PLLFPGAP,
     //input wire          PLLFPGAN,
@@ -290,10 +297,14 @@ module cwhusky_cw310_top (
    wire [pUSERIO_WIDTH-1:0] userio_drive_data_reg;
    wire [pUSERIO_WIDTH-1:0] userio_debug_data;
 
-   wire decode_uart_input;
+   wire uart_trigger_line;
+   wire edge_trigger_line;
    wire decodeio_active;
+   wire trace_active;
+   wire trace_trigger_in_use;
    wire sad_active;
    wire edge_trigger_active;
+   wire adc_trigger_active;
    wire trace_trig_out;
    wire trigger_adc;
    wire trigger_sad;
@@ -334,6 +345,7 @@ module cwhusky_cw310_top (
    wire           fifo_source_sel;
 
    wire           cmd_arm_usb;
+   wire           armed_and_ready;
 
    wire           la_capture_start;
    wire           la_capture_start_ui;
@@ -486,6 +498,10 @@ module cwhusky_cw310_top (
   wire ADC_slow_clk_even;
   wire ADC_slow_clk_odd;
 
+  // TODO: use these
+  wire clear_adc_error;
+  wire disable_adc_error;
+
    openadc_interface #(
         .pBYTECNT_SIZE          (pBYTECNT_SIZE)
    ) oadc (
@@ -493,9 +509,12 @@ module cwhusky_cw310_top (
         .ADC_slow_clk_even      (ADC_slow_clk_even),
         .ADC_slow_clk_odd       (ADC_slow_clk_odd),
         .reset_o                (reg_rst),
+        .xadc_error             (xadc_error_flag),
 
         .LED_capture            (cw_led_cap),
         .LED_armed              (cw_led_armed),
+        .O_clear_adc_error      (clear_adc_error),
+        .O_disable_adc_error    (disable_adc_error),
         .ADC_data               (ADC_data),
         .ADC_clk_feedback       (ADC_clk_fb),
         .pll_fpga_clk           (pll_fpga_clk),
@@ -508,9 +527,11 @@ module cwhusky_cw310_top (
         .trigger_edge_counter   (trigger_edge_counter),
         .sad_active             (sad_active),
         .edge_trigger_active    (edge_trigger_active),
+        .adc_trigger_active     (adc_trigger_active),
         .amp_gain               (VDBSPWM),
         .fifo_dout              (fifo_dout),
         .cmd_arm_usb            (cmd_arm_usb),
+        .armed_and_ready        (armed_and_ready),
         .freq_measure           (freq_measure),
 
         .reg_address            (reg_address),
@@ -525,7 +546,7 @@ module cwhusky_cw310_top (
         .stream_segment_available (stream_segment_available),
 
         .capture_active         (capture_active),
-        .trigger_in             (decode_uart_input),
+        .trigger_in             (edge_trigger_line),
 
         .flash_pattern          (flash_pattern),
 
@@ -611,8 +632,10 @@ module cwhusky_cw310_top (
 
 
    reg_chipwhisperer  #(
-        .pBYTECNT_SIZE  (pBYTECNT_SIZE),
-        .pUSERIO_WIDTH  (pUSERIO_WIDTH)
+        .pBYTECNT_SIZE                  (pBYTECNT_SIZE),
+        .pUSERIO_WIDTH                  (pUSERIO_WIDTH),
+        .pSEQUENCER_NUM_TRIGGERS        (pSEQUENCER_NUM_TRIGGERS  ),
+        .pSEQUENCER_COUNTER_WIDTH       (pSEQUENCER_COUNTER_WIDTH )
    ) reg_chipwhisperer (
         .reset_i                (reg_rst),
         .clk_usb                (clk_usb_buf),
@@ -633,10 +656,14 @@ module cwhusky_cw310_top (
         .trigger_io3_i          (target_io3),
         .trigger_io4_i          (target_io4),
         .trigger_nrst_i         (target_nRST),
-        .trigger_ext_o          (decode_uart_input),
+        .uart_trigger_line      (uart_trigger_line),
+        .edge_trigger_line      (edge_trigger_line),
         .decodeio_active        (decodeio_active),
+        .trace_active           (trace_active),
+        .trace_trigger_in_use   (trace_trigger_in_use),
         .sad_active             (sad_active),
         .edge_trigger_active    (edge_trigger_active),
+        .adc_trigger_active     (adc_trigger_active),
         .trigger_advio_i        (1'b0),
         .trigger_decodedio_i    (trace_trig_out),
         .trigger_trace_i        (trace_trig_out),
@@ -691,6 +718,7 @@ module cwhusky_cw310_top (
         .trace_exists           (trace_exists),
         .la_exists              (la_exists),
 
+        .armed_and_ready        (armed_and_ready),
         .trigger_capture        (trigger_capture),
         .trigger_glitch         (trigger_glitch),
         .trigger_trace          (trigger_trace),
@@ -1060,10 +1088,27 @@ module cwhusky_cw310_top (
    `ifdef TRACE
 
        wire TRACECLOCK = USERIO_CLK;
-
        wire [3:0] TRACEDATA  = USERIO_D[7:4];
-       wire serial_in = decodeio_active? decode_uart_input : 
-                        trace_en?        USERIO_D[2] : 1'b1;
+
+       // here we choose trace_top's serial input: either SWO (USERIO_D[2]) or
+       // the chosen UART trigger line; also, ensure that the line is held
+       // high if it's not meant to see anything (e.g. in the case of
+       // sequenced triggers, when it's not its turn)
+       reg serial_in;
+       always @ (*) begin
+           if (decodeio_active)
+               serial_in = uart_trigger_line;
+           else if (trace_en) begin
+               if (trace_trigger_in_use)
+                   serial_in = (trace_active)? USERIO_D[2] : 1'b1;
+               else
+                   serial_in = USERIO_D[2];
+           end
+           else
+               serial_in = 1'b1;
+       end
+
+
 
        reg [22:0] count_fe_clock;
        always @(posedge fe_clk) count_fe_clock <= count_fe_clock + 1;

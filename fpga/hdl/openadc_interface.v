@@ -152,7 +152,6 @@ module openadc_interface #(
     wire [2:0] fifo_first_error_state;
     wire       no_clip_errors;
     wire       no_gain_errors;
-    wire       clear_fifo_errors;
     wire       capture_done;
     wire [2:0] fifo_state;
     wire [2:0] ddr_state;

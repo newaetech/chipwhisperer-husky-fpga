@@ -27,6 +27,8 @@
 ../hdl/sad.v
 ../hdl/edge_trigger.v
 ../hdl/trigger_pulse_cdc.v
+../hdl/trigger_sequencer.v
+../hdl/trigger_chooser.v
 ../sim/vivado/xpm_memory.sv
 ../fpga-common/hdl/fifo_async.v
 ../fpga-common/hdl/fifo_sync.v
