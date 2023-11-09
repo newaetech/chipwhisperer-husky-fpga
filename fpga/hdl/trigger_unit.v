@@ -102,11 +102,12 @@ module trigger_unit(
 
    //ADC Trigger Stuff
    reg reset_arm;
+   wire trigger_level_match = (trigger == trigger_level_i);
    always @(posedge adc_clk) begin
       if (reset) begin
          reset_arm <= 0;
       end else begin
-         if (((trigger == trigger_level_i) & armed) | trigger_now) begin
+         if ((trigger_level_match & armed) | trigger_now) begin
             reset_arm <= 1;
          end else if ((arm_i == 0) & (capture_active_o == 0)) begin
             reset_arm <= 0;
