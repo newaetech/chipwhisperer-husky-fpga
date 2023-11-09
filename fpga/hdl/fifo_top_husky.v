@@ -454,6 +454,16 @@ module fifo_top_husky(
        .data_out_r     ()
    );
 
+   wire flushing_adc_usb;
+   cdc_simple U_flushing_adc_usb_cdc (
+       .reset          (reset),
+       .clk            (clk_usb),
+       .data_in        (flushing_adc),
+       .data_out       (flushing_adc_usb),
+       .data_out_r     ()
+   );
+
+
     always @(posedge adc_sampleclk) begin
        if (reset) begin
           arming <= 1'b0;
@@ -508,10 +518,11 @@ module fifo_top_husky(
         end
         else begin
             arm_usb_r <= arm_usb;
-            if (fast_fifo_empty_usb && slow_fifo_empty)
-                flushing <= 1'b0;
-            else if (arm_pulse_usb)
+            if (arm_pulse_usb)
                 flushing <= 1'b1;
+            // last condition is to ensure that CDC from flushing to flushing_adc had a chance to occur:
+            else if (fast_fifo_empty_usb && slow_fifo_empty && flushing_adc_usb)
+                flushing <= 1'b0;
         end
     end
 
@@ -638,7 +649,10 @@ module fifo_top_husky(
        end
 
        else begin
-          if (flushing_adc || ((state == pS_SEGMENT_DONE) && fast_fifo_empty)) begin
+          if (arm_pulse_adc)
+              fast_read_count <= 0;
+
+          else if (flushing_adc || ((state == pS_SEGMENT_DONE) && fast_fifo_empty)) begin
              slow_fifo_prewr <= 0;
              if (flushing_adc)
                 fast_read_count <= 0;
@@ -711,7 +725,7 @@ module fifo_top_husky(
     end
 
     assign slow_fifo_rd_fast = fifo_read_fifoen && (low_res? (slow_read_count == 2) : ((slow_read_count == 3) || (slow_read_count == 8)));
-    assign slow_fifo_rd = flushing || (fast_fifo_read_mode? slow_fifo_rd_fast : slow_fifo_rd_slow);
+    assign slow_fifo_rd = (flushing && ~slow_fifo_empty) || (fast_fifo_read_mode? slow_fifo_rd_fast : slow_fifo_rd_slow);
 
     reg [7:0] fifo_read_data_pre;
     always @(*) begin
@@ -748,7 +762,7 @@ module fifo_top_husky(
             first_read <= 1'b0;
             first_read_done <= 1'b1;
         end
-        else if (!slow_fifo_empty && !first_read_done) begin
+        else if (!slow_fifo_empty && !first_read_done && !flushing) begin
             first_read <= 1'b1;
         end
 
