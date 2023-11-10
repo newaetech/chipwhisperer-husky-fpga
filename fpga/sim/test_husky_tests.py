@@ -147,12 +147,13 @@ class GenericTest(object):
                 samples += job['offset']
         await ClockCycles(self.clk, self._capture_cycles(samples)) # UI clock is USB clock, so that's the dominant portion of the capture delay
         # then, wait for DDR to be done writing:
-        self.dut._log.info("%12s waiting for DDR writing to be done..." % job['name'])
-        not_done_writing = True
-        while not_done_writing:
-            await ClockCycles(self.clk, 50)
-            not_done_writing = not await self.harness.ddr_done_writing()
-        self.dut._log.info("%12s DDR write done" % job['name'])
+        if self.harness.is_pro:
+            self.dut._log.info("%12s waiting for DDR writing to be done..." % job['name'])
+            not_done_writing = True
+            while not_done_writing:
+                await ClockCycles(self.clk, 50)
+                not_done_writing = not await self.harness.ddr_done_writing()
+            self.dut._log.info("%12s DDR write done" % job['name'])
 
     def get_downstream_trigger(self, job) -> list:
         """ If a job triggers another job, returns that second job's Test
@@ -278,7 +279,9 @@ class ADCTest(GenericTest):
         self.max_segment_cycles = None
         self.segment_time_factor = 4
         fifo_watch_thread = cocotb.start_soon(self.fifo_watch())
-        ddr_watch_thread = cocotb.start_soon(self.ddr_model_watch())
+        if harness.is_pro:
+            ddr_watch_thread = cocotb.start_soon(self.ddr_model_watch())
+        trigger_watch_thread = cocotb.start_soon(self.trigger_ready_watch())
         self.allowed_downstream_triggers = ['LA', 'trace', 'glitch']
 
     async def _job_setup(self) -> dict:
@@ -311,6 +314,11 @@ class ADCTest(GenericTest):
                     wait_samples = random.randint(min_wait_samples, min_wait_samples*self.segment_time_factor)
                     segment_times.append(wait_samples)
                     capture_samples_time += wait_samples
+            if presamples > 0 and not self.harness.is_pro and samples % 3:
+                if samples < 3:
+                    samples = 3
+                else:
+                    samples -= (samples %3)
         if random.randint(0,1) or presamples or segments > 1:
             downsample = 1  # downsamples with presamples or segments is not allowed
         else:
@@ -393,7 +401,10 @@ class ADCTest(GenericTest):
             min_cycles = self._capture_cycles(presamples + 1)
             wait_cycles = random.randint(min_cycles, min_cycles*4)
             self.dut._log.info('%12s pre-trigger waiting %d cycles' % (job['name'], wait_cycles))
-            await ClockCycles(self.clk, wait_cycles)
+            await ClockCycles(self.dut.PLL_CLK1, wait_cycles) # note: Pro used self.clk (USB clock), why did that work?!?
+        if not self.harness.is_pro:
+            # on Husky the FIFO flushing can be *slow*, so wait more:
+            await ClockCycles(self.clk, 100)
 
     def _capture_cycles(self, cycles) -> int:
         return math.ceil(self.harness.adc_period / self.harness.usb_period * cycles)
@@ -426,6 +437,13 @@ class ADCTest(GenericTest):
             await RisingEdge(self.dut.U_dut.oadc.U_ddr.U_ddr3_model.dropped_read_request)
             self.harness.inc_error()
             self.dut._log.error('Internal FIFO/DDR error(s): DDR dropped read request')
+
+    async def trigger_ready_watch(self) -> None:
+        while True:
+            await RisingEdge(self.dut.U_dut.oadc.tu_inst.trigger_level_match)
+            if not self.dut.U_dut.oadc.tu_inst.armed_and_ready.value:
+                self.harness.inc_error()
+                self.dut._log.error('Trigger before armed_and_ready! (testbench error)')
 
 
     def get_downstream_trigger(self, job) -> list:
@@ -463,7 +481,8 @@ class LATest(GenericTest):
         self.dut_job_signal = dut_job_signal
         self.checker = LACapture(dut, harness, dut_reading_signal)
         self.name = 'LA'
-        preddr_watch_thread = cocotb.start_soon(self.preddr_watch())
+        if harness.is_pro:
+            preddr_watch_thread = cocotb.start_soon(self.preddr_watch())
 
     async def _job_setup(self) -> dict:
         samples = random.randint(self.capture_min, self.capture_max)
@@ -548,7 +567,8 @@ class TraceTest(GenericTest):
         self.dut_job_signal = dut_job_signal
         self.checker = TraceCapture(dut, harness, dut_reading_signal)
         self.name = 'trace'
-        preddr_watch_thread = cocotb.start_soon(self.preddr_watch())
+        if harness.is_pro:
+            preddr_watch_thread = cocotb.start_soon(self.preddr_watch())
 
     async def _job_setup(self) -> dict:
         samples = random.randint(self.capture_min, self.capture_max)

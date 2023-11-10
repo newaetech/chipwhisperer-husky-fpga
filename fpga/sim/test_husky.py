@@ -7,13 +7,17 @@ from cocotb.log import SimLogFormatter
 #from cocotb.regression import TestFactory
 import random
 import math
-from cw310_registers import Registers
 from test_husky_tests import ADCTest, LATest, TraceTest, GlitchTest
 import numpy as np
 import logging
 import os
 import re
 import io
+
+if int(os.getenv('CW310', '0')):
+    from cw310_registers import Registers
+else:
+    from husky_registers import Registers
 
 # Note: this could also be place in individual test functions by replacing root_logger by dut._log.
 root_logger = logging.getLogger()
@@ -55,6 +59,7 @@ class Harness(object):
         usb_clock_thread = cocotb.start_soon(Clock(dut.clk_usb, self.usb_period, units="ns").start())
         adc_clock_thread = cocotb.start_soon(Clock(dut.PLL_CLK1, self.adc_period, units="ns").start())
         ui_clock_thread = cocotb.start_soon(Clock(dut.ui_clk, 6, units="ns").start())
+        self.is_pro = int(os.getenv('PRO', '0'))
         self.dut.errors.value = 0
 
     def queue_push(self, job):
@@ -293,9 +298,9 @@ async def reg_rw(dut, wait_cycles=1000):
     harness = Harness(dut, registers)
     await harness.reset()
     await ClockCycles(dut.clk_usb, 10)
-    reg_thread1 = cocotb.start_soon(harness.register_rw_thread(self.harness.reg_addr['ECHO_ADDR'], 8))
-    reg_thread2 = cocotb.start_soon(harness.register_rw_thread(self.harness.reg_addr['SAMPLES_ADDR'], 4))
-    reg_thread4 = cocotb.start_soon(harness.register_rw_thread(self.harness.reg_addr['GAIN_ADDR'], 1))
+    reg_thread1 = cocotb.start_soon(harness.register_rw_thread(harness.reg_addr['ECHO_ADDR'], 8))
+    reg_thread2 = cocotb.start_soon(harness.register_rw_thread(harness.reg_addr['SAMPLES_ADDR'], 4))
+    reg_thread4 = cocotb.start_soon(harness.register_rw_thread(harness.reg_addr['GAIN_ADDR'], 1))
     await ClockCycles(dut.clk_usb, wait_cycles)
 
 

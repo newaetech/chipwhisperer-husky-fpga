@@ -246,9 +246,10 @@ class ADCCapture(GenericCapture):
         if self.dut.U_dut.oadc.U_fifo.fast_fifo_empty.value == 0:
             self.harness.inc_error()
             self.dut._log.error('%12s fast FIFO not empty after reading all samples.' % job_name)
-        if self.dut.U_dut.oadc.U_fifo.preddr_fifo_empty.value == 0:
-            self.harness.inc_error()
-            self.dut._log.error('%12s pre-DDR FIFO not empty after reading all samples.' % job_name)
+        if self.harness.is_pro:
+            if self.dut.U_dut.oadc.U_fifo.preddr_fifo_empty.value == 0:
+                self.harness.inc_error()
+                self.dut._log.error('%12s pre-DDR FIFO not empty after reading all samples.' % job_name)
         ## TODO: temporarily commented out because last word is left unread, due to the first word fallthrough nature of the FIFO.
         #if self.dut.U_dut.oadc.U_fifo.postddr_fifo_empty.value == 0:
         #    self.harness.inc_error()

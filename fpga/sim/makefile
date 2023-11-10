@@ -78,6 +78,20 @@ ifeq ($(VIVADO_PATH),)
   endif
 endif
 
+ifeq ($(VARIANT),PRO)
+    TOP=cwhusky_cw310_cocowrapper
+    CMDFILE=cmdfile_cw310_pro
+    EXTRARGS=-DCW310 -DPRO -DREGULARDDR -D$(DDR_MODEL_WRITES)
+    CW310=1
+    PRO=1
+else
+    TOP=cwhusky_top_cocowrapper
+    CMDFILE=cmdfile
+    EXTRARGS=
+    CW310=0
+    PRO=0
+endif
+
 compile_sad:
 	iverilog \
 	../hdl/sad.v \
@@ -214,29 +228,28 @@ compile:
 	cwhusky_tb.v \
 
 compile_coco:
-	iverilog -ccmdfile_coco \
+	iverilog -c$(CMDFILE) \
 	-I../hdl/ \
 	-I../tracewhisperer/hdl/ \
 	-g2005-sv \
 	-gsupported-assertions \
 	-y/$(VIVADO_PATH)/$(VIVADO_VERSION)/ids_lite/ISE/verilog/src/unisims/ \
-	-s cwhusky_cw310_cocowrapper \
+	-s $(TOP) \
 	-s glbl \
 	-Wportbind \
 	-Wselect-range \
 	-D$(FIFOSIZE) \
-	-D$(DDR_MODEL_WRITES) \
+	$(EXTRARGS) \
 	-DTRACE \
 	-DNOMIG \
-	-DCW310 \
-	-DPRO \
 	-DNOXILINXFIFO \
+	-D$(VARIANT) \
 	-D$(FAST_FIFO_SIM) \
-	-DREGULARDDR \
 	-DCOCOTB_SIM=1 \
-	-P cwhusky_cw310_cocowrapper.pDUMP=$(DUMP) \
+	-P $(TOP).pDUMP=$(DUMP) \
 	-o $(EXEFILE) \
-	../vivado/cw310/cwhusky_cw310_cocowrapper.v \
+	../hdl/$(TOP).v \
+
 
 cwlite:
 	iverilog -ccmdfile_cwlite \
@@ -335,8 +348,10 @@ run:
 # note that -M and -m arguments must immediately follow vvp, otherwise Python doesn't start!
 run_coco:
 	COCOTB_RESOLVE_X=RANDOM \
-	TOPLEVEL=cwhusky_cw310_cocowrapper \
+	TOPLEVEL=$(TOP) \
 	TOPLEVEL_LANG=verilog \
+	PRO=$(PRO) \
+	CW310=$(CW310) \
 	NUM_CAPTURES=$(NUM_CAPTURES) \
 	LA_CAPTURE=$(LA_CAPTURE) \
 	TRACE_CAPTURE=$(TRACE_CAPTURE) \

@@ -12,6 +12,7 @@ parser = argparse.ArgumentParser()
 group = parser.add_mutually_exclusive_group()
 group.add_argument("--runs", type=int, help="Number of iterations.", default=1)
 group.add_argument("--test", help="Testcase to run")
+parser.add_argument("--variant", help="Husky variant (regular/plus/pro)", default='regular')
 parser.add_argument("--seed", type=int, help="Seed to use when running a single test with --test.")
 parser.add_argument("--tests", help="Run all tests whose name contains TESTS", default='')
 parser.add_argument("--exclude", help="Exclude tests whose name contains TESTS", default='')
@@ -224,13 +225,23 @@ if (args.test):
       print_tests()
 
 
+if args.variant == 'plus':
+    variant = 'VARIANT=PLUS'
+elif args.variant == 'pro':
+    variant = 'VARIANT=PRO'
+elif args.variant == 'regular':
+    variant = 'VARIANT=REGULAR'
+else:
+    raise ValueError('Variant not recognized (%s)' % args.variant)
+
+
 stat_regex = re.compile(r'TESTS=(\d+) PASS=(\d+) FAIL=(\d+) SKIP=(\d+)')
 test_regex = re.compile(args.tests)
 exclude_regex = re.compile(args.exclude)
 
 exefile = 'coco.vvp'
 outfile = open('coco_compile.out', 'w')
-makeargs = ['make', 'compile_coco', 'EXEFILE=%s' % exefile]
+makeargs = ['make', 'compile_coco', variant, 'EXEFILE=%s' % exefile]
 if args.dump:
     makeargs.append('DUMP=1')
 if args.fast_fifo_sim:
@@ -270,6 +281,7 @@ for test in tests:
           # not easy/clean to get cocotb-generated seed from logfile, so force ours instead
           seed = random.randint(0, 2**31-1)
       makeargs.append("RANDOM_SEED=%d" % seed)
+      makeargs.append(variant)
 
       run_test = True
       # build make command:
