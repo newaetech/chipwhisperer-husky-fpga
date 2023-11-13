@@ -222,9 +222,10 @@ class ADCCapture(GenericCapture):
     async def _initiate_read(self) -> None:
         #self.dut._log.info("issuing initiate read command...")
         # 1. initiate the read:
-        await self.harness.registers.write(self.reg_addr['REG_DDR_START_READ'], [0])
-        await self.harness.registers.write(self.reg_addr['REG_DDR_START_READ'], [1])
-        await ClockCycles(self.clk, 50)
+        if self.harness.is_pro:
+            await self.harness.registers.write(self.reg_addr['REG_DDR_START_READ'], [0])
+            await self.harness.registers.write(self.reg_addr['REG_DDR_START_READ'], [1])
+            await ClockCycles(self.clk, 50)
         await self.harness.wait_flush('ADC') # if previous read wasn't complete, wait for post-DDR to get flushed
         # wait for read FIFO to be not empty:
         #self.dut._log.info("waiting for FIFO to not be empty...")
@@ -236,6 +237,12 @@ class ADCCapture(GenericCapture):
     async def _read_samples(self, job) -> list:
         samples = self._limit_read(job)
         bits_per_sample = job['bits_per_sample']
+        downsample = job['downsample']
+        # if capture is downsampled, we could read it too fast and underflow:
+        if downsample > 1:
+            cycles = math.ceil(self.harness.adc_period / self.harness.usb_period * samples * downsample * bits_per_sample/8)
+            self.dut._log.info('XXX: cycles = %d' % cycles)
+            await ClockCycles(self.clk, cycles)
         #self.dut._log.info("starting the read (%0d samples)" % samples)
         self.raw_read_data = await self.read_adc_data(samples, bits_per_sample)
         data = self.processHuskyData(samples, bytearray(self.raw_read_data))
@@ -243,6 +250,11 @@ class ADCCapture(GenericCapture):
 
     async def _check_fifo_errors(self, job_name) -> None:
         # TODO: replace internal signal checks with a register status read
+        # give a chance for FSM to return to idle (e.g. in case where we don't read all the samples)
+        idle = False
+        while not idle:
+            raw = (await self.harness.registers.read(self.reg_addr['FIFO_STATE'], 1))[0]
+            idle = (raw & 0x03) == 0
         if self.dut.U_dut.oadc.U_fifo.fast_fifo_empty.value == 0:
             self.harness.inc_error()
             self.dut._log.error('%12s fast FIFO not empty after reading all samples.' % job_name)
@@ -321,9 +333,10 @@ class LACapture(GenericCapture):
     async def _initiate_read(self) -> None:
         #self.dut._log.info("issuing initiate read command...")
         # 1. initiate the read:
-        await self.harness.registers.write(self.reg_addr['REG_DDR_START_READ'], [0])
-        await self.harness.registers.write(self.reg_addr['REG_DDR_START_READ'], [2])
-        await ClockCycles(self.clk, 50)
+        if self.harness.is_pro:
+            await self.harness.registers.write(self.reg_addr['REG_DDR_START_READ'], [0])
+            await self.harness.registers.write(self.reg_addr['REG_DDR_START_READ'], [2])
+            await ClockCycles(self.clk, 50)
         await self.harness.wait_flush('LA') # if previous read wasn't complete, wait for post-DDR to get flushed
         # wait for read FIFO to be not empty:
         #self.dut._log.info("waiting for FIFO to not be empty...")
@@ -432,9 +445,10 @@ class TraceCapture(GenericCapture):
     async def _initiate_read(self) -> None:
         #self.dut._log.info("issuing initiate read command...")
         # 1. initiate the read:
-        await self.harness.registers.write(self.reg_addr['REG_DDR_START_READ'], [0])
-        await self.harness.registers.write(self.reg_addr['REG_DDR_START_READ'], [4])
-        await ClockCycles(self.clk, 50)
+        if self.harness.is_pro:
+            await self.harness.registers.write(self.reg_addr['REG_DDR_START_READ'], [0])
+            await self.harness.registers.write(self.reg_addr['REG_DDR_START_READ'], [4])
+            await ClockCycles(self.clk, 50)
         await self.harness.wait_flush('trace') # if previous read wasn't complete, wait for post-DDR to get flushed
         # wait for read FIFO to be not empty:
         #self.dut._log.info("waiting for FIFO to not be empty...")

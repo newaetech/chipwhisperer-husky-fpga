@@ -106,6 +106,11 @@ class GenericTest(object):
         """
         pass
 
+    async def _idlecheck(self) -> None:
+        """ Check whether DUT is idle, if necessary.
+        """
+        pass
+
     async def _initial_setup(self) -> None:
         """ Initial DUT setup to do prior to the main dispatch loop.
         """
@@ -173,6 +178,7 @@ class GenericTest(object):
         await self._initial_setup()
         await self._dispatch_delay()
         for cap in range(self.num_captures):
+            await self._idlecheck()
             job_name = self.name + "_job_" + str(self.dispatch_id)
             self.dut_job_signal.value = self.dispatch_id
             job = await self._job_setup()
@@ -391,6 +397,14 @@ class ADCTest(GenericTest):
         await ClockCycles(self.clk, untrigger_wait)
         self._untrigger(job)
 
+    async def _idlecheck(self) -> None:
+        self.dut._log.info('waiting for DUT to be idle before setting up next job')
+        idle = False
+        while not idle:
+            raw = (await self.registers.read(self.reg_addr['FIFO_STATE'], 1))[0]
+            idle = (raw & 0x03) == 0
+
+
     def _untrigger(self, job) -> None:
         if job['trigger_type'] == 'io4':
             self.dut.target_io4.value = 0
@@ -403,8 +417,14 @@ class ADCTest(GenericTest):
             self.dut._log.info('%12s pre-trigger waiting %d cycles' % (job['name'], wait_cycles))
             await ClockCycles(self.dut.PLL_CLK1, wait_cycles) # note: Pro used self.clk (USB clock), why did that work?!?
         if not self.harness.is_pro:
-            # on Husky the FIFO flushing can be *slow*, so wait more:
-            await ClockCycles(self.clk, 100)
+            # on Husky the FIFO flushing can be *slow*, so explicitely check on FIFO empty flag:
+            #await ClockCycles(self.clk, 100)
+            empty = False
+            while not empty:
+                await ClockCycles(self.clk, 50)
+                empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 2))[1] & 32
+            await ClockCycles(self.clk, 5) # bit more time for armed_and_ready to rise
+
 
     def _capture_cycles(self, cycles) -> int:
         return math.ceil(self.harness.adc_period / self.harness.usb_period * cycles)
