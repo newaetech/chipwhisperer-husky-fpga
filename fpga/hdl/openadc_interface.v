@@ -971,6 +971,7 @@ module openadc_interface #(
           .capture_done             (capture_done),
           .armed_and_ready          (armed_and_ready),
           .state                    (fifo_state),
+          .flushing                 (adc_flushing),
 
           .slow_fifo_wr             (slow_fifo_wr),
           .slow_fifo_rd             (slow_fifo_rd),
