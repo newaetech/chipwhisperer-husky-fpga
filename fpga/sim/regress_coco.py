@@ -103,7 +103,7 @@ tests.append(dict(name  = 'big_capture',
              NUM_CAPTURES = 2,
              description = 'All sources, larger captures.'))
 
-tests.append(dict(name  = 'huge_adc_capture',
+tests.append(dict(name  = 'huge_adc_capture_pro',
              testcase = 'capture',
              frequency = 7,
              MIN_SIZE = 12000,
@@ -112,12 +112,26 @@ tests.append(dict(name  = 'huge_adc_capture',
              LA_CAPTURE = 0,
              TRACE_CAPTURE = 0,
              FIFOSIZE = "TINYFIFO",
+             VARIANT = 'pro', # will only run with --variant=pro
              # with TINY FIFO, for ADC we have:
              # fast FIFO: 1024 samples
              # pre DDR: 512*64/12 = 2730 samples
              # post DDR: 512*64/12 = 2730 samples
              # DDR capacity: selectable via TINYDDR, 256*64/12 = 1365 or 64K*64/12 = 349525 samples
              description = 'ADC capture exceeding pre-DDR FIFO size.'))
+
+tests.append(dict(name  = 'huge_adc_capture_regular',
+             testcase = 'capture',
+             frequency = 7,
+             MIN_SIZE = 3895,
+             MAX_SIZE = 4095,
+             NUM_CAPTURES = 1,
+             LA_CAPTURE = 0,
+             TRACE_CAPTURE = 0,
+             FIFOSIZE = "TINYFIFO",
+             VARIANT = 'regular', # will only run with --variant=regular
+             description = 'ADC capture exceeding fast FIFO size.'))
+
 
 tests.append(dict(name  = 'huge_la_capture',
              testcase = 'capture',
@@ -301,6 +315,9 @@ for test in tests:
                run_test = False
             elif i % test[key]:
                run_test = False
+         elif key == 'VARIANT':
+             if test[key] != args.variant:
+                 run_test = False
          else:
             if type(test[key]) == list:
                value = random.randint(test[key][0], test[key][1])

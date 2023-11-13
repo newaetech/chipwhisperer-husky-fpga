@@ -50,7 +50,7 @@ class GenericCapture(object):
         """
         self.dut._log.error("%12s: _read_samples() must be implemented in child class." % self.name)
 
-    async def _check_fifo_errors(self, job_name) -> None:
+    async def _check_fifo_errors(self, job) -> None:
         """ Check FIFO status and errors. Meant to be called after reading all
         samples. Verifies that FIFO is empty.
         """
@@ -120,7 +120,7 @@ class GenericCapture(object):
             self.harness.read_lock_release()
             self.dut._log.info("%12s read_lock released" % job_name)
             self.dut_reading_signal.value = 0
-            await self._check_fifo_errors(job_name)
+            await self._check_fifo_errors(job)
             self._check_samples(job, data)
             self.results.put_nowait({"errors": self.errors})
             if self.errors:
@@ -140,6 +140,7 @@ class GenericCapture(object):
         else:
             samples = random.randint(1, samples-1)
             self.dut._log.info("%12s reducing sample read count to %d" % (job['name'], samples))
+            job['limited_reads'] = True
             return samples
 
     def find_bad_words(self, job):
@@ -248,9 +249,13 @@ class ADCCapture(GenericCapture):
         data = self.processHuskyData(samples, bytearray(self.raw_read_data))
         return data
 
-    async def _check_fifo_errors(self, job_name) -> None:
+    async def _check_fifo_errors(self, job) -> None:
         # TODO: replace internal signal checks with a register status read
         # give a chance for FSM to return to idle (e.g. in case where we don't read all the samples)
+        if job['limited_reads']:
+            # nothing to check because FIFOs are probably not empty
+            return
+        job_name = job['name']
         idle = False
         while not idle:
             raw = (await self.harness.registers.read(self.reg_addr['FIFO_STATE'], 1))[0]
@@ -387,8 +392,9 @@ class LACapture(GenericCapture):
         num_full_words = int(len(raw)/9*8)
         return words[:num_full_words]
 
-    async def _check_fifo_errors(self, job_name) -> None:
+    async def _check_fifo_errors(self, job) -> None:
         # TODO: replace internal signal checks with a register status read
+        job_name = job['name']
         if self.dut.U_dut.U_la_converter.fifo_empty.value == 0:
             self.harness.inc_error()
             self.dut._log.error('%12s pre-DDR FIFO not empty after reading all samples.' % job_name)
@@ -491,8 +497,9 @@ class TraceCapture(GenericCapture):
         num_full_words = int(len(raw)/18*8)
         return words[:num_full_words]
 
-    async def _check_fifo_errors(self, job_name) -> None:
+    async def _check_fifo_errors(self, job) -> None:
         # TODO: replace internal signal checks with a register status read
+        job_name = job['name']
         if self.dut.U_dut.U_trace_converter.fifo_empty.value == 0:
             self.harness.inc_error()
             self.dut._log.error('%12s pre-DDR FIFO not empty after reading all samples.' % job_name)

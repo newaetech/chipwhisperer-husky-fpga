@@ -349,6 +349,7 @@ class ADCTest(GenericTest):
         job['segment_cycles'] = segment_cycles
         job['segment_times'] = segment_times
         job['capture_time_us'] = self._capture_time_us(capture_samples_time)
+        job['limited_reads'] = False
         return job
 
     def max_job_time(self) -> int:
