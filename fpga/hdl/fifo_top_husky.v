@@ -68,6 +68,7 @@ module fifo_top_husky(
     output reg          capture_done,
     output reg          armed_and_ready,
     output reg [2:0]    state,
+    output reg          flushing,
 
     // for debug only:
     output wire         slow_fifo_wr,
@@ -116,7 +117,6 @@ module fifo_top_husky(
     reg                 arming;
     reg                 capture_go_r;
     reg                 capture_go_r2;
-    reg                 flushing;
     wire                flushing_adc;
 
     reg [1:0]           fast_read_count;
