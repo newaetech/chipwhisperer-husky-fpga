@@ -151,8 +151,8 @@ cwhusky_top U_dut (
     .clk_usb            (clk_usb      ),
     .ADC_clk_fbp        (PLL_CLK1     ),
     .ADC_clk_fbn        (1'b0         ),
-    //.glitch_out         (glitch_out   ), TODO?!?
-    //.glitch_clk         (glitch_clk   ), TODO?!?
+    .glitch_out         (glitch_out   ),
+    .glitch_clk         (glitch_clk   ),
     //.ADC_DP             (6'b0         ),
     //.ADC_DN             (6'b0         ),
     //.ADC_CLKP           (             ),

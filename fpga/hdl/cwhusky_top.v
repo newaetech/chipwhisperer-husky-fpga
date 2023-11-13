@@ -30,6 +30,13 @@ module cwhusky_top(
     output wire        LED_ARMED,
     output wire        LED_CAP,
 
+`ifdef __ICARUS__
+    // simulation only:
+    output wire         glitch_out,
+    output wire         glitch_clk,
+`endif
+
+
     /* FPGA - USB Interface */
     inout wire [7:0]    USB_Data,
     input wire [7:0]    USB_Addr,
@@ -117,6 +124,13 @@ module cwhusky_top(
     parameter pSEQUENCER_NUM_TRIGGERS = 2;
 `endif
     parameter pSEQUENCER_COUNTER_WIDTH = 16;
+
+
+`ifdef __ICARUS__
+   assign glitch_out = glitchclk;
+   assign glitch_clk = glitch_mmcm1_clk_out;
+`endif
+
 
    wire         target_npower;
    wire         stream_segment_available;

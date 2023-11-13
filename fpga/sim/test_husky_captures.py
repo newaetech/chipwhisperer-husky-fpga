@@ -578,7 +578,10 @@ class GlitchCapture(GenericCapture):
         """ Ensures there are glitches when there are supposed to be.
         """
         if job['trigger_type'] == 'manual':
-            actual_offset = 0
+            if self.harness.is_pro: # offset difference is from USB write timing differences:
+                actual_offset = 0
+            else:
+                actual_offset = 3
         else:
             actual_offset = job['offset'] + 3
         await ClockCycles(self.glitch_clock, 3 + actual_offset)
