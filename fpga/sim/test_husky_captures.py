@@ -341,9 +341,9 @@ class LACapture(GenericCapture):
             await self.harness.registers.write(self.reg_addr['REG_DDR_START_READ'], [0])
             await self.harness.registers.write(self.reg_addr['REG_DDR_START_READ'], [2])
             await ClockCycles(self.clk, 50)
-            await self.harness.wait_flush('LA') # if previous read wasn't complete, wait for post-DDR to get flushed
         else:
             await self.harness.registers.write(self.reg_addr['REG_FAST_FIFO_RD_EN'], [1])
+        await self.harness.wait_flush('LA') # if previous read wasn't complete, wait for post-DDR to get flushed
 
         # wait for read FIFO to be not empty:
         #self.dut._log.info("waiting for FIFO to not be empty...")
@@ -375,16 +375,12 @@ class LACapture(GenericCapture):
         return data
 
     async def _read_samples_regular(self, job) -> list:
-        samples = self._limit_read(job) # TODO-temp
-        samples = job['samples']
+        samples = self._limit_read(job)
         bits_per_sample = job['bits_per_sample']
         bytes_to_read = samples*2
-        #self.dut._log.info('XXX reading %d bytes' % bytes_to_read)
         data = list(await self.harness.registers.read(self.reg_addr['REG_SNIFF_FIFO_RD'], bytes_to_read))
         self.raw_read_data = data
-        #self.dut._log.info('XXX raw data: %s' % data)
         data = self.process9bitRawDataRegular(data)
-        #self.dut._log.info('XXX processed data: %s' % data)
         return data
 
 
@@ -494,20 +490,49 @@ class TraceCapture(GenericCapture):
             await self.harness.registers.write(self.reg_addr['REG_DDR_START_READ'], [0])
             await self.harness.registers.write(self.reg_addr['REG_DDR_START_READ'], [4])
             await ClockCycles(self.clk, 50)
+        else:
+            await self.harness.registers.write(self.reg_addr['REG_FAST_FIFO_RD_EN'], [1])
         await self.harness.wait_flush('trace') # if previous read wasn't complete, wait for post-DDR to get flushed
         # wait for read FIFO to be not empty:
         #self.dut._log.info("waiting for FIFO to not be empty...")
         empty = True
         while empty:
             await ClockCycles(self.clk, 50)
-            empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 2))[1] & 32
+            if self.harness.is_pro:
+                empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 2))[1] & 32
+            else:
+                empty = (await self.harness.registers.read(self.reg_addr['REG_SNIFF_FIFO_STAT'], 1))[0] & 0x01
 
     async def _read_samples(self, job) -> list:
-        samples = self._limit_read(job)
-        bytes_to_read = math.ceil(samples*18/8)
-        self.raw_read_data = list(await self.harness.registers.read(self.reg_addr['ADCREAD_ADDR'], bytes_to_read))
-        data = self.process18bitRawData(self.raw_read_data)
+        if not self.harness.is_pro:
+            data = await self._read_samples_regular(job)
+        else:
+            samples = self._limit_read(job)
+            bytes_to_read = math.ceil(samples*18/8)
+            self.raw_read_data = list(await self.harness.registers.read(self.reg_addr['ADCREAD_ADDR'], bytes_to_read))
+            data = self.process18bitRawData(self.raw_read_data)
         return data
+
+    async def _read_samples_regular(self, job) -> list:
+        samples = self._limit_read(job)
+        bytes_to_read = samples * 4
+        self.raw_read_data = list(await self.harness.registers.read(self.reg_addr['REG_SNIFF_FIFO_RD'], bytes_to_read))
+        data = self.processRawDataRegular(self.raw_read_data)
+        return data
+
+    @staticmethod
+    def processRawDataRegular(raw, verbose=False):
+        """ Ramp pattern comes out different on the regular Husky (because it's read directly from the
+        shared FIFO). Every four bytes contains a single 18-bit counter sample so it's pretty straightfoward
+        as long as you drop the right byte and order and index correctly.
+        """
+        words = []
+        for i in range(len(raw)//4):
+            bignum = int.from_bytes(raw[i*4+1:(i+1)*4], byteorder='little')
+            word = bignum & 0x3ffff
+            words.append(word)
+        return words
+
 
     @staticmethod
     def process18bitRawData(raw, verbose=False):
@@ -539,9 +564,10 @@ class TraceCapture(GenericCapture):
     async def _check_fifo_errors(self, job) -> None:
         # TODO: replace internal signal checks with a register status read
         job_name = job['name']
-        if self.dut.U_dut.U_trace_converter.fifo_empty.value == 0:
-            self.harness.inc_error()
-            self.dut._log.error('%12s pre-DDR FIFO not empty after reading all samples.' % job_name)
+        if self.harness.is_pro:
+            if self.dut.U_dut.U_trace_converter.fifo_empty.value == 0:
+                self.harness.inc_error()
+                self.dut._log.error('%12s pre-DDR FIFO not empty after reading all samples.' % job_name)
         ## TODO: temporarily commented out because last word is left unread, due to the first word fallthrough nature of the FIFO.
         #if self.dut.U_dut.oadc.U_fifo.postddr_fifo_empty.value == 0:
         #    self.harness.inc_error()
