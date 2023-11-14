@@ -503,7 +503,9 @@ module reg_la #(
 
       else begin
          capturing_r <= capturing;
-         if (capture_go) begin
+         if (fifo_flush)
+             capturing <= 1'b0;
+         else if (capture_go) begin
             capture_count <= 0;
             capturing <= 1'b1;
             ticktock <= 1'b0;
