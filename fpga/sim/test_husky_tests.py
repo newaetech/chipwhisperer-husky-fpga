@@ -510,7 +510,9 @@ class LATest(GenericTest):
         if samples % 2: 
             # in both 4- and 9-bit mode, samples are collected two at a time, so enforce it to be an even number
             samples -= 1
-        if random.randint(0,1):
+        if not self.harness.is_pro:
+            bits_per_sample = 9
+        elif random.randint(0,1):
             bits_per_sample = 8 # not a typo: in four-bit mode the ramp pattern is 8 bits long
         else:
             bits_per_sample = 9

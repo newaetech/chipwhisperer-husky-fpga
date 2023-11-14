@@ -133,7 +133,7 @@ tests.append(dict(name  = 'huge_adc_capture_regular',
              description = 'ADC capture exceeding fast FIFO size.'))
 
 
-tests.append(dict(name  = 'huge_la_capture',
+tests.append(dict(name  = 'huge_la_capture_pro',
              testcase = 'capture',
              frequency = 7,
              MIN_SIZE = 12000,
@@ -141,11 +141,28 @@ tests.append(dict(name  = 'huge_la_capture',
              NUM_CAPTURES = 1,
              ADC_CAPTURE = 0,
              TRACE_CAPTURE = 0,
+             VARIANT = 'pro', # will only run with --variant=pro
              FIFOSIZE = "TINYFIFO",
              # with TINY FIFO, for LA we have:
              # pre DDR: 512*64/9 = 3640 samples
              # DDR capacity: selectable via TINYDDR, 256*64/12 = 1365 or 64K*64/12 = 349525 samples
              description = 'LA capture exceeding pre-DDR FIFO size.'))
+
+tests.append(dict(name  = 'huge_la_capture_regular',
+             testcase = 'capture',
+             frequency = 7,
+             MIN_SIZE = 3096,
+             MAX_SIZE = 4096,
+             NUM_CAPTURES = 1,
+             ADC_CAPTURE = 0,
+             TRACE_CAPTURE = 0,
+             VARIANT = 'regular', # will only run with --variant=regular
+             FIFOSIZE = "TINYFIFO",
+             # with TINY FIFO, for LA we have:
+             # pre DDR: 512*64/9 = 3640 samples
+             # DDR capacity: selectable via TINYDDR, 256*64/12 = 1365 or 64K*64/12 = 349525 samples
+             description = 'LA capture exceeding pre-DDR FIFO size.'))
+
 
 tests.append(dict(name  = 'huge_all_capture',
              testcase = 'capture',

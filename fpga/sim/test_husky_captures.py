@@ -242,7 +242,6 @@ class ADCCapture(GenericCapture):
         # if capture is downsampled, we could read it too fast and underflow:
         if downsample > 1:
             cycles = math.ceil(self.harness.adc_period / self.harness.usb_period * samples * downsample * bits_per_sample/8)
-            self.dut._log.info('XXX: cycles = %d' % cycles)
             await ClockCycles(self.clk, cycles)
         #self.dut._log.info("starting the read (%0d samples)" % samples)
         self.raw_read_data = await self.read_adc_data(samples, bits_per_sample)
@@ -342,28 +341,52 @@ class LACapture(GenericCapture):
             await self.harness.registers.write(self.reg_addr['REG_DDR_START_READ'], [0])
             await self.harness.registers.write(self.reg_addr['REG_DDR_START_READ'], [2])
             await ClockCycles(self.clk, 50)
-        await self.harness.wait_flush('LA') # if previous read wasn't complete, wait for post-DDR to get flushed
+            await self.harness.wait_flush('LA') # if previous read wasn't complete, wait for post-DDR to get flushed
+        else:
+            await self.harness.registers.write(self.reg_addr['REG_FAST_FIFO_RD_EN'], [1])
+
         # wait for read FIFO to be not empty:
         #self.dut._log.info("waiting for FIFO to not be empty...")
         empty = True
         while empty:
             await ClockCycles(self.clk, 50)
-            empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 2))[1] & 32
+            if self.harness.is_pro:
+                empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 2))[1] & 32
+            else:
+                empty = (await self.harness.registers.read(self.reg_addr['REG_SNIFF_FIFO_STAT'], 1))[0] & 0x01
 
     async def _read_samples(self, job) -> list:
-        samples = self._limit_read(job)
-        bits_per_sample = job['bits_per_sample']
-        if bits_per_sample == 8:
-            bytes_to_read = math.ceil(samples/2)
-        elif bits_per_sample == 9:
-            bytes_to_read = math.ceil(samples*9/8)
+        if not self.harness.is_pro:
+            data = await self._read_samples_regular(job)
         else:
-            raise ValueError("Unsupported capture width")
-        data = list(await self.harness.registers.read(self.reg_addr['ADCREAD_ADDR'], bytes_to_read))
-        self.raw_read_data = data
-        if bits_per_sample == 9:
-            data = self.process9bitRawData(data)
+            samples = self._limit_read(job)
+            bits_per_sample = job['bits_per_sample']
+            if bits_per_sample == 8:
+                bytes_to_read = math.ceil(samples/2)
+            elif bits_per_sample == 9:
+                bytes_to_read = math.ceil(samples*9/8)
+            else:
+                raise ValueError("Unsupported capture width")
+            self.dut._log.info('YOYOYO reading %d bytes' % bytes_to_read)
+            data = list(await self.harness.registers.read(self.reg_addr['ADCREAD_ADDR'], bytes_to_read))
+            self.raw_read_data = data
+            if bits_per_sample == 9:
+                data = self.process9bitRawData(data)
         return data
+
+    async def _read_samples_regular(self, job) -> list:
+        samples = self._limit_read(job) # TODO-temp
+        samples = job['samples']
+        bits_per_sample = job['bits_per_sample']
+        bytes_to_read = samples*2
+        #self.dut._log.info('XXX reading %d bytes' % bytes_to_read)
+        data = list(await self.harness.registers.read(self.reg_addr['REG_SNIFF_FIFO_RD'], bytes_to_read))
+        self.raw_read_data = data
+        #self.dut._log.info('XXX raw data: %s' % data)
+        data = self.process9bitRawDataRegular(data)
+        #self.dut._log.info('XXX processed data: %s' % data)
+        return data
+
 
     @staticmethod
     def process9bitRawData(raw, verbose=False):
@@ -392,12 +415,28 @@ class LACapture(GenericCapture):
         num_full_words = int(len(raw)/9*8)
         return words[:num_full_words]
 
+    @staticmethod
+    def process9bitRawDataRegular(raw, verbose=False):
+        """ 9-bit ramp pattern comes out different on the regular Husky (because it's read directly from the
+        shared FIFO). Every four bytes contains two 2-bit counter samples:
+        | byte 3  | byte 2 | byte 1 | byte 0
+         | 1st counter| 2nd counter |
+         |(bits 25:17)| (bits 16:8) |
+        """
+        words = []
+        for i in range(len(raw)//4):
+            bignum = int.from_bytes(raw[i*4:(i+1)*4], byteorder='little')
+            words.append((bignum >> 17) & 0x1ff)
+            words.append((bignum >> 8) & 0x1ff)
+        return words
+
     async def _check_fifo_errors(self, job) -> None:
         # TODO: replace internal signal checks with a register status read
         job_name = job['name']
-        if self.dut.U_dut.U_la_converter.fifo_empty.value == 0:
-            self.harness.inc_error()
-            self.dut._log.error('%12s pre-DDR FIFO not empty after reading all samples.' % job_name)
+        if self.harness.is_pro:
+            if self.dut.U_dut.U_la_converter.fifo_empty.value == 0:
+                self.harness.inc_error()
+                self.dut._log.error('%12s pre-DDR FIFO not empty after reading all samples.' % job_name)
         ## TODO: temporarily commented out because last word is left unread, due to the first word fallthrough nature of the FIFO.
         #if self.dut.U_dut.oadc.U_fifo.postddr_fifo_empty.value == 0:
         #    self.harness.inc_error()
