@@ -450,6 +450,8 @@ module cwhusky_top(
         .cmd_arm_usb            (cmd_arm_usb),
         .armed_and_ready        (armed_and_ready),
         .freq_measure           (freq_measure),
+        .trace_flushing         (trace_fifo_flush),
+        .la_flushing            (la_fifo_flush),
 
         .reg_address            (reg_address),
         .reg_bytecnt            (reg_bytecnt), 
@@ -678,7 +680,7 @@ module cwhusky_top(
         .mmcm_shutdown          (xadc_error_flag),
         .I_trace_en             (trace_en),
         .O_enabled              (), // PRO only
-        .O_4bit_mode            (), // TODO!
+        .O_4bit_mode            (), // PRO only
         .freq_measure           (freq_measure),
 
         .glitchclk              (glitchclk),

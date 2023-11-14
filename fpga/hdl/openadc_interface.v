@@ -53,6 +53,8 @@ module openadc_interface #(
     output wire                         trigger_edge_counter,
     output wire                         amp_gain,
     output wire [7:0]                   fifo_dout,
+    input  wire                         trace_flushing,
+    input  wire                         la_flushing,
 
     // register interface
     input  wire [7:0]                   reg_address,
@@ -112,8 +114,6 @@ module openadc_interface #(
     output wire                         clear_fifo_errors,
     input  wire [1:0]                   trace_fifo_errors,
     input  wire [1:0]                   la_fifo_errors,
-    input  wire                         trace_flushing,
-    input  wire                         la_flushing,
     input  wire                         tb_ui_clk,
     `ifdef CW310
         input wire                      ADC_clk_fbp,
@@ -641,8 +641,6 @@ module openadc_interface #(
     wire clear_fifo_errors = 1'b0;
     wire trace_fifo_errors = 1'b0;
     wire la_fifo_errors = 1'b0;
-    wire la_flushing = 1'b0;
-    wire trace_flushing = 1'b0;
     wire O_xo_en;
     wire O_vddr_enable;
     wire I_vddr_pgood = 1'b0;
