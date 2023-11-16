@@ -177,12 +177,14 @@ class GenericTest(object):
         self.dut_job_signal.value = cocotb.binary.BinaryValue("xxxxxxxx")
         await self._initial_setup()
         await self._dispatch_delay()
+
         for cap in range(self.num_captures):
             await self._idlecheck()
             job_name = self.name + "_job_" + str(self.dispatch_id)
             self.dut_job_signal.value = self.dispatch_id
             job = await self._job_setup()
             job['name'] = job_name
+            shared_lock_acquired = False
 
             # this job might be triggered from a different GenericTest instance, in which case we 
             # may have to change some of its properties: (example: LA job triggered by ADC capture)
@@ -197,6 +199,15 @@ class GenericTest(object):
             else:
                 self.dut._log.debug("%12s not externally triggered" % job_name)
                 externally_triggered = False
+
+            # LA and trace share storage on the Husky and so can't be active at the same time:
+            if not self.harness.is_pro and self.name in ['LA', 'trace']:
+                self.dut._log.info('%12s waiting for shared_fifo_lock...' % job_name)
+                await self.harness.shared_fifo_lock.acquire()
+                shared_lock_acquired = True
+                self.dut._log.info('%12s shared_fifo_lock acquired, proceeding.' % job_name)
+            else:
+                self.dut._log.info('%12s does not need no shared_fifo_lock because the name is %s' % (job_name, self.name))
 
             # see comments around queue definition in Harness for how this queue and lock mechanism works:
             self.dut._log.info("%12s trying to trigger job (waiting for read_lock to be freed)..." % job_name)
@@ -233,10 +244,8 @@ class GenericTest(object):
                 # harness.queue tracks the number of currently active capture jobs; if a job
                 # is externally triggered, then it will get accounted for by the *externally triggering job*,
                 # otherwise there's a (small) chance for unfortunate timing where everything locks up.
-                #self.harness.queue.put_nowait(self.name)
                 self.harness.queue_push(self.name)
                 for downstream_trigger in downstream_triggers:
-                    #self.harness.queue.put_nowait(downstream_trigger.name)
                     self.harness.queue_push(downstream_trigger.name)
                 self.dut._log.info("%12s pushed to job queue (count = %d, contents: %s)" % (job_name, self.harness.queue.qsize(), self.harness._queue_contents))
 
@@ -264,13 +273,17 @@ class GenericTest(object):
             except:
                 raise SimTimeoutError('%12s timed out on _wait_capture_done()' % job_name)
             self._untrigger(job) # TODO: could be moved up?
-            #self.harness.queue.get_nowait()
             self.harness.queue_get(self.name)
             self.dut._log.info("%12s popped from job queue (count = %d, contents: %s)" % (job_name, self.harness.queue.qsize(), self.harness._queue_contents))
             result = await self.checker.results.get()
             await self._post_job()
             #assert result['errors'] == 0 # TODO: optionally assert here, to stop test as soon as errors are found?
             self.errors += result['errors']
+
+            if shared_lock_acquired:
+                self.harness.shared_fifo_lock.release()
+                self.dut._log.info('%12s released shared_fifo_lock' % job_name)
+
             self.dispatch_id += 1
 
 
@@ -617,13 +630,20 @@ class TraceTest(GenericTest):
     async def _initial_setup(self) -> None:
         await self.registers.write(self.reg_addr['REG_RESET_REG'], [1])
         await self.registers.write(self.reg_addr['REG_RESET_REG'], [0]) 
-        await self.registers.write(self.reg_addr['REG_TRACE_EN'], [1]) # enable trace
         await self.registers.write(self.reg_addr['REG_FE_CLOCK_SEL'], [2]) # select USB clock
         await self.registers.write(self.reg_addr['REG_COUNT_WRITES'], [1]) 
         await self.registers.write(self.reg_addr['REG_TRACE_TEST'], [1])
         await self.registers.write(self.reg_addr['REG_SOFT_TRIG_ENABLE'], [0])
+        # regular Husky doesn't support concurrent LA/trace captures so trace gets enabled "just in time" for it:
+        if self.harness.is_pro:
+            await self.registers.write(self.reg_addr['REG_TRACE_EN'], [1]) # enable trace
+        else:
+            await self.registers.write(self.reg_addr['REG_TRACE_EN'], [0])
 
     async def _arm(self) -> None:
+        # regular Husky doesn't support concurrent LA/trace captures so trace gets enabled "just in time" for it:
+        if not self.harness.is_pro:
+            await self.registers.write(self.reg_addr['REG_TRACE_EN'], [1]) # enable trace
         await self.registers.write(self.reg_addr['REG_ARM'], [0])   # disarm
         await self.registers.write(self.reg_addr['REG_ARM'], [1])   # arm
         await self.harness.wait_flush('trace')# allow for any flushes (triggered by arming) to complete before triggering
@@ -645,6 +665,8 @@ class TraceTest(GenericTest):
         """
         await self.registers.write(self.reg_addr['REG_SOFT_TRIG_PASSTHRU'], [0])
         await self.registers.write(self.reg_addr['REG_SOFT_TRIG_ENABLE'], [0])
+        if not self.harness.is_pro:
+            await self.registers.write(self.reg_addr['REG_TRACE_EN'], [0]) # disable trace
 
     def _capture_cycles(self, cycles) -> int:
         # TODO: currently using USB clock to capture; when this changes, this needs to be updated!

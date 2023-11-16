@@ -138,7 +138,11 @@ class GenericCapture(object):
             return samples
         #2. otherwise randomly reduce the number of samples read to as little as 1:
         else:
-            samples = random.randint(1, samples-1)
+            if self.harness.is_pro:
+                MIN = 1
+            else:
+                MIN = 2
+            samples = random.randint(MIN, samples-1)
             self.dut._log.info("%12s reducing sample read count to %d" % (job['name'], samples))
             job['limited_reads'] = True
             return samples

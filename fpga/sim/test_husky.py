@@ -49,6 +49,8 @@ class Harness(object):
         self._queue_contents = []
         self.read_lock = Lock()
         self.trigger_lock = Lock()
+        self.shared_fifo_lock = Lock()  # used by regular Husky, which has shared storage for LA+trace, which means
+                                        # trace+LA can't be simultaneously active; this lock manages that
         # Actual seed is obtained only if RANDOM_SEED is defined on vvp command line (otherwise you get 0)
         # regress.py always specifies the seed so this is fine.
         self.dut._log.info("seed: %d" % int(os.getenv('RANDOM_SEED', '0')))
