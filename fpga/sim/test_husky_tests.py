@@ -166,8 +166,7 @@ class GenericTest(object):
         """
         return []
 
-    @staticmethod
-    def valid_external_trigger_combo(choice, job) -> bool:
+    def valid_external_trigger_combo(self, choice, choices, job) -> bool:
         """ Whether the trigger used by job can be used to trigger choice
         """
         return False
@@ -496,15 +495,24 @@ class ADCTest(GenericTest):
             choices = []
             for i in range(num_potential_triggers):
                 choice = random.choice(self.downstream_triggers)
-                if choice.can_be_externally_triggered and self.valid_external_trigger_combo(choice, job) and choice not in choices:
+                if choice.can_be_externally_triggered and self.valid_external_trigger_combo(choice, choices, job) and choice not in choices:
                     choices.append(choice)
         self.dut._log.info("%12s choosing %d downstream triggers: %s" % (job['name'], len(choices), choices))
         return choices
 
-    def valid_external_trigger_combo(self, choice, job) -> bool:
+    def valid_external_trigger_combo(self, choice, choices, job) -> bool:
         result = False # default response
         if (job['trigger_type'] == 'io4' and ((choice.name == 'trace') or (choice.name == 'glitch'))) or (choice.name == 'LA'):
             result = True
+        # on regular Husky, LA and trace can't both be active so they can't both be downstream triggers:
+        if not self.harness.is_pro:
+            using_trace_la = False
+            for c in choices:
+                if c.name in ['trace', 'LA']:
+                    using_trace_la = True
+                    break
+            if using_trace_la and choice.name in ['trace', 'LA']:
+                result = False
         return result
 
 

@@ -164,7 +164,7 @@ tests.append(dict(name  = 'huge_la_capture_regular',
              description = 'LA capture exceeding pre-DDR FIFO size.'))
 
 
-tests.append(dict(name  = 'huge_all_capture',
+tests.append(dict(name  = 'huge_all_capture_pro',
              testcase = 'capture',
              frequency = 7,
              MIN_SIZE = 4000,
@@ -172,7 +172,19 @@ tests.append(dict(name  = 'huge_all_capture',
              NUM_CAPTURES = 1,
              FIFOSIZE = "TINYFIFO",
              DDR_MODEL_WRITES = 'FAST_DDR_WRITES',
+             VARIANT = 'pro', # will only run with --variant=pro
              description = 'ADC+trace+LA capture exceeding pre-DDR FIFO size.'))
+
+tests.append(dict(name  = 'huge_all_capture_regular',
+             testcase = 'capture',
+             frequency = 7,
+             MIN_SIZE = 2000,
+             MAX_SIZE = 2047,
+             NUM_CAPTURES = 1,
+             FIFOSIZE = "TINYFIFO",
+             VARIANT = 'regular', # will only run with --variant=regular
+             description = 'ADC+trace+LA capture exceeding pre-DDR FIFO size.'))
+
 
 tests.append(dict(name  = 'glitch_only',
              testcase = 'capture',
