@@ -14,6 +14,7 @@ group.add_argument("--runs", type=int, help="Number of iterations.", default=1)
 group.add_argument("--test", help="Testcase to run")
 parser.add_argument("--variant", help="Husky variant (regular/plus/pro)", default='regular')
 parser.add_argument("--seed", type=int, help="Seed to use when running a single test with --test.")
+parser.add_argument("--timeout", type=int, help="Simulation timeout.")
 parser.add_argument("--tests", help="Run all tests whose name contains TESTS", default='')
 parser.add_argument("--exclude", help="Exclude tests whose name contains TESTS", default='')
 parser.add_argument("--list", help="List available tests.", action='store_true')
@@ -325,6 +326,9 @@ for test in tests:
           seed = random.randint(0, 2**31-1)
       makeargs.append("RANDOM_SEED=%d" % seed)
       makeargs.append(variant)
+
+      if args.timeout:
+          makeargs.append('TIMEOUT_TIME=%d' % args.timeout)
 
       run_test = True
       # build make command:

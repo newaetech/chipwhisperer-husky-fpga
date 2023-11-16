@@ -27,6 +27,8 @@ fh = logging.FileHandler(logfile, 'w')
 fh.setFormatter(SimLogFormatter())
 root_logger.addHandler(fh)
 
+timeout_time = int(os.getenv('TIMEOUT_TIME', '2000'))
+
 class Harness(object):
     def __init__(self, dut, registers):
         self.dut = dut
@@ -306,7 +308,7 @@ async def reg_rw(dut, wait_cycles=1000):
     await ClockCycles(dut.clk_usb, wait_cycles)
 
 
-@cocotb.test(timeout_time=2000, timeout_unit="us")
+@cocotb.test(timeout_time=timeout_time, timeout_unit="us")
 async def capture(dut):
     """Concurrent captures of ADC, trace and LA."""
     registers = Registers(dut)
