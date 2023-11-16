@@ -503,8 +503,10 @@ module reg_la #(
 
       else begin
          capturing_r <= capturing;
-         if (fifo_flush)
+         if (fifo_flush) begin
              capturing <= 1'b0;
+             fifo_wr <= 1'b0;
+         end
          else if (capture_go) begin
             capture_count <= 0;
             capturing <= 1'b1;
