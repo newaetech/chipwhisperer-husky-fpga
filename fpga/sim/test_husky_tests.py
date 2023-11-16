@@ -308,6 +308,7 @@ class ADCTest(GenericTest):
             presamples = 0  # no presamples a quarter of the time
         else:
             presamples = random.randint(8, min(self.max_presamples, samples-2)) # DUT doesn't allow for 1-7 presamples, and samples must be at least 2 more than presamples
+            self.dut._log.info('setting presamples to %d because samples=%d, min=%d' % (presamples, samples, min(self.max_presamples, samples-2)))
         if random.randint(0,3) == 0:
             offset = 0  # no offset a quarter of the time
         else:
@@ -337,6 +338,8 @@ class ADCTest(GenericTest):
                     samples = 3
                 else:
                     samples -= (samples %3)
+            if samples - presamples < 2: # in case we adjusted samples into an invalid number of presamples, correct it
+                presamples = samples - 2
         if random.randint(0,1) or presamples or segments > 1:
             downsample = 1  # downsamples with presamples or segments is not allowed
         else:
