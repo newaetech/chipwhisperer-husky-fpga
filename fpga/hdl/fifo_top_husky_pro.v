@@ -455,6 +455,26 @@ module fifo_top_husky_pro (
        .data_out_r     ()
    );
 
+   wire flushing_adc_usb;
+   cdc_simple U_flushing_adc_usb_cdc (
+       .reset          (reset),
+       .clk            (clk_usb),
+       .data_in        (flushing_adc),
+       .data_out       (flushing_adc_usb),
+       .data_out_r     ()
+   );
+
+   wire flushing_ui_usb;
+   cdc_simple U_flushing_ui_usb_cdc (
+       .reset          (reset),
+       .clk            (clk_usb),
+       .data_in        (flushing_ui),
+       .data_out       (flushing_ui_usb),
+       .data_out_r     ()
+   );
+
+
+
     always @(posedge adc_sampleclk) begin
        if (reset) begin
           arming <= 1'b0;
@@ -529,7 +549,8 @@ module fifo_top_husky_pro (
             if (arm_pulse_usb)
                 flushing <= 1'b1;
             //else if (fast_fifo_empty_usb && all_preddr_fifo_empty_usb && postddr_fifo_empty)
-            else if (fast_fifo_empty_usb && postddr_fifo_empty)
+            // last two conditions are to ensure that CDC from flushing to flushing_adc and flushing_ui had a chance to occur:
+            else if (fast_fifo_empty_usb && postddr_fifo_empty && flushing_adc_usb && flushing_ui_usb)
                 flushing <= 1'b0;
         end
     end
@@ -725,7 +746,7 @@ module fifo_top_husky_pro (
 
     assign fast_fifo_rd = fast_fifo_presample_drain || 
                           (fast_fifo_rd_en && !preddr_fifo_full && !fast_fifo_empty) || 
-                          (flushing && !fast_fifo_empty);
+                          (flushing_adc && !fast_fifo_empty);
 
     wire preddr_fifo_rd = I_preddr_fifo_rd || (flushing_ui && !preddr_fifo_empty);
 
