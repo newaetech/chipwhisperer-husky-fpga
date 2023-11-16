@@ -432,14 +432,12 @@ class ADCTest(GenericTest):
             wait_cycles = random.randint(min_cycles, min_cycles*4)
             self.dut._log.info('%12s pre-trigger waiting %d cycles' % (job['name'], wait_cycles))
             await ClockCycles(self.dut.PLL_CLK1, wait_cycles) # note: Pro used self.clk (USB clock), why did that work?!?
-        if not self.harness.is_pro:
-            # on Husky the FIFO flushing can be *slow*, so explicitely check on FIFO empty flag:
-            #await ClockCycles(self.clk, 100)
-            empty = False
-            while not empty:
-                await ClockCycles(self.clk, 50)
-                empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 2))[1] & 32
-            await ClockCycles(self.clk, 5) # bit more time for armed_and_ready to rise
+        # the FIFO flushing can be *slow*, so explicitely check on FIFO empty flag:
+        empty = False
+        while not empty:
+            await ClockCycles(self.clk, 50)
+            empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 2))[1] & 32
+        await ClockCycles(self.clk, 5) # bit more time for armed_and_ready to rise
 
 
     def _capture_cycles(self, cycles) -> int:
