@@ -30,7 +30,7 @@ root_logger.addHandler(fh)
 timeout_time = int(os.getenv('TIMEOUT_TIME', '2000'))
 
 class Harness(object):
-    def __init__(self, dut, registers):
+    def __init__(self, dut, registers, stream):
         self.dut = dut
         self.registers = registers
         self.slurp_defines(['../hdl/registers.v', '../tracewhisperer/hdl/defines_trace.v', '../tracewhisperer/hdl/defines_pw.v'])
@@ -58,7 +58,10 @@ class Harness(object):
         self.dut._log.info("seed: %d" % int(os.getenv('RANDOM_SEED', '0')))
         #cocotb.start_soon(Clock(dut.clk_usb, 1, units='ns').start())
         self.usb_period = 10
-        self.adc_period = random.randint(4, 20)
+        if stream: # slow ADC clock *way* down in order to allow for slow FIFO reads to (usually) outpace writes, like IRL:
+            self.adc_period = random.randint(25, 200)
+        else:
+            self.adc_period = random.randint(4, 20)
         self.dut._log.info("ADC clock randomized to %5.1f MHz" % (1/self.adc_period*1000))
         usb_clock_thread = cocotb.start_soon(Clock(dut.clk_usb, self.usb_period, units="ns").start())
         adc_clock_thread = cocotb.start_soon(Clock(dut.PLL_CLK1, self.adc_period, units="ns").start())
@@ -186,10 +189,8 @@ class Harness(object):
         # rules are followed, and the empty/full status flags may remain at X. Sometimes just changing the time when the
         # reset begins, and how long it is held for, can return correct behaviour.
         await ClockCycles(self.dut.clk_usb, 30)
-        #self.dut.U_dut.oadc.U_reg_openadc.reset_fromreg.value = Force(1) # experimenting with iverilog 11.0 FIFO problems...
         await self.registers.write(self.reg_addr['RESET'], [1])
-        #self.dut.U_dut.oadc.U_reg_openadc.reset_fromreg.value = Release()
-        await ClockCycles(self.dut.clk_usb, 10)
+        await ClockCycles(self.dut.clk_usb, 20)
         await self.registers.write(self.reg_addr['RESET'], [0])
 
     async def ddr_done_writing(self):
@@ -311,8 +312,6 @@ async def reg_rw(dut, wait_cycles=1000):
 @cocotb.test(timeout_time=timeout_time, timeout_unit="us")
 async def capture(dut):
     """Concurrent captures of ADC, trace and LA."""
-    registers = Registers(dut)
-    harness = Harness(dut, registers)
 
     num_captures = int(os.getenv('NUM_CAPTURES', '3'))
     min_size = int(os.getenv('MIN_SIZE', '30'))
@@ -324,6 +323,10 @@ async def capture(dut):
     max_glitches = int(os.getenv('MAX_GLITCHES', '5'))
     max_segments = int(os.getenv('MAX_SEGMENTS', '1'))
     max_segment_cycles = int(os.getenv('MAX_SEGMENT_CYCLES', '1'))
+    stream = int(os.getenv('STREAM', '0'))
+
+    registers = Registers(dut)
+    harness = Harness(dut, registers, stream)
 
     await harness.initialize_dut()
     if int(os.getenv('NO_DOWNSTREAM_TRIGGERS', 0)):
@@ -347,6 +350,8 @@ async def capture(dut):
         adctest.max_downsample = max_downsample
         adctest.max_segments = max_segments
         adctest.max_segment_cycles = max_segment_cycles
+        adctest.stream = stream
+        adctest.checker.stream = stream
         harness.register_test(adctest)
 
     if int(os.getenv('TRACE_CAPTURE')):

@@ -20,6 +20,7 @@ class GenericCapture(object):
         self.job_id = 0
         self.name = None
         self.errors = 0
+        self.stream = 0
         self._first_read_sample = None
         self._actual_first_write = None
         self.raw_read_data = []
@@ -101,11 +102,11 @@ class GenericCapture(object):
             while self.harness.trigger_lock.locked:
                 await ClockCycles(self.clk, 10)
             await self.harness.read_lock_acquire(job_name)
-            self.dut._log.info("%12s awaiting empty queue (count = %d, contents: %s)" % (job_name, self.harness.queue.qsize(), self.harness._queue_contents))
-            while not self.harness.queue.empty():
-            #while self.harness.queue.qsize() != 1:
-                await ClockCycles(self.clk, 10)
-            self.dut._log.info("%12s empty queue wait done" % job_name)
+            if not self.stream:
+                self.dut._log.info("%12s awaiting empty queue (count = %d, contents: %s)" % (job_name, self.harness.queue.qsize(), self.harness._queue_contents))
+                while not self.harness.queue.empty():
+                    await ClockCycles(self.clk, 10)
+                self.dut._log.info("%12s empty queue wait done" % job_name)
             self.dut.current_action.value = self.harness.hexstring("%12s initread" % job_name)
             try:
                 await with_timeout(self._initiate_read(), 100, 'us')
@@ -134,7 +135,7 @@ class GenericCapture(object):
         if 'segments' in job.keys():
             samples *= job['segments']
         #1. Read full capture 75% of the time:
-        if random.randint(0,3) < 3:
+        if self.stream or random.randint(0,3) < 3:
             return samples
         #2. otherwise randomly reduce the number of samples read to as little as 1:
         else:
@@ -240,17 +241,40 @@ class ADCCapture(GenericCapture):
             empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 2))[1] & 32
 
     async def _read_samples(self, job) -> list:
+        job_name = job['name']
         samples = self._limit_read(job)
         bits_per_sample = job['bits_per_sample']
-        downsample = job['downsample']
-        # if capture is downsampled, we could read it too fast and underflow:
-        if downsample > 1:
-            cycles = math.ceil(self.harness.adc_period / self.harness.usb_period * samples * downsample * bits_per_sample/8)
-            await ClockCycles(self.clk, cycles)
-        #self.dut._log.info("starting the read (%0d samples)" % samples)
-        self.raw_read_data = await self.read_adc_data(samples, bits_per_sample)
+        if self.stream:
+            stream_segment_n = 0
+            stream_segment_size = job['stream_segment_threshold'] # N.B.: does NOT need to be equal, though in practice (and by default) it usually is
+            self.raw_read_data = []
+            samples_left = samples
+            while samples_left:
+                wait_printed = False
+                while self.dut.USB_SPARE0.value == 0:
+                    if not wait_printed:
+                        self.dut._log.info('%12s waiting for stream segment to be available...' % job_name)
+                        wait_printed = True
+                    await ClockCycles(self.clk, 10)
+                samples_to_read = min(stream_segment_size, samples_left)
+                self.dut._log.info('%12s starting stream segment read %d: reading %d samples' % (job_name, stream_segment_n, samples_to_read))
+                stream_segment = await self.read_adc_data(samples_to_read, bits_per_sample)
+                self.raw_read_data.extend(stream_segment)
+                samples_left -= samples_to_read
+                stream_segment_n += 1
+
+        else:
+            downsample = job['downsample']
+            # if capture is downsampled, we could read it too fast and underflow:
+            if downsample > 1:
+                cycles = math.ceil(self.harness.adc_period / self.harness.usb_period * samples * downsample * bits_per_sample/8)
+                await ClockCycles(self.clk, cycles)
+            #self.dut._log.info("starting the read (%0d samples)" % samples)
+            self.raw_read_data = await self.read_adc_data(samples, bits_per_sample)
+
         data = self.processHuskyData(samples, bytearray(self.raw_read_data))
         return data
+
 
     async def _check_fifo_errors(self, job) -> None:
         # TODO: replace internal signal checks with a register status read

@@ -295,6 +295,7 @@ class ADCTest(GenericTest):
         self.name = 'ADC'
         self.max_segments = None
         self.max_segment_cycles = None
+        self.stream = 0
         self.segment_time_factor = 4
         fifo_watch_thread = cocotb.start_soon(self.fifo_watch())
         if harness.is_pro:
@@ -344,6 +345,10 @@ class ADCTest(GenericTest):
             downsample = 1  # downsamples with presamples or segments is not allowed
         else:
             downsample = random.randint(1, self.max_downsample)
+        if self.stream:
+            stream_segment_threshold = random.randint(256, 2048)
+            await self.registers.write(self.reg_addr['STREAM_SEGMENT_THRESHOLD'], self.registers.to_bytes(stream_segment_threshold, 3))
+            await self.registers.write(self.reg_addr['SETTINGS_ADDR'], [0x24 + (1<<4)])
 
         await self.registers.write(self.reg_addr['DECIMATE_ADDR'], self.registers.to_bytes(0, 2)) # clear this first because setting e.g. presamples when the previous job had this non-zero will cause an error
         await self.registers.write(self.reg_addr['SAMPLES_ADDR'], self.registers.to_bytes(samples, 4))
@@ -363,6 +368,8 @@ class ADCTest(GenericTest):
         job['segment_counter_en'] = segment_counter_en
         job['segment_cycles'] = segment_cycles
         job['segment_times'] = segment_times
+        if self.stream:
+            job['stream_segment_threshold'] = stream_segment_threshold
         job['capture_time_us'] = self._capture_time_us(capture_samples_time)
         job['limited_reads'] = False
         return job
@@ -379,8 +386,8 @@ class ADCTest(GenericTest):
         await self.registers.write(self.reg_addr['FIFO_CONFIG'], [1]) # use DDR and set ADC ramp mode
 
     async def _arm(self) -> None:
-        await self.registers.write(self.reg_addr['SETTINGS_ADDR'], [0x24]) # disarm
-        await self.registers.write(self.reg_addr['SETTINGS_ADDR'], [0x0c]) # arm
+        await self.registers.write(self.reg_addr['SETTINGS_ADDR'], [0x24 + (self.stream << 4)]) # disarm
+        await self.registers.write(self.reg_addr['SETTINGS_ADDR'], [0x0c + (self.stream << 4)]) # arm
         await self.harness.wait_flush('ADC')  # allow for any flushes (triggered by arming) to complete before triggering
 
     async def _trigger(self, job) -> None:
@@ -404,7 +411,7 @@ class ADCTest(GenericTest):
                     await ClockCycles(self.clk, self._capture_cycles(job['segment_times'][i]))
 
     async def trigger_now(self) -> None:
-        await self.registers.write(self.reg_addr['SETTINGS_ADDR'], [0x4c]) # trigger
+        await self.registers.write(self.reg_addr['SETTINGS_ADDR'], [0x4c + (self.stream << 4)]) # trigger
 
     async def trigger_io4(self) -> None:
         self.dut.target_io4.value = 1
@@ -437,6 +444,12 @@ class ADCTest(GenericTest):
         while not empty:
             await ClockCycles(self.clk, 50)
             empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 2))[1] & 32
+
+        if self.stream:
+            # stream_segment_available is updated every 2**6 cycles (see write_cycle_count in fifo_top_husky.v), so wait enough
+            # time for stream_segment_available to be sensical before starting the next capture:
+            await ClockCycles(self.dut.PLL_CLK1, 2**7)
+
         await ClockCycles(self.clk, 5) # bit more time for armed_and_ready to rise
 
 
