@@ -111,7 +111,7 @@ module fifo_top_husky(
     reg  [19:0]         segment_cycle_counter;
 
     reg                 arm_r;
-    reg                 arm_pulse_adc;
+    wire                arm_pulse_adc;
     wire                arm_pulse_usb;
     reg                 arm_usb_r;
     reg                 arming;
@@ -475,7 +475,6 @@ module fifo_top_husky(
           capture_go_r <= capture_go;
           capture_go_r2 <= capture_go_r;
           arm_r <= arm_i;
-          //arm_pulse_adc <= ~arm_r & arm_i;
           if (arm_i && ~arm_r && ~arming) begin
              arming <= 1'b1;
              armed_and_ready <= 1'b0;

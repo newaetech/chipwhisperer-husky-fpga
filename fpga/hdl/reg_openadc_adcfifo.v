@@ -133,7 +133,7 @@ module reg_openadc_adcfifo #(
 
    wire [23:0] fifo_first_error_combined;
    assign fifo_first_error_combined[23:16] = {5'b0, fifo_first_error_state};
-   assign fifo_first_error_combined[15:0] = {4'b0, fifo_first_error_stat};
+   assign fifo_first_error_combined[15:0] = {3'b0, fifo_first_error_stat};
 
    wire [23:0] ddr3_stats;
    assign ddr3_stats[23:16] = I_ddr3_errors;

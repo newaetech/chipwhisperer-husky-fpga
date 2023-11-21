@@ -187,6 +187,9 @@ module openadc_interface #(
    wire extclk_monitor_disabled;
    wire [31:0] extclk_limit;
 
+`ifndef PRO
+    wire       clear_fifo_errors;
+`endif
 
    //Divide clock by 2^24 for heartbeat LED
    //Divide clock by 2^23 for frequency measurement
@@ -638,7 +641,6 @@ module openadc_interface #(
 
 `ifndef PRO
     wire ui_clk = 1'b0;
-    wire clear_fifo_errors = 1'b0;
     wire trace_fifo_errors = 1'b0;
     wire la_fifo_errors = 1'b0;
     wire O_xo_en;
