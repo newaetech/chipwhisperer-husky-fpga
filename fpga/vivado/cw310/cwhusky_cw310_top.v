@@ -556,6 +556,7 @@ module cwhusky_cw310_top (
 
         .flash_pattern          (flash_pattern),
 
+`ifdef PRO
         .O_xo_en                (xo_en       ),
         .O_vddr_enable          (vddr_enable ),
         .I_vddr_pgood           (vddr_pgood  ),
@@ -576,7 +577,7 @@ module cwhusky_cw310_top (
         .ddr3_dm                (ddr3_dm       ),
         .ddr3_cs_n              (ddr3_cs_n     ),
         .ddr3_odt               (ddr3_odt      ),
-`ifdef PRO
+
         .ui_clk                 (ui_clk             ),
         .preddr_trace_rd        (preddr_trace_rd    ),
         .preddr_trace_data      (preddr_trace_data  ),
