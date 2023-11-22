@@ -1007,7 +1007,11 @@ module fifo_top_husky(
          total_samples <= max_samples_i * num_segments;
          if (slow_fifo_rd)
             read_count <= read_count + 3;
-         if (read_update_usb) begin
+         if (stream_mode && error_stat[3:0])
+             // if any FIFO overflow/underflow errors occur, ensure that SAM3U will be able to read as much as it wants
+             // (so that the capture terminates normally on the SAM3U side)
+             stream_segment_available <= 1'b1;
+         else if (read_update_usb) begin
             if (write_count_to_usb > read_count)
                stream_segment_available <= ( (write_count_to_usb - read_count > stream_segment_threshold) || (write_count_to_usb >= total_samples) );
             else
@@ -1103,7 +1107,6 @@ module fifo_top_husky(
        `endif
 
 
-       /*
        ila_slow_fifo U_ila_slow_fifo (
           .clk            (clk_usb),              // input wire clk
           .probe0         (reset),                // input wire [0:0]  probe0  
@@ -1123,9 +1126,7 @@ module fifo_top_husky(
           .probe14        (stream_segment_available), // input wire [0:0]  probe14
           .probe15        (fast_fifo_read_mode)   // input wire [0:0]  probe15
        );
-       */
 
-       /*
        ila_long_fifo U_ila_long_fifo (
           .clk            (clk_usb),              // input wire clk
           .probe0         (slow_fifo_wr),         // input wire [0:0]  probe0 
@@ -1136,9 +1137,15 @@ module fifo_top_husky(
           .probe5         (slow_fifo_underflow),  // input wire [0:0]  probe5 
           .probe6         (stream_segment_available), // input wire [0:0]  probe6
           .probe7         (fast_fifo_overflow),   // input wire [0:0]  probe7 
-          .probe8         (fast_fifo_underflow)   // input wire [0:0]  probe8 
+          .probe8         (error_flag),           // input wire [0:0]  probe8 
+          .probe9         (flushing),             // input wire [0:0]  probe8 
+          .probe10        (arm_pulse_usb),        // input wire [0:0]  probe8 
+          .probe11        (fast_fifo_empty_usb),  // input wire [0:0]  probe8 
+          .probe12        (reg_write),            // input wire [0:0]  probe8 
+          .probe13        (reg_datai),            // input wire [0:0]  probe8 
+          .probe14        (reg_address),          // input wire [0:0]  probe8 
+          .probe15        (state)                 // input wire [0:0]  probe8 
        );
-       */
 
    `endif
 
