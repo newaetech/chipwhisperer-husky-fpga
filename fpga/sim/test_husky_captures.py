@@ -238,7 +238,7 @@ class ADCCapture(GenericCapture):
         empty = True
         while empty:
             await ClockCycles(self.clk, 50)
-            empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 2))[1] & 32
+            empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 2))[1] & 64
 
     async def _read_samples(self, job) -> list:
         job_name = job['name']
@@ -379,7 +379,7 @@ class LACapture(GenericCapture):
         while empty:
             await ClockCycles(self.clk, 50)
             if self.harness.is_pro:
-                empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 2))[1] & 32
+                empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 2))[1] & 64
             else:
                 empty = (await self.harness.registers.read(self.reg_addr['REG_SNIFF_FIFO_STAT'], 1))[0] & 0x01
 
@@ -527,7 +527,7 @@ class TraceCapture(GenericCapture):
         while empty:
             await ClockCycles(self.clk, 50)
             if self.harness.is_pro:
-                empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 2))[1] & 32
+                empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 2))[1] & 64
             else:
                 empty = (await self.harness.registers.read(self.reg_addr['REG_SNIFF_FIFO_STAT'], 1))[0] & 0x01
 

@@ -443,7 +443,7 @@ class ADCTest(GenericTest):
         empty = False
         while not empty:
             await ClockCycles(self.clk, 50)
-            empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 2))[1] & 32
+            empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 2))[1] & 64
 
         if self.stream:
             # stream_segment_available is updated every 2**6 cycles (see write_cycle_count in fifo_top_husky.v), so wait enough
@@ -464,10 +464,11 @@ class ADCTest(GenericTest):
             await ClockCycles(self.clk, 2) # Note: without this, error_value comes back as 0, even though it changes on the same cycle as error_flag
             error_value = self.dut.U_dut.oadc.U_fifo.error_stat.value
             # accessing vector bits requires iverilog >= 10.3:
-            if error_value & 2**12: error_message += "ddr_full "
-            if error_value & 2**11: error_message += "reading_too_soon  "
-            if error_value & 2**10: error_message += "preddr_fifo_overflow "
-            if error_value & 2**9 : error_message += "preddr_fifo_underflow "
+            if error_value & 2**13: error_message += "ddr_full "
+            if error_value & 2**12: error_message += "reading_too_soon  "
+            if error_value & 2**11: error_message += "preddr_fifo_overflow "
+            if error_value & 2**10: error_message += "preddr_fifo_underflow "
+            if error_value & 2**9 : error_message += "trigger_too_soon_error "
             if error_value & 2**8 : error_message += "gain_error "
             if error_value & 2**7 : error_message += "segment_error "
             if error_value & 2**6 : error_message += "downsample_error "
@@ -487,10 +488,9 @@ class ADCTest(GenericTest):
 
     async def trigger_ready_watch(self) -> None:
         while True:
-            await RisingEdge(self.dut.U_dut.oadc.tu_inst.trigger_level_match)
-            if not self.dut.U_dut.oadc.tu_inst.armed_and_ready.value:
-                self.harness.inc_error()
-                self.dut._log.error('Trigger before armed_and_ready! (testbench error)')
+            await RisingEdge(self.dut.U_dut.oadc.tu_inst.trigger_too_soon)
+            self.harness.inc_error()
+            self.dut._log.error('Trigger before armed_and_ready! (testbench error)')
 
 
     def get_downstream_trigger(self, job) -> list:

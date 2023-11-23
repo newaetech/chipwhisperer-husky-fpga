@@ -47,10 +47,11 @@ module fifo_top_husky_pro (
 
     output wire         fifo_overflow, //If overflow happens (bad during stream mode)
     output reg          error_flag,
-    output reg [12:0]   error_stat,
-    output reg [12:0]   first_error_stat,
+    output reg [13:0]   error_stat,
+    output reg [13:0]   first_error_stat,
     output reg [2:0]    first_error_state,
     input  wire         clear_fifo_errors,
+    input  wire         trigger_too_soon,
     input  wire         no_clip_errors,
     input  wire         no_gain_errors,
     output reg [7:0]    underflow_count,
@@ -582,13 +583,14 @@ module fifo_top_husky_pro (
     );
 
     // this may seem awkward; goal is to set new error bits without clearing old ones
-    function [12:0] error_bits (input [12:0] current_error);
+    function [13:0] error_bits (input [13:0] current_error);
        begin
           error_bits = current_error;
-          if (ddr_full_error)                error_bits[12] = 1'b1;
-          if (reading_too_soon_error)        error_bits[11] = 1'b1;
-          if (preddr_fifo_overflow)          error_bits[10] = 1'b1;
-          if (preddr_fifo_underflow)         error_bits[9]  = 1'b1;
+          if (ddr_full_error)                error_bits[13] = 1'b1;
+          if (reading_too_soon_error)        error_bits[12] = 1'b1;
+          if (preddr_fifo_overflow)          error_bits[11] = 1'b1;
+          if (preddr_fifo_underflow)         error_bits[10] = 1'b1;
+          if (trigger_too_soon)              error_bits[9]  = 1'b1;
           if (gain_error)                    error_bits[8]  = 1'b1;
           if (segment_error)                 error_bits[7]  = 1'b1;
           if (downsample_error)              error_bits[6]  = 1'b1;

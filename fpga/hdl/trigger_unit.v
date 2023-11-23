@@ -44,6 +44,8 @@ module trigger_unit(
     input wire               capture_done_i,       //1 = capture done
     input wire               armed_and_ready,
 
+    output wire              trigger_too_soon,
+
     input wire               cmd_arm_usb,          // for debug only
     output wire [7:0]        debug2,               // for debug only
     output wire [8:0]        la_debug              // for debug only
@@ -103,6 +105,9 @@ module trigger_unit(
    //ADC Trigger Stuff
    reg reset_arm;
    wire trigger_level_match = (trigger == trigger_level_i);
+   reg trigger_level_match_r;
+   always @(posedge adc_clk) trigger_level_match_r <= trigger_level_match;
+
    always @(posedge adc_clk) begin
       if (reset) begin
          reset_arm <= 0;
@@ -114,6 +119,8 @@ module trigger_unit(
          end
       end
    end
+
+   assign trigger_too_soon = trigger_level_match && ~trigger_level_match_r && ~armed_and_ready;
 
    wire int_reset_capture;
    assign int_reset_capture = adc_capture_done | reset | (~arm_i);

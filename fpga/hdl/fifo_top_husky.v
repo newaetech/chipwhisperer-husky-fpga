@@ -56,10 +56,11 @@ module fifo_top_husky(
     output wire         fifo_overflow, //If overflow happens (bad during stream mode)
     input  wire         stream_mode, //1=Enable stream mode, 0=Normal
     output reg          error_flag,
-    output reg [8:0]    error_stat,
-    output reg [8:0]    first_error_stat,
+    output reg [9:0]    error_stat,
+    output reg [9:0]    first_error_stat,
     output reg [2:0]    first_error_state,
     input  wire         clear_fifo_errors,
+    input  wire         trigger_too_soon,
     output reg          stream_segment_available,
     input  wire         no_clip_errors,
     input  wire         no_gain_errors,
@@ -549,9 +550,10 @@ module fifo_top_husky(
         .data_out_r     ()
     );
 
-    function [8:0] error_bits (input [8:0] current_error);
+    function [9:0] error_bits (input [9:0] current_error);
        begin
           error_bits = current_error;
+          if (trigger_too_soon)                 error_bits[9] = 1'b1;
           if (gain_error)                       error_bits[8] = 1'b1;
           if (segment_error)                    error_bits[7] = 1'b1;
           if (downsample_error)                 error_bits[6] = 1'b1;
@@ -1007,7 +1009,7 @@ module fifo_top_husky(
          total_samples <= max_samples_i * num_segments;
          if (slow_fifo_rd)
             read_count <= read_count + 3;
-         if (stream_mode && error_stat[3:0])
+         if (stream_mode && |error_stat[3:0])
              // if any FIFO overflow/underflow errors occur, ensure that SAM3U will be able to read as much as it wants
              // (so that the capture terminates normally on the SAM3U side)
              stream_segment_available <= 1'b1;
