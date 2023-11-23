@@ -483,7 +483,6 @@ module cwhusky_cw310_top (
    wire trace_capture_on;
    wire [7:0] trace_userio_dir;
    wire freq_measure;
-   wire clear_adc_error;
    wire disable_adc_error;
    reg PLL_STATUS_reg = 1'b1;
 
@@ -494,7 +493,7 @@ module cwhusky_cw310_top (
    assign LED_ARMED = cw_led_armed;
 
    always @(posedge clk_usb_buf) begin
-       if (clear_adc_error || disable_adc_error)
+       if (disable_adc_error)
            PLL_STATUS_reg <= 1'b1;
        else if (~PLL_STATUS) // make it sticky!
            PLL_STATUS_reg <= 1'b0;
@@ -519,7 +518,6 @@ module cwhusky_cw310_top (
 
         .LED_capture            (cw_led_cap),
         .LED_armed              (cw_led_armed),
-        .O_clear_adc_error      (clear_adc_error),
         .O_disable_adc_error    (disable_adc_error),
         .ADC_data               (ADC_data),
         .ADC_clk_feedback       (ADC_clk_fb),

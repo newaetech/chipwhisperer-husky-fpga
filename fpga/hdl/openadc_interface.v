@@ -34,7 +34,6 @@ module openadc_interface #(
     output reg                          LED_armed, // Armed LED
     output reg                          LED_capture, // Capture in Progress LED (only illuminate during capture, very quick)
     output reg                          freq_measure,
-    output wire                         O_clear_adc_error,
     output wire                         O_disable_adc_error,
 
     // OpenADC Interface Pins
@@ -181,7 +180,6 @@ module openadc_interface #(
     wire       use_ddr;
 
     assign reset_o = reset;
-    assign O_clear_adc_error = extclk_monitor_disabled;
 
    reg extclk_change;
    reg extclk_change_usb;
