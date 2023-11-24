@@ -136,15 +136,29 @@ tests.append(dict(name  = 'huge_adc_capture_regular',
 tests.append(dict(name  = 'adc_stream_regular',
              testcase = 'capture',
              frequency = 2,
-             MIN_SIZE = 2048,
-             MAX_SIZE = 4095,
+             MIN_SIZE = 4096,
+             MAX_SIZE = 16384,
              NUM_CAPTURES = 2,
              LA_CAPTURE = 0,
              TRACE_CAPTURE = 0,
              STREAM = 1,
              FIFOSIZE = "TINYFIFO",
              VARIANT = 'regular', # will only run with --variant=regular
-             TIMEOUT_TIME = 5000,
+             TIMEOUT_TIME = 10000,
+             description = 'ADC capture exceeding fast FIFO size.'))
+
+tests.append(dict(name  = 'adc_concurrent_stream_regular',
+             testcase = 'capture',
+             frequency = 2,
+             MIN_SIZE = 4096,
+             MAX_SIZE = 16384,
+             NUM_CAPTURES = 2,
+             LA_CAPTURE = 1,
+             TRACE_CAPTURE = 1,
+             STREAM = 1,
+             FIFOSIZE = "TINYFIFO",
+             VARIANT = 'regular', # will only run with --variant=regular
+             TIMEOUT_TIME = 15000,
              description = 'ADC capture exceeding fast FIFO size.'))
 
 

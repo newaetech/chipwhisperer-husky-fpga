@@ -101,8 +101,8 @@ class GenericCapture(object):
             self.dut._log.info("%12s awaiting freed trigger lock" % job_name)
             while self.harness.trigger_lock.locked:
                 await ClockCycles(self.clk, 10)
-            await self.harness.read_lock_acquire(job_name)
             if not self.stream:
+                await self.harness.read_lock_acquire(job_name)
                 self.dut._log.info("%12s awaiting empty queue (count = %d, contents: %s)" % (job_name, self.harness.queue.qsize(), self.harness._queue_contents))
                 while not self.harness.queue.empty():
                     await ClockCycles(self.clk, 10)

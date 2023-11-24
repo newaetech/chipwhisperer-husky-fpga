@@ -27,6 +27,7 @@ class GenericTest(object):
         self._coro = None
         self.dispatch_id = 0
         self.name = None
+        self.stream = 0
         self.errors = 0
         self.downstream_triggers = []
         self.downstream_triggers_pending = 0
@@ -234,9 +235,14 @@ class GenericTest(object):
             # while the capture thread sets up and executes its read.
             if not self.harness.trigger_lock.locked:
                 await self.harness.trigger_lock.acquire()
-            self.dut._log.info("%12s waiting for read_lock to be freed: second check" % job_name)
-            while self.harness.read_lock.locked:
-                await ClockCycles(self.clk, 10)
+            if self.stream:
+                self.dut._log.info("%12s acquiring read_lock prior to triggering (because streaming)..." % job_name)
+                await self.harness.read_lock_acquire(job_name)
+                self.dut._log.info("%12s read_lock acquired" % job_name)
+            else:
+                self.dut._log.info("%12s waiting for read_lock to be freed: second check" % job_name)
+                while self.harness.read_lock.locked:
+                    await ClockCycles(self.clk, 10)
 
             # now we can trigger *this* job:
             if not externally_triggered:
@@ -295,7 +301,6 @@ class ADCTest(GenericTest):
         self.name = 'ADC'
         self.max_segments = None
         self.max_segment_cycles = None
-        self.stream = 0
         self.segment_time_factor = 4
         fifo_watch_thread = cocotb.start_soon(self.fifo_watch())
         if harness.is_pro:
@@ -346,7 +351,7 @@ class ADCTest(GenericTest):
         else:
             downsample = random.randint(1, self.max_downsample)
         if self.stream:
-            stream_segment_threshold = random.randint(256, 2048)
+            stream_segment_threshold = random.randint(256, 1024)
             await self.registers.write(self.reg_addr['STREAM_SEGMENT_THRESHOLD'], self.registers.to_bytes(stream_segment_threshold, 3))
             await self.registers.write(self.reg_addr['SETTINGS_ADDR'], [0x24 + (1<<4)])
 
