@@ -30,9 +30,10 @@ root_logger.addHandler(fh)
 timeout_time = int(os.getenv('TIMEOUT_TIME', '2000'))
 
 class Harness(object):
-    def __init__(self, dut, registers, stream):
+    def __init__(self, dut, registers, stream, is_pro):
         self.dut = dut
         self.registers = registers
+        self.is_pro = is_pro
         self.slurp_defines(['../hdl/registers.v', '../tracewhisperer/hdl/defines_trace.v', '../tracewhisperer/hdl/defines_pw.v'])
         self.tests = []
         self.errors = 0
@@ -59,14 +60,13 @@ class Harness(object):
         #cocotb.start_soon(Clock(dut.clk_usb, 1, units='ns').start())
         self.usb_period = 10
         if stream: # slow ADC clock *way* down in order to allow for slow FIFO reads to (usually) outpace writes, like IRL:
-            self.adc_period = random.randint(25, 200)
+            self.adc_period = random.randint(50, 200)
         else:
             self.adc_period = random.randint(4, 20)
         self.dut._log.info("ADC clock randomized to %5.1f MHz" % (1/self.adc_period*1000))
         usb_clock_thread = cocotb.start_soon(Clock(dut.clk_usb, self.usb_period, units="ns").start())
         adc_clock_thread = cocotb.start_soon(Clock(dut.PLL_CLK1, self.adc_period, units="ns").start())
         ui_clock_thread = cocotb.start_soon(Clock(dut.ui_clk, 6, units="ns").start())
-        self.is_pro = int(os.getenv('PRO', '0'))
         self.dut.errors.value = 0
 
     def queue_push(self, job):
@@ -313,6 +313,7 @@ async def reg_rw(dut, wait_cycles=1000):
 async def capture(dut):
     """Concurrent captures of ADC, trace and LA."""
 
+
     num_captures = int(os.getenv('NUM_CAPTURES', '3'))
     min_size = int(os.getenv('MIN_SIZE', '30'))
     max_size = int(os.getenv('MAX_SIZE', '100'))
@@ -324,9 +325,23 @@ async def capture(dut):
     max_segments = int(os.getenv('MAX_SEGMENTS', '1'))
     max_segment_cycles = int(os.getenv('MAX_SEGMENT_CYCLES', '1'))
     stream = int(os.getenv('STREAM', '0'))
+    is_pro = int(os.getenv('PRO', '0'))
+
+    if is_pro:
+        # actual limits are higher (depends on DDR model size); these are in the interest of simulation time:
+        ADC_MAX = 16384
+        LA_MAX = 16384
+        TRACE_MAX = 16384
+    else:
+        LA_MAX = 4095
+        TRACE_MAX = 2047
+        if stream:
+            ADC_MAX = 16384 # not the actual limit -- just in interest of simulation time
+        else:
+            ADC_MAX = 4095
 
     registers = Registers(dut)
-    harness = Harness(dut, registers, stream)
+    harness = Harness(dut, registers, stream, is_pro)
 
     await harness.initialize_dut()
     if int(os.getenv('NO_DOWNSTREAM_TRIGGERS', 0)):
@@ -335,16 +350,16 @@ async def capture(dut):
     if int(os.getenv('LA_CAPTURE')):
         latest = LATest(dut, harness, registers, dut.la_job, dut.la_reading)
         latest.num_captures = num_captures
-        latest.capture_min = min_size
-        latest.capture_max = max_size
+        latest.capture_max = min(max_size, LA_MAX)
+        latest.capture_min = min(min_size, latest.capture_max)
         latest.max_downsample = max_downsample
         harness.register_test(latest)
 
     if int(os.getenv('ADC_CAPTURE')):
         adctest = ADCTest(dut, harness, registers, dut.adc_job, dut.adc_reading)
         adctest.num_captures = num_captures
-        adctest.capture_min = min_size
-        adctest.capture_max = max_size
+        adctest.capture_max = min(max_size, ADC_MAX)
+        adctest.capture_min = min(min_size, adctest.capture_max)
         adctest.max_presamples = max_presamples
         adctest.max_offset = max_offset
         adctest.max_downsample = max_downsample
@@ -357,8 +372,8 @@ async def capture(dut):
     if int(os.getenv('TRACE_CAPTURE')):
         tracetest = TraceTest(dut, harness, registers, dut.trace_job, dut.trace_reading)
         tracetest.num_captures = num_captures
-        tracetest.capture_min = min_size
-        tracetest.capture_max = max_size
+        tracetest.capture_max = min(max_size, TRACE_MAX)
+        tracetest.capture_min = min(min_size, tracetest.capture_max)
         harness.register_test(tracetest)
 
     if int(os.getenv('GLITCH_CAPTURE')):
@@ -367,7 +382,6 @@ async def capture(dut):
         glitchtest.capture_min = min_glitches
         glitchtest.capture_max = max_glitches
         harness.register_test(glitchtest)
-
 
     harness.init_tests()
     harness.start_tests()
