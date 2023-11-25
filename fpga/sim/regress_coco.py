@@ -34,7 +34,7 @@ args = parser.parse_args()
 tests = []
 tests.append(dict(name  = 'adc_capture',
              testcase = 'capture',
-             frequency = 3,
+             frequency = 4,
              LA_CAPTURE = 0,
              TRACE_CAPTURE = 0,
              MAX_SIZE = 300,
@@ -46,7 +46,7 @@ tests.append(dict(name  = 'adc_capture',
 # downsamples gets its own testcase because it has restrictions on presamples and segments:
 tests.append(dict(name  = 'adc_downsample',
              testcase = 'capture',
-             frequency = 5,
+             frequency = 6,
              LA_CAPTURE = 0,
              TRACE_CAPTURE = 0,
              MAX_SIZE = 300,
@@ -70,7 +70,7 @@ tests.append(dict(name  = 'adc_segments',
 
 tests.append(dict(name  = 'la_capture',
              testcase = 'capture',
-             frequency = 3,
+             frequency = 4,
              ADC_CAPTURE = 0,
              TRACE_CAPTURE = 0,
              MAX_SIZE = 300,
@@ -79,7 +79,7 @@ tests.append(dict(name  = 'la_capture',
 
 tests.append(dict(name  = 'trace_capture',
              testcase = 'capture',
-             frequency = 3,
+             frequency = 4,
              ADC_CAPTURE = 0,
              LA_CAPTURE = 0,
              MAX_SIZE = 300,
@@ -104,34 +104,22 @@ tests.append(dict(name  = 'big_capture',
              NUM_CAPTURES = 2,
              description = 'All sources, larger captures.'))
 
-tests.append(dict(name  = 'huge_adc_capture_pro',
+tests.append(dict(name  = 'huge_adc_capture',
              testcase = 'capture',
              frequency = 7,
+             # note: max_size will get adjusted down if not pro
              MIN_SIZE = 12000,
              MAX_SIZE = 12100,
              NUM_CAPTURES = 1,
              LA_CAPTURE = 0,
              TRACE_CAPTURE = 0,
              FIFOSIZE = "TINYFIFO",
-             VARIANT = 'pro', # will only run with --variant=pro
              # with TINY FIFO, for ADC we have:
              # fast FIFO: 1024 samples
              # pre DDR: 512*64/12 = 2730 samples
              # post DDR: 512*64/12 = 2730 samples
              # DDR capacity: selectable via TINYDDR, 256*64/12 = 1365 or 64K*64/12 = 349525 samples
              description = 'ADC capture exceeding pre-DDR FIFO size.'))
-
-tests.append(dict(name  = 'huge_adc_capture_regular',
-             testcase = 'capture',
-             frequency = 7,
-             MIN_SIZE = 3895,
-             MAX_SIZE = 4095,
-             NUM_CAPTURES = 1,
-             LA_CAPTURE = 0,
-             TRACE_CAPTURE = 0,
-             FIFOSIZE = "TINYFIFO",
-             VARIANT = 'regular', # will only run with --variant=regular
-             description = 'ADC capture exceeding fast FIFO size.'))
 
 tests.append(dict(name  = 'adc_stream_regular',
              testcase = 'capture',
@@ -145,7 +133,7 @@ tests.append(dict(name  = 'adc_stream_regular',
              FIFOSIZE = "TINYFIFO",
              VARIANT = 'regular', # will only run with --variant=regular
              TIMEOUT_TIME = 10000,
-             description = 'ADC capture exceeding fast FIFO size.'))
+             description = 'ADC-only stream capture (regular Husky only).'))
 
 tests.append(dict(name  = 'adc_concurrent_stream_regular',
              testcase = 'capture',
@@ -159,10 +147,9 @@ tests.append(dict(name  = 'adc_concurrent_stream_regular',
              FIFOSIZE = "TINYFIFO",
              VARIANT = 'regular', # will only run with --variant=regular
              TIMEOUT_TIME = 15000,
-             description = 'ADC capture exceeding fast FIFO size.'))
+             description = 'ADC stream capture plus other sources (regular Husky only).'))
 
-
-tests.append(dict(name  = 'huge_la_capture_pro',
+tests.append(dict(name  = 'huge_la_capture',
              testcase = 'capture',
              frequency = 7,
              MIN_SIZE = 12000,
@@ -170,30 +157,13 @@ tests.append(dict(name  = 'huge_la_capture_pro',
              NUM_CAPTURES = 1,
              ADC_CAPTURE = 0,
              TRACE_CAPTURE = 0,
-             VARIANT = 'pro', # will only run with --variant=pro
              FIFOSIZE = "TINYFIFO",
              # with TINY FIFO, for LA we have:
              # pre DDR: 512*64/9 = 3640 samples
              # DDR capacity: selectable via TINYDDR, 256*64/12 = 1365 or 64K*64/12 = 349525 samples
              description = 'LA capture exceeding pre-DDR FIFO size.'))
 
-tests.append(dict(name  = 'huge_la_capture_regular',
-             testcase = 'capture',
-             frequency = 7,
-             MIN_SIZE = 3096,
-             MAX_SIZE = 4096,
-             NUM_CAPTURES = 1,
-             ADC_CAPTURE = 0,
-             TRACE_CAPTURE = 0,
-             VARIANT = 'regular', # will only run with --variant=regular
-             FIFOSIZE = "TINYFIFO",
-             # with TINY FIFO, for LA we have:
-             # pre DDR: 512*64/9 = 3640 samples
-             # DDR capacity: selectable via TINYDDR, 256*64/12 = 1365 or 64K*64/12 = 349525 samples
-             description = 'LA capture exceeding pre-DDR FIFO size.'))
-
-
-tests.append(dict(name  = 'huge_all_capture_pro',
+tests.append(dict(name  = 'huge_all_capture',
              testcase = 'capture',
              frequency = 7,
              MIN_SIZE = 4000,
@@ -201,19 +171,7 @@ tests.append(dict(name  = 'huge_all_capture_pro',
              NUM_CAPTURES = 1,
              FIFOSIZE = "TINYFIFO",
              DDR_MODEL_WRITES = 'FAST_DDR_WRITES',
-             VARIANT = 'pro', # will only run with --variant=pro
              description = 'ADC+trace+LA capture exceeding pre-DDR FIFO size.'))
-
-tests.append(dict(name  = 'huge_all_capture_regular',
-             testcase = 'capture',
-             frequency = 7,
-             MIN_SIZE = 2000,
-             MAX_SIZE = 2047,
-             NUM_CAPTURES = 1,
-             FIFOSIZE = "TINYFIFO",
-             VARIANT = 'regular', # will only run with --variant=regular
-             description = 'ADC+trace+LA capture exceeding pre-DDR FIFO size.'))
-
 
 tests.append(dict(name  = 'glitch_only',
              testcase = 'capture',
@@ -238,7 +196,6 @@ tests.append(dict(name  = 'everything',
              description = 'ADC+LA+glitch.'))
 
 
-
 #tests.append(dict(name  = 'adctrig',
 #             testcase = 'capture',
 #             frequency = 1,
@@ -247,7 +204,6 @@ tests.append(dict(name  = 'everything',
 #             TRACE_CAPTURE = 0,
 #             NUM_CAPTURES = 1,
 #             description = 'ADC and LA only, covering LA triggered by ADC.'))
-
 
 
 def print_tests():
