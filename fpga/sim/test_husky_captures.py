@@ -288,16 +288,20 @@ class ADCCapture(GenericCapture):
             raw = (await self.harness.registers.read(self.reg_addr['FIFO_STATE'], 1))[0]
             idle = (raw & 0x03) == 0
         if self.dut.U_dut.oadc.U_fifo.fast_fifo_empty.value == 0:
-            self.harness.inc_error()
             self.dut._log.error('%12s fast FIFO not empty after reading all samples.' % job_name)
+            self.harness.inc_error()
         if self.harness.is_pro:
             if self.dut.U_dut.oadc.U_fifo.preddr_fifo_empty.value == 0:
-                self.harness.inc_error()
                 self.dut._log.error('%12s pre-DDR FIFO not empty after reading all samples.' % job_name)
-        ## TODO: temporarily commented out because last word is left unread, due to the first word fallthrough nature of the FIFO.
-        #if self.dut.U_dut.oadc.U_fifo.postddr_fifo_empty.value == 0:
-        #    self.harness.inc_error()
+                self.harness.inc_error()
+        # TODO: temporarily commented out because last word is left unread, due to the first word fallthrough nature of the FIFO.
+        #if self.harness.is_pro:
+        #    empty_flag = self.dut.U_dut.oadc.U_fifo.postddr_fifo_empty.value
+        #else:
+        #    empty_flag = self.dut.U_dut.oadc.U_fifo.slow_fifo_empty.value
+        #if empty_flag == 0:
         #    self.dut._log.error('%12s post-DDR FIFO not empty after reading all samples.' % job_name)
+        #    self.harness.inc_error()
 
     @staticmethod
     def processHuskyData(NumberPoints, data, bits_per_sample=12):
@@ -459,8 +463,8 @@ class LACapture(GenericCapture):
         job_name = job['name']
         if self.harness.is_pro:
             if self.dut.U_dut.U_la_converter.fifo_empty.value == 0:
-                self.harness.inc_error()
                 self.dut._log.error('%12s pre-DDR FIFO not empty after reading all samples.' % job_name)
+                self.harness.inc_error()
         ## TODO: temporarily commented out because last word is left unread, due to the first word fallthrough nature of the FIFO.
         #if self.dut.U_dut.oadc.U_fifo.postddr_fifo_empty.value == 0:
         #    self.harness.inc_error()
@@ -489,8 +493,8 @@ class LACapture(GenericCapture):
         for i,byte in enumerate(data[1:]):
             expected = (data[0] + INC*(i+1)) % MOD
             if expected != byte:
-                self.inc_error()
                 self.dut._log.error("%12s Sample %4d: expected %2x got %2x" % (job['name'], i+1, expected, byte))
+                self.inc_error()
             else:
                 self.dut._log.debug("%12s Good sample %4d: %2x" % (job['name'], i+1, byte))
 
@@ -594,8 +598,8 @@ class TraceCapture(GenericCapture):
         job_name = job['name']
         if self.harness.is_pro:
             if self.dut.U_dut.U_trace_converter.fifo_empty.value == 0:
-                self.harness.inc_error()
                 self.dut._log.error('%12s pre-DDR FIFO not empty after reading all samples.' % job_name)
+                self.harness.inc_error()
         ## TODO: temporarily commented out because last word is left unread, due to the first word fallthrough nature of the FIFO.
         #if self.dut.U_dut.oadc.U_fifo.postddr_fifo_empty.value == 0:
         #    self.harness.inc_error()
@@ -610,8 +614,8 @@ class TraceCapture(GenericCapture):
         for i,byte in enumerate(data[1:]):
             expected = (data[0] + i + 1) % 2**18
             if expected != byte:
-                self.inc_error()
                 self.dut._log.error("%12s Sample %4d: expected %5x got %5x" % (job['name'], i+1, expected, byte))
+                self.inc_error()
             else:
                 self.dut._log.debug("%12s Good sample %4d: %5x" % (job['name'], i+1, byte))
 
@@ -664,8 +668,8 @@ class GlitchCapture(GenericCapture):
         self.not_in_a_job()
         while True:
             await Edge(self.glitch_error)
-            self.harness.inc_error()
             self.dut._log.error('%12s Unexpected glitch value! (expected %d, got %s)' % (self.job_name, self.dut.expected_glitch.value, self.dut.glitch_out.value))
+            self.harness.inc_error()
 
     async def glitch_check(self, job) -> None:
         """ Ensures there are glitches when there are supposed to be.

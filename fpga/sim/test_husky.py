@@ -30,10 +30,11 @@ root_logger.addHandler(fh)
 timeout_time = int(os.getenv('TIMEOUT_TIME', '2000'))
 
 class Harness(object):
-    def __init__(self, dut, registers, stream, is_pro):
+    def __init__(self, dut, registers, stream, is_pro, stop_first_error):
         self.dut = dut
         self.registers = registers
         self.is_pro = is_pro
+        self.stop_first_error = stop_first_error
         self.slurp_defines(['../hdl/registers.v', '../tracewhisperer/hdl/defines_trace.v', '../tracewhisperer/hdl/defines_pw.v'])
         self.tests = []
         self.errors = 0
@@ -251,6 +252,8 @@ class Harness(object):
     def inc_error(self):
         self.errors += 1
         self.dut.errors.value = self.errors
+        if self.stop_first_error:
+            assert False
 
     async def register_rw_thread(self, address, size):
         while True:
@@ -326,6 +329,7 @@ async def capture(dut):
     max_segment_cycles = int(os.getenv('MAX_SEGMENT_CYCLES', '1'))
     stream = int(os.getenv('STREAM', '0'))
     is_pro = int(os.getenv('PRO', '0'))
+    stop_first_error = int(os.getenv('STOP_FIRST_ERROR', '1'))
 
     if is_pro:
         # actual limits are higher (depends on DDR model size); these are in the interest of simulation time:
@@ -341,7 +345,7 @@ async def capture(dut):
             ADC_MAX = 4095
 
     registers = Registers(dut)
-    harness = Harness(dut, registers, stream, is_pro)
+    harness = Harness(dut, registers, stream, is_pro, stop_first_error)
 
     await harness.initialize_dut()
     if int(os.getenv('NO_DOWNSTREAM_TRIGGERS', 0)):

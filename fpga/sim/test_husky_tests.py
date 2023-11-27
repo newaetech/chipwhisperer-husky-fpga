@@ -282,7 +282,6 @@ class GenericTest(object):
             self.dut._log.info("%12s popped from job queue (count = %d, contents: %s)" % (job_name, self.harness.queue.qsize(), self.harness._queue_contents))
             result = await self.checker.results.get()
             await self._post_job()
-            #assert result['errors'] == 0 # TODO: optionally assert here, to stop test as soon as errors are found?
             self.errors += result['errors']
 
             if shared_lock_acquired:
@@ -464,7 +463,6 @@ class ADCTest(GenericTest):
     async def fifo_watch(self) -> None:
         while True:
             await RisingEdge(self.dut.U_dut.oadc.U_fifo.error_flag)
-            self.harness.inc_error()
             error_message = 'Internal FIFO/DDR error(s): '
             await ClockCycles(self.clk, 2) # Note: without this, error_value comes back as 0, even though it changes on the same cycle as error_flag
             error_value = self.dut.U_dut.oadc.U_fifo.error_stat.value
@@ -484,18 +482,19 @@ class ADCTest(GenericTest):
             if error_value & 2**1 : error_message += "postddr_fifo_overflow "
             if error_value & 2**0 : error_message += "postddr_fifo_underflow_masked "
             self.dut._log.error(error_message)
+            self.harness.inc_error()
 
     async def ddr_model_watch(self) -> None:
         while True:
             await RisingEdge(self.dut.U_dut.oadc.U_ddr.U_ddr3_model.dropped_read_request)
-            self.harness.inc_error()
             self.dut._log.error('Internal FIFO/DDR error(s): DDR dropped read request')
+            self.harness.inc_error()
 
     async def trigger_ready_watch(self) -> None:
         while True:
             await RisingEdge(self.dut.U_dut.oadc.tu_inst.trigger_too_soon)
-            self.harness.inc_error()
             self.dut._log.error('Trigger before armed_and_ready! (testbench error)')
+            self.harness.inc_error()
 
 
     def get_downstream_trigger(self, job) -> list:
@@ -616,12 +615,12 @@ class LATest(GenericTest):
     async def preddr_watch(self) -> None:
         while True:
             await RisingEdge(self.dut.U_dut.U_la_converter.error_flag)
-            self.harness.inc_error()
             error_message = 'Pre-DDR FIFO error(s): '
             await ClockCycles(self.clk, 2)
             if self.dut.U_dut.U_la_converter.fifo_overflow_sticky.value:     error_message += "U_la_converter overflow "
             if self.dut.U_dut.U_la_converter.fifo_underflow_sticky.value:    error_message += "U_la_converter underflow "
             self.dut._log.error(error_message)
+            self.harness.inc_error()
 
 
 class TraceTest(GenericTest):
@@ -702,12 +701,12 @@ class TraceTest(GenericTest):
     async def preddr_watch(self) -> None:
         while True:
             await RisingEdge(self.dut.U_dut.U_trace_converter.error_flag)
-            self.harness.inc_error()
             error_message = 'Pre-DDR FIFO error(s): '
             await ClockCycles(self.clk, 2)
             if self.dut.U_dut.U_trace_converter.fifo_overflow_sticky.value:  error_message += "U_trace_converter overflow "
             if self.dut.U_dut.U_trace_converter.fifo_underflow_sticky.value: error_message += "U_trace_converter underflow "
             self.dut._log.error(error_message)
+            self.harness.inc_error()
 
 
 
