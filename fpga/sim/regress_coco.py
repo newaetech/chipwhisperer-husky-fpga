@@ -195,6 +195,50 @@ tests.append(dict(name  = 'everything',
              GLITCH_CAPTURE = 1,
              description = 'ADC+LA+glitch.'))
 
+tests.append(dict(name  = 'sad',
+             frequency = 4,
+             BITS_PER_SAMPLE = 8,
+             REF_SAMPLES = 128, # caution: large values can lead to slow simulation
+             SHORT_SAD = [0,1],
+             THRESHOLD = [20,100], # keep threshold low to avoid unintentional triggers - testbench isn't smart enough
+             TRIGGERS = 4,
+             FLUSH = [0,1],
+             LINEAR_RAMP = 0,
+             TIMEOUT_CYCLES = 5000,
+             SAD = 'SAD_X2',
+             TOP = 'sad_tb.v',
+             description = 'SAD block-level test.'))
+
+tests.append(dict(name  = 'edge',
+             frequency = 4,
+             EDGES = [1, 32],
+             TIMEOUT_CYCLES = 10000,
+             TOP = 'edge_tb.v',
+             description = 'edge trigger block-level test.'))
+
+# TODO: more NUM_TRIGGERS for some variants?
+tests.append(dict(name  = 'trigger_sequencer_pass',
+             frequency = 4,
+             PASS = 1,
+             NUM_TRIGGERS = 2,
+             TOP = 'trigger_sequencer_cocowrapper.v',
+             description = 'trigger sequencer block-level test.'))
+
+tests.append(dict(name  = 'trigger_sequencer_fail',
+             frequency = 4,
+             FAIL = 1,
+             NUM_TRIGGERS = 2,
+             TOP = 'trigger_sequencer_cocowrapper.v',
+             description = 'trigger sequencer block-level test.'))
+
+tests.append(dict(name  = 'trigger_sequencer_rand',
+             frequency = 2,
+             RAND = 1,
+             NUM_TRIGGERS = 2,
+             TOP = 'trigger_sequencer_cocowrapper.v',
+             description = 'trigger sequencer block-level test.'))
+
+
 
 #tests.append(dict(name  = 'adctrig',
 #             testcase = 'capture',
@@ -212,28 +256,37 @@ def print_tests():
        print("%s: %s" % (test['name'], test['description']))
     quit()
 
-def check_pass_fail(logfile):
+def check_pass_fail(logfile, cocotb):
     log = open(logfile, 'r')
     passed = None
-    failed = None
     warnings = 0
     errors = 0
     for line in log:
-       stat_matches = stat_regex.search(line)
-       if stat_matches:
-          #print("CPF MATCHED ON LINE: %s" % line)
-          passed = int(stat_matches.group(2))
-          failed = int(stat_matches.group(3))
-          break
-       #else:
-       #    print("CPF couldn't parse line: %s" % line)
+       if cocotb:
+           failed = None
+           stat_matches = cocotb_stat_regex.search(line)
+           if stat_matches:
+              passed = int(stat_matches.group(2))
+              failed = int(stat_matches.group(3))
+              break
+       else:
+           pass_matches = pass_regex.search(line)
+           fail_matches = fail_regex.search(line)
+           if pass_matches:
+              passed = 1
+              warnings = int(pass_matches.group(1))
+              break
+           elif fail_matches:
+              passed = 0
+              errors = int(fail_matches.group(1))
+              break
     log.close()
     if passed is None:
         print("*** parsing error on %s ***" % logfile)
-    if failed:
+    if cocotb and failed:
         errors = 1
-    # TODO: count warnings and errors
     return passed, warnings, errors
+
 
 
 if (args.list):
@@ -263,9 +316,12 @@ else:
     raise ValueError('Variant not recognized (%s)' % args.variant)
 
 
-stat_regex = re.compile(r'TESTS=(\d+) PASS=(\d+) FAIL=(\d+) SKIP=(\d+)')
+pass_regex = re.compile(r'^Simulation passed \((\d+) warnings')
+fail_regex = re.compile(r'^SIMULATION FAILED \((\d+) errors')
 test_regex = re.compile(args.tests)
 exclude_regex = re.compile(args.exclude)
+cocotb_stat_regex = re.compile(r'TESTS=(\d+) PASS=(\d+) FAIL=(\d+) SKIP=(\d+)')
+
 
 exefile = 'coco.vvp'
 outfile = open('coco_compile.out', 'w')
@@ -294,6 +350,7 @@ for test in tests:
       if exclude_regex.search(test['name']) != None:
           continue
 
+   cocotb = True
    for i in range(args.runs):
 
       if args.compile_once:
@@ -302,13 +359,14 @@ for test in tests:
           make_target = 'coco'
 
 
-      makeargs = ['make', make_target, 'TESTCASE=%s' % test['testcase'], 'COCOTB_LOG_LEVEL=%s' % args.cocodebug]
+      makeargs = ['make', make_target, 'COCOTB_LOG_LEVEL=%s' % args.cocodebug]
+      if 'testcase' in test:
+          makeargs.append('TESTCASE=%s' % test['testcase'])
       if (args.seed):
           seed = args.seed
       else:
           # not easy/clean to get cocotb-generated seed from logfile, so force ours instead
           seed = random.randint(0, 2**31-1)
-      makeargs.append("RANDOM_SEED=%d" % seed)
       makeargs.append(variant)
 
       if args.timeout:
@@ -335,6 +393,14 @@ for test in tests:
          elif key == 'VARIANT':
              if test[key] != args.variant:
                  run_test = False
+         elif key == 'TOP' and test[key] == 'sad_tb.v':
+             makeargs[1] = 'all_sad'
+             cocotb = False
+         elif key == 'TOP' and test[key] == 'edge_tb.v':
+             makeargs[1] = 'all_edge'
+             cocotb = False
+         elif key == 'TOP' and test[key] == 'trigger_sequencer_cocowrapper.v':
+             makeargs[1] = 'all_trigger_sequencer'
          else:
             if type(test[key]) == list:
                value = random.randint(test[key][0], test[key][1])
@@ -342,10 +408,15 @@ for test in tests:
                value = test[key]
             makeargs.append("%s=%s" % (key, value))
 
+      if cocotb:
+          makeargs.append("RANDOM_SEED=%d" % seed)
+      else:
+          makeargs.append("SEED=%d" % seed)
+
       # run:
       if run_test:
          #print("Adding job: %s" % makeargs)
-         jobs_to_submit.append((makeargs, logfile, outfile, seed))
+         jobs_to_submit.append((makeargs, logfile, outfile, seed, cocotb))
          exefiles.append(exefile)
 
 num_processes = len(jobs_to_submit)
@@ -370,9 +441,9 @@ if procs > len(jobs_to_submit):
 else:
     num_first_batch = procs
 for i in range(num_first_batch):
-    makeargs, logfile, outfile, seed = jobs_to_submit.pop()
+    makeargs, logfile, outfile, seed, cocotb = jobs_to_submit.pop()
     p = subprocess.Popen(makeargs, stdout=outfile, stderr=outfile)
-    processes.append((p,logfile,seed))
+    processes.append((p,logfile,seed, cocotb))
 
 pbar_dispatched.update(num_first_batch)
 pbar_dispatched.refresh()
@@ -383,21 +454,21 @@ oldpass_count = 0
 fail_count = 0
 pass_count = 0
 while len(processes):
-    for p,l,s in processes:
+    for p,l,s,cocotb in processes:
         if not p.poll() is None:
             finished += 1
-            passed, warnings, errors = check_pass_fail(l)
+            passed, warnings, errors = check_pass_fail(l,cocotb)
             pass_count += passed
             if warnings:
                 warns.append("%s: %0d warnings" % (l, warnings))
             if errors:
                 fail_count += 1
                 fails.append("%s: %d errors (seed=%d)" % (l, errors, s))
-            processes.remove((p,l,s))
+            processes.remove((p,l,s,cocotb))
             if len(jobs_to_submit) > 0:
-                makeargs, logfile, outfile, seed = jobs_to_submit.pop()
+                makeargs, logfile, outfile, seed, cocotb = jobs_to_submit.pop()
                 p = subprocess.Popen(makeargs, stdout=outfile, stderr=outfile)
-                processes.append((p,logfile,seed))
+                processes.append((p,logfile,seed,cocotb))
                 pbar_dispatched.update(1)
                 pbar_dispatched.refresh()
 
