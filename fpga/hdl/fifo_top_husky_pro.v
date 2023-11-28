@@ -67,6 +67,7 @@ module fifo_top_husky_pro (
     output wire [63:0]  preddr_fifo_dout,
     output wire         preddr_fifo_empty,
     output reg          flushing,
+    output wire         fast_fifo_empty,
 
     input  wire         postddr_fifo_empty,
     input  wire         postddr_fifo_overflow,
@@ -96,7 +97,6 @@ module fifo_top_husky_pro (
     wire                fast_fifo_rd;
     wire [11:0]         fast_fifo_dout;
     wire                fast_fifo_full;
-    wire                fast_fifo_empty;
     wire                fast_fifo_overflow;
     wire                fast_fifo_underflow;
 

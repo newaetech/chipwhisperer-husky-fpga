@@ -1,4 +1,6 @@
 `include "includes.v"
+`include "defines_pw.v"
+
 `timescale 1 ns / 1 ps
 `default_nettype none
 /***********************************************************************
@@ -537,6 +539,7 @@ module cwhusky_cw310_top (
         .cmd_arm_usb            (cmd_arm_usb),
         .armed_and_ready        (armed_and_ready),
         .freq_measure           (freq_measure),
+        .shared_fifo_empty      (shared_fifo_empty),
 
         .reg_address            (reg_address),
         .reg_bytecnt            (reg_bytecnt), 
@@ -1349,6 +1352,15 @@ module cwhusky_cw310_top (
         .fifo_errors            (la_fifo_errors),
         .fifo_full              ()      // unused
     );
+
+    // ~same as in phywhisperer-common/hardware/hdl/fifo.v:
+    assign fifo_status[`FIFO_STAT_EMPTY] = preddr_trace_empty;
+    assign fifo_status[`FIFO_STAT_UNDERFLOW] = trace_fifo_errors[0];
+    assign fifo_status[`FIFO_STAT_EMPTY_THRESHOLD] = 1'b0;
+    assign fifo_status[`FIFO_STAT_FULL] = trace_fifo_full;
+    assign fifo_status[`FIFO_STAT_OVERFLOW_BLOCKED] = trace_fifo_errors[1];
+
+    assign shared_fifo_empty = 1'b1;
 
 `endif
 

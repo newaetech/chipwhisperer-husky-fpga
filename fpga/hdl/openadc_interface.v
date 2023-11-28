@@ -54,6 +54,7 @@ module openadc_interface #(
     output wire [7:0]                   fifo_dout,
     input  wire                         trace_flushing,
     input  wire                         la_flushing,
+    input  wire                         shared_fifo_empty,
 
     // register interface
     input  wire [7:0]                   reg_address,
@@ -140,6 +141,7 @@ module openadc_interface #(
     wire       adc_capture_done;
     wire       reset;
 
+    wire       fast_fifo_empty;
     wire       fifo_stream;
     wire [15:0] num_segments;
     wire [19:0] segment_cycles;
@@ -188,6 +190,8 @@ module openadc_interface #(
 
 `ifndef PRO
     wire       clear_fifo_errors;
+    wire       preddr_trace_empty = 1'b1;
+    wire       preddr_la_empty = 1'b1;
 `endif
 
    //Divide clock by 2^24 for heartbeat LED
@@ -684,6 +688,12 @@ module openadc_interface #(
       .trace_flushing                   (trace_flushing),
       .postddr_flush                    (postddr_flush),
 
+      .preddr_adc_fifo_empty            (preddr_adc_fifo_empty),
+      .preddr_la_empty                  (preddr_la_empty),
+      .preddr_trace_empty               (preddr_trace_empty),
+      .fast_fifo_empty                  (fast_fifo_empty),
+      .shared_fifo_empty                (shared_fifo_empty),
+
       .ddr_single_write                 (single_write      ),
       .ddr_single_read                  (single_read       ),
       .ddr_single_address               (single_address    ),
@@ -810,6 +820,7 @@ module openadc_interface #(
           .postddr_fifo_overflow    (postddr_fifo_overflow),
           .postddr_fifo_underflow_masked (postddr_fifo_underflow_masked),
           .flushing                 (adc_flushing),
+          .fast_fifo_empty          (fast_fifo_empty),
 
           .preddr_fifo_wr           (slow_fifo_wr),
           .preddr_fifo_underflow    (preddr_adc_fifo_underflow ),
@@ -974,6 +985,7 @@ module openadc_interface #(
           .armed_and_ready          (armed_and_ready),
           .state                    (fifo_state),
           .flushing                 (adc_flushing),
+          .fast_fifo_empty          (fast_fifo_empty),
 
           .slow_fifo_wr             (slow_fifo_wr),
           .slow_fifo_rd             (slow_fifo_rd),
@@ -1001,6 +1013,7 @@ module openadc_interface #(
        assign ddr_single_done = 0;
        assign ddr_write_data_done = 0;
        assign postddr_flush = 0;
+       wire preddr_adc_fifo_empty = 1'b0;
 
    `endif
 

@@ -60,6 +60,12 @@ module reg_openadc_adcfifo #(
    input  wire         trace_flushing,
    input  wire         postddr_flush,
 
+   input  wire         preddr_adc_fifo_empty,
+   input  wire         preddr_la_empty,
+   input  wire         preddr_trace_empty,
+   input  wire         fast_fifo_empty,
+   input  wire         shared_fifo_empty,
+
    // DDR3 (Pro) stuff:
    output reg          O_use_ddr,
    output reg          O_ddr3_rwtest_en,
@@ -111,15 +117,20 @@ module reg_openadc_adcfifo #(
    reg [7:0] reg_datao_reg;
    assign reg_datao = reg_datao_reg;
 
-   wire [23:0] fifo_stat = {1'b0,               // 23
+   wire [28:0] fifo_stat = {shared_fifo_empty,                  // 28
+                            preddr_la_empty,                    // 27
+                            preddr_trace_empty,                 // 26
+                            preddr_adc_fifo_empty,              // 25
+                            fast_fifo_empty,                    // 24
+                            1'b0,                               // 23
                             trace_flushing | postddr_flush,     // 22
                             la_flushing | postddr_flush,        // 21
                             adc_flushing | postddr_flush,       // 20
-                            trace_fifo_errors,  // 19:18
-                            la_fifo_errors,     // 17:16
-                            1'b0,               // 15
-                            fifo_empty,         // 14 (this is post-ddr/slow FIFO empty)
-                            fifo_error_stat};   // 13:0
+                            trace_fifo_errors,                  // 19:18
+                            la_fifo_errors,                     // 17:16
+                            1'b0,                               // 15
+                            fifo_empty,                         // 14 (this is post-ddr/slow FIFO empty)
+                            fifo_error_stat};                   // 13:0
 
    wire [159:0] ddr3_rw_stats = {I_ddr3_read_read,              // 159:128
                                  I_ddr3_read_idle,              // 127:96

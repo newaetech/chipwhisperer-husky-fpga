@@ -450,6 +450,7 @@ module cwhusky_top(
         .freq_measure           (freq_measure),
         .trace_flushing         (trace_fifo_flush),
         .la_flushing            (la_fifo_flush),
+        .shared_fifo_empty      (fifo_empty),
 
         .reg_address            (reg_address),
         .reg_bytecnt            (reg_bytecnt), 
