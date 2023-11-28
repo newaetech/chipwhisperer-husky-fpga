@@ -51,11 +51,10 @@ class GenericCapture(object):
         """
         self.dut._log.error("%12s: _read_samples() must be implemented in child class." % self.name)
 
-    async def _check_fifo_errors(self, job) -> None:
-        """ Check FIFO status and errors. Meant to be called after reading all
-        samples. Verifies that FIFO is empty.
+    async def _check_fifo_empty(self, job) -> None:
+        """ Meant to be called after reading all samples; verifies that FIFO is empty.
         """
-        self.dut._log.error("%12s: _check_fifo_errors() must be implemented in child class." % self.name)
+        self.dut._log.error("%12s: _check_fifo_empty() must be implemented in child class." % self.name)
 
     def _check_samples(self, job, data) -> None:
         """ Check <data> for errors. Return the number of errors seen.
@@ -121,7 +120,7 @@ class GenericCapture(object):
             self.harness.read_lock_release()
             self.dut._log.info("%12s read_lock released" % job_name)
             self.dut_reading_signal.value = 0
-            await self._check_fifo_errors(job)
+            await self._check_fifo_empty(job)
             self._check_samples(job, data)
             self.results.put_nowait({"errors": self.errors})
             if self.errors:
@@ -275,8 +274,7 @@ class ADCCapture(GenericCapture):
         return data
 
 
-    async def _check_fifo_errors(self, job) -> None:
-        # TODO: replace internal signal checks with a register status read
+    async def _check_fifo_empty(self, job) -> None:
         # give a chance for FSM to return to idle (e.g. in case where we don't read all the samples)
         if job['limited_reads']:
             # nothing to check because FIFOs are probably not empty
@@ -286,21 +284,11 @@ class ADCCapture(GenericCapture):
         while not idle:
             raw = (await self.harness.registers.read(self.reg_addr['FIFO_STATE'], 1))[0]
             idle = (raw & 0x03) == 0
-        if self.dut.U_dut.oadc.U_fifo.fast_fifo_empty.value == 0:
-            self.dut._log.error('%12s fast FIFO not empty after reading all samples.' % job_name)
+        # note that we don't check the slow/post-DDR FIFO because last word is left unread since FIFO is first word fallthrough
+        empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 4))[3] & 0x03
+        if not empty:
+            self.dut._log.error('%12s fast/pre-DDR FIFO not empty after reading all samples.' % job_name)
             self.harness.inc_error()
-        if self.harness.is_pro:
-            if self.dut.U_dut.oadc.U_fifo.preddr_fifo_empty.value == 0:
-                self.dut._log.error('%12s pre-DDR FIFO not empty after reading all samples.' % job_name)
-                self.harness.inc_error()
-        # TODO: temporarily commented out because last word is left unread, due to the first word fallthrough nature of the FIFO.
-        #if self.harness.is_pro:
-        #    empty_flag = self.dut.U_dut.oadc.U_fifo.postddr_fifo_empty.value
-        #else:
-        #    empty_flag = self.dut.U_dut.oadc.U_fifo.slow_fifo_empty.value
-        #if empty_flag == 0:
-        #    self.dut._log.error('%12s post-DDR FIFO not empty after reading all samples.' % job_name)
-        #    self.harness.inc_error()
 
     @staticmethod
     def processHuskyData(NumberPoints, data, bits_per_sample):
@@ -456,17 +444,13 @@ class LACapture(GenericCapture):
             words.append((bignum >> 8) & 0x1ff)
         return words
 
-    async def _check_fifo_errors(self, job) -> None:
-        # TODO: replace internal signal checks with a register status read
+    async def _check_fifo_empty(self, job) -> None:
+        # note that we don't check the slow/post-DDR FIFO because last word is left unread since FIFO is first word fallthrough
         job_name = job['name']
-        if self.harness.is_pro:
-            if self.dut.U_dut.U_la_converter.fifo_empty.value == 0:
-                self.dut._log.error('%12s pre-DDR FIFO not empty after reading all samples.' % job_name)
-                self.harness.inc_error()
-        ## TODO: temporarily commented out because last word is left unread, due to the first word fallthrough nature of the FIFO.
-        #if self.dut.U_dut.oadc.U_fifo.postddr_fifo_empty.value == 0:
-        #    self.harness.inc_error()
-        #    self.dut._log.error('%12s post-DDR FIFO not empty after reading all samples.' % job_name)
+        empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 4))[3] & 0x18
+        if not empty:
+            self.dut._log.error('%12s shared/pre-DDR FIFO not empty after reading all samples.' % job_name)
+            self.harness.inc_error()
 
     def _check_samples(self, job, data) -> None:
         if job['bits_per_sample'] == 8:
@@ -591,17 +575,13 @@ class TraceCapture(GenericCapture):
         num_full_words = int(len(raw)/18*8)
         return words[:num_full_words]
 
-    async def _check_fifo_errors(self, job) -> None:
-        # TODO: replace internal signal checks with a register status read
+    async def _check_fifo_empty(self, job) -> None:
+        # note that we don't check the slow/post-DDR FIFO because last word is left unread since FIFO is first word fallthrough
         job_name = job['name']
-        if self.harness.is_pro:
-            if self.dut.U_dut.U_trace_converter.fifo_empty.value == 0:
-                self.dut._log.error('%12s pre-DDR FIFO not empty after reading all samples.' % job_name)
-                self.harness.inc_error()
-        ## TODO: temporarily commented out because last word is left unread, due to the first word fallthrough nature of the FIFO.
-        #if self.dut.U_dut.oadc.U_fifo.postddr_fifo_empty.value == 0:
-        #    self.harness.inc_error()
-        #    self.dut._log.error('%12s post-DDR FIFO not empty after reading all samples.' % job_name)
+        empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 4))[3] & 0x14
+        if not empty:
+            self.dut._log.error('%12s pre-DDR FIFO not empty after reading all samples.' % job_name)
+            self.harness.inc_error()
 
     def _check_samples(self, job, data) -> None:
         self.first_read_sample = int(data[0])
