@@ -221,7 +221,6 @@ class ADCCapture(GenericCapture):
             bytes_to_read = math.ceil(samples*1.5)
         else:
             bytes_to_read = samples
-            dut._log.error("Unsupported! (yet)")
         raw = list(await self.harness.registers.read(self.reg_addr['ADCREAD_ADDR'], bytes_to_read))
         return raw
 
@@ -272,7 +271,7 @@ class ADCCapture(GenericCapture):
             #self.dut._log.info("starting the read (%0d samples)" % samples)
             self.raw_read_data = await self.read_adc_data(samples, bits_per_sample)
 
-        data = self.processHuskyData(samples, bytearray(self.raw_read_data))
+        data = self.processHuskyData(samples, bytearray(self.raw_read_data), bits_per_sample)
         return data
 
 
@@ -304,7 +303,7 @@ class ADCCapture(GenericCapture):
         #    self.harness.inc_error()
 
     @staticmethod
-    def processHuskyData(NumberPoints, data, bits_per_sample=12):
+    def processHuskyData(NumberPoints, data, bits_per_sample):
         if bits_per_sample == 12:
             if len(data)%3:
                 data.extend([0]*(3-len(data)%3))
@@ -313,9 +312,8 @@ class ADCCapture(GenericCapture):
             fst_uint12 = (fst_uint8 << 4) + (mid_uint8 >> 4)
             snd_uint12 = ((mid_uint8 % 16) << 8) + lst_uint8
             data = np.reshape(np.concatenate((fst_uint12[:, None], snd_uint12[:, None]), axis=1), 2 * fst_uint12.shape[0])
-        else:
-            raise ValueError("unsupported")
         return data[:NumberPoints]
+
 
     def _check_samples(self, job, data) -> None:
         bits_per_sample = job['bits_per_sample']

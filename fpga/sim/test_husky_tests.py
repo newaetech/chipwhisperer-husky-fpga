@@ -318,6 +318,10 @@ class ADCTest(GenericTest):
             offset = 0  # no offset a quarter of the time
         else:
             offset = random.randint(0, self.max_offset)
+        if random.randint(0,1):
+            bits_per_sample = 12
+        else:
+            bits_per_sample = 8
         segments = random.randint(1, self.max_segments)
         segment_cycles = 0
         segment_counter_en = 0
@@ -362,7 +366,11 @@ class ADCTest(GenericTest):
         await self.registers.write(self.reg_addr['SEGMENT_CYCLE_COUNTER_EN'], [segment_counter_en])
         await self.registers.write(self.reg_addr['SEGMENT_CYCLES'], self.registers.to_bytes(segment_cycles, 3))
         await self.registers.write(self.reg_addr['DECIMATE_ADDR'], self.registers.to_bytes(downsample-1, 2))
-        bits_per_sample = 12 # TODO
+        if  bits_per_sample == 12:
+            await self.registers.write(self.reg_addr['ADC_LOW_RES'], [0])
+        else:
+            await self.registers.write(self.reg_addr['ADC_LOW_RES'], [3])
+
         if random.randint(0,1) or (segments > 1 and segment_counter_en == 0):
             trigger_type = 'io4'
         else:
