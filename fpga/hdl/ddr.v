@@ -452,7 +452,7 @@ module ddr (
       end
    end
 
-    // Read slow FIFO: TODO! (some parts haven't been updated yet)
+    reg [3:0] postddr_fifo_dout_r;
     always @(posedge clk_usb) begin
        if (reset || fresh_start_usb) begin
           slow_read_count <= 0;
@@ -460,15 +460,17 @@ module ddr (
        end
 
        else if (fifo_read_fifoen || first_read) begin
-          if (low_res) begin // TODO (later) return 8 bits per sample
-             if (slow_read_count < 2) begin
+          if (actual_low_res) begin
+             if (slow_read_count < 15)
                 slow_read_count <= slow_read_count + 1;
-                slow_fifo_rd_slow <= 1'b0;
-             end
-             else begin
+             else
                 slow_read_count <= 0;
-                slow_fifo_rd_slow <= 1'b1;
+             if ((slow_read_count == 4) || (slow_read_count == 9) || (slow_read_count == 15)) begin
+                slow_fifo_rd_slow <= 1;
+                postddr_fifo_dout_r <= postddr_fifo_dout[3:0];
              end
+             else
+                slow_fifo_rd_slow <= 0;
           end
 
           else begin // hi_res, return all 12 bits per sample
@@ -486,7 +488,15 @@ module ddr (
           slow_fifo_rd_slow <= 1'b0;
     end
 
-    assign slow_fifo_rd_fast = fifo_read_fifoen && (low_res? (slow_read_count == 2) : ((slow_read_count == 3) || (slow_read_count == 8))); // TODO!
+    reg actual_low_res;
+    always @(posedge clk_usb) begin
+        if (start_adc_read_usb_pulse)
+            actual_low_res <= low_res;
+        else if (start_la_read_usb_pulse || start_trace_read_usb_pulse)
+            actual_low_res <= 1'b0;
+    end
+
+    assign slow_fifo_rd_fast = fifo_read_fifoen && (actual_low_res ? (slow_read_count == 2) : ((slow_read_count == 3) || (slow_read_count == 8))); // TODO!
     assign postddr_fifo_rd = ((source_flushing || pre_read_flush_usb) && ~postddr_fifo_empty) || 
                              ((fast_fifo_read_mode)? slow_fifo_rd_fast : slow_fifo_rd_slow);
 
@@ -494,11 +504,51 @@ module ddr (
     always @(*) begin
        if (postddr_fifo_underflow_sticky)
           fifo_read_data_pre = 0;
-       else if (low_res) begin // TODO (later)
+       else if (actual_low_res) begin
           if (low_res_lsb)
-             fifo_read_data_pre = postddr_fifo_dout[(2-slow_read_count)*12 +: 8];
+              case (slow_read_count)
+                 0:  fifo_read_data_pre =  postddr_fifo_dout[52+:8];
+                 1:  fifo_read_data_pre =  postddr_fifo_dout[40+:8];
+                 2:  fifo_read_data_pre =  postddr_fifo_dout[28+:8];
+                 3:  fifo_read_data_pre =  postddr_fifo_dout[16+:8];
+                 4:  fifo_read_data_pre =  postddr_fifo_dout[ 4+:8];
+                 5:  fifo_read_data_pre =  postddr_fifo_dout[56+:8];
+                 6:  fifo_read_data_pre =  postddr_fifo_dout[44+:8];
+                 7:  fifo_read_data_pre =  postddr_fifo_dout[32+:8];
+                 8:  fifo_read_data_pre =  postddr_fifo_dout[20+:8];
+                 9:  fifo_read_data_pre =  postddr_fifo_dout[ 8+:8];
+                 10: fifo_read_data_pre = {postddr_fifo_dout_r[3:0], postddr_fifo_dout[60+:4]};
+                 11: fifo_read_data_pre =  postddr_fifo_dout[48+:8];
+                 12: fifo_read_data_pre =  postddr_fifo_dout[36+:8];
+                 13: fifo_read_data_pre =  postddr_fifo_dout[24+:8];
+                 14: fifo_read_data_pre =  postddr_fifo_dout[12+:8];
+                 15: fifo_read_data_pre =  postddr_fifo_dout[0+:8];
+                 default: fifo_read_data_pre = 8'h00;
+              endcase
+
           else
-             fifo_read_data_pre = postddr_fifo_dout[(2-slow_read_count)*12 + 4 +: 8];
+              case (slow_read_count)
+                 // TODO: not validated in simulation; will have to get validated on actual target
+                 0:  fifo_read_data_pre =  postddr_fifo_dout[56+:8];
+                 1:  fifo_read_data_pre =  postddr_fifo_dout[44+:8];
+                 2:  fifo_read_data_pre =  postddr_fifo_dout[32+:8];
+                 3:  fifo_read_data_pre =  postddr_fifo_dout[20+:8];
+                 4:  fifo_read_data_pre =  postddr_fifo_dout[ 8+:8];
+                 5:  fifo_read_data_pre = {postddr_fifo_dout_r[3:0], postddr_fifo_dout[60+:4]};
+                 6:  fifo_read_data_pre =  postddr_fifo_dout[48+:8];
+                 7:  fifo_read_data_pre =  postddr_fifo_dout[36+:8];
+                 8:  fifo_read_data_pre =  postddr_fifo_dout[32+:8];
+                 9:  fifo_read_data_pre =  postddr_fifo_dout[12+:8];
+                 10: fifo_read_data_pre =  postddr_fifo_dout[ 0+:8];
+                 11: fifo_read_data_pre =  postddr_fifo_dout[52+:8];
+                 12: fifo_read_data_pre =  postddr_fifo_dout[40+:8];
+                 13: fifo_read_data_pre =  postddr_fifo_dout[28+:8];
+                 14: fifo_read_data_pre =  postddr_fifo_dout[16+:8];
+                 15: fifo_read_data_pre =  postddr_fifo_dout[4+:8];
+                 default: fifo_read_data_pre = 8'h00;
+              endcase
+
+
        end
        else
           fifo_read_data_pre = postddr_fifo_dout[(7-slow_read_count)*8 +: 8];
