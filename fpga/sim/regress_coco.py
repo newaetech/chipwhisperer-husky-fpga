@@ -275,9 +275,15 @@ def check_pass_fail(logfile, cocotb):
     passed = None
     warnings = 0
     errors = 0
+    error_msg = None
     for line in log:
        if cocotb:
            failed = None
+           if not error_msg:
+               error_match = error_regex.search(line)
+               if error_match:
+                   error_msg = error_match.group(1)
+
            stat_matches = cocotb_stat_regex.search(line)
            if stat_matches:
               passed = int(stat_matches.group(2))
@@ -299,7 +305,7 @@ def check_pass_fail(logfile, cocotb):
         print("*** parsing error on %s ***" % logfile)
     if cocotb and failed:
         errors = 1
-    return passed, warnings, errors
+    return passed, warnings, errors, error_msg
 
 
 
@@ -335,6 +341,7 @@ fail_regex = re.compile(r'^SIMULATION FAILED \((\d+) errors')
 test_regex = re.compile(args.tests)
 exclude_regex = re.compile(args.exclude)
 cocotb_stat_regex = re.compile(r'TESTS=(\d+) PASS=(\d+) FAIL=(\d+) SKIP=(\d+)')
+error_regex = re.compile(r'ERROR\s+cocotb.+cocowrapper\s+(.+)$')
 
 
 exefile = 'coco.vvp'
@@ -471,13 +478,13 @@ while len(processes):
     for p,l,s,cocotb in processes:
         if not p.poll() is None:
             finished += 1
-            passed, warnings, errors = check_pass_fail(l,cocotb)
+            passed, warnings, errors, error_msg = check_pass_fail(l,cocotb)
             pass_count += passed
             if warnings:
                 warns.append("%s: %0d warnings" % (l, warnings))
             if errors:
                 fail_count += 1
-                fails.append("%s: %d errors (seed=%d)" % (l, errors, s))
+                fails.append("%-42s %3d errors, seed:%12d 1st error: %20s" % (l, errors, s, error_msg))
             processes.remove((p,l,s,cocotb))
             if len(jobs_to_submit) > 0:
                 makeargs, logfile, outfile, seed, cocotb = jobs_to_submit.pop()
