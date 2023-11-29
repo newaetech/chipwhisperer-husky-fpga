@@ -185,6 +185,20 @@ tests.append(dict(name  = 'glitch_only',
              GLITCH_CAPTURE = 1,
              description = 'Only glitches.'))
 
+tests.append(dict(name  = 'glitch_ext_continuous',
+             testcase = 'capture',
+             frequency = 1,
+             MIN_SIZE = 1,
+             MAX_SIZE = 1,
+             NUM_CAPTURES = 3,
+             ADC_CAPTURE = 0,
+             LA_CAPTURE = 0,
+             TRACE_CAPTURE = 0,
+             GLITCH_CAPTURE = 1,
+             GLITCH_EXT_CONTINUOUS = 1,
+             description = 'glitches, ext_continuous mode'))
+
+
 tests.append(dict(name  = 'everything',
              testcase = 'capture',
              frequency = 1,

@@ -330,7 +330,8 @@ async def capture(dut):
     max_segment_cycles = int(os.getenv('MAX_SEGMENT_CYCLES', '1'))
     stream = int(os.getenv('STREAM', '0'))
     is_pro = int(os.getenv('PRO', '0'))
-    stop_first_error = int(os.getenv('STOP_FIRST_ERROR', '1'))
+    glitch_ext_continous = int(os.getenv('GLITCH_EXT_CONTINUOUS', '0'))
+    stop_first_error = int(os.getenv('STOP_FIRST_ERROR', '0'))
 
     if is_pro:
         # actual limits are higher (depends on DDR model size); these are in the interest of simulation time:
@@ -361,6 +362,8 @@ async def capture(dut):
         harness.register_test(latest)
 
     if int(os.getenv('ADC_CAPTURE')):
+        if glitch_ext_continous:
+            dut._log.error('Cannot test ext_continuous glitches when ADC is active')
         adctest = ADCTest(dut, harness, registers, dut.adc_job, dut.adc_reading)
         adctest.num_captures = num_captures
         adctest.capture_max = min(max_size, ADC_MAX)
@@ -386,6 +389,7 @@ async def capture(dut):
         glitchtest.num_captures = num_captures
         glitchtest.capture_min = min_glitches
         glitchtest.capture_max = max_glitches
+        glitchtest.ext_continuous = glitch_ext_continous
         harness.register_test(glitchtest)
 
     harness.init_tests()

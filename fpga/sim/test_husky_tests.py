@@ -277,7 +277,9 @@ class GenericTest(object):
                 await with_timeout(self._wait_capture_done(job), timeout, 'us')
             except:
                 raise SimTimeoutError('%12s timed out on _wait_capture_done()' % job_name)
-            self._untrigger(job) # NOTE: could be moved up?
+            if self.name == 'glitch':
+                await ClockCycles(self.clk, 10)
+            self._untrigger(job) # TODO: thread it
             self.harness.queue_get(self.name)
             self.dut._log.info("%12s popped from job queue (count = %d, contents: %s)" % (job_name, self.harness.queue.qsize(), self.harness._queue_contents))
             result = await self.checker.results.get()
@@ -624,7 +626,6 @@ class LATest(GenericTest):
         await self.registers.write(self.reg_addr['LA_MANUAL_CAPTURE'], [0])
 
     async def trigger_userio(self) -> None:
-        #self.dut.USERIO_D[0].value = 1
         self.dut.USERIO_D.value = 1
 
     def _untrigger(self, job) -> None:
@@ -743,6 +744,7 @@ class GlitchTest(GenericTest):
         super().__init__(dut, harness, registers)
         self.dut_job_signal = dut_job_signal
         self.checker = GlitchCapture(dut, harness, dut_reading_signal)
+        self.ext_continuous = 0
         self.name = 'glitch'
 
     async def _initial_setup(self) -> None:
@@ -751,7 +753,10 @@ class GlitchTest(GenericTest):
         self.checker._start_watch_threads()
 
     async def _job_setup(self) -> dict:
-        trigger_type = 'manual'
+        if self.ext_continuous:
+            trigger_type = 'ext_continuous'
+        else:
+            trigger_type = 'manual'
         #glitches = random.randint(self.capture_min, self.capture_max)
         glitches = 1 # TODO: more glitches (not all triggers support multiple!)
         offset = random.randint(0, 10) # TODO: randomize over legal range
@@ -763,6 +768,9 @@ class GlitchTest(GenericTest):
         settings[5] = 0x4c
         if trigger_type == 'manual':
             settings[5] &= 0xf3 # clear bits 3:2
+        elif trigger_type == 'ext_continuous':
+            settings[5] &= 0xf3 # clear bits 3:2
+            settings[5] |= 0x04 # set bits 3:2 to 01
         else:
             raise ValueError('not supported yet')
         settings[6] = (repeats-1) & 0xff
@@ -774,12 +782,12 @@ class GlitchTest(GenericTest):
         return job
 
     async def _job_external_source_mods(self, source, job) -> dict:
-        if source.name == 'ADC':
+        if source.name == 'ADC' and not self.ext_continuous:
             job['trigger_type'] = 'ADC'
             await self.set_glitch_trigger_type('ext_single')
-            self.dut._log.info('%12s ready for external trigger!' % job['name'])
         else:
             raise ValueError
+        self.dut._log.info('%12s ready for external trigger!' % job['name'])
         return job
 
     async def set_glitch_trigger_type(self, ttype) -> None:
@@ -814,16 +822,24 @@ class GlitchTest(GenericTest):
     async def _trigger(self, job) -> None:
         if job['trigger_type'] == 'manual':
             await self.trigger_now()
+        elif job['trigger_type'] == 'ext_continuous':
+            await self.trigger_io4()
         elif job['trigger_type'] == 'ADC':
-            pass # nothing to do! (because externally triggered; TODO!)
+            pass # nothing to do!
         else:
             raise ValueError
-        # TODO: code more trigger options
 
     async def trigger_now(self) -> None:
         settings = await self.harness.registers.read(self.reg_addr['CLOCKGLITCH_SETTINGS'], 8)
         settings[5] |= 0x80 # set manual trigger bit
         await self.registers.write(self.reg_addr['CLOCKGLITCH_SETTINGS'], settings)
+
+    async def trigger_io4(self) -> None:
+        self.dut.target_io4.value = 1
+
+    def _untrigger(self, job) -> None:
+        if job['trigger_type'] == 'ext_continuous':
+            self.dut.target_io4.value = 0
 
     def _capture_cycles(self, cycles) -> int:
         # TODO: currently using USB clock to capture; when this changes, this needs to be updated!
