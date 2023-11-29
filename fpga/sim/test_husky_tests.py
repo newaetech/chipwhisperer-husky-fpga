@@ -277,7 +277,7 @@ class GenericTest(object):
                 await with_timeout(self._wait_capture_done(job), timeout, 'us')
             except:
                 raise SimTimeoutError('%12s timed out on _wait_capture_done()' % job_name)
-            self._untrigger(job) # TODO: could be moved up?
+            self._untrigger(job) # NOTE: could be moved up?
             self.harness.queue_get(self.name)
             self.dut._log.info("%12s popped from job queue (count = %d, contents: %s)" % (job_name, self.harness.queue.qsize(), self.harness._queue_contents))
             result = await self.checker.results.get()
@@ -289,6 +289,7 @@ class GenericTest(object):
                 self.dut._log.info('%12s released shared_fifo_lock' % job_name)
 
             self.dispatch_id += 1
+
 
 
 
@@ -330,7 +331,7 @@ class ADCTest(GenericTest):
         if segments > 1:
             segment_counter_en = random.randint(0,1)
             if segment_counter_en:
-                # TODO: this is pessimistic (one segment doesn't last samples+offset+presamples); may want to tighten this?
+                # NOTE: this is pessimistic (one segment doesn't last samples+offset+presamples); may want to tighten this?
                 if samples+1+offset+presamples >= samples+self.max_segment_cycles:
                     segments = 1
                 else:
@@ -412,9 +413,8 @@ class ADCTest(GenericTest):
                 await self.trigger_now()
             elif job['trigger_type'] == 'io4':
                 await self.trigger_io4()
-            # TODO: code more trigger options
             else:
-                raise ValueError
+                raise ValueError('Unsupported trigger %s' % job['trigger_type'])
             if iterations > 1:
                 self.dut._log.info('%12s issued trigger %d' % (job['name'], i))
                 if i < iterations - 1:
@@ -438,7 +438,6 @@ class ADCTest(GenericTest):
         while not idle:
             raw = (await self.registers.read(self.reg_addr['FIFO_STATE'], 1))[0]
             idle = (raw & 0x03) == 0
-
 
     def _untrigger(self, job) -> None:
         if job['trigger_type'] == 'io4':
@@ -543,6 +542,7 @@ class ADCTest(GenericTest):
 
 
 
+
 class LATest(GenericTest):
     def __init__(self, dut, harness, registers, dut_job_signal, dut_reading_signal, num_captures=5):
         super().__init__(dut, harness, registers)
@@ -563,7 +563,12 @@ class LATest(GenericTest):
             bits_per_sample = 8 # not a typo: in four-bit mode the ramp pattern is 8 bits long
         else:
             bits_per_sample = 9
-        trigger_type = 'manual'
+        if random.randint(0,1):
+            trigger_type = 'manual'
+            await self.registers.write(self.reg_addr['LA_TRIGGER_SOURCE'], [0])
+        else:
+            trigger_type = 'USERIO_D0'
+            await self.registers.write(self.reg_addr['LA_TRIGGER_SOURCE'], [8])
         if random.randint(0,3) == 0:
             downsample = random.randint(1, self.max_downsample)
         else:
@@ -574,6 +579,7 @@ class LATest(GenericTest):
             await self.registers.write(self.reg_addr['LA_CAPTURE_GROUP'], [0x87])   # group 7 in 4-bit capture mode
         else:
             await self.registers.write(self.reg_addr['LA_CAPTURE_GROUP'], [0x07])   # group 7 in 9-bit capture mode
+
         job = {"samples": samples, "bits_per_sample": bits_per_sample, "trigger_type": trigger_type, "downsample": downsample}
         job['capture_time_us'] = self._capture_time_us(samples)
         return job
@@ -606,15 +612,24 @@ class LATest(GenericTest):
     async def _trigger(self, job) -> None:
         if job['trigger_type'] == 'manual':
             await self.trigger_now()
+        elif job['trigger_type'] == 'USERIO_D0':
+            await self.trigger_userio()
         elif job['trigger_type'] == 'ADC':
             pass # nothing to do!
         else:
-            raise ValueError
-        # TODO: code more trigger options
+            raise ValueError('Unsupported trigger %s' % job['trigger_type'])
 
     async def trigger_now(self) -> None:
         await self.registers.write(self.reg_addr['LA_MANUAL_CAPTURE'], [1])
         await self.registers.write(self.reg_addr['LA_MANUAL_CAPTURE'], [0])
+
+    async def trigger_userio(self) -> None:
+        #self.dut.USERIO_D[0].value = 1
+        self.dut.USERIO_D.value = 1
+
+    def _untrigger(self, job) -> None:
+        if job['trigger_type'] == 'USERIO_D0':
+            self.dut.USERIO_D.value = 0
 
     def _capture_cycles(self, cycles) -> int:
         # TODO: currently using USB clock to capture; when this changes, this needs to be updated!
@@ -629,6 +644,8 @@ class LATest(GenericTest):
             if self.dut.U_dut.U_la_converter.fifo_underflow_sticky.value:    error_message += "U_la_converter underflow "
             self.dut._log.error(error_message)
             self.harness.inc_error()
+
+
 
 
 class TraceTest(GenericTest):
@@ -668,6 +685,7 @@ class TraceTest(GenericTest):
         await self.registers.write(self.reg_addr['REG_COUNT_WRITES'], [1]) 
         await self.registers.write(self.reg_addr['REG_TRACE_TEST'], [1])
         await self.registers.write(self.reg_addr['REG_SOFT_TRIG_ENABLE'], [0])
+        await self.registers.write(self.reg_addr['REG_TRACE_USERIO_DIR'], [0]) # don't let trace take over USERIO pins
         # regular Husky doesn't support concurrent LA/trace captures so trace gets enabled "just in time" for it:
         if self.harness.is_pro:
             await self.registers.write(self.reg_addr['REG_TRACE_EN'], [1]) # enable trace
@@ -689,7 +707,8 @@ class TraceTest(GenericTest):
             pass # nothing to do!
         else:
             raise ValueError
-        # TODO: code more trigger options
+        # NOTE: adding more trigger options is tricky, because for trace it's either pass-thru (ADC) or pattern 
+        # match (which we don't exercise here (yet?))
 
     async def trigger_now(self) -> None:
         await self.registers.write(self.reg_addr['REG_ARM'], [3])   # capture now
@@ -715,6 +734,7 @@ class TraceTest(GenericTest):
             if self.dut.U_dut.U_trace_converter.fifo_underflow_sticky.value: error_message += "U_trace_converter underflow "
             self.dut._log.error(error_message)
             self.harness.inc_error()
+
 
 
 
@@ -781,7 +801,6 @@ class GlitchTest(GenericTest):
             await self.registers.write(self.reg_addr['CLOCKGLITCH_SETTINGS'], settings)
             settings[5] = settings[5] & ~(1 << 7)
             await self.registers.write(self.reg_addr['CLOCKGLITCH_SETTINGS'], settings)
-
 
     def max_job_time(self) -> int:
         return 0 # TODO?

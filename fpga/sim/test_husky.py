@@ -177,6 +177,7 @@ class Harness(object):
         await self.reset()
         # the reset will cause target_io4 to "lose" the 0 we'd assigned to it... possibly a simulator/cocotb bug?
         self.dut.target_io4.value = 0
+        self.dut.USERIO_D.value = 0
         await self.registers.write(self.reg_addr['CLOCKGLITCH_SETTINGS'], [0,0,0,0,0,0xcc,0,1])  # set source to clk_usb (otherwise, X's propagate)
         #await self.registers.write(self.reg_addr['CLOCKGLITCH_SETTINGS'], [0,0,0,0,0,0x4c,0,1])  # set source to clk_usb (otherwise, X's propagate)
         self.dut.U_dut.reg_clockglitch.U_clockglitch.glitch_go.value = Force(0)
