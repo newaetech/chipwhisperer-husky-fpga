@@ -354,7 +354,7 @@ async def capture(dut):
         harness.allow_downstream_triggers = False
 
     if int(os.getenv('LA_CAPTURE')):
-        latest = LATest(dut, harness, registers, dut.la_job, dut.la_reading)
+        latest = LATest(dut, dut.clk_usb, harness, registers, dut.la_job, dut.la_reading)
         latest.num_captures = num_captures
         latest.capture_max = min(max_size, LA_MAX)
         latest.capture_min = min(min_size, latest.capture_max)
@@ -364,7 +364,7 @@ async def capture(dut):
     if int(os.getenv('ADC_CAPTURE')):
         if glitch_ext_continous:
             dut._log.error('Cannot test ext_continuous glitches when ADC is active')
-        adctest = ADCTest(dut, harness, registers, dut.adc_job, dut.adc_reading)
+        adctest = ADCTest(dut, dut.PLL_CLK1, harness, registers, dut.adc_job, dut.adc_reading)
         adctest.num_captures = num_captures
         adctest.capture_max = min(max_size, ADC_MAX)
         adctest.capture_min = min(min_size, adctest.capture_max)
@@ -378,14 +378,14 @@ async def capture(dut):
         harness.register_test(adctest)
 
     if int(os.getenv('TRACE_CAPTURE')):
-        tracetest = TraceTest(dut, harness, registers, dut.trace_job, dut.trace_reading)
+        tracetest = TraceTest(dut, dut.clk_usb, harness, registers, dut.trace_job, dut.trace_reading)
         tracetest.num_captures = num_captures
         tracetest.capture_max = min(max_size, TRACE_MAX)
         tracetest.capture_min = min(min_size, tracetest.capture_max)
         harness.register_test(tracetest)
 
     if int(os.getenv('GLITCH_CAPTURE')):
-        glitchtest = GlitchTest(dut, harness, registers, dut.glitch_job, dut.glitch_reading)
+        glitchtest = GlitchTest(dut, dut.U_dut.reg_clockglitch.glitch_mmcm1_clk_out, harness, registers, dut.glitch_job, dut.glitch_reading)
         glitchtest.num_captures = num_captures
         glitchtest.capture_min = min_glitches
         glitchtest.capture_max = max_glitches
