@@ -10,9 +10,10 @@ import math
 import numpy as np
 
 class GenericTest(object):
-    def __init__(self, dut, harness, registers):
+    def __init__(self, dut, sampling_clock, harness, registers):
         self.reg_addr = harness.reg_addr
-        self.clk = dut.clk_usb
+        self.clk_usb = dut.clk_usb
+        self.sampling_clock = sampling_clock
         self.dut = dut
         self.harness = harness
         self.registers = registers
@@ -90,7 +91,7 @@ class GenericTest(object):
         """ Random delay before starting first job, so that ordering of initial
         jobs is random.
         """
-        await ClockCycles(self.clk, random.randint(0,100))
+        await ClockCycles(self.clk_usb, random.randint(0,100))
 
     async def _arm(self) -> None:
         """ Arm the DUT prior to capture.
@@ -151,13 +152,13 @@ class GenericTest(object):
                 samples = job['segments'] * job['segment_cycles'] + job['offset']
             else:
                 samples += job['offset']
-        await ClockCycles(self.clk, self._capture_cycles(samples)) # UI clock is USB clock, so that's the dominant portion of the capture delay
+        await ClockCycles(self.sampling_clock, samples)
         # then, wait for DDR to be done writing:
         if self.harness.is_pro:
             self.dut._log.info("%12s waiting for DDR writing to be done..." % job['name'])
             not_done_writing = True
             while not_done_writing:
-                await ClockCycles(self.clk, 50)
+                await ClockCycles(self.clk_usb, 50)
                 not_done_writing = not await self.harness.ddr_done_writing()
             self.dut._log.info("%12s DDR write done" % job['name'])
 
@@ -173,7 +174,7 @@ class GenericTest(object):
         return False
 
     async def _untrigger_thread(self, job, untrigger_wait) -> None:
-        await ClockCycles(self.clk, untrigger_wait)
+        await ClockCycles(self.sampling_clock, untrigger_wait)
         self._untrigger(job)
 
     async def _run(self) -> None:
@@ -216,7 +217,7 @@ class GenericTest(object):
             # see comments around queue definition in Harness for how this queue and lock mechanism works:
             self.dut._log.info("%12s trying to trigger job (waiting for read_lock to be freed)..." % job_name)
             while self.harness.read_lock.locked:
-                await ClockCycles(self.clk, 10)
+                await ClockCycles(self.clk_usb, 10)
 
             self.dut._log.info("%12s trying to trigger job: read_lock freed" % job_name)
             # decide whether this job also triggers a downstream job:
@@ -230,7 +231,7 @@ class GenericTest(object):
                 # wait for downstream job to be ready to capture
                 while self.downstream_triggers_pending:
                     self.dut._log.debug("%12s waiting for downstream triggers to get set up (%d left)..." % (job_name, self.downstream_triggers_pending))
-                    await ClockCycles(self.clk, 10)
+                    await ClockCycles(self.clk_usb, 10)
                 self.dut._log.debug("%12s all downstream triggers are good to go!" % job_name)
 
             # since some time may have passed, check for read_lock again, and this time set a trigger lock to prevent a read lock from "sneaking in"
@@ -246,7 +247,7 @@ class GenericTest(object):
             else:
                 self.dut._log.info("%12s waiting for read_lock to be freed: second check" % job_name)
                 while self.harness.read_lock.locked:
-                    await ClockCycles(self.clk, 10)
+                    await ClockCycles(self.clk_usb, 10)
 
             # now we can trigger *this* job:
             if not externally_triggered:
@@ -260,13 +261,14 @@ class GenericTest(object):
 
             await self._arm()
             await self._pretrigger_wait(job)
+            await ClockCycles(self.sampling_clock, 1) # ensure trigger is synchronous with sampling clock
             self.dut._log.info("%12s Triggering: %s" %(job_name, job))
             self.dut.current_action.value = self.harness.hexstring("%12s Triggering" % job_name)
             await self._trigger(job)
             # kick off thread to de-assert trigger, except for segmented captures (which manage their own untriggering):
             if not (self.name == 'ADC' and job['segments'] > 1): 
                 if random.randint(0,4):
-                    untrigger_wait = self._capture_cycles(random.randint(10, 1000))
+                    untrigger_wait = random.randint(10, 500)
                 else:
                     untrigger_wait = random.randint(1,2)
                 self.untriggering = cocotb.start_soon(self._untrigger_thread(job, untrigger_wait))
@@ -289,8 +291,6 @@ class GenericTest(object):
                 await with_timeout(self._wait_capture_done(job), timeout, 'us')
             except:
                 raise SimTimeoutError('%12s timed out on _wait_capture_done()' % job_name)
-            if self.name == 'glitch':
-                await ClockCycles(self.clk, 10)
             self.harness.queue_get(self.name)
             self.dut._log.info("%12s popped from job queue (count = %d, contents: %s)" % (job_name, self.harness.queue.qsize(), self.harness._queue_contents))
             result = await self.checker.results.get()
@@ -309,10 +309,10 @@ class GenericTest(object):
 
 
 class ADCTest(GenericTest):
-    def __init__(self, dut, harness, registers, dut_job_signal, dut_reading_signal, num_captures=5):
-        super().__init__(dut, harness, registers)
+    def __init__(self, dut, sampling_clock, harness, registers, dut_job_signal, dut_reading_signal, num_captures=5):
+        super().__init__(dut, sampling_clock, harness, registers)
         self.dut_job_signal = dut_job_signal
-        self.checker = ADCCapture(dut, harness, dut_reading_signal)
+        self.checker = ADCCapture(dut, sampling_clock, harness, dut_reading_signal)
         self.name = 'ADC'
         self.max_segments = None
         self.max_segment_cycles = None
@@ -432,13 +432,13 @@ class ADCTest(GenericTest):
                 raise ValueError('Unsupported trigger %s' % job['trigger_type'])
             self.dut._log.info('%12s issued trigger %d' % (job['name'], i))
             if i < iterations - 1:
-                untrigger_wait = self._capture_cycles(random.randint(1, job['segment_times'][i]-2))
+                untrigger_wait = random.randint(1, job['segment_times'][i]-2)
             else:
-                untrigger_wait = random.randint(1, 1000)
+                untrigger_wait = random.randint(1, 500)
             self.untriggering = cocotb.start_soon(self._untrigger_thread(job, untrigger_wait))
             if i < iterations - 1:
                 # wait prescribed time for the next trigger:
-                await ClockCycles(self.clk, self._capture_cycles(job['segment_times'][i]))
+                await ClockCycles(self.sampling_clock, job['segment_times'][i])
 
     async def trigger_now(self) -> None:
         await self.registers.write(self.reg_addr['SETTINGS_ADDR'], [0x4c + (self.stream << 4)]) # trigger
@@ -460,22 +460,21 @@ class ADCTest(GenericTest):
     async def _pretrigger_wait(self, job) -> None:
         presamples = job['presamples']
         if presamples > 0:
-            min_cycles = self._capture_cycles(presamples + 1)
-            wait_cycles = random.randint(min_cycles, min_cycles*4)
+            wait_cycles = random.randint(presamples+1, presamples*4)
             self.dut._log.info('%12s pre-trigger waiting %d cycles' % (job['name'], wait_cycles))
-            await ClockCycles(self.dut.PLL_CLK1, wait_cycles) # note: Pro used self.clk (USB clock), why did that work?!?
+            await ClockCycles(self.sampling_clock, wait_cycles) # note: Pro used self.clk_usb, why did that work?!?
         # the FIFO flushing can be *slow*, so explicitely check on FIFO empty flag:
         empty = False
         while not empty:
-            await ClockCycles(self.clk, 50)
+            await ClockCycles(self.clk_usb, 50)
             empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 2))[1] & 64
 
         if self.stream:
             # stream_segment_available is updated every 2**6 cycles (see write_cycle_count in fifo_top_husky.v), so wait enough
             # time for stream_segment_available to be sensical before starting the next capture:
-            await ClockCycles(self.dut.PLL_CLK1, 2**7)
+            await ClockCycles(self.sampling_clock, 2**7)
 
-        await ClockCycles(self.clk, 5) # bit more time for armed_and_ready to rise
+        await ClockCycles(self.clk_usb, 5) # bit more time for armed_and_ready to rise
 
 
     def _capture_cycles(self, cycles) -> int:
@@ -485,7 +484,7 @@ class ADCTest(GenericTest):
         while True:
             await RisingEdge(self.dut.U_dut.oadc.U_fifo.error_flag)
             error_message = 'Internal FIFO/DDR error(s): '
-            await ClockCycles(self.clk, 2) # Note: without this, error_value comes back as 0, even though it changes on the same cycle as error_flag
+            await ClockCycles(self.clk_usb, 2) # Note: without this, error_value comes back as 0, even though it changes on the same cycle as error_flag
             error_value = self.dut.U_dut.oadc.U_fifo.error_stat.value
             # accessing vector bits requires iverilog >= 10.3:
             if error_value & 2**13: error_message += "ddr_full "
@@ -558,10 +557,10 @@ class ADCTest(GenericTest):
 
 
 class LATest(GenericTest):
-    def __init__(self, dut, harness, registers, dut_job_signal, dut_reading_signal, num_captures=5):
-        super().__init__(dut, harness, registers)
+    def __init__(self, dut, sampling_clock, harness, registers, dut_job_signal, dut_reading_signal, num_captures=5):
+        super().__init__(dut, sampling_clock, harness, registers)
         self.dut_job_signal = dut_job_signal
-        self.checker = LACapture(dut, harness, dut_reading_signal)
+        self.checker = LACapture(dut, sampling_clock, harness, dut_reading_signal)
         self.name = 'LA'
         if harness.is_pro:
             preddr_watch_thread = cocotb.start_soon(self.preddr_watch())
@@ -653,7 +652,7 @@ class LATest(GenericTest):
         while True:
             await RisingEdge(self.dut.U_dut.U_la_converter.error_flag)
             error_message = 'Pre-DDR FIFO error(s): '
-            await ClockCycles(self.clk, 2)
+            await ClockCycles(self.clk_usb, 2)
             if self.dut.U_dut.U_la_converter.fifo_overflow_sticky.value:     error_message += "U_la_converter overflow "
             if self.dut.U_dut.U_la_converter.fifo_underflow_sticky.value:    error_message += "U_la_converter underflow "
             self.dut._log.error(error_message)
@@ -663,10 +662,10 @@ class LATest(GenericTest):
 
 
 class TraceTest(GenericTest):
-    def __init__(self, dut, harness, registers, dut_job_signal, dut_reading_signal, num_captures=5):
-        super().__init__(dut, harness, registers)
+    def __init__(self, dut, sampling_clock, harness, registers, dut_job_signal, dut_reading_signal, num_captures=5):
+        super().__init__(dut, sampling_clock, harness, registers)
         self.dut_job_signal = dut_job_signal
-        self.checker = TraceCapture(dut, harness, dut_reading_signal)
+        self.checker = TraceCapture(dut, sampling_clock, harness, dut_reading_signal)
         self.name = 'trace'
         if harness.is_pro:
             preddr_watch_thread = cocotb.start_soon(self.preddr_watch())
@@ -743,7 +742,7 @@ class TraceTest(GenericTest):
         while True:
             await RisingEdge(self.dut.U_dut.U_trace_converter.error_flag)
             error_message = 'Pre-DDR FIFO error(s): '
-            await ClockCycles(self.clk, 2)
+            await ClockCycles(self.clk_usb, 2)
             if self.dut.U_dut.U_trace_converter.fifo_overflow_sticky.value:  error_message += "U_trace_converter overflow "
             if self.dut.U_dut.U_trace_converter.fifo_underflow_sticky.value: error_message += "U_trace_converter underflow "
             self.dut._log.error(error_message)
@@ -753,10 +752,10 @@ class TraceTest(GenericTest):
 
 
 class GlitchTest(GenericTest):
-    def __init__(self, dut, harness, registers, dut_job_signal, dut_reading_signal, num_captures=5):
-        super().__init__(dut, harness, registers)
+    def __init__(self, dut, sampling_clock, harness, registers, dut_job_signal, dut_reading_signal, num_captures=5):
+        super().__init__(dut, sampling_clock, harness, registers)
         self.dut_job_signal = dut_job_signal
-        self.checker = GlitchCapture(dut, harness, dut_reading_signal)
+        self.checker = GlitchCapture(dut, sampling_clock, harness, dut_reading_signal)
         self.ext_continuous = 0
         self.name = 'glitch'
 

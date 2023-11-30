@@ -8,10 +8,11 @@ import math
 import numpy as np
 
 class GenericCapture(object):
-    def __init__(self, dut, harness, dut_reading_signal):
+    def __init__(self, dut, sampling_clock, harness, dut_reading_signal):
         self.reg_addr = harness.reg_addr
-        self.clk = dut.clk_usb
+        self.clk_usb = dut.clk_usb
         self.dut = dut
+        self.sampling_clock = sampling_clock
         self.harness = harness
         self.dut_reading_signal = dut_reading_signal
         self.jobs = Queue()
@@ -99,12 +100,12 @@ class GenericCapture(object):
             # see comments around queue definition in Harness for how this queue and lock mechanism works:
             self.dut._log.info("%12s awaiting freed trigger lock" % job_name)
             while self.harness.trigger_lock.locked:
-                await ClockCycles(self.clk, 10)
+                await ClockCycles(self.clk_usb, 10)
             if not self.stream:
                 await self.harness.read_lock_acquire(job_name)
                 self.dut._log.info("%12s awaiting empty queue (count = %d, contents: %s)" % (job_name, self.harness.queue.qsize(), self.harness._queue_contents))
                 while not self.harness.queue.empty():
-                    await ClockCycles(self.clk, 10)
+                    await ClockCycles(self.clk_usb, 10)
                 self.dut._log.info("%12s empty queue wait done" % job_name)
             self.dut.current_action.value = self.harness.hexstring("%12s initread" % job_name)
             try:
@@ -209,8 +210,8 @@ class GenericCapture(object):
 
 
 class ADCCapture(GenericCapture):
-    def __init__(self, dut, harness, dut_reading_signal):
-        super().__init__(dut, harness, dut_reading_signal)
+    def __init__(self, dut, sampling_clock, harness, dut_reading_signal):
+        super().__init__(dut, sampling_clock, harness, dut_reading_signal)
         self.name = 'ADC'
         self.sample_increment = 1
 
@@ -229,13 +230,13 @@ class ADCCapture(GenericCapture):
         if self.harness.is_pro:
             await self.harness.registers.write(self.reg_addr['REG_DDR_START_READ'], [0])
             await self.harness.registers.write(self.reg_addr['REG_DDR_START_READ'], [1])
-            await ClockCycles(self.clk, 50)
+            await ClockCycles(self.clk_usb, 50)
         await self.harness.wait_flush('ADC') # if previous read wasn't complete, wait for post-DDR to get flushed
         # wait for read FIFO to be not empty:
         #self.dut._log.info("waiting for FIFO to not be empty...")
         empty = True
         while empty:
-            await ClockCycles(self.clk, 50)
+            await ClockCycles(self.clk_usb, 50)
             empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 2))[1] & 64
 
     async def _read_samples(self, job) -> list:
@@ -253,7 +254,7 @@ class ADCCapture(GenericCapture):
                     if not wait_printed:
                         self.dut._log.info('%12s waiting for stream segment to be available...' % job_name)
                         wait_printed = True
-                    await ClockCycles(self.clk, 10)
+                    await ClockCycles(self.clk_usb, 10)
                 samples_to_read = min(stream_segment_size, samples_left)
                 self.dut._log.info('%12s starting stream segment read %d: reading %d samples' % (job_name, stream_segment_n, samples_to_read))
                 stream_segment = await self.read_adc_data(samples_to_read, bits_per_sample)
@@ -265,8 +266,7 @@ class ADCCapture(GenericCapture):
             downsample = job['downsample']
             # if capture is downsampled, we could read it too fast and underflow:
             if downsample > 1:
-                cycles = math.ceil(self.harness.adc_period / self.harness.usb_period * samples * downsample * bits_per_sample/8)
-                await ClockCycles(self.clk, cycles)
+                await ClockCycles(self.sampling_clock, math.ceil(samples * downsample * bits_per_sample/8))
             #self.dut._log.info("starting the read (%0d samples)" % samples)
             self.raw_read_data = await self.read_adc_data(samples, bits_per_sample)
 
@@ -347,8 +347,8 @@ class ADCCapture(GenericCapture):
 
 
 class LACapture(GenericCapture):
-    def __init__(self, dut, harness, dut_reading_signal):
-        super().__init__(dut, harness, dut_reading_signal)
+    def __init__(self, dut, sampling_clock, harness, dut_reading_signal):
+        super().__init__(dut, sampling_clock, harness, dut_reading_signal)
         self.name = 'LA'
         self.sample_increment = None # filled in by each job
 
@@ -358,7 +358,7 @@ class LACapture(GenericCapture):
         if self.harness.is_pro:
             await self.harness.registers.write(self.reg_addr['REG_DDR_START_READ'], [0])
             await self.harness.registers.write(self.reg_addr['REG_DDR_START_READ'], [2])
-            await ClockCycles(self.clk, 50)
+            await ClockCycles(self.clk_usb, 50)
         else:
             await self.harness.registers.write(self.reg_addr['REG_FAST_FIFO_RD_EN'], [1])
         await self.harness.wait_flush('LA') # if previous read wasn't complete, wait for post-DDR to get flushed
@@ -367,7 +367,7 @@ class LACapture(GenericCapture):
         #self.dut._log.info("waiting for FIFO to not be empty...")
         empty = True
         while empty:
-            await ClockCycles(self.clk, 50)
+            await ClockCycles(self.clk_usb, 50)
             if self.harness.is_pro:
                 empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 2))[1] & 64
             else:
@@ -492,8 +492,8 @@ class LACapture(GenericCapture):
 
 
 class TraceCapture(GenericCapture):
-    def __init__(self, dut, harness, dut_reading_signal):
-        super().__init__(dut, harness, dut_reading_signal)
+    def __init__(self, dut, sampling_clock, harness, dut_reading_signal):
+        super().__init__(dut, sampling_clock, harness, dut_reading_signal)
         self.name = 'trace'
         self.sample_increment = 1
 
@@ -503,7 +503,7 @@ class TraceCapture(GenericCapture):
         if self.harness.is_pro:
             await self.harness.registers.write(self.reg_addr['REG_DDR_START_READ'], [0])
             await self.harness.registers.write(self.reg_addr['REG_DDR_START_READ'], [4])
-            await ClockCycles(self.clk, 50)
+            await ClockCycles(self.clk_usb, 50)
         else:
             await self.harness.registers.write(self.reg_addr['REG_FAST_FIFO_RD_EN'], [1])
         await self.harness.wait_flush('trace') # if previous read wasn't complete, wait for post-DDR to get flushed
@@ -511,7 +511,7 @@ class TraceCapture(GenericCapture):
         #self.dut._log.info("waiting for FIFO to not be empty...")
         empty = True
         while empty:
-            await ClockCycles(self.clk, 50)
+            await ClockCycles(self.clk_usb, 50)
             if self.harness.is_pro:
                 empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 2))[1] & 64
             else:
@@ -610,8 +610,8 @@ class TraceCapture(GenericCapture):
 
 
 class GlitchCapture(GenericCapture):
-    def __init__(self, dut, harness, dut_reading_signal):
-        super().__init__(dut, harness, dut_reading_signal)
+    def __init__(self, dut, sampling_clock, harness, dut_reading_signal):
+        super().__init__(dut, sampling_clock, harness, dut_reading_signal)
         self.name = 'glitch'
         self.glitch_clock = self.dut.U_dut.reg_clockglitch.glitch_mmcm1_clk_out
         self.glitch_error = self.dut.glitch_error_reg
@@ -635,7 +635,7 @@ class GlitchCapture(GenericCapture):
             self.dut._log.info("%12s Starting check for job" % job_name)
             self.dut.current_action.value = self.harness.hexstring("%12s verify" % job_name)
             await self.glitch_check(job)
-            await ClockCycles(self.clk, 50)
+            await ClockCycles(self.clk_usb, 50)
             self.results.put_nowait({"errors": self.errors})
             self.job_id += 1
             self.not_in_a_job()
