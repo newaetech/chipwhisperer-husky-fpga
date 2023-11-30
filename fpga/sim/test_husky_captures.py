@@ -613,7 +613,6 @@ class GlitchCapture(GenericCapture):
     def __init__(self, dut, sampling_clock, harness, dut_reading_signal):
         super().__init__(dut, sampling_clock, harness, dut_reading_signal)
         self.name = 'glitch'
-        self.glitch_clock = self.dut.U_dut.reg_clockglitch.glitch_mmcm1_clk_out
         self.glitch_error = self.dut.glitch_error_reg
         self.expect_glitch(0)
 
@@ -658,12 +657,13 @@ class GlitchCapture(GenericCapture):
             else:
                 actual_offset = 3
         else:
-            actual_offset = job['offset'] + 3
-        await ClockCycles(self.glitch_clock, 3 + actual_offset)
-        await FallingEdge(self.glitch_clock)
+            actual_offset = job['offset'] + 2
+            await FallingEdge(self.sampling_clock) # because incoming trigger to reg_clockglitch.v first gets negedge sampled
+        await ClockCycles(self.sampling_clock, 3 + actual_offset)
+        await FallingEdge(self.sampling_clock)
         self.expect_glitch(1)
         for i in range(job['repeats']):
-            await FallingEdge(self.glitch_clock)
+            await FallingEdge(self.sampling_clock)
         self.expect_glitch(0)
 
     def expect_glitch(self, value) -> None:
