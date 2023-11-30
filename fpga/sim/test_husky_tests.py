@@ -172,6 +172,10 @@ class GenericTest(object):
         """
         return False
 
+    async def _untrigger_thread(self, job, untrigger_wait) -> None:
+        await ClockCycles(self.clk, untrigger_wait)
+        self._untrigger(job)
+
     async def _run(self) -> None:
         """ Main run loop. """
         self.dut_job_signal.value = cocotb.binary.BinaryValue("xxxxxxxx")
@@ -259,6 +263,14 @@ class GenericTest(object):
             self.dut._log.info("%12s Triggering: %s" %(job_name, job))
             self.dut.current_action.value = self.harness.hexstring("%12s Triggering" % job_name)
             await self._trigger(job)
+            # kick off thread to de-assert trigger, except for segmented captures (which manage their own untriggering):
+            if not (self.name == 'ADC' and job['segments'] > 1): 
+                if random.randint(0,4):
+                    untrigger_wait = self._capture_cycles(random.randint(10, 1000))
+                else:
+                    untrigger_wait = random.randint(1,2)
+                self.untriggering = cocotb.start_soon(self._untrigger_thread(job, untrigger_wait))
+
             if self.harness.trigger_lock.locked:
                 self.harness.trigger_lock.release()
             self.trigger_event.set()
@@ -279,10 +291,11 @@ class GenericTest(object):
                 raise SimTimeoutError('%12s timed out on _wait_capture_done()' % job_name)
             if self.name == 'glitch':
                 await ClockCycles(self.clk, 10)
-            self._untrigger(job) # TODO: thread it
             self.harness.queue_get(self.name)
             self.dut._log.info("%12s popped from job queue (count = %d, contents: %s)" % (job_name, self.harness.queue.qsize(), self.harness._queue_contents))
             result = await self.checker.results.get()
+            # sometimes trigger is held high for a very long time; wait for it to be cleared:
+            await Join(self.untriggering)
             await self._post_job()
             self.errors += result['errors']
 
@@ -417,22 +430,21 @@ class ADCTest(GenericTest):
                 await self.trigger_io4()
             else:
                 raise ValueError('Unsupported trigger %s' % job['trigger_type'])
-            if iterations > 1:
-                self.dut._log.info('%12s issued trigger %d' % (job['name'], i))
-                if i < iterations - 1:
-                    untrigger_wait = self._capture_cycles(random.randint(1, job['segment_times'][i]-2))
-                    untrigger_thread = cocotb.start_soon(self._untrigger_thread(job, untrigger_wait))
-                    await ClockCycles(self.clk, self._capture_cycles(job['segment_times'][i]))
+            self.dut._log.info('%12s issued trigger %d' % (job['name'], i))
+            if i < iterations - 1:
+                untrigger_wait = self._capture_cycles(random.randint(1, job['segment_times'][i]-2))
+            else:
+                untrigger_wait = random.randint(1, 1000)
+            self.untriggering = cocotb.start_soon(self._untrigger_thread(job, untrigger_wait))
+            if i < iterations - 1:
+                # wait prescribed time for the next trigger:
+                await ClockCycles(self.clk, self._capture_cycles(job['segment_times'][i]))
 
     async def trigger_now(self) -> None:
         await self.registers.write(self.reg_addr['SETTINGS_ADDR'], [0x4c + (self.stream << 4)]) # trigger
 
     async def trigger_io4(self) -> None:
         self.dut.target_io4.value = 1
-
-    async def _untrigger_thread(self, job, untrigger_wait) -> None:
-        await ClockCycles(self.clk, untrigger_wait)
-        self._untrigger(job)
 
     async def _idlecheck(self) -> None:
         self.dut._log.info('waiting for DUT to be idle before setting up next job')
@@ -571,6 +583,7 @@ class LATest(GenericTest):
         else:
             trigger_type = 'USERIO_D0'
             await self.registers.write(self.reg_addr['LA_TRIGGER_SOURCE'], [8])
+        await self.registers.write(self.reg_addr['LA_TRIGGER_SOURCE'], [8])
         if random.randint(0,3) == 0:
             downsample = random.randint(1, self.max_downsample)
         else:
