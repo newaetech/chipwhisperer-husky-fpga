@@ -747,6 +747,7 @@ module openadc_interface #(
 
 `ifdef SAD_ONLY
    assign armed_and_ready = 1'b1;
+   wire preddr_adc_fifo_empty = 1'b1;
 `else
 
    `ifdef PRO
