@@ -758,6 +758,8 @@ class GlitchTest(GenericTest):
         self.checker = GlitchCapture(dut, sampling_clock, harness, dut_reading_signal)
         self.ext_continuous = 0
         self.name = 'glitch'
+        if harness.adc_period < harness.usb_period:
+            self.can_be_externally_triggered = False
 
     async def _initial_setup(self) -> None:
         await self.registers.write(self.reg_addr['CLOCKGLITCH_POWERDOWN'], [0])

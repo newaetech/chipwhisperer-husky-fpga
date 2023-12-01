@@ -63,7 +63,7 @@ class Harness(object):
         if stream: # slow ADC clock *way* down in order to allow for slow FIFO reads to (usually) outpace writes, like IRL:
             self.adc_period = random.randint(50, 200)
         else:
-            self.adc_period = random.randint(4, 20)
+            self.adc_period = random.randint(4, 25)
         self.dut._log.info("ADC clock randomized to %5.1f MHz" % (1/self.adc_period*1000))
         usb_clock_thread = cocotb.start_soon(Clock(dut.clk_usb, self.usb_period, units="ns").start())
         adc_clock_thread = cocotb.start_soon(Clock(dut.PLL_CLK1, self.adc_period, units="ns").start())
