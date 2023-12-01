@@ -769,10 +769,12 @@ class GlitchTest(GenericTest):
             trigger_type = 'ext_continuous'
         else:
             trigger_type = 'manual'
-        #glitches = random.randint(self.capture_min, self.capture_max)
-        glitches = 1 # TODO: more glitches (not all triggers support multiple!)
-        offset = random.randint(0, 10) # TODO: randomize over legal range
-        repeats = random.randint(1, 10) # TODO: randomize over legal range
+        glitches = 1 # NOTE: not covering multiple glitches since it's well covered on-target
+        if random.randint(0,1):
+            offset = random.randint(0,2)
+        else:
+            offset = random.randint(2, 100)
+        repeats = random.randint(1, 10)
         await self.registers.write(self.reg_addr['CLOCKGLITCH_NUM_GLITCHES'], [glitches-1])
         await self.registers.write(self.reg_addr['CLOCKGLITCH_OFFSET'], self.registers.to_bytes(offset, 4))
         # setting the repeats value is messy:
