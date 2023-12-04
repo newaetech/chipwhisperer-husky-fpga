@@ -46,7 +46,7 @@ NUM_CAPTURES=3
 LA_CAPTURE=1
 TRACE_CAPTURE=1
 ADC_CAPTURE=1
-GLITCH_CAPTURE=0
+GLITCH_CAPTURE=1
 GLITCH_EXT_CONTINUOUS=0
 MIN_SIZE=30
 MAX_SIZE=100
@@ -322,10 +322,10 @@ lint_sad:
         -D__ICARUS__ \
         -DNOFIFO \
         -DTRACE \
-        ../hdl/sad.v \
+	../hdl/sad_x2_slowclock.v \
         ../fpga-common/hdl/cdc_pulse.v \
         ../fpga-common/hdl/cdc_simple.v \
-        --top-module sad \
+        --top-module sad_x2_slowclock \
         2>&1 | tee lint.sad \
         
 fifo:
