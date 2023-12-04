@@ -331,7 +331,7 @@ async def capture(dut):
     stream = int(os.getenv('STREAM', '0'))
     is_pro = int(os.getenv('PRO', '0'))
     glitch_ext_continous = int(os.getenv('GLITCH_EXT_CONTINUOUS', '0'))
-    stop_first_error = int(os.getenv('STOP_FIRST_ERROR', '0'))
+    stop_first_error = int(os.getenv('STOP_FIRST_ERROR', '1'))
 
     if is_pro:
         # actual limits are higher (depends on DDR model size); these are in the interest of simulation time:
@@ -391,6 +391,14 @@ async def capture(dut):
         glitchtest.capture_max = max_glitches
         glitchtest.ext_continuous = glitch_ext_continous
         harness.register_test(glitchtest)
+    else:
+        # ensure glitch never fires:
+        from test_husky_captures import GlitchCapture
+        GC = GlitchCapture(dut, dut.clk_usb, harness, None)
+        GC.expect_glitch(0)
+        await ClockCycles(dut.clk_usb, 10)
+        GC._start_watch_threads()
+
 
     harness.init_tests()
     harness.start_tests()
