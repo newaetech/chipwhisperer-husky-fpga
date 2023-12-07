@@ -70,21 +70,21 @@ class Harness(object):
         ui_clock_thread = cocotb.start_soon(Clock(dut.ui_clk, 6, units="ns").start())
         self.dut.errors.value = 0
 
-    def queue_push(self, job):
+    def queue_push(self, job) -> None:
         """ Wrapper around queue.put_nowait() so we can track what's actually in the queue, to help debugging.
         """
         self.queue.put_nowait(job)
         self._queue_contents.append(job)
         self.dut._log.debug("queue contents after addition: %s" % self._queue_contents)
 
-    def queue_get(self, job):
+    def queue_get(self, job) -> None:
         """ Wrapper around queue.get_nowait() so we can track what's actually in the queue, to help debugging.
         """
         self.queue.get_nowait()
         self._queue_contents.remove(job)
         self.dut._log.debug("queue contents after removal: %s" % self._queue_contents)
 
-    async def read_lock_acquire(self, job_name):
+    async def read_lock_acquire(self, job_name) -> None:
         """ Wrapper around read_lock.acquire() to track who has acquired it on the sim waveform
         """
         self.dut._log.info("%12s trying to acquire read_lock..." % job_name)
@@ -92,7 +92,7 @@ class Harness(object):
         self.dut._log.info("%12s read_lock acquired" % job_name)
         self.dut.current_read_lock.value = self.hexstring("%12s" % job_name)
 
-    def read_lock_release(self):
+    def read_lock_release(self) -> None:
         """ Wrapper around read_lock.release() to track who has acquired it on the sim waveform
         """
         self.read_lock.release()
@@ -100,7 +100,7 @@ class Harness(object):
         self.dut.current_read_lock.value = 0
 
 
-    def slurp_defines(self, defines_files=None):
+    def slurp_defines(self, defines_files=None) -> None:
         """ Parse Verilog defines file so we can access register and bit
         definitions by name and avoid 'magic numbers'.
 
@@ -172,7 +172,7 @@ class Harness(object):
         self.dut._log.debug("Register addresses: %s" % self.reg_addr)
 
 
-    async def initialize_dut(self):
+    async def initialize_dut(self) -> None:
         self.dut.target_io4.value = 0
         await self.reset()
         # the reset will cause target_io4 to "lose" the 0 we'd assigned to it... possibly a simulator/cocotb bug?
@@ -195,14 +195,14 @@ class Harness(object):
         await ClockCycles(self.dut.clk_usb, 20)
         await self.registers.write(self.reg_addr['RESET'], [0])
 
-    async def ddr_done_writing(self):
+    async def ddr_done_writing(self) -> bool:
         raw = await self.registers.read(self.reg_addr['REG_DDR_START_READ'])
         if raw[0] >> 7:
             return True
         else:
             return False
 
-    async def wait_flush(self, source):
+    async def wait_flush(self, source) -> None:
         if source == 'ADC':
             bitmask = 16
         elif source == 'LA':
@@ -215,20 +215,20 @@ class Harness(object):
             self.dut._log.info("...waiting for %s flush to complete..." % source)
             flushing = (await self.registers.read(self.reg_addr['FIFO_STAT'], 3))[2] & bitmask
 
-    def register_test(self, test):
+    def register_test(self, test) -> None:
         """ Add to list of running tests, so that we can later wait for all of
         them to complete via all_tests_done().
         """
         self.tests.append(test)
 
-    async def all_tests_done(self):
+    async def all_tests_done(self) -> None:
         """ Wait for all tests which were registered via register_test() to finish.
         """
         for test in self.tests:
             await test.done()
         await ClockCycles(self.dut.clk_usb, 10) # to give time for fifo_watch errors to be seen
 
-    def init_tests(self):
+    def init_tests(self) -> None:
         """ Call after all tests have been defined and registered.
         """
         # Populate each test's downstream_triggers list, according to the
@@ -244,19 +244,19 @@ class Harness(object):
         for test in self.tests:
             self.dut._log.debug("%s downstream_triggers: %s" % (test.name, test.downstream_triggers))
 
-    def start_tests(self):
+    def start_tests(self) -> None:
         """ Wait for all tests which were registered via register_test() to finish.
         """
         for test in self.tests:
             test.start()
 
-    def inc_error(self):
+    def inc_error(self) -> None:
         self.errors += 1
         self.dut.errors.value = self.errors
         if self.stop_first_error:
             assert False
 
-    async def register_rw_thread(self, address, size):
+    async def register_rw_thread(self, address, size) -> None:
         while True:
             wdata = random.randint(1,2**(size*8)-1)
             #self.dut._log.info("Writing to %d at time %s" % (address, cocotb.utils.get_sim_time('ns')))
@@ -267,7 +267,7 @@ class Harness(object):
             assert rdata == wdata, "Wrote %x but read %x" % (wdata, rdata)
 
     @staticmethod
-    def hexstring(string, max_chars=24):
+    def hexstring(string, max_chars=24) -> int:
         """ Convenience function to put a string onto the simulation waveform."""
         data = 0
         for i,j in enumerate(string[:max_chars]):
@@ -277,11 +277,11 @@ class Harness(object):
     # the idea here was to track which jobs are currently active, in order to estimate the worst-case finish time for any
     # job (and set timeouts accordingly), however this doesn't account for jobs that can be created after currently in-flight jobs
     # and still impact them, and so this isn't used; saving it in case there's another need for it later
-    def add_job(self, job):
+    def add_job(self, job) -> None:
         self.active_jobs[job['name']] = job
-    def remove_job(self, job):
+    def remove_job(self, job) -> None:
         self.active_jobs.pop(job['name'])
-    def active_job_times(self):
+    def active_job_times(self) -> int:
         total = 0
         for k,j in self.active_jobs.items(): 
             total += j['capture_time_us']
@@ -289,7 +289,7 @@ class Harness(object):
 
     # all registered tests report their maximum job time; here we add them up in order to estimate the worst-case time for
     # processing a job, in order to set timeouts.
-    def max_job_times(self):
+    def max_job_times(self) ->  int:
         time = 0
         for test in self.tests:
             time += test.max_job_time()
