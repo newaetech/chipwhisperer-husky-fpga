@@ -30,6 +30,13 @@ module cwhusky_top(
     output wire        LED_ARMED,
     output wire        LED_CAP,
 
+`ifdef __ICARUS__
+    // simulation only:
+    output wire         glitch_out,
+    output wire         glitch_clk,
+`endif
+
+
     /* FPGA - USB Interface */
     inout wire [7:0]    USB_Data,
     input wire [7:0]    USB_Addr,
@@ -117,6 +124,13 @@ module cwhusky_top(
     parameter pSEQUENCER_NUM_TRIGGERS = 2;
 `endif
     parameter pSEQUENCER_COUNTER_WIDTH = 16;
+
+
+`ifdef __ICARUS__
+   assign glitch_out = glitchclk;
+   assign glitch_clk = glitch_mmcm1_clk_out;
+`endif
+
 
    wire         target_npower;
    wire         stream_segment_available;
@@ -388,7 +402,6 @@ module cwhusky_top(
    wire trace_capture_on;
    wire [7:0] trace_userio_dir;
    wire freq_measure;
-   wire clear_adc_error;
    wire disable_adc_error;
    reg PLL_STATUS_reg = 1'b1;
 
@@ -399,7 +412,7 @@ module cwhusky_top(
    assign LED_ARMED = cw_led_armed;
 
    always @(posedge clk_usb_buf) begin
-       if (clear_adc_error || disable_adc_error)
+       if (disable_adc_error)
            PLL_STATUS_reg <= 1'b1;
        else if (~PLL_STATUS) // make it sticky!
            PLL_STATUS_reg <= 1'b0;
@@ -416,7 +429,6 @@ module cwhusky_top(
 
         .LED_capture            (cw_led_cap),
         .LED_armed              (cw_led_armed),
-        .O_clear_adc_error      (clear_adc_error),
         .O_disable_adc_error    (disable_adc_error),
         .ADC_data               (ADC_data),
         .ADC_clk_feedback       (ADC_clk_fb),
@@ -436,6 +448,9 @@ module cwhusky_top(
         .cmd_arm_usb            (cmd_arm_usb),
         .armed_and_ready        (armed_and_ready),
         .freq_measure           (freq_measure),
+        .trace_flushing         (trace_fifo_flush),
+        .la_flushing            (la_fifo_flush),
+        .shared_fifo_empty      (fifo_empty),
 
         .reg_address            (reg_address),
         .reg_bytecnt            (reg_bytecnt), 
@@ -578,6 +593,8 @@ module cwhusky_top(
         .trace_exists           (trace_exists),
         .la_exists              (la_exists),
 
+        .cw310_adc_clk_sel      (), // CW310 only
+
         .sequencer_debug        (sequencer_debug),
         .sequencer_debug2       (seq_trace_sad_debug2),
         .seq_trace_sad_debug    (seq_trace_sad_debug),
@@ -661,6 +678,8 @@ module cwhusky_top(
         .observer_locked        (observer_locked),
         .mmcm_shutdown          (xadc_error_flag),
         .I_trace_en             (trace_en),
+        .O_enabled              (), // PRO only
+        .O_4bit_mode            (), // PRO only
         .freq_measure           (freq_measure),
 
         .glitchclk              (glitchclk),
@@ -697,6 +716,8 @@ module cwhusky_top(
         .glitch_trigger_manual_sourceclock (glitch_trigger_manual_sourceclock),
         .glitch_trigger         (glitch_trigger),
         .capture_active         (capture_active),
+        .capture_start          (), // unused
+        .capture_done           (), // unused
 
         .fifo_wr                (la_fifo_wr),
         .fifo_wr_data           (la_wr_data),
@@ -928,6 +949,7 @@ module cwhusky_top(
           .reg_datai        (write_data), 
           .reg_read         (reg_read), 
           .reg_write        (reg_write), 
+          .O_xadc_temp_out  (), // PRO only
           .xadc_error       (xadc_error_flag)
        ); 
 
@@ -1046,6 +1068,8 @@ module cwhusky_top(
           .arm_usb                      (trace_arm_usb),
           .arm_fe                       (trace_arm_fe),
           .capturing                    (),
+          .capture_start                (),  // PRO only
+          .capture_done                 (),  // PRO only
 
           .fifo_full                    (fifo_full),
           .fifo_overflow_blocked        (fifo_overflow_blocked),
@@ -1111,7 +1135,6 @@ module cwhusky_top(
    assign fifo_clear_read_flags = trace_arm_usb || la_clear_read_flags;
    assign fifo_clear_write_flags = trace_arm_fe || la_clear_write_flags;
 
-   `ifndef NOFIFO // for clean compilation
    // NOTE: this FIFO is shared by LOGIC_ANALYZER and TRACE.
    // There are no other ifdef's around it, as per the note above in the
    // LOGIC_ANALYZER block.
@@ -1138,7 +1161,6 @@ module cwhusky_top(
 
       .I_custom_fifo_stat_flag  (synchronized)      
    );
-   `endif
 
 `ifdef ILA_SHARED_FIFO
     ila_shared_fifo U_ila_shared_fifo (

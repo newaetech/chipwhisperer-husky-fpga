@@ -44,7 +44,8 @@ module trigger_unit(
     input wire               capture_done_i,       //1 = capture done
     input wire               armed_and_ready,
 
-    input wire               fifo_rst,             // for debug only
+    output wire              trigger_too_soon,
+
     input wire               cmd_arm_usb,          // for debug only
     output wire [7:0]        debug2,               // for debug only
     output wire [8:0]        la_debug              // for debug only
@@ -60,22 +61,18 @@ module trigger_unit(
 
    reg [31:0] adc_delay_cnt;
 
-   (* ASYNC_REG = "TRUE" *) reg[1:0] trigger_now_pipe;
-   reg trigger_now_r;
-   reg trigger_now_r2;
+   wire trigger_now_r;
+   wire trigger_now_r2;
    wire trigger_now;
    reg triggered;
 
-   always @(posedge adc_clk) begin
-      if (reset) begin
-         trigger_now_pipe <= 0;
-         trigger_now_r <= 0;
-         trigger_now_r2 <= 0;
-      end
-      else begin
-         {trigger_now_r2, trigger_now_r, trigger_now_pipe} <= {trigger_now_r, trigger_now_pipe, trigger_now_i};
-      end
-   end
+   cdc_simple U_trigger_now_cdc (
+       .reset          (reset),
+       .clk            (adc_clk),
+       .data_in        (trigger_now_i),
+       .data_out       (trigger_now_r),
+       .data_out_r     (trigger_now_r2)
+   );
 
    assign trigger_now = trigger_now_r && ~trigger_now_r2;
 
@@ -107,17 +104,23 @@ module trigger_unit(
 
    //ADC Trigger Stuff
    reg reset_arm;
+   wire trigger_level_match = (trigger == trigger_level_i);
+   reg trigger_level_match_r;
+   always @(posedge adc_clk) trigger_level_match_r <= trigger_level_match;
+
    always @(posedge adc_clk) begin
       if (reset) begin
          reset_arm <= 0;
       end else begin
-         if (((trigger == trigger_level_i) & armed) | trigger_now) begin
+         if ((trigger_level_match & armed) | trigger_now) begin
             reset_arm <= 1;
          end else if ((arm_i == 0) & (capture_active_o == 0)) begin
             reset_arm <= 0;
          end
       end
    end
+
+   assign trigger_too_soon = trigger_level_match && ~trigger_level_match_r && ~armed_and_ready;
 
    wire int_reset_capture;
    assign int_reset_capture = adc_capture_done | reset | (~arm_i);
@@ -213,7 +216,7 @@ module trigger_unit(
           .probe7         (arm_i),                // input wire [0:0]  probe7 
           .probe8         (capture_go_start),     // input wire [0:0]  probe8 
           .probe9         (capture_go_o),         // input wire [0:0]  probe9 
-          .probe10        (fifo_rst)              // input wire [0:0]  probe10
+          .probe10        (1'b0)                  // input wire [0:0]  probe10
        );
    `endif
 

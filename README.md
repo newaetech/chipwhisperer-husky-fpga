@@ -71,19 +71,23 @@ CW-Husky is tested in two ways:
 
 ### Requirements
 * [Icarus Verilog](http://iverilog.icarus.com)
+* [cocotb](https://github.com/cocotb/cocotb)
 * [gtkwave](http://gtkwave.sourceforge.net)
 * **no commercial tools!**
 
-While it should be possible to simulate using Vivado, the current setup uses
-iverilog and gtkwave. Try it, you'll like it!
+Note that the Vivado simulator is not supported. In theory [any simulator
+supported by cocotb](https://docs.cocotb.org/en/stable/simulator_support.html)
+should work; in practice, iverilog is what we use.
+
 
 ### Running Simulations
-Testcases are defined in the `regress.py` script. Run `regress.py --list` to
-lists available testcases. 
+Testcases are defined in the `regress.py` script in `fpga/sim/`. Run
+`regress.py --list` to lists available testcases. 
 
 To run a particular testcase: `regress.py --test <testcase>`. 
 
-Add the `--variant plus` argument to simulate the Husky Plus variant.
+Add the `--variant plus` argument to simulate the Husky Plus variant;
+``--variant pro` for the Pro.
 
 Many things are randomized when a testcase is run. To re-run a testcase with
 the same randomizations, specify a `--seed <integer>`. 
@@ -122,9 +126,12 @@ So, the Xilinx FIFOs are still used in implementation and remain the default
 in simulation; to use the faster FIFOs in simulation, add `--fast_fifo_sim`
 to `regress.py`.
 
+More detailed notes about the testbench architecture and what it does and
+doesn't cover can be found [here](fpga/sim/README.md).
+
 
 ### TraceWhisperer
-Husky's Verilog testbench does not cover trace. For this, run the
+Husky's top-level testbench does not cover trace. For this, run the
 TraceWhisperer testbench in its
 [submodule](https://github.com/newaetech/chipwhisperer-husky-fpga/tree/main/fpga).
 Verification of trace within Husky is covered by on-target testing (see
@@ -165,7 +172,7 @@ To hunt down bugs on the FPGA, you can either:
   internal signals are already routed to it, and more can be added);
 * use Xilinx ILAs.
 
-ILAs require BRAM, and Husky uses 48 of the 50 available BRAMs for storage
+ILAs require BRAM, and Husky uses 49 of the 50 available BRAMs for storage
 of ADC samples, trace samples, and `scope.LA` samples (on Husky Plus there
 is a little bit more BRAM left to play with). To free up more, you can
 rebuild Husky with `TINYFIFO` defined: this reduces the size of the sample,

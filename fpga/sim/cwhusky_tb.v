@@ -75,6 +75,7 @@ module cwhusky_tb();
    wire [7:0]           usb_data;
    reg  [7:0]           usb_wdata;
    reg  [7:0]           usb_addr;
+   reg  [7:0]           usb_bytecount;
    reg                  usb_rdn;
    reg                  usb_wrn;
    reg                  usb_cen;
@@ -204,11 +205,12 @@ module cwhusky_tb();
 
       // manually reset with new register:
       write_1byte(`RESET, 8'h1);
+      #(pCLK_USB_PERIOD*20);
       write_1byte(`RESET, 8'h0);
 
       #(pCLK_USB_PERIOD*1000);
 
-      write_1byte(`DATA_SOURCE_SELECT, 8'h0);
+      write_1byte(`FIFO_CONFIG, 8'h0);
       if (pADC_LOW_RES)
          write_1byte(`ADC_LOW_RES, 3);
       else

@@ -125,6 +125,8 @@ module reg_chipwhisperer #(
    output wire        trigger_trace,    // Trigger signal to trace
    output wire        trig_glitch_o_mcx,// trig/glitch MCX 
 
+   output reg         cw310_adc_clk_sel, // CW310 only
+
    output wire [7:0]  sequencer_debug,
    output wire [7:0]  sequencer_debug2,
    output wire [4:0]  seq_trace_sad_debug,
@@ -589,6 +591,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
            `EXTERNAL_CLOCK:             reg_datao_reg = reg_external_clock;
            `COMPONENTS_EXIST:           reg_datao_reg = {6'b0, trace_exists, la_exists};
 
+           `REG_CW310_SPECIFIC:         reg_datao_reg = {7'b0, cw310_adc_clk_sel};
            `SOFTPOWER_CONTROL:          reg_datao_reg = reg_softpower_control[reg_bytecnt*8 +: 8];
 
            `SEQ_TRIGGERS_CONFIG:        reg_datao_reg = reg_seq_triggers_config_read[reg_bytecnt*8 +: 8];
@@ -622,6 +625,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
          userio_drive_data <= 8'b0;
          userio_fpga_debug_select <= 4'b0;
          reg_external_clock <= 1'b0;
+         cw310_adc_clk_sel <= 1'b0;
          registers_cwauxio <= 3'b0;
          reg_softpower_control <= {16'd0, 16'd1995, 16'd2000, 8'd0, 8'd35};
          reg_seq_triggers_config <= 1; // default to two triggers, sequencer disabled
@@ -640,6 +644,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
            `EXTERNAL_CLOCK: reg_external_clock <= reg_datai[0];
 
+           `REG_CW310_SPECIFIC: cw310_adc_clk_sel <= reg_datai[0];
            `SOFTPOWER_CONTROL: reg_softpower_control[reg_bytecnt*8 +: 8] <= reg_datai;
 
            `SEQ_TRIGGERS_CONFIG: reg_seq_triggers_config <= reg_datai;

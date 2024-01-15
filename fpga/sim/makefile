@@ -26,6 +26,7 @@ SEED=1
 TIMEOUT_CYCLES=50000
 DUMP=0
 FIFOSIZE=REGULARFIFO
+DDR_MODEL_WRITES=REGULAR_DDR_WRITES
 FAST_FIFO_SIM=NOFASTFIFO
 ERRORS_OK=0
 PRESAMP_ERROR=0
@@ -40,6 +41,17 @@ TRIGGERS=1
 FLUSH=0
 THRESHOLD=0
 VERBOSE=0
+COCOTB_LOG_LEVEL=INFO
+NUM_CAPTURES=3
+LA_CAPTURE=1
+TRACE_CAPTURE=1
+ADC_CAPTURE=1
+GLITCH_CAPTURE=1
+GLITCH_EXT_CONTINUOUS=0
+MIN_SIZE=30
+MAX_SIZE=100
+NO_DOWNSTREAM_TRIGGERS=0
+VIVADO_VERSION=2020.2
 VARIANT=REGULAR
 SAD=SAD_X2
 FIFO_TYPE=NOXILINXFIFO
@@ -51,6 +63,35 @@ all: compile run
 all_sad: compile_sad run
 all_edge: compile_edge run
 all_trigger_sequencer: compile_trigger_sequencer run_trigger_sequencer
+coco: compile_coco run_coco
+
+ifeq ($(VIVADO_PATH),)
+  ifeq ($(OS), Windows_NT)
+    VIVADO_PATH=/mnt/c/Xilinx/Vivado/
+  else
+    UNAME_S := $(shell uname -s)
+    ifeq ($(UNAME_S),Linux)
+      VIVADO_PATH=/tools/Xilinx/Vivado/
+    endif
+    ifeq ($(UNAME_S),Darwin)
+      VIVADO_PATH=$(HOME)/tools/Xilinx/Vivado/
+    endif
+  endif
+endif
+
+ifeq ($(VARIANT),PRO)
+    TOP=cwhusky_cw310_cocowrapper
+    CMDFILE=cmdfile_cw310_pro
+    EXTRARGS=-DCW310 -DPRO -DREGULARDDR -D$(DDR_MODEL_WRITES)
+    CW310=1
+    PRO=1
+else
+    TOP=cwhusky_top_cocowrapper
+    CMDFILE=cmdfile
+    EXTRARGS=
+    CW310=0
+    PRO=0
+endif
 
 compile_sad:
 	iverilog \
@@ -62,7 +103,7 @@ compile_sad:
 	../fpga-common/hdl/cdc_simple.v \
 	sad_tb.v \
 	vivado/sad_fifo_sim_netlist.v \
-	-y/tools/Xilinx/Vivado/2020.2/ids_lite/ISE/verilog/src/unisims/ \
+	-y/$(VIVADO_PATH)/$(VIVADO_VERSION)/ids_lite/ISE/verilog/src/unisims/ \
 	-g2005-sv \
 	-I../hdl \
 	-Wportbind \
@@ -111,8 +152,9 @@ compile_edge:
 	../hdl/edge_wrapper.v \
 	../hdl/usb_reg_main.v \
 	../fpga-common/hdl/cdc_pulse.v \
+	../fpga-common/hdl/cdc_simple.v \
 	edge_tb.v \
-	-y/tools/Xilinx/Vivado/2020.2/ids_lite/ISE/verilog/src/unisims/ \
+	-y/$(VIVADO_PATH)/$(VIVADO_VERSION)/ids_lite/ISE/verilog/src/unisims/ \
 	-g2005-sv \
 	-I../hdl \
 	-Wportbind \
@@ -142,10 +184,11 @@ compile_trigger_sequencer:
 
 compile:
 	iverilog -ccmdfile \
-	cwhusky_tb.v \
+	-y/$(VIVADO_PATH)/$(VIVADO_VERSION)/ids_lite/ISE/verilog/src/unisims/ \
 	-g2005-sv \
 	-gsupported-assertions \
 	-I../hdl \
+	-I../tracewhisperer/hdl/ \
 	-Wportbind \
 	-Wselect-range \
 	-D$(FIFOSIZE) \
@@ -183,25 +226,52 @@ compile:
 	-P cwhusky_tb.pDUMP=$(DUMP) \
 	-P cwhusky_tb.pSEED=$(SEED) \
 	-o $(EXEFILE) \
+	cwhusky_tb.v \
+
+compile_coco:
+	iverilog -c$(CMDFILE) \
+	-I../hdl/ \
+	-I../tracewhisperer/hdl/ \
+	-g2005-sv \
+	-gsupported-assertions \
+	-y/$(VIVADO_PATH)/$(VIVADO_VERSION)/ids_lite/ISE/verilog/src/unisims/ \
+	-s $(TOP) \
+	-s glbl \
+	-Wportbind \
+	-Wselect-range \
+	-D$(FIFOSIZE) \
+	$(EXTRARGS) \
+	-DTRACE \
+	-DNOMIG \
+	-DNOXILINXFIFO \
+	-D$(VARIANT) \
+	-D$(FAST_FIFO_SIM) \
+	-DCOCOTB_SIM=1 \
+	-P $(TOP).pDUMP=$(DUMP) \
+	-o $(EXEFILE) \
+	../hdl/$(TOP).v \
+
 
 cwlite:
 	iverilog -ccmdfile_cwlite \
 	-g2005-sv \
 	-I../hdl \
+	-y/$(VIVADO_PATH)/$(VIVADO_VERSION)/ids_lite/ISE/verilog/src/unisims/ \
 	-Wportbind \
 	-Wselect-range \
 
 nofifo:
 	iverilog -ccmdfile_nofifo \
-	cwhusky_tb.v \
-	-g2005-sv \
-	-I../hdl \
+	-I../hdl/ \
 	-I../tracewhisperer/hdl/ \
+	-g2005-sv \
 	-Wportbind \
 	-Wselect-range \
 	-DNOFIFO \
 	-DNOXILINXFIFO \
+	-DLINT \
 	-DTRACE \
+	cwhusky_tb.v 
 
 lint:
 	verilator --lint-only -Wall \
@@ -212,6 +282,9 @@ lint:
 	-I../hdl/ \
 	-I../tracewhisperer/hdl/ \
 	-D__ICARUS__ \
+	-DNOXILINXFIFO \
+	-DFASTFIFOSIM \
+	-DLINT \
 	-DNOFIFO \
 	-DNOXILINXFIFO \
 	-DTRACE \
@@ -220,31 +293,47 @@ lint:
 	--top-module cwhusky_top \
 	2>&1 | tee lint.out \
 
-lint_sad:
+lint_pro:
 	verilator --lint-only -Wall \
 	--error-limit 0 \
-	-Wno-PINCONNECTEMPTY \
-	-Wno-ASSIGNDLY \
-	-I../hdl/ \
-	-D__ICARUS__ \
-	-DNOFIFO \
-	-DTRACE \
+        -Wno-PINCONNECTEMPTY \
+        -Wno-ASSIGNDLY \
+        -f cmdfile_coco_nofifo \
+        -I../hdl/ \
+        -I../tracewhisperer/hdl/ \
+        -D__ICARUS__ \
+        -DPRO \
+	-DCW310 \
+        -DNOXILINXFIFO \
+        -DFASTFIFOSIM \
+        -DLINT \
+        -DTRACE \
 	-D$(VARIANT) \
 	-D$(SAD) \
-	../hdl/sad.v \
+        --top-module cwhusky_cw310_top \
+        2>&1 | tee lint.out \
+
+lint_sad:
+	verilator --lint-only -Wall \
+        --error-limit 0 \
+        -Wno-PINCONNECTEMPTY \
+        -Wno-ASSIGNDLY \
+        -I../hdl/ \
+        -D__ICARUS__ \
+        -DNOFIFO \
+        -DTRACE \
 	../hdl/sad_x2_slowclock.v \
-	../fpga-common/hdl/cdc_pulse.v \
-	../fpga-common/hdl/cdc_simple.v \
-	--top-module sad \
-	2>&1 | tee lint.sad \
-
-
+        ../fpga-common/hdl/cdc_pulse.v \
+        ../fpga-common/hdl/cdc_simple.v \
+        --top-module sad_x2_slowclock \
+        2>&1 | tee lint.sad \
+        
 fifo:
 	iverilog \
 	../hdl/fifo_top_husky.v \
         ../vivado/cwhusky.srcs/sources_1/ip/adc_fast_fifo/adc_fast_fifo_sim_netlist.v \
         ../vivado/cwhusky.srcs/sources_1/ip/usb_slow_fifo/usb_slow_fifo_sim_netlist.v \
-        -y/mnt/c/Xilinx/Vivado/2019.2/ids_lite/ISE/verilog/src/unisims/ \
+	-y/$(VIVADO_PATH)/$(VIVADO_VERSION)/ids_lite/ISE/verilog/src/unisims/ \
 	-I../hdl \
 	-DTRACE \
 	-D$(VARIANT) \
@@ -258,6 +347,30 @@ run:
 	vvp -l$(LOGFILE) $(EXEFILE) -$(WAVEFORMAT)
 
 # note that -M and -m arguments must immediately follow vvp, otherwise Python doesn't start!
+run_coco:
+	COCOTB_RESOLVE_X=RANDOM \
+	TOPLEVEL=$(TOP) \
+	TOPLEVEL_LANG=verilog \
+	PRO=$(PRO) \
+	CW310=$(CW310) \
+	NUM_CAPTURES=$(NUM_CAPTURES) \
+	LA_CAPTURE=$(LA_CAPTURE) \
+	TRACE_CAPTURE=$(TRACE_CAPTURE) \
+	ADC_CAPTURE=$(ADC_CAPTURE) \
+	GLITCH_CAPTURE=$(GLITCH_CAPTURE) \
+	GLITCH_EXT_CONTINUOUS=$(GLITCH_EXT_CONTINUOUS) \
+	MIN_SIZE=$(MIN_SIZE) \
+	MAX_SIZE=$(MAX_SIZE) \
+	STREAM=$(STREAM) \
+	NO_DOWNSTREAM_TRIGGERS=$(NO_DOWNSTREAM_TRIGGERS) \
+	MODULE=test_husky \
+	COCOTB_LOG_LEVEL=$(COCOTB_LOG_LEVEL) \
+	COCOTB_HDL_TIMEUNIT=1ns \
+	LIBPYTHON_LOC=$(shell cocotb-config --libpython) \
+	vvp -M $(shell cocotb-config --lib-dir) \
+	-m $(shell cocotb-config --lib-name vpi icarus) \
+	-l$(LOGFILE) $(EXEFILE) -$(WAVEFORMAT) \
+
 run_trigger_sequencer:
 	COCOTB_RESOLVE_X=RANDOM \
 	TOPLEVEL=trigger_sequencer_cocowrapper \

@@ -1,4 +1,6 @@
 `include "includes.v"
+`include "defines_pw.v"
+
 `timescale 1 ns / 1 ps
 `default_nettype none
 /***********************************************************************
@@ -22,7 +24,7 @@ Author: Jean-Pierre Thibault <jpthibault@newae.com>
   along with chipwhisperer.  If not, see <http://www.gnu.org/licenses/>.
 *************************************************************************/
 
-module cwhusky_cw310_top(  
+module cwhusky_cw310_top (
     input wire         clk_usb,
 
     output wire        LED_ADC, //  LED_CLK1FAIL on schematic,
@@ -33,10 +35,32 @@ module cwhusky_cw310_top(
     output wire        LED_UNUSED,              // CW310 new
     output wire        LED_GLITCHOUT_HIGHPWR,   // CW310 new
     output wire        LED_GLITCHOUT_LOWPWR,    // CW310 new
+`ifdef __ICARUS__
+    // simulation only:
+    input wire          tb_ui_clk,
+    output wire         glitch_out,
+    output wire         glitch_clk,   
+`endif
 
+    // DDR3 (Pro) stuff:
     output wire        xo_en,
     output wire        vddr_enable,
     input  wire        vddr_pgood,
+    output wire [15:0] ddr3_addr,
+    output wire [2:0]  ddr3_ba,
+    output wire        ddr3_cas_n,
+    output wire        ddr3_ck_n,
+    output wire        ddr3_ck_p,
+    output wire        ddr3_cke,
+    output wire        ddr3_ras_n,
+    output wire        ddr3_reset_n,
+    output wire        ddr3_we_n,
+    inout  wire [7:0]  ddr3_dq,
+    inout  wire        ddr3_dqs_n,
+    inout  wire        ddr3_dqs_p,
+    output wire        ddr3_dm,
+    output wire        ddr3_cs_n,
+    output wire        ddr3_odt,
 
     /* FPGA - USB Interface */
     inout wire [7:0]    USB_Data,
@@ -55,8 +79,9 @@ module cwhusky_cw310_top(
     //input wire          FPGA_BONUS4,
 
     // ADC
-    input wire          ADC_clk_fbp,
+    input wire          ADC_clk_fbp, // CW310: these are actually used for the MIG reference clock input
     input wire          ADC_clk_fbn,
+    input wire          PLL_CLK1,    // CW310 PLL is used as the ADC clock
     //output wire         ADC_CLKP,
     //output wire         ADC_CLKN,
     //output wire         ADC_SCLK,     // CW310 new
@@ -105,7 +130,7 @@ module cwhusky_cw310_top(
     inout wire          target_io2, // Normally RXD
     inout wire          target_io1, // Normally TXD / SmartCard Reset
     input wire          target_hs1, // Clock from victim device
-    output wire         target_hs2  // Clock to victim device
+    output wire         target_hs2, // Clock to victim device
 
     //output wire         glitchout_highpwr, // high-speed glitch output
     //output wire         glitchout_lowpwr, // high-speed glitch output 
@@ -113,30 +138,36 @@ module cwhusky_cw310_top(
     //output wire         target_poweron,
 
     //output wire         TRIG_GLITCHOUT, //trigger/glitch out MCX
-    //inout  wire         AUXIO // AUX I/O MCX
+    inout  wire         AUXIO // AUX I/O MCX
 );
 
     parameter pBYTECNT_SIZE = 7;
     parameter pUSERIO_WIDTH = 8;
     parameter pTRACE_BUFFER_SIZE = 64;
     parameter pTRACE_MATCH_RULES = 8;
+`ifdef PRO
+    parameter pSEQUENCER_NUM_TRIGGERS = 4; // TODO: increase?
+`else
+    `ifdef PLUS
+        parameter pSEQUENCER_NUM_TRIGGERS = 4;
+    `else
+        parameter pSEQUENCER_NUM_TRIGGERS = 2;
+    `endif
+`endif
+    parameter pSEQUENCER_COUNTER_WIDTH = 16;
 
     //input wire          PLLFPGAP,
     //input wire          PLLFPGAN,
 
-   wire          FPGA_BONUS1;
-   wire          FPGA_BONUS2;
-   wire          FPGA_BONUS3;
-   wire          FPGA_BONUS4;
    wire          ADC_OVR_SDOUT;
    wire [5:0]    ADC_DP;
    wire [5:0]    ADC_DN;
-   wire          PLL_STATUS;
-   wire          FPGA_CDOUT;
+   wire          PLL_STATUS = 1'b1;
+   wire          FPGA_CDOUT = 1'b0;
    wire          SAM_MOSI;
    wire          SAM_SPCK;
    wire          SAM_CS;
-   wire          AUXIO;
+   //wire          AUXIO = target_hs1;
    wire          USB_SPARE0;
    wire          USB_ALEn = 1'b1;
 
@@ -185,6 +216,11 @@ module cwhusky_cw310_top(
    wire pll_fpga_clk;
    wire observer_clk;
    wire observer_locked;
+   `ifdef __ICARUS__
+       assign glitch_out = glitchclk;
+       assign glitch_clk = glitch_mmcm1_clk_out;
+   `endif
+
 
    `ifdef __ICARUS__
       assign clk_usb_buf = clk_usb;
@@ -213,12 +249,13 @@ module cwhusky_cw310_top(
    wire [7:0] read_data_xadc;
    wire [7:0] read_data_la;
    wire [7:0] read_data_trace;
-   wire [7:0] read_data_cw310;
-   always @(posedge clk_usb_buf) read_data_reg <= read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc | read_data_la | read_data_trace | read_data_cw310;
+   always @(posedge clk_usb_buf) read_data_reg <= read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc | read_data_la | read_data_trace;
    //always @(*) read_data_reg = read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc | read_data_la;
    assign read_data = (reg_address == `ADCREAD_ADDR)? fifo_dout : read_data_reg;
 
-   wire ext_trigger;
+   wire trigger_capture;
+   wire trigger_glitch;
+   wire trigger_trace;
    wire extclk_mux;
    wire target_clk;
    wire glitchclk;
@@ -237,6 +274,7 @@ module cwhusky_cw310_top(
    wire trace_error_flag;
    wire error_flag = fifo_error_flag | xadc_error_flag | trace_error_flag;
    wire fast_fifo_read;
+   wire [11:0] xadc_temp_out;
 
    wire slow_fifo_wr;
    wire slow_fifo_rd;
@@ -247,6 +285,7 @@ module cwhusky_cw310_top(
    wire [7:0] edge_trigger_debug;
    wire [7:0] clockglitch_debug1;
    wire [7:0] clockglitch_debug2;
+   wire [7:0] clockglitch_debug3;
 
    wire flash_pattern;
 
@@ -259,10 +298,14 @@ module cwhusky_cw310_top(
    wire [pUSERIO_WIDTH-1:0] userio_drive_data_reg;
    wire [pUSERIO_WIDTH-1:0] userio_debug_data;
 
-   wire decode_uart_input;
+   wire uart_trigger_line;
+   wire edge_trigger_line;
    wire decodeio_active;
+   wire trace_active;
+   wire trace_trigger_in_use;
    wire sad_active;
    wire edge_trigger_active;
+   wire adc_trigger_active;
    wire trace_trig_out;
    wire trigger_adc;
    wire trigger_sad;
@@ -271,6 +314,7 @@ module cwhusky_cw310_top(
 
    wire la_exists;
    wire trace_exists;
+   wire cw310_adc_clk_sel;
 
    wire           fifo_full;
    wire           fifo_overflow_blocked;
@@ -285,7 +329,7 @@ module cwhusky_cw310_top(
    wire           clear_errors;
    wire [17:0]    fifo_out_data;
    wire [5:0]     fifo_status;
-   wire           fifo_empty;
+   wire           shared_fifo_empty;
    wire           trace_fifo_error_flag;
    wire           synchronized;
    wire           la_clear_read_flags;
@@ -293,6 +337,7 @@ module cwhusky_cw310_top(
    wire           fifo_clear_read_flags;
    wire           fifo_clear_write_flags;
 
+   wire           la_4bit_mode;
    wire           trace_fifo_wr;
    wire           la_fifo_wr;
    wire [17:0]    trace_wr_data;
@@ -301,6 +346,29 @@ module cwhusky_cw310_top(
    wire           fifo_source_sel;
 
    wire           cmd_arm_usb;
+   wire           armed_and_ready;
+
+   wire           la_capture_start;
+   wire           la_capture_start_ui;
+   wire           la_capture_done;
+   wire           la_capture_done_ui;
+   wire           trace_capture_start;
+   wire           trace_capture_start_ui;
+   wire           trace_capture_done;
+   wire           trace_capture_done_ui;
+   wire           clear_fifo_errors;
+
+   wire           preddr_trace_rd;
+   wire           [63:0] preddr_trace_data;
+   wire           preddr_trace_empty;
+   wire           preddr_la_rd;
+   wire           [63:0] preddr_la_data;
+   wire           preddr_la_empty;
+   wire           ui_clk;
+
+   wire [1:0]     la_fifo_errors;
+   wire [1:0]     trace_fifo_errors;
+   wire           trace_fifo_full;
 
    assign USB_SPARE0 = enable_avrprog? 1'bz : stream_segment_available;
 
@@ -320,7 +388,7 @@ module cwhusky_cw310_top(
       .cwusb_isout      (cmdfifo_isout), 
       .fast_fifo_read   (fast_fifo_read),
       .reg_address      (reg_address), 
-      .reg_bytecnt      (),  // on CW310 we use the LSB of the USB address instead
+      .reg_bytecnt      (),  // on CW310 we use the LSBits of the USB address instead
       .reg_datao        (write_data), 
       .reg_datai        (read_data),
       .reg_read         (reg_read), 
@@ -391,13 +459,15 @@ module cwhusky_cw310_top(
                                                                          glitch_mmcm2_clk_out,
                                                                          glitchclk,
                                                                          glitch_enable,
-                                                                         ext_trigger,
+                                                                         trigger_capture,
                                                                          cmd_arm_usb} :
                                  (userio_fpga_debug_select == 4'b0100)?  clockglitch_debug1 : 
                                  (userio_fpga_debug_select == 4'b0101)?  clockglitch_debug2 :
                                  (userio_fpga_debug_select == 4'b0110)?  usb_debug1 :
-                                 (userio_fpga_debug_select == 4'b0111)?  usb_debug2 : usb_debug3;
-                                 (userio_fpga_debug_select == 4'b1000)?  usb_debug3 : edge_trigger_debug;
+                                 (userio_fpga_debug_select == 4'b0111)?  usb_debug2 :
+                                 (userio_fpga_debug_select == 4'b1000)?  usb_debug3 :
+                                 (userio_fpga_debug_select == 4'b1001)?  edge_trigger_debug :
+                                 (userio_fpga_debug_select == 4'b1010)?  {cmd_arm_usb, clockglitch_debug3[6:0]} : 8'b0;
 
    `else
       assign userio_debug_data[7:0] = 8'bz;
@@ -411,41 +481,65 @@ module cwhusky_cw310_top(
    wire cw_led_cap;
    wire cw_led_armed;
    wire trace_en;
+   wire la_enabled;
    wire trace_capture_on;
    wire [7:0] trace_userio_dir;
    wire freq_measure;
+   wire disable_adc_error;
+   reg PLL_STATUS_reg = 1'b1;
 
    // fast-flash red LEDs when some internal error has occurred:
-   assign LED_ADC = error_flag? flash_pattern : ~PLL_STATUS;
+   assign LED_ADC = error_flag? flash_pattern : ~PLL_STATUS_reg;
    assign LED_GLITCH = error_flag? flash_pattern : led_glitch;
    assign LED_CAP = cw_led_cap;
    assign LED_ARMED = cw_led_armed;
 
+   always @(posedge clk_usb_buf) begin
+       if (disable_adc_error)
+           PLL_STATUS_reg <= 1'b1;
+       else if (~PLL_STATUS) // make it sticky!
+           PLL_STATUS_reg <= 1'b0;
+   end
+
+
+   `ifndef __ICARUS__
+       wire tb_ui_clk = 1'b0;
+   `endif
+
+  wire ADC_slow_clk_even;
+  wire ADC_slow_clk_odd;
 
    openadc_interface #(
-        .pBYTECNT_SIZE  (pBYTECNT_SIZE)
+        .pBYTECNT_SIZE          (pBYTECNT_SIZE)
    ) oadc (
         .clk_usb                (clk_usb_buf),
+        .ADC_slow_clk_even      (ADC_slow_clk_even),
+        .ADC_slow_clk_odd       (ADC_slow_clk_odd),
         .reset_o                (reg_rst),
+        .xadc_error             (xadc_error_flag),
 
         .LED_capture            (cw_led_cap),
         .LED_armed              (cw_led_armed),
+        .O_disable_adc_error    (disable_adc_error),
         .ADC_data               (ADC_data),
         .ADC_clk_feedback       (ADC_clk_fb),
         .pll_fpga_clk           (pll_fpga_clk),
         .PLL_STATUS             (PLL_STATUS),
         .DUT_CLK_i              (extclk_mux),
-        .DUT_trigger_i          (ext_trigger),
+        .DUT_trigger_i          (trigger_capture),
         .trigger_io4_i          (target_io4),
         .trigger_adc            (trigger_adc),
         .trigger_sad            (trigger_sad),
         .trigger_edge_counter   (trigger_edge_counter),
         .sad_active             (sad_active),
         .edge_trigger_active    (edge_trigger_active),
+        .adc_trigger_active     (adc_trigger_active),
         .amp_gain               (VDBSPWM),
         .fifo_dout              (fifo_dout),
         .cmd_arm_usb            (cmd_arm_usb),
+        .armed_and_ready        (armed_and_ready),
         .freq_measure           (freq_measure),
+        .shared_fifo_empty      (shared_fifo_empty),
 
         .reg_address            (reg_address),
         .reg_bytecnt            (reg_bytecnt), 
@@ -459,12 +553,58 @@ module cwhusky_cw310_top(
         .stream_segment_available (stream_segment_available),
 
         .capture_active         (capture_active),
-        .trigger_in             (decode_uart_input),
+        .trigger_in             (edge_trigger_line),
 
         .flash_pattern          (flash_pattern),
 
+`ifdef PRO
+        .O_xo_en                (xo_en       ),
+        .O_vddr_enable          (vddr_enable ),
+        .I_vddr_pgood           (vddr_pgood  ),
+        .temp_out               (xadc_temp_out),
+
+        .ddr3_addr              (ddr3_addr     ),
+        .ddr3_ba                (ddr3_ba       ),
+        .ddr3_cas_n             (ddr3_cas_n    ),
+        .ddr3_ck_n              (ddr3_ck_n     ),
+        .ddr3_ck_p              (ddr3_ck_p     ),
+        .ddr3_cke               (ddr3_cke      ),
+        .ddr3_ras_n             (ddr3_ras_n    ),
+        .ddr3_reset_n           (ddr3_reset_n  ),
+        .ddr3_we_n              (ddr3_we_n     ),
+        .ddr3_dq                (ddr3_dq       ),
+        .ddr3_dqs_n             (ddr3_dqs_n    ),
+        .ddr3_dqs_p             (ddr3_dqs_p    ),
+        .ddr3_dm                (ddr3_dm       ),
+        .ddr3_cs_n              (ddr3_cs_n     ),
+        .ddr3_odt               (ddr3_odt      ),
+
+        .ui_clk                 (ui_clk             ),
+        .preddr_trace_rd        (preddr_trace_rd    ),
+        .preddr_trace_data      (preddr_trace_data  ),
+        .preddr_trace_empty     (preddr_trace_empty ),
+        .preddr_la_rd           (preddr_la_rd       ),
+        .preddr_la_data         (preddr_la_data     ),
+        .preddr_la_empty        (preddr_la_empty    ),
+        .write_done_la          (la_capture_done_ui ),
+        .write_done_trace       (trace_capture_done_ui ),
+        .capture_go_la          (la_capture_start_ui   ),
+        .capture_go_trace       (trace_capture_start_ui),
+        .clear_fifo_errors      (clear_fifo_errors  ),
+        .trace_fifo_errors      (trace_fifo_errors  ),
+        .la_fifo_errors         (la_fifo_errors     ),
+        .trace_flushing         (trace_fifo_flush   ),
+        .la_flushing            (la_fifo_flush      ),
+        .tb_ui_clk              (tb_ui_clk          ),
+`endif
+
+        // CW310-specific:
+        .ADC_clk_fbp            (ADC_clk_fbp ),
+        .ADC_clk_fbn            (ADC_clk_fbn ),
+
         .slow_fifo_wr           (slow_fifo_wr),
         .slow_fifo_rd           (slow_fifo_rd),
+        .la_debug2              (), // TODO-later
         .la_debug               (tu_la_debug),
         .fifo_debug             (fifo_debug),
         .edge_trigger_debug     (edge_trigger_debug)
@@ -501,8 +641,10 @@ module cwhusky_cw310_top(
 
 
    reg_chipwhisperer  #(
-        .pBYTECNT_SIZE  (pBYTECNT_SIZE),
-        .pUSERIO_WIDTH  (pUSERIO_WIDTH)
+        .pBYTECNT_SIZE                  (pBYTECNT_SIZE),
+        .pUSERIO_WIDTH                  (pUSERIO_WIDTH),
+        .pSEQUENCER_NUM_TRIGGERS        (pSEQUENCER_NUM_TRIGGERS  ),
+        .pSEQUENCER_COUNTER_WIDTH       (pSEQUENCER_COUNTER_WIDTH )
    ) reg_chipwhisperer (
         .reset_i                (reg_rst),
         .clk_usb                (clk_usb_buf),
@@ -523,10 +665,14 @@ module cwhusky_cw310_top(
         .trigger_io3_i          (target_io3),
         .trigger_io4_i          (target_io4),
         .trigger_nrst_i         (target_nRST),
-        .trigger_ext_o          (decode_uart_input),
+        .uart_trigger_line      (uart_trigger_line),
+        .edge_trigger_line      (edge_trigger_line),
         .decodeio_active        (decodeio_active),
+        .trace_active           (trace_active),
+        .trace_trigger_in_use   (trace_trigger_in_use),
         .sad_active             (sad_active),
         .edge_trigger_active    (edge_trigger_active),
+        .adc_trigger_active     (adc_trigger_active),
         .trigger_advio_i        (1'b0),
         .trigger_decodedio_i    (trace_trig_out),
         .trigger_trace_i        (trace_trig_out),
@@ -535,11 +681,21 @@ module cwhusky_cw310_top(
         .trigger_edge_i         (trigger_edge_counter),
         .pll_fpga_clk           (pll_fpga_clk),
         .glitchclk              (glitchclk),
+        .glitch_mmcm1_clk_out   (glitch_mmcm1_clk_out),
+        .adc_sample_clk         (ADC_clk_fb),
+        .trace_fe_clk           (fe_clk),
 
         .targetio1_io           (target_io1),
         .targetio2_io           (target_io2),
         .targetio3_io           (target_io3),
         .targetio4_io           (target_io4),
+
+        .target_PDID            (target_PDID),
+        .target_PDIC            (target_PDIC),
+        .target_nRST            (target_nRST),
+        .target_MISO            (target_MISO),
+        .target_MOSI            (target_MOSI),
+        .target_SCK             (target_SCK),
 
         .hsglitcha_o            (glitchout_highpwr),
         .hsglitchb_o            (glitchout_lowpwr),
@@ -571,8 +727,18 @@ module cwhusky_cw310_top(
         .trace_exists           (trace_exists),
         .la_exists              (la_exists),
 
-        .trigger_o              (ext_trigger),
-        .trig_glitch_o          (TRIG_GLITCHOUT)
+        .cw310_adc_clk_sel      (cw310_adc_clk_sel), // CW310 only
+
+        // TODO-later:
+        .sequencer_debug        (),
+        .sequencer_debug2       (),
+        .seq_trace_sad_debug    (),
+
+        .armed_and_ready        (armed_and_ready),
+        .trigger_capture        (trigger_capture),
+        .trigger_glitch         (trigger_glitch),
+        .trigger_trace          (trigger_trace),
+        .trig_glitch_o_mcx      (TRIG_GLITCHOUT)
    );
 
    assign userio_drive_data = userio_target_debug? {target_MOSI, // carries TDI on USERIO_D7
@@ -614,29 +780,14 @@ module cwhusky_cw310_top(
         .glitch_mmcm1_clk_out (glitch_mmcm1_clk_out),
         .glitch_mmcm2_clk_out (glitch_mmcm2_clk_out),
         .glitch_enable  (glitch_enable),
-        .exttrigger     (ext_trigger),
+        .exttrigger     (trigger_glitch),
         .glitch_go      (glitch_go),
         .glitch_trigger (glitch_trigger),
         .glitch_trigger_manual_sourceclock (glitch_trigger_manual_sourceclock),
         .led_glitch     (led_glitch),
         .debug1         (clockglitch_debug1),
-        .debug2         (clockglitch_debug2)
-   );
-
-   reg_cw310 #(
-        .pBYTECNT_SIZE  (pBYTECNT_SIZE)
-   ) reg_cw310 (
-        .reset          (reg_rst),
-        .clk_usb        (clk_usb_buf),
-        .reg_address    (reg_address),
-        .reg_bytecnt    (reg_bytecnt), 
-        .reg_datao      (read_data_cw310), 
-        .reg_datai      (write_data), 
-        .reg_read       (reg_read), 
-        .reg_write      (reg_write), 
-        .O_xo_en        (xo_en),
-        .O_vddr_enabled (vddr_enable),
-        .I_vddr_pgood   (vddr_pgood)
+        .debug2         (clockglitch_debug2),
+        .debug3         (clockglitch_debug3)
    );
 
 
@@ -661,8 +812,11 @@ module cwhusky_cw310_top(
         .observer_clk           (observer_clk),
         .observer_locked        (observer_locked),
         .mmcm_shutdown          (xadc_error_flag),
-        .I_trace_en             (trace_en),
+        //.I_trace_en             (trace_en),
+        .I_trace_en             (1'b0), // trace/LA aren't mutually exclusive here; TODO: a better mechanism?
+        .O_enabled              (la_enabled),             
         .freq_measure           (freq_measure),
+        .O_4bit_mode            (la_4bit_mode),
 
         .glitchclk              (glitchclk),
         .glitch_mmcm1_clk_out   (glitch_mmcm1_clk_out),
@@ -686,7 +840,9 @@ module cwhusky_cw310_top(
         .userio6                (USERIO_D[6]),
         .userio7                (USERIO_D[7]),
         .userio_clk             (USERIO_CLK),
+        .trigger_glitch         (trigger_glitch),
 
+        .clockglitch_debug      (clockglitch_debug3),
         .tu_la_debug            (tu_la_debug),
         .trace_data             (trace_data_sdr),
         .trace_debug            (trace_debug),
@@ -696,11 +852,13 @@ module cwhusky_cw310_top(
         .glitch_trigger_manual_sourceclock (glitch_trigger_manual_sourceclock),
         .glitch_trigger         (glitch_trigger),
         .capture_active         (capture_active),
+        .capture_start          (la_capture_start),
+        .capture_done           (la_capture_done),
 
         .fifo_wr                (la_fifo_wr),
         .fifo_wr_data           (la_wr_data),
         .fifo_flush             (la_fifo_flush),
-        .fifo_empty             (fifo_empty),
+        .fifo_empty             (preddr_la_empty),
         .fifo_clear_read_flags  (la_clear_read_flags),
         .fifo_clear_write_flags (la_clear_write_flags)
    );
@@ -733,92 +891,109 @@ module cwhusky_cw310_top(
                      (enable_avrprog) ? target_MISO : 1'bZ;
 
 
-   /* generate ADC output differential clock
-   `ifdef __ICARUS__
-      assign ADC_CLKP = extclk_mux;
-      assign ADC_CLKN = extclk_mux;
+   // NOTE: this is very CW310-specific:
 
-   `else
-      wire adc_clk_out_oddr;
-      ODDR  #(
-         .DDR_CLK_EDGE     ("OPPOSITE_EDGE"),
-         .INIT             (1'b0),
-         .SRTYPE           ("SYNC")
-      ) U_ODDR_adc_clk_out (
-         .Q                (adc_clk_out_oddr),
-         .C                (extclk_mux),
-         .CE               (1'b1),
-         .D1               (1'b1),
-         .D2               (1'b0),
-         .R                (1'b0),
-         .S                (1'b0)
-      );
+    wire pll_clk_x2;
 
-      OBUFDS #(
-         .IOSTANDARD       ("LVDS_25"),
-         .SLEW             ("FAST")
-      ) U_OBUFDS_adc_clk_out (
-         .O                (ADC_CLKP),
-         .OB               (ADC_CLKN),
-         .I                (adc_clk_out_oddr)
-      );
-   `endif
-   */
+`ifdef __ICARUS__
+    assign ADC_clk_fb = cw310_adc_clk_sel ? pll_clk_x2 : PLL_CLK1;
+    assign pll_fpga_clk = ADC_clk_fb;
+
+`else
+    wire mmcm1_clkfb;
+
+    BUFGMUX BUFG_ADC_clk_fb (
+       .O       (ADC_clk_fb),
+       .I0      (PLL_CLK1),
+       .I1      (pll_clk_x2),
+       .S       (cw310_adc_clk_sel)
+    );
 
 
-   // take in ADC input differential clock
-   `ifdef __ICARUS__
-      assign ADC_clk_fb = ADC_clk_fbp;
-      assign pll_fpga_clk = ADC_clk_fb;
 
-   `else
-      wire ADC_clk_fb_prebuf;
-      IBUFDS #(
-         .DIFF_TERM        ("FALSE"),
-         .IBUF_LOW_PWR     ("FALSE"),
-         .IOSTANDARD       ("LVDS_25")
-      ) U_IBUFDS_adc_clk_fb (
-         .I                (ADC_clk_fbp),
-         .IB               (ADC_clk_fbn),
-         //.O                (ADC_clk_fb_prebuf)
-         .O                (ADC_clk_fb)
-      );
-
-      /*
-      BUFG BUFG_adc_clk (
-         .O(ADC_clk_fb),
-         .I(ADC_clk_fb_prebuf)
-      );
-      */
-      BUFR BUFG_pll_fpga_clk (
-         .O(pll_fpga_clk),
-         .I(ADC_clk_fb)
-      );
-
-   `endif
+`ifdef SAD_X2
+  reg bufgce_count = 1'b0;
+  always @(posedge ADC_clk_fb) bufgce_count <= ~bufgce_count;
+  BUFGCE U_slow_adc_even (
+      .I    (ADC_clk_fb),
+      .CE   (bufgce_count),
+      .O    (ADC_slow_clk_even)
+  );
+  BUFGCE U_slow_adc_odd (
+      .I    (ADC_clk_fb),
+      .CE   (~bufgce_count),
+      .O    (ADC_slow_clk_odd)
+  );
+`else
+  wire ADC_slow_clk_even = 1'b0;
+  wire ADC_slow_clk_odd = 1'b0;
+`endif
 
 
-   /*
-   // take in PLL input differential clock
-   `ifdef __ICARUS__
-      assign pll_fpga_clk = PLLFPGAP;
+    assign pll_fpga_clk = ADC_clk_fb;
 
-   `else
-      `ifdef CW310
-         assign pll_fpga_clk = ADC_clk_fb;
-      `else
-      IBUFDS #(
-         .DIFF_TERM        ("FALSE"),
-         .IBUF_LOW_PWR     ("FALSE"),
-         .IOSTANDARD       ("LVDS_25")
-      ) U_IBUFDS_pll_fpga_clk (
-         .I                (PLLFPGAP),
-         .IB               (PLLFPGAN),
-         .O                (pll_fpga_clk)
-      );
-      `endif
-   `endif
-   */
+    // expected use is to take 125 MHz clock and double it to 250 MHz, so
+    // settings are chosen for this, with some room in the VCO operating
+    // frequency to go higher still
+    MMCME2_ADV #(
+       .BANDWIDTH                    ("OPTIMIZED"), // Jitter programming (OPTIMIZED, HIGH, LOW)
+       .CLKFBOUT_MULT_F              (12.0), // Multiply value for all CLKOUT (2.000-64.000)
+       .CLKOUT0_DIVIDE_F             (3.0),
+       .CLKFBOUT_PHASE               (0.0), // Phase offset in degrees of CLKFB (-360.000-360.000).
+       .CLKIN1_PERIOD                (10.0),
+       .CLKOUT0_DUTY_CYCLE           (0.5),
+       .CLKOUT0_PHASE                (0.0),  // Phase offset for CLKOUT outputs (-360.000-360.000).
+       .CLKOUT4_CASCADE              ("FALSE"), // Cascade CLKOUT4 counter with CLKOUT6 (FALSE, TRUE)
+       .COMPENSATION                 ("INTERNAL"), // ZHOLD, BUF_IN, EXTERNAL, INTERNAL
+       .DIVCLK_DIVIDE                (2), // Master division value (1-106)
+       .STARTUP_WAIT                 ("FALSE"), // Delays DONE until MMCM is locked (FALSE, TRUE)
+       .CLKFBOUT_USE_FINE_PS         ("FALSE"),
+       .CLKOUT0_USE_FINE_PS          ("FALSE")
+    ) U_mmcm_x2 (
+       // Clock Outputs:
+       .CLKOUT0                      (pll_clk_x2), 
+       .CLKOUT0B                     (),
+       .CLKOUT1                      (),
+       .CLKOUT1B                     (),
+       .CLKOUT2                      (),
+       .CLKOUT2B                     (),
+       .CLKOUT3                      (),
+       .CLKOUT3B                     (),
+       .CLKOUT4                      (),
+       .CLKOUT5                      (),
+       .CLKOUT6                      (),
+       // Feedback Clocks:
+       .CLKFBOUT                     (mmcm1_clkfb),
+       .CLKFBOUTB                    (),
+       // Status Ports: 1-bit (each) output: MMCM status ports
+       .CLKFBSTOPPED                 (),
+       .CLKINSTOPPED                 (),
+       .LOCKED                       (),
+       // Clock Inputs:
+       .CLKIN1                       (PLL_CLK1),
+       .CLKIN2                       (1'b0),
+       // Control Ports: 1-bit (each) input: MMCM control ports
+       .CLKINSEL                     (1'b1),
+       .PWRDWN                       (1'b0),
+       .RST                          (reg_rst),
+       // DRP Ports:
+       .DADDR                        (0),
+       .DCLK                         (clk_usb_buf),
+       .DEN                          (0),
+       .DI                           (0),
+       .DWE                          (0),
+       .DO                           (),
+       .DRDY                         (),
+       // Dynamic Phase Shift Ports:
+       .PSCLK                        (clk_usb_buf),
+       .PSEN                         (1'b0),
+       .PSINCDEC                     (1'b0),
+       .PSDONE                       (),
+       // Feedback Clocks
+       .CLKFBIN                      (mmcm1_clkfb) // 1-bit input: Feedback clock
+    );
+
+`endif
 
 
    assign ADC_data = 0;
@@ -912,7 +1087,8 @@ module cwhusky_cw310_top(
           .reg_datai        (write_data), 
           .reg_read         (reg_read), 
           .reg_write        (reg_write), 
-          .xadc_error       (xadc_error_flag)
+          .xadc_error       (xadc_error_flag),
+          .O_xadc_temp_out  (xadc_temp_out)
        ); 
 
    `else
@@ -927,10 +1103,27 @@ module cwhusky_cw310_top(
    `ifdef TRACE
 
        wire TRACECLOCK = USERIO_CLK;
-
        wire [3:0] TRACEDATA  = USERIO_D[7:4];
-       wire serial_in = decodeio_active? decode_uart_input : 
-                        trace_en?        USERIO_D[2] : 1'b1;
+
+       // here we choose trace_top's serial input: either SWO (USERIO_D[2]) or
+       // the chosen UART trigger line; also, ensure that the line is held
+       // high if it's not meant to see anything (e.g. in the case of
+       // sequenced triggers, when it's not its turn)
+       reg serial_in;
+       always @ (*) begin
+           if (decodeio_active)
+               serial_in = uart_trigger_line;
+           else if (trace_en) begin
+               if (trace_trigger_in_use)
+                   serial_in = (trace_active)? USERIO_D[2] : 1'b1;
+               else
+                   serial_in = USERIO_D[2];
+           end
+           else
+               serial_in = 1'b1;
+       end
+
+
 
        reg [22:0] count_fe_clock;
        always @(posedge fe_clk) count_fe_clock <= count_fe_clock + 1;
@@ -949,6 +1142,7 @@ module cwhusky_cw310_top(
           .trace_clk_in                 (TRACECLOCK),
           .fe_clk                       (fe_clk),
           .usb_clk                      (clk_usb_buf),
+          .fifo_rd_clk                  (ui_clk),
           .reset_pin                    (reg_rst),
           .fpga_reset                   (),
           .I_external_arm               (cmd_arm_usb),
@@ -962,7 +1156,7 @@ module cwhusky_cw310_top(
           .trace_data                   (TRACEDATA),
           .swo                          (serial_in),
           .O_trace_trig_out             (trace_trig_out),
-          .m3_trig                      (ext_trigger),
+          .m3_trig                      (trigger_trace),
           .O_soft_trig_passthru         (),     // N/A, used for CW305 DST only
 
           .target_clk                   (target_clk),
@@ -1013,9 +1207,11 @@ module cwhusky_cw310_top(
           .arm_usb                      (trace_arm_usb),
           .arm_fe                       (trace_arm_fe),
           .capturing                    (),
+          .capture_start                (trace_capture_start),
+          .capture_done                 (trace_capture_done),
 
-          .fifo_full                    (fifo_full),
-          .fifo_overflow_blocked        (fifo_overflow_blocked),
+          .fifo_full                    (trace_fifo_full),
+          .fifo_overflow_blocked        (trace_fifo_errors[1]),
           .fifo_in_data                 (trace_wr_data),
           .fifo_wr                      (trace_fifo_wr),
                                                
@@ -1025,7 +1221,7 @@ module cwhusky_cw310_top(
                                                
           .fifo_out_data                (fifo_out_data),
           .fifo_status                  (fifo_status),
-          .fifo_empty                   (fifo_empty),
+          .fifo_empty                   (preddr_trace_empty),
           .fifo_error_flag              (trace_fifo_error_flag),
 
           .trace_debug                  (trace_debug),
@@ -1052,6 +1248,10 @@ module cwhusky_cw310_top(
 
    `endif
 
+`ifndef PRO
+   // On Husky, a FIFO is shared by LOGIC_ANALYZER and TRACE.
+   // There are no other ifdef's around it, as per the note above in the
+   // LOGIC_ANALYZER block.
    // fifo_source_sel controls FIFO acccess.
    // 0: trace
    // 1: LA
@@ -1079,33 +1279,90 @@ module cwhusky_cw310_top(
    assign fifo_clear_write_flags = trace_arm_fe || la_clear_write_flags;
 
    `ifndef NOFIFO // for clean compilation
-   // NOTE: this FIFO is shared by LOGIC_ANALYZER and TRACE.
-   // There are no other ifdef's around it, as per the note above in the
-   // LOGIC_ANALYZER block.
-   fifo U_fifo (
-      .reset_i                  (reg_rst),
-      .cwusb_clk                (clk_usb_buf),
-      .fe_clk                   (fifo_wr_clk),
+       fifo U_fifo (
+          .reset_i                  (reg_rst),
+          .cwusb_clk                (clk_usb_buf),
+          .fe_clk                   (fifo_wr_clk),
 
-      .O_fifo_full              (fifo_full),
-      .O_fifo_overflow_blocked  (fifo_overflow_blocked),
-      .I_data                   (fifo_in_data),
-      .I_wr                     (fifo_wr),
+          .O_fifo_full              (fifo_full),
+          .O_fifo_overflow_blocked  (fifo_overflow_blocked),
+          .I_data                   (fifo_in_data),
+          .I_wr                     (fifo_wr),
 
-      .I_fifo_read              (fifo_read),
-      .I_fifo_flush             (fifo_flush),
-      .I_clear_read_flags       (fifo_clear_read_flags),
-      .I_clear_write_flags      (fifo_clear_write_flags),
-      .I_clear_errors           (clear_errors),
+          .I_fifo_read              (fifo_read),
+          .I_fifo_flush             (fifo_flush),
+          .I_clear_read_flags       (fifo_clear_read_flags),
+          .I_clear_write_flags      (fifo_clear_write_flags),
+          .I_clear_errors           (clear_errors),
 
-      .O_data                   (fifo_out_data),
-      .O_fifo_status            (fifo_status),
-      .O_fifo_empty             (fifo_empty),
-      .O_error_flag             (trace_fifo_error_flag),
+          .O_data                   (fifo_out_data),
+          .O_fifo_status            (fifo_status),
+          .O_fifo_empty             (shared_fifo_empty),
+          .O_error_flag             (trace_fifo_error_flag),
 
-      .I_custom_fifo_stat_flag  (synchronized)      
-   );
+          .I_custom_fifo_stat_flag  (synchronized)      
+       );
    `endif
+
+   assign preddr_trace_empty = shared_fifo_empty;
+   assign preddr_la_empty = shared_fifo_empty;
+
+`else
+    // On Husky-Pro, there are separate TRACE and LOGIC_ANALYZER FIFOs.
+    // However capture data needs to get converted to 64-bit width because
+    // that's what DDR needs.
+    preddr_18to64_converter U_trace_converter (
+        .reset                  (reg_rst),
+        .wr_clk                 (fe_clk),
+        .rd_clk                 (ui_clk),
+        .enabled                (trace_en),
+        .capture_start          (trace_capture_start),
+        .capture_done           (trace_capture_done),
+        .capture_done_out       (trace_capture_done_ui),
+        .capture_start_out      (trace_capture_start_ui),
+        .I_fifo_flush           (trace_fifo_flush),
+        .I_data                 (trace_wr_data),
+        .I_wr                   (trace_fifo_wr),
+        .I_4bit_mode            (1'b0),
+        .clear_fifo_errors      (clear_fifo_errors),
+        .fifo_rd                (preddr_trace_rd),
+        .fifo_dout              (preddr_trace_data),
+        .fifo_empty             (preddr_trace_empty),
+        .fifo_errors            (trace_fifo_errors),
+        .fifo_full              (trace_fifo_full)
+    );
+
+    preddr_18to64_converter U_la_converter (
+        .reset                  (reg_rst),
+        .wr_clk                 (observer_clk),
+        .rd_clk                 (ui_clk),
+        .enabled                (la_enabled),
+        .capture_start          (la_capture_start),
+        .capture_done           (la_capture_done),
+        .capture_done_out       (la_capture_done_ui),
+        .capture_start_out      (la_capture_start_ui),
+        .I_fifo_flush           (la_fifo_flush),
+        .I_data                 (la_wr_data),
+        .I_wr                   (la_fifo_wr),
+        .I_4bit_mode            (la_4bit_mode),
+        .clear_fifo_errors      (clear_fifo_errors),
+        .fifo_rd                (preddr_la_rd),
+        .fifo_dout              (preddr_la_data),
+        .fifo_empty             (preddr_la_empty),
+        .fifo_errors            (la_fifo_errors),
+        .fifo_full              ()      // unused
+    );
+
+    // ~same as in phywhisperer-common/hardware/hdl/fifo.v:
+    assign fifo_status[`FIFO_STAT_EMPTY] = preddr_trace_empty;
+    assign fifo_status[`FIFO_STAT_UNDERFLOW] = trace_fifo_errors[0];
+    assign fifo_status[`FIFO_STAT_EMPTY_THRESHOLD] = 1'b0;
+    assign fifo_status[`FIFO_STAT_FULL] = trace_fifo_full;
+    assign fifo_status[`FIFO_STAT_OVERFLOW_BLOCKED] = trace_fifo_errors[1];
+
+    assign shared_fifo_empty = 1'b1;
+
+`endif
 
 `ifdef ILA_SHARED_FIFO
     ila_shared_fifo U_ila_shared_fifo (

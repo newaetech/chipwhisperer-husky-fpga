@@ -82,7 +82,7 @@ module clockglitch_a7 #(
     output wire                         glitch_mmcm1_clk_out_buf,
     output wire                         glitch_mmcm2_clk_out_buf,
     output wire                         glitch_enable,
-    output reg                          glitch_go,
+    output wire                         glitch_go,
 
     // register interface (for DRP)
     input  wire [7:0]                   reg_address,
@@ -203,45 +203,47 @@ module clockglitch_a7 #(
 
    end
 
+   reg glitch_go_source = 1'b0;
    reg glitch_go_r;
+   assign glitch_go = glitch_go_source;
    always @(negedge glitch_mmcm1_clk_out_buf) begin
-      glitch_go_r <= glitch_go;
+      glitch_go_r <= glitch_go_source;
       // Careful because it's possible for glitch_trigger to be > 1 cycle.
       // Also note that max_glitches = <number of cycles to glitch> - 1
 
       if (I_mmcm_powerdown_early) begin // use the early signal so that clock is still there!
-         glitch_go <= 1'b0;
+         glitch_go_source <= 1'b0;
          glitch_go_r <= 1'b0;
       end
       // In continuous mode, we need an explicit way to turn it off. Order is important here!
       else if (continuous_mode_r2 && ~continuous_mode_r)
-          glitch_go <= 1'b0;
+          glitch_go_source <= 1'b0;
       else if (continuous_mode_r)
-          glitch_go <= 1'b1;
+          glitch_go_source <= 1'b1;
 
       else if (trigger_resync_idle && multiple_glitches_supported && ~(easy_done_exit && num_glitches == 0))
           glitch_count <= 0;
 
       else if (max_glitches > 0) begin
           if (glitch_trigger)
-             glitch_go <= 'b1;
+             glitch_go_source <= 'b1;
           else if (glitch_len_cnt == max_glitches) begin
-             glitch_go <= 'b0;
+             glitch_go_source <= 'b0;
              if (multiple_glitches_supported)
                  glitch_count <= glitch_count + 1;
            end
       end
       else begin
-          if (glitch_go) begin
-              glitch_go <= 1'b0;
+          if (glitch_go_source) begin
+              glitch_go_source <= 1'b0;
               if (multiple_glitches_supported)
                   glitch_count <= glitch_count + 1;
           end
           else if (glitch_trigger)
-              glitch_go <= 1'b1;
+              glitch_go_source <= 1'b1;
       end
 
-      if (glitch_go)
+      if (glitch_go_source)
          glitch_len_cnt <= glitch_len_cnt + 13'd1;
       else
          glitch_len_cnt <= 0;
