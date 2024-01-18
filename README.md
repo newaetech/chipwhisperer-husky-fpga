@@ -4,7 +4,7 @@ ChipWhisperer-Husky.
 
 # Implementation
 Husky uses a Xilinx XC7A35 FPGA; Husky Plus uses an XC7A100.  Implementation is
-done with Vivado 2020.2.
+done with Vivado 2022.1.
 
 When opening the [project](fpga/vivado/cwhusky.xpr), Vivado will report some
 "errors" about missing IP that are not actually errors and can be safely
