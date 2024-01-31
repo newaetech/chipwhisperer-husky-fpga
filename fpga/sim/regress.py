@@ -397,6 +397,8 @@ for test in tests:
       else:
           # not easy/clean to get cocotb-generated seed from logfile, so force ours instead
           seed = random.randint(0, 2**31-1)
+      random.seed(seed)
+
       makeargs.append(variant)
 
       if args.timeout:
