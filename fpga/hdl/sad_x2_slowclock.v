@@ -59,6 +59,7 @@ module sad_x2_slowclock #(
     output reg          trigger
 );
 
+    localparam pSADS_PER_CYCLE = 2;
     localparam pMASTER_COUNTER_WIDTH = (pREF_SAMPLES <= 32)?  5 :
                                        (pREF_SAMPLES <= 64)?  6 :
                                        (pREF_SAMPLES <= 128)? 7 :
@@ -287,7 +288,7 @@ module sad_x2_slowclock #(
     );
 
 
-    wire [pMASTER_COUNTER_WIDTH-1:0] master_counter_top = (sad_short)? pREF_SAMPLES/2-2 : pREF_SAMPLES-2;
+    wire [pMASTER_COUNTER_WIDTH-1:0] master_counter_top = (sad_short)? pREF_SAMPLES/2-pSADS_PER_CYCLE : pREF_SAMPLES-pSADS_PER_CYCLE;
 
 
     always @(posedge adc_sampleclk) begin
@@ -310,19 +311,19 @@ module sad_x2_slowclock #(
     // First half of counters, on even clock:
     genvar i;
     generate 
-        for (i = 0; i < pREF_SAMPLES; i = i + 2) begin: gen_sad_even_counters
+        for (i = 0; i < pREF_SAMPLES; i = i + pSADS_PER_CYCLE) begin: gen_sad_even_counters
             assign refsample[i+0] = refsamples[(i+0)*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
             always @(posedge slow_clk_even) begin
                 if ((armed_and_ready_adc_even || always_armed) && active_adc_even && ~xadc_error) begin
-                    if (i > 0) ready2trigger_even[i] <= ready2trigger_even[i-2];
+                    if (i > 0) ready2trigger_even[i] <= ready2trigger_even[i-pSADS_PER_CYCLE];
                     else if (master_counter_even == master_counter_top) ready2trigger_even[0] <= 1;
-                    if (i == 0) resetter_even[i] <= resetter_even[pREF_SAMPLES-2];
-                    else resetter_even[i] <= resetter_even[i-2];
+                    if (i == 0) resetter_even[i] <= resetter_even[pREF_SAMPLES-pSADS_PER_CYCLE];
+                    else resetter_even[i] <= resetter_even[i-pSADS_PER_CYCLE];
                     if (i == 0) begin
                         if (master_counter_even == master_counter_top)
                             master_counter_even <= 0;
                         else 
-                            master_counter_even <= master_counter_even + 2;
+                            master_counter_even <= master_counter_even + pSADS_PER_CYCLE;
                     end
                 end
                 else begin
@@ -330,14 +331,14 @@ module sad_x2_slowclock #(
                     ready2trigger_even[i] <= 0;
                     if (sad_short) begin
                         // TODO-note: this seems to work for pREF_SAMPLES >= 32;
-                        if ((i == pREF_SAMPLES-4) ||
-                            (i == pREF_SAMPLES/2-4)) resetter_even[i] <= 1'b1;
-                        else                         resetter_even[i] <= 1'b0;
+                        if ((i == pREF_SAMPLES-(pSADS_PER_CYCLE*2)) ||
+                            (i == pREF_SAMPLES/2-(pSADS_PER_CYCLE*2))) resetter_even[i] <= 1'b1;
+                        else resetter_even[i] <= 1'b0;
                     end
                     else begin
                         // TODO-note: there seems to be an issue when pREF_SAMPLES isn't a power of 2
-                        if (i == pREF_SAMPLES - 4) resetter_even[i] <= 1'b1;
-                        else                       resetter_even[i] <= 1'b0;
+                        if (i == pREF_SAMPLES - (pSADS_PER_CYCLE*2)) resetter_even[i] <= 1'b1;
+                        else resetter_even[i] <= 1'b0;
                     end
 
                 end
@@ -347,8 +348,8 @@ module sad_x2_slowclock #(
                     nextrefsample_b[0] <= refsample[master_counter_even];
                 end
                 else begin
-                    nextrefsample_a[i] <= nextrefsample_a[i-2];
-                    nextrefsample_b[i] <= nextrefsample_b[i-2];
+                    nextrefsample_a[i] <= nextrefsample_a[i-pSADS_PER_CYCLE];
+                    nextrefsample_b[i] <= nextrefsample_b[i-pSADS_PER_CYCLE];
                 end
 
                 nextrefsample_r_a[i] <= nextrefsample_a[i];
@@ -386,21 +387,21 @@ module sad_x2_slowclock #(
     // Second half of counters, on odd clock:
     genvar j;
     generate 
-        for (j = 1; j < pREF_SAMPLES-0; j = j + 2) begin: gen_sad_odd_counters
+        for (j = 1; j < pREF_SAMPLES-0; j = j + pSADS_PER_CYCLE) begin: gen_sad_odd_counters
             assign refsample[j+0] = refsamples[(j+0)*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
             always @(posedge slow_clk_odd) begin
                 if ((armed_and_ready_adc_odd || always_armed) && active_adc_odd && ~xadc_error) begin
-                    if (j > 1) ready2trigger_odd[j] <= ready2trigger_odd[j-2];
+                    if (j > 1) ready2trigger_odd[j] <= ready2trigger_odd[j-pSADS_PER_CYCLE];
                     else if (master_counter_odd >= master_counter_top) ready2trigger_odd[1] <= 1;
 
                     if (j == 1) resetter_odd[j] <= resetter_odd[pREF_SAMPLES-1];
-                    else resetter_odd[j] <= resetter_odd[j-2];
+                    else resetter_odd[j] <= resetter_odd[j-pSADS_PER_CYCLE];
 
                     if (j == 1) begin
                         if (master_counter_odd == master_counter_top)
                             master_counter_odd <= 0;
                         else 
-                            master_counter_odd <= master_counter_odd + 2;
+                            master_counter_odd <= master_counter_odd + pSADS_PER_CYCLE;
                     end
                 end
                 else begin
@@ -408,13 +409,13 @@ module sad_x2_slowclock #(
                     ready2trigger_odd[j] <= 0;
                     // NOTE: see comments in corresponding "even" code block
                     if (sad_short) begin
-                        if ((j == pREF_SAMPLES-3) || 
-                            (j == pREF_SAMPLES/2-3)) resetter_odd[j] <= 1'b1;
-                        else                         resetter_odd[j] <= 1'b0;
+                        if ((j == pREF_SAMPLES-(pSADS_PER_CYCLE*2 - 1)) || 
+                            (j == pREF_SAMPLES/2-(pSADS_PER_CYCLE*2 - 1))) resetter_odd[j] <= 1'b1;
+                        else resetter_odd[j] <= 1'b0;
                     end
                     else begin
-                        if (j == pREF_SAMPLES - 3) resetter_odd[j] <= 1'b1;
-                        else                       resetter_odd[j] <= 1'b0;
+                        if (j == pREF_SAMPLES - (pSADS_PER_CYCLE*2 - 1)) resetter_odd[j] <= 1'b1;
+                        else resetter_odd[j] <= 1'b0;
                     end
 
                 end
@@ -424,8 +425,8 @@ module sad_x2_slowclock #(
                     nextrefsample_b[1] <= refsample[master_counter_odd];
                 end
                 else begin
-                    nextrefsample_a[j] <= nextrefsample_a[j-2];
-                    nextrefsample_b[j] <= nextrefsample_b[j-2];
+                    nextrefsample_a[j] <= nextrefsample_a[j-pSADS_PER_CYCLE];
+                    nextrefsample_b[j] <= nextrefsample_b[j-pSADS_PER_CYCLE];
                 end
 
                 nextrefsample_r_a[j] <= nextrefsample_a[j];

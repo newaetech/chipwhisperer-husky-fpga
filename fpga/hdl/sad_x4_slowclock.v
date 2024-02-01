@@ -61,6 +61,7 @@ module sad_x4_slowclock #(
     output reg          trigger
 );
 
+    localparam pSADS_PER_CYCLE = 4;
     localparam pMASTER_COUNTER_WIDTH = (pREF_SAMPLES <= 32)?  5 :
                                        (pREF_SAMPLES <= 64)?  6 :
                                        (pREF_SAMPLES <= 128)? 7 :
@@ -350,7 +351,7 @@ module sad_x4_slowclock #(
     );
 
 
-    wire [pMASTER_COUNTER_WIDTH-1:0] master_counter_top = (sad_short)? pREF_SAMPLES/2-4 : pREF_SAMPLES-4;
+    wire [pMASTER_COUNTER_WIDTH-1:0] master_counter_top = (sad_short)? pREF_SAMPLES/2-pSADS_PER_CYCLE : pREF_SAMPLES-pSADS_PER_CYCLE;
 
 
     always @(posedge adc_sampleclk) begin
@@ -395,19 +396,19 @@ module sad_x4_slowclock #(
     integer block1start = 0;
     generate 
         // NOTE: can't use block1start in for loop!
-        for (i = 0; i < pREF_SAMPLES; i = i + 4) begin: gen_sad_counters1
+        for (i = 0; i < pREF_SAMPLES; i = i + pSADS_PER_CYCLE) begin: gen_sad_counters1
             assign refsample[i+0] = refsamples[(i+0)*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
             always @(posedge slow_clk1) begin
                 if ((armed_and_ready_adc1 || always_armed) && active_adc1 && ~xadc_error) begin
-                    if (i > block1start) ready2trigger1[i] <= ready2trigger1[i-4];
+                    if (i > block1start) ready2trigger1[i] <= ready2trigger1[i-pSADS_PER_CYCLE];
                     else if (master_counter1 == master_counter_top) ready2trigger1[0] <= 1;
-                    if (i == block1start) resetter1[i] <= resetter1[pREF_SAMPLES-4];
-                    else resetter1[i] <= resetter1[i-4];
+                    if (i == block1start) resetter1[i] <= resetter1[pREF_SAMPLES-pSADS_PER_CYCLE];
+                    else resetter1[i] <= resetter1[i-pSADS_PER_CYCLE];
                     if (i == 0) begin
                         if (master_counter1 == master_counter_top)
                             master_counter1 <= 0;
                         else 
-                            master_counter1 <= master_counter1 + 4;
+                            master_counter1 <= master_counter1 + pSADS_PER_CYCLE;
                     end
                 end
                 else begin
@@ -415,14 +416,14 @@ module sad_x4_slowclock #(
                     ready2trigger1[i] <= 0;
                     if (sad_short) begin
                         // TODO-note: this seems to work for pREF_SAMPLES >= 32;
-                        if ((i == pREF_SAMPLES-8) ||
-                            (i == pREF_SAMPLES/2-8)) resetter1[i] <= 1'b1;
-                        else                         resetter1[i] <= 1'b0;
+                        if ((i == pREF_SAMPLES-(pSADS_PER_CYCLE*2 - block1start)) ||
+                            (i == pREF_SAMPLES/2-(pSADS_PER_CYCLE*2 - block1start))) resetter1[i] <= 1'b1;
+                        else resetter1[i] <= 1'b0;
                     end
                     else begin
                         // TODO-note: there seems to be an issue when pREF_SAMPLES isn't a power of 2
-                        if (i == pREF_SAMPLES - 8) resetter1[i] <= 1'b1;
-                        else                       resetter1[i] <= 1'b0;
+                        if (i == pREF_SAMPLES - (pSADS_PER_CYCLE*2 - block1start)) resetter1[i] <= 1'b1;
+                        else resetter1[i] <= 1'b0;
                     end
 
                 end
@@ -434,10 +435,10 @@ module sad_x4_slowclock #(
                     nextrefsample_d[block1start] <= refsample[master_counter1];
                 end
                 else begin
-                    nextrefsample_a[i] <= nextrefsample_a[i-4];
-                    nextrefsample_b[i] <= nextrefsample_b[i-4];
-                    nextrefsample_c[i] <= nextrefsample_c[i-4];
-                    nextrefsample_d[i] <= nextrefsample_d[i-4];
+                    nextrefsample_a[i] <= nextrefsample_a[i-pSADS_PER_CYCLE];
+                    nextrefsample_b[i] <= nextrefsample_b[i-pSADS_PER_CYCLE];
+                    nextrefsample_c[i] <= nextrefsample_c[i-pSADS_PER_CYCLE];
+                    nextrefsample_d[i] <= nextrefsample_d[i-pSADS_PER_CYCLE];
                 end
 
                 if (adc_datain1_r4 > nextrefsample_d[i])
@@ -484,19 +485,19 @@ module sad_x4_slowclock #(
     genvar j;
     integer block2start = 1;
     generate 
-        for (j = 1; j < pREF_SAMPLES; j = j + 4) begin: gen_sad_counters2
+        for (j = 1; j < pREF_SAMPLES; j = j + pSADS_PER_CYCLE) begin: gen_sad_counters2
             assign refsample[j+0] = refsamples[(j+0)*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
             always @(posedge slow_clk2) begin
                 if ((armed_and_ready_adc2 || always_armed) && active_adc2 && ~xadc_error) begin
-                    if (j > block2start) ready2trigger2[j] <= ready2trigger2[j-4];
+                    if (j > block2start) ready2trigger2[j] <= ready2trigger2[j-pSADS_PER_CYCLE];
                     else if (master_counter2 == master_counter_top) ready2trigger2[block2start] <= 1;
                     if (j == block2start) resetter2[j] <= resetter2[pREF_SAMPLES-3];
-                    else resetter2[j] <= resetter2[j-4];
+                    else resetter2[j] <= resetter2[j-pSADS_PER_CYCLE];
                     if (j == block2start) begin
                         if (master_counter2 == master_counter_top)
                             master_counter2 <= 0;
                         else 
-                            master_counter2 <= master_counter2 + 4;
+                            master_counter2 <= master_counter2 + pSADS_PER_CYCLE;
                     end
                 end
                 else begin
@@ -504,14 +505,14 @@ module sad_x4_slowclock #(
                     ready2trigger2[j] <= 0;
                     if (sad_short) begin
                         // TODO-note: this seems to work for pREF_SAMPLES >= 32;
-                        if ((j == pREF_SAMPLES-7) ||
-                            (j == pREF_SAMPLES/2-7)) resetter2[j] <= 1'b1;
-                        else                         resetter2[j] <= 1'b0;
+                        if ((j == pREF_SAMPLES-(pSADS_PER_CYCLE*2 - block2start)) ||
+                            (j == pREF_SAMPLES/2-(pSADS_PER_CYCLE*2 - block2start))) resetter2[j] <= 1'b1;
+                        else resetter2[j] <= 1'b0;
                     end
                     else begin
                         // TODO-note: there seems to be an issue when pREF_SAMPLES isn't a power of 2
-                        if (j == pREF_SAMPLES - 7) resetter2[j] <= 1'b1;
-                        else                       resetter2[j] <= 1'b0;
+                        if (j == pREF_SAMPLES - (pSADS_PER_CYCLE*2 - block2start)) resetter2[j] <= 1'b1;
+                        else resetter2[j] <= 1'b0;
                     end
 
                 end
@@ -523,10 +524,10 @@ module sad_x4_slowclock #(
                     nextrefsample_d[block2start] <= refsample[master_counter2];
                 end
                 else begin
-                    nextrefsample_a[j] <= nextrefsample_a[j-4];
-                    nextrefsample_b[j] <= nextrefsample_b[j-4];
-                    nextrefsample_c[j] <= nextrefsample_c[j-4];
-                    nextrefsample_d[j] <= nextrefsample_d[j-4];
+                    nextrefsample_a[j] <= nextrefsample_a[j-pSADS_PER_CYCLE];
+                    nextrefsample_b[j] <= nextrefsample_b[j-pSADS_PER_CYCLE];
+                    nextrefsample_c[j] <= nextrefsample_c[j-pSADS_PER_CYCLE];
+                    nextrefsample_d[j] <= nextrefsample_d[j-pSADS_PER_CYCLE];
                 end
 
                 if (adc_datain2_r4 > nextrefsample_d[j])
@@ -573,19 +574,19 @@ module sad_x4_slowclock #(
     genvar k;
     integer block3start = 2;
     generate 
-        for (k = 2; k < pREF_SAMPLES; k = k + 4) begin: gen_sad_counters3
+        for (k = 2; k < pREF_SAMPLES; k = k + pSADS_PER_CYCLE) begin: gen_sad_counters3
             assign refsample[k+0] = refsamples[(k+0)*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
             always @(posedge slow_clk3) begin
                 if ((armed_and_ready_adc3 || always_armed) && active_adc3 && ~xadc_error) begin
-                    if (k > block3start) ready2trigger3[k] <= ready2trigger3[k-4];
+                    if (k > block3start) ready2trigger3[k] <= ready2trigger3[k-pSADS_PER_CYCLE];
                     else if (master_counter3 == master_counter_top) ready2trigger3[block3start] <= 1;
                     if (k == block3start) resetter3[k] <= resetter3[pREF_SAMPLES-2];
-                    else resetter3[k] <= resetter3[k-4];
+                    else resetter3[k] <= resetter3[k-pSADS_PER_CYCLE];
                     if (k == block3start) begin
                         if (master_counter3 == master_counter_top)
                             master_counter3 <= 0;
                         else 
-                            master_counter3 <= master_counter3 + 4;
+                            master_counter3 <= master_counter3 + pSADS_PER_CYCLE;
                     end
                 end
                 else begin
@@ -593,14 +594,14 @@ module sad_x4_slowclock #(
                     ready2trigger3[k] <= 0;
                     if (sad_short) begin
                         // TODO-note: this seems to work for pREF_SAMPLES >= 32;
-                        if ((k == pREF_SAMPLES-6) ||
-                            (k == pREF_SAMPLES/2-6)) resetter3[k] <= 1'b1;
-                        else                         resetter3[k] <= 1'b0;
+                        if ((k == pREF_SAMPLES-(pSADS_PER_CYCLE*2 - block3start)) ||
+                            (k == pREF_SAMPLES/2-(pSADS_PER_CYCLE*2 - block3start))) resetter3[k] <= 1'b1;
+                        else resetter3[k] <= 1'b0;
                     end
                     else begin
                         // TODO-note: there seems to be an issue when pREF_SAMPLES isn't a power of 2
-                        if (k == pREF_SAMPLES - 6) resetter3[k] <= 1'b1;
-                        else                       resetter3[k] <= 1'b0;
+                        if (k == pREF_SAMPLES - (pSADS_PER_CYCLE*2 - block3start)) resetter3[k] <= 1'b1;
+                        else resetter3[k] <= 1'b0;
                     end
 
                 end
@@ -612,10 +613,10 @@ module sad_x4_slowclock #(
                     nextrefsample_d[block3start] <= refsample[master_counter3];
                 end
                 else begin
-                    nextrefsample_a[k] <= nextrefsample_a[k-4];
-                    nextrefsample_b[k] <= nextrefsample_b[k-4];
-                    nextrefsample_c[k] <= nextrefsample_c[k-4];
-                    nextrefsample_d[k] <= nextrefsample_d[k-4];
+                    nextrefsample_a[k] <= nextrefsample_a[k-pSADS_PER_CYCLE];
+                    nextrefsample_b[k] <= nextrefsample_b[k-pSADS_PER_CYCLE];
+                    nextrefsample_c[k] <= nextrefsample_c[k-pSADS_PER_CYCLE];
+                    nextrefsample_d[k] <= nextrefsample_d[k-pSADS_PER_CYCLE];
                 end
 
                 if (adc_datain3_r4 > nextrefsample_d[k])
@@ -663,19 +664,19 @@ module sad_x4_slowclock #(
     genvar l;
     integer block4start = 3;
     generate 
-        for (l = 3; l < pREF_SAMPLES; l = l + 4) begin: gen_sad_counters4
+        for (l = 3; l < pREF_SAMPLES; l = l + pSADS_PER_CYCLE) begin: gen_sad_counters4
             assign refsample[l+0] = refsamples[(l+0)*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
             always @(posedge slow_clk4) begin
                 if ((armed_and_ready_adc4 || always_armed) && active_adc4 && ~xadc_error) begin
-                    if (l > block4start) ready2trigger4[l] <= ready2trigger4[l-4];
+                    if (l > block4start) ready2trigger4[l] <= ready2trigger4[l-pSADS_PER_CYCLE];
                     else if (master_counter4 == master_counter_top) ready2trigger4[block4start] <= 1;
                     if (l == block4start) resetter4[l] <= resetter4[pREF_SAMPLES-1];
-                    else resetter4[l] <= resetter4[l-4];
+                    else resetter4[l] <= resetter4[l-pSADS_PER_CYCLE];
                     if (l == block4start) begin
                         if (master_counter4 == master_counter_top)
                             master_counter4 <= 0;
                         else 
-                            master_counter4 <= master_counter4 + 4;
+                            master_counter4 <= master_counter4 + pSADS_PER_CYCLE;
                     end
                 end
                 else begin
@@ -683,14 +684,14 @@ module sad_x4_slowclock #(
                     ready2trigger4[l] <= 0;
                     if (sad_short) begin
                         // TODO-note: this seems to work for pREF_SAMPLES >= 32;
-                        if ((l == pREF_SAMPLES-5) ||
-                            (l == pREF_SAMPLES/2-5)) resetter4[l] <= 1'b1;
-                        else                         resetter4[l] <= 1'b0;
+                        if ((l == pREF_SAMPLES-(pSADS_PER_CYCLE*2 - block4start)) ||
+                            (l == pREF_SAMPLES/2-(pSADS_PER_CYCLE*2 - block4start))) resetter4[l] <= 1'b1;
+                        else resetter4[l] <= 1'b0;
                     end
                     else begin
                         // TODO-note: there seems to be an issue when pREF_SAMPLES isn't a power of 2
-                        if (l == pREF_SAMPLES - 5) resetter4[l] <= 1'b1;
-                        else                       resetter4[l] <= 1'b0;
+                        if (l == pREF_SAMPLES - (pSADS_PER_CYCLE*2 - block4start)) resetter4[l] <= 1'b1;
+                        else resetter4[l] <= 1'b0;
                     end
 
                 end
@@ -702,10 +703,10 @@ module sad_x4_slowclock #(
                     nextrefsample_d[block4start] <= refsample[master_counter4];
                 end
                 else begin
-                    nextrefsample_a[l] <= nextrefsample_a[l-4];
-                    nextrefsample_b[l] <= nextrefsample_b[l-4];
-                    nextrefsample_c[l] <= nextrefsample_c[l-4];
-                    nextrefsample_d[l] <= nextrefsample_d[l-4];
+                    nextrefsample_a[l] <= nextrefsample_a[l-pSADS_PER_CYCLE];
+                    nextrefsample_b[l] <= nextrefsample_b[l-pSADS_PER_CYCLE];
+                    nextrefsample_c[l] <= nextrefsample_c[l-pSADS_PER_CYCLE];
+                    nextrefsample_d[l] <= nextrefsample_d[l-pSADS_PER_CYCLE];
                 end
 
                 if (adc_datain4_r4 > nextrefsample_d[l])
