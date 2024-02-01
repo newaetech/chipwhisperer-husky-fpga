@@ -515,6 +515,10 @@ module cwhusky_cw310_top (
         .clk_usb                (clk_usb_buf),
         .ADC_slow_clk_even      (ADC_slow_clk_even),
         .ADC_slow_clk_odd       (ADC_slow_clk_odd),
+        .ADC_slow_clk1          (ADC_slow_clk1),
+        .ADC_slow_clk2          (ADC_slow_clk2),
+        .ADC_slow_clk3          (ADC_slow_clk3),
+        .ADC_slow_clk4          (ADC_slow_clk4),
         .reset_o                (reg_rst),
         .xadc_error             (xadc_error_flag),
 
@@ -927,6 +931,41 @@ module cwhusky_cw310_top (
 `else
   wire ADC_slow_clk_even = 1'b0;
   wire ADC_slow_clk_odd = 1'b0;
+`endif
+
+`ifdef SAD_X4
+  wire ADC_slow_clk1;
+  wire ADC_slow_clk2;
+  wire ADC_slow_clk3;
+  wire ADC_slow_clk4;
+  reg [1:0] bufgce_count2 = 2'b0;
+  always @(posedge ADC_clk_fb) bufgce_count2 <= bufgce_count2 + 1;
+  BUFGCE U_slow_adc1 (
+      .I    (ADC_clk_fb),
+      .CE   (~bufgce_count2[1]),
+      .O    (ADC_slow_clk1)
+  );
+  BUFGCE U_slow_adc2 (
+      .I    (ADC_clk_fb),
+      .CE   (bufgce_count2[0] ^ bufgce_count2[1]),
+      .O    (ADC_slow_clk2)
+  );
+  BUFGCE U_slow_adc3 (
+      .I    (ADC_clk_fb),
+      .CE   (bufgce_count2[1]),
+      .O    (ADC_slow_clk3)
+  );
+  BUFGCE U_slow_adc4 (
+      .I    (ADC_clk_fb),
+      .CE   (~(bufgce_count2[0] ^ bufgce_count2[1])),
+      .O    (ADC_slow_clk4)
+  );
+
+`else
+  wire ADC_slow_clk1 = 1'b0;
+  wire ADC_slow_clk2 = 1'b0;
+  wire ADC_slow_clk3 = 1'b0;
+  wire ADC_slow_clk4 = 1'b0;
 `endif
 
 

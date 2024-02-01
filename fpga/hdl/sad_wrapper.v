@@ -55,8 +55,18 @@ module sad_wrapper #(
    wire [7:0]   reg_address;
    reg [11:0] adc_datain_r;
 
-   wire [7:0] read_data_sad;
-   always @(posedge clk_usb) read_data <= read_data_sad;
+   wire [7:0] read_data_sad_base;
+   wire [7:0] read_data_sad_x2;
+   wire [7:0] read_data_sad_x4;
+`ifdef SAD_X2
+   always @(posedge clk_usb) read_data <= read_data_sad_x2;
+   `else
+   `ifdef SAD_X4
+       always @(posedge clk_usb) read_data <= read_data_sad_x4;
+   `else
+       always @(posedge clk_usb) read_data <= read_data_sad_base;
+   `endif
+`endif
 
    assign USB_Data = cmdfifo_isout ? cmdfifo_dout : 8'bZ;
    assign cmdfifo_din = USB_Data;
@@ -103,7 +113,7 @@ sad #(
     .reg_address        (reg_address),
     .reg_bytecnt        (reg_bytecnt),
     .reg_datai          (write_data),
-    .reg_datao          (read_data_sad),
+    .reg_datao          (read_data_sad_base),
     .reg_read           (reg_read),
     .reg_write          (reg_write),
     .ext_trigger        (1'b0), // debug only
@@ -116,13 +126,24 @@ reg ADC_slow_clk_odd  = 1'b1;
 always @(posedge clk_adc) ADC_slow_clk_even <= ~ADC_slow_clk_even;
 always @(posedge clk_adc) ADC_slow_clk_odd  <= ~ADC_slow_clk_odd;
 
+reg ADC_slow_clk1 = 0;
+reg ADC_slow_clk2 = 0;
+reg ADC_slow_clk3 = 1;
+reg ADC_slow_clk4 = 1;
+
+always @(posedge ADC_slow_clk_even) ADC_slow_clk1 <= ~ADC_slow_clk1;
+always @(posedge ADC_slow_clk_even) ADC_slow_clk3 <= ~ADC_slow_clk3;
+
+always @(posedge ADC_slow_clk_odd) ADC_slow_clk2 <= ~ADC_slow_clk2;
+always @(posedge ADC_slow_clk_odd) ADC_slow_clk4 <= ~ADC_slow_clk4;
+
 
 wire trigger_x2;
 sad_x2_slowclock #(
     .pBYTECNT_SIZE      (7),
     .pREF_SAMPLES       (pREF_SAMPLES),
     .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE)
-) U_new_dut (
+) U_x2_dut (
     .reset              (reset),
     .xadc_error         (1'b0),
     .adc_datain         (adc_datain_r[pBITS_PER_SAMPLE-1:0]),
@@ -135,7 +156,7 @@ sad_x2_slowclock #(
     .reg_address        (reg_address),
     .reg_bytecnt        (reg_bytecnt),
     .reg_datai          (write_data),
-    .reg_datao          (),
+    .reg_datao          (read_data_sad_x2),
     .reg_read           (reg_read),
     .reg_write          (reg_write),
     .ext_trigger        (1'b0), // debug only
@@ -143,10 +164,43 @@ sad_x2_slowclock #(
     .trigger            (trigger_x2)
 );
 
+wire trigger_x4;
+sad_x4_slowclock #(
+    .pBYTECNT_SIZE      (7),
+    .pREF_SAMPLES       (pREF_SAMPLES),
+    .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE)
+) U_x4_dut (
+    .reset              (reset),
+    .xadc_error         (1'b0),
+    .adc_datain         (adc_datain_r[pBITS_PER_SAMPLE-1:0]),
+    .adc_sampleclk      (clk_adc),
+    .slow_clk1          (ADC_slow_clk1),
+    .slow_clk2          (ADC_slow_clk2),
+    .slow_clk3          (ADC_slow_clk3),
+    .slow_clk4          (ADC_slow_clk4),
+    .armed_and_ready    (armed_and_ready),
+    .active             (1'b1),
+    .clk_usb            (clk_usb),
+    .reg_address        (reg_address),
+    .reg_bytecnt        (reg_bytecnt),
+    .reg_datai          (write_data),
+    .reg_datao          (read_data_sad_x4),
+    .reg_read           (reg_read),
+    .reg_write          (reg_write),
+    .ext_trigger        (1'b0), // debug only
+    .io4                (1'b0), // debug only
+    .trigger            (trigger_x4)
+);
+
+
 `ifdef SAD_X2
     assign trigger = trigger_x2;
 `else
-    assign trigger = trigger_base;
+    `ifdef SAD_X4
+        assign trigger = trigger_x4;
+    `else
+        assign trigger = trigger_base;
+    `endif
 `endif
 
 

@@ -97,6 +97,7 @@ compile_sad:
 	iverilog \
 	../hdl/sad.v \
 	../hdl/sad_x2_slowclock.v \
+	../hdl/sad_x4_slowclock.v \
 	../hdl/sad_wrapper.v \
 	../hdl/usb_reg_main.v \
 	../fpga-common/hdl/cdc_pulse.v \
