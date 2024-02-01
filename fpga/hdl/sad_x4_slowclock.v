@@ -190,7 +190,7 @@ module sad_x4_slowclock #(
     // used in different targets or builds.
     // Format: 2 MSB = version code (00: sad.v, 01: sad_x2_slowclock.v, 10: sad_x4_slowclock.v)
     //         6 LSB = trigger latency
-    wire [7:0] version_bits = {2'b10, 6'd12}; // TODO: document actual latency
+    wire [7:0] version_bits = {2'b10, 6'd18}; // NOTE: latency not verified on-target (yet)
     wire [15:0] ref_samples = pREF_SAMPLES;
 
     // register reads:
