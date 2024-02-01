@@ -229,7 +229,21 @@ tests.append(dict(name  = 'everything',
              GLITCH_CAPTURE = 1,
              description = 'ADC+LA+glitch.'))
 
-tests.append(dict(name  = 'sad',
+tests.append(dict(name  = 'sad_base',
+             frequency = 10,
+             BITS_PER_SAMPLE = 8,
+             REF_SAMPLES = 128, # caution: large values can lead to slow simulation
+             SHORT_SAD = [0,1],
+             THRESHOLD = [20,100], # keep threshold low to avoid unintentional triggers - testbench isn't smart enough
+             TRIGGERS = 4,
+             FLUSH = [0,1],
+             LINEAR_RAMP = 0,
+             TIMEOUT_CYCLES = 5000,
+             SAD = 'SAD_BASE',
+             TOP = 'sad_tb.v',
+             description = 'SAD block-level test.'))
+
+tests.append(dict(name  = 'sad_x2',
              frequency = 4,
              BITS_PER_SAMPLE = 8,
              REF_SAMPLES = 128, # caution: large values can lead to slow simulation
@@ -240,6 +254,21 @@ tests.append(dict(name  = 'sad',
              LINEAR_RAMP = 0,
              TIMEOUT_CYCLES = 5000,
              SAD = 'SAD_X2',
+             TOP = 'sad_tb.v',
+             description = 'SAD block-level test.'))
+
+tests.append(dict(name  = 'sad_x4',
+             frequency = 100,
+             BITS_PER_SAMPLE = 8,
+             REF_SAMPLES = 128, # caution: large values can lead to slow simulation
+             #SHORT_SAD = [0,1],
+             SHORT_SAD = 0,
+             THRESHOLD = [20,100], # keep threshold low to avoid unintentional triggers - testbench isn't smart enough
+             TRIGGERS = 4,
+             FLUSH = [0,1],
+             LINEAR_RAMP = 0,
+             TIMEOUT_CYCLES = 5000,
+             SAD = 'SAD_X4',
              TOP = 'sad_tb.v',
              description = 'SAD block-level test.'))
 

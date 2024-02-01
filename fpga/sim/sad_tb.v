@@ -86,12 +86,23 @@ reg trigger_expected_delayed;
 reg expect_fail;
 integer unexpected;
 integer itrig;
+wire [3:0] trigger_cycles;
 
 `ifdef SAD_X2
     integer sad_x2 = 1;
+    integer sad_x4 = 0;
+    assign trigger_cycles = 2;
 `else
     integer sad_x2 = 0;
+    `ifdef SAD_X4
+        integer sad_x4 = 1;
+        assign trigger_cycles = 4;
+    `else
+        integer sad_x4 = 0;
+        assign trigger_cycles = 1;
+    `endif
 `endif
+
 
 wire usb_clk = clk_usb;
 `include "tb_reg_tasks.v"
@@ -104,9 +115,10 @@ initial begin
     $display("Running with seed=%0d", seed);
     rdata = $urandom(seed);
 
-    $display("SAD_X2            = %d", sad_x2);    
-    $display("pTRIGGERS         = %d", pTRIGGERS);    
-    $display("pFLUSH            = %d", pFLUSH);    
+    $display("SAD_X2            = %d", sad_x2);
+    $display("SAD_X4            = %d", sad_x4);
+    $display("pTRIGGERS         = %d", pTRIGGERS);
+    $display("pFLUSH            = %d", pFLUSH);
     $display("pLINEAR_RAMP      = %d", pLINEAR_RAMP);    
     $display("pINPUTS_FROM_FILE = %d", pINPUTS_FROM_FILE);    
     $display("pREF_SAMPLES      = %d", pREF_SAMPLES);   
@@ -167,6 +179,7 @@ initial begin
     rw_lots_bytes(`SAD_REFERENCE);
     for (i = 0; i < pattern_samples; i = i + 1) begin
         write_next_byte(pattern[i]);
+        //$display("Reference byte %d: %x", i, pattern[i]);
     end
 
     rw_lots_bytes(`SAD_THRESHOLD);
@@ -272,9 +285,9 @@ initial begin
         @(posedge clk_adc)
         #1 trigger_expected = 1'b1;
         adc_datain = $urandom_range(0, 2**pBITS_PER_SAMPLE-1);
-        @(posedge clk_adc) adc_datain = $urandom_range(0, 2**pBITS_PER_SAMPLE-1);
-        @(posedge clk_adc) adc_datain = $urandom_range(0, 2**pBITS_PER_SAMPLE-1);
-        trigger_expected = 1'b0;
+        repeat(trigger_cycles)
+            @(posedge clk_adc) adc_datain = $urandom_range(0, 2**pBITS_PER_SAMPLE-1);
+        #1 trigger_expected = 1'b0;
         if (pVERBOSE) begin
             $display("Total delta: %d", total_delta);
             $display("Threshold:   %d", threshold);
@@ -301,13 +314,17 @@ initial begin
 
 end
 
-reg [9:0] trigger_expected_pipe;
+reg [13:0] trigger_expected_pipe;
 always @(posedge clk_adc)
-    trigger_expected_pipe <= {trigger_expected_pipe[8:0], trigger_expected};
+    trigger_expected_pipe <= {trigger_expected_pipe[12:0], trigger_expected};
 `ifdef SAD_X2
     assign trigger_expected_delayed = trigger_expected_pipe[7];
 `else
-    assign trigger_expected_delayed = trigger_expected_pipe[5];
+    `ifdef SAD_X4
+        assign trigger_expected_delayed = trigger_expected_pipe[13];
+    `else
+        assign trigger_expected_delayed = trigger_expected_pipe[5];
+    `endif
 `endif
 
 // trigger check thread:
@@ -368,6 +385,12 @@ initial begin
     $finish;
 end
 
+always @(trigger_expected_delayed)
+    if (trigger_expected_delayed != trigger) begin
+        errors += 1;
+        $display("ERROR: trigger/expected mismatch at time %t", $time);
+    end
+
 // quicker exit if testbench screwed up:
 initial begin
     wait (setup_done);
@@ -399,6 +422,12 @@ wire #1 usb_cen_out = usb_cen;
 wire #1 usb_alen_out = usb_alen;
 wire [7:0] #1 usb_addr_out = usb_addr;
 wire [11:0] #1 adc_datain_out = adc_datain;
+//wire [11:0] #1 adc_datain_out = adc_datain_ramp; // TEMP: easier debugging!
+
+reg [11:0] adc_datain_ramp = 0;
+always @(posedge clk_adc)
+    adc_datain_ramp <= adc_datain_ramp + 1;
+
 
 reg read_select;
 
