@@ -77,6 +77,11 @@ module sad_x4_slowclock #(
     reg always_armed;
     reg multiple_triggers;
     reg [pREF_SAMPLES*pBITS_PER_SAMPLE-1:0] refsamples;
+    reg [pREF_SAMPLES-1:0] refen = {pREF_SAMPLES{1'b1}}; // all samples enabled by default
+    reg [pREF_SAMPLES-1:0] compare_en_a;
+    reg [pREF_SAMPLES-1:0] compare_en_b;
+    reg [pREF_SAMPLES-1:0] compare_en_c;
+    reg [pREF_SAMPLES-1:0] compare_en_d;
     reg [pSAD_COUNTER_WIDTH-1:0] threshold;
     reg [pMASTER_COUNTER_WIDTH-1:0] master_counter1;
     reg [pMASTER_COUNTER_WIDTH-1:0] master_counter2;
@@ -198,6 +203,7 @@ module sad_x4_slowclock #(
         if (reg_read) begin
             case (reg_address)
                 `SAD_REFERENCE: reg_datao = refsamples[{refbase, reg_bytecnt}*8 +: 8];
+                `SAD_REFEN: reg_datao = refen[reg_bytecnt*8 +: 8];
                 `SAD_THRESHOLD: reg_datao = wide_threshold_reg[reg_bytecnt*8 +: 8];
                 `SAD_STATUS: reg_datao = status_reg[reg_bytecnt*8 +: 8];
                 `SAD_BITS_PER_SAMPLE: reg_datao = pBITS_PER_SAMPLE;
@@ -224,12 +230,14 @@ module sad_x4_slowclock #(
             sad_short <= 0;
             refbase <= 0;
             always_armed <= 0;
+            refen <= {pREF_SAMPLES{1'b1}}; // all samples enabled by default
         end 
         else begin
             clear_status_r <= clear_status;
             if (reg_write) begin
                 case (reg_address)
                     `SAD_REFERENCE: refsamples[{refbase, reg_bytecnt}*8 +: 8] <= reg_datai;
+                    `SAD_REFEN: refen[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_THRESHOLD: threshold[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_MULTIPLE_TRIGGERS: multiple_triggers <= reg_datai[0];
                     `SAD_SHORT: sad_short <= reg_datai[0];
@@ -397,7 +405,7 @@ module sad_x4_slowclock #(
     generate 
         // NOTE: can't use block1start in for loop!
         for (i = 0; i < pREF_SAMPLES; i = i + pSADS_PER_CYCLE) begin: gen_sad_counters1
-            assign refsample[i+0] = refsamples[(i+0)*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
+            assign refsample[i] = refsamples[i*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
             always @(posedge slow_clk1) begin
                 if ((armed_and_ready_adc1 || always_armed) && active_adc1 && ~xadc_error) begin
                     if (i > block1start) ready2trigger1[i] <= ready2trigger1[i-pSADS_PER_CYCLE];
@@ -433,30 +441,46 @@ module sad_x4_slowclock #(
                     nextrefsample_b[block1start] <= refsample[master_counter1+2];
                     nextrefsample_c[block1start] <= refsample[master_counter1+1];
                     nextrefsample_d[block1start] <= refsample[master_counter1];
+                    compare_en_a[block1start] <= refen[master_counter1+3];
+                    compare_en_b[block1start] <= refen[master_counter1+2];
+                    compare_en_c[block1start] <= refen[master_counter1+1];
+                    compare_en_d[block1start] <= refen[master_counter1];
                 end
                 else begin
                     nextrefsample_a[i] <= nextrefsample_a[i-pSADS_PER_CYCLE];
                     nextrefsample_b[i] <= nextrefsample_b[i-pSADS_PER_CYCLE];
                     nextrefsample_c[i] <= nextrefsample_c[i-pSADS_PER_CYCLE];
                     nextrefsample_d[i] <= nextrefsample_d[i-pSADS_PER_CYCLE];
+                    compare_en_a[i] <= compare_en_a[i-pSADS_PER_CYCLE];
+                    compare_en_b[i] <= compare_en_b[i-pSADS_PER_CYCLE];
+                    compare_en_c[i] <= compare_en_c[i-pSADS_PER_CYCLE];
+                    compare_en_d[i] <= compare_en_d[i-pSADS_PER_CYCLE];
                 end
 
-                if (adc_datain1_r4 > nextrefsample_d[i])
+                if (compare_en_d[i] == 0)
+                    counter_incr_d[i] <= 0;
+                else if (adc_datain1_r4 > nextrefsample_d[i])
                     counter_incr_d[i] <= wadc_datain1_rpr4 - nextrefsample_d[i];
                 else
                     counter_incr_d[i] <= wadc_datain1_rmr4 + nextrefsample_d[i];
 
-                if (adc_datain1_r3 > nextrefsample_c[i])
+                if (compare_en_c[i] == 0)
+                    counter_incr_c[i] <= 0;
+                else if (adc_datain1_r3 > nextrefsample_c[i])
                     counter_incr_c[i] <= wadc_datain1_rpr3 - nextrefsample_c[i];
                 else
                     counter_incr_c[i] <= wadc_datain1_rmr3 + nextrefsample_c[i];
 
-                if (adc_datain1_r2 > nextrefsample_b[i])
+                if (compare_en_b[i] == 0)
+                    counter_incr_b[i] <= 0;
+                else if (adc_datain1_r2 > nextrefsample_b[i])
                     counter_incr_b[i] <= wadc_datain1_rpr2 - nextrefsample_b[i];
                 else
                     counter_incr_b[i] <= wadc_datain1_rmr2 + nextrefsample_b[i];
 
-                if (adc_datain1_r > nextrefsample_a[i])
+                if (compare_en_a[i] == 0)
+                    counter_incr_a[i] <= 0;
+                else if (adc_datain1_r > nextrefsample_a[i])
                     counter_incr_a[i] <= wadc_datain1_rpr - nextrefsample_a[i];
                 else
                     counter_incr_a[i] <= wadc_datain1_rmr + nextrefsample_a[i];
@@ -486,7 +510,7 @@ module sad_x4_slowclock #(
     integer block2start = 1;
     generate 
         for (j = 1; j < pREF_SAMPLES; j = j + pSADS_PER_CYCLE) begin: gen_sad_counters2
-            assign refsample[j+0] = refsamples[(j+0)*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
+            assign refsample[j] = refsamples[j*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
             always @(posedge slow_clk2) begin
                 if ((armed_and_ready_adc2 || always_armed) && active_adc2 && ~xadc_error) begin
                     if (j > block2start) ready2trigger2[j] <= ready2trigger2[j-pSADS_PER_CYCLE];
@@ -522,30 +546,46 @@ module sad_x4_slowclock #(
                     nextrefsample_b[block2start] <= refsample[master_counter2+2];
                     nextrefsample_c[block2start] <= refsample[master_counter2+1];
                     nextrefsample_d[block2start] <= refsample[master_counter2];
+                    compare_en_a[block2start] <= refen[master_counter2+3];
+                    compare_en_b[block2start] <= refen[master_counter2+2];
+                    compare_en_c[block2start] <= refen[master_counter2+1];
+                    compare_en_d[block2start] <= refen[master_counter2];
                 end
                 else begin
                     nextrefsample_a[j] <= nextrefsample_a[j-pSADS_PER_CYCLE];
                     nextrefsample_b[j] <= nextrefsample_b[j-pSADS_PER_CYCLE];
                     nextrefsample_c[j] <= nextrefsample_c[j-pSADS_PER_CYCLE];
                     nextrefsample_d[j] <= nextrefsample_d[j-pSADS_PER_CYCLE];
+                    compare_en_a[j] <= compare_en_a[j-pSADS_PER_CYCLE];
+                    compare_en_b[j] <= compare_en_b[j-pSADS_PER_CYCLE];
+                    compare_en_c[j] <= compare_en_c[j-pSADS_PER_CYCLE];
+                    compare_en_d[j] <= compare_en_d[j-pSADS_PER_CYCLE];
                 end
 
-                if (adc_datain2_r4 > nextrefsample_d[j])
+                if (compare_en_d[j] == 0)
+                    counter_incr_d[j] <= 0;
+                else if (adc_datain2_r4 > nextrefsample_d[j])
                     counter_incr_d[j] <= wadc_datain2_rpr4 - nextrefsample_d[j];
                 else
                     counter_incr_d[j] <= wadc_datain2_rmr4 + nextrefsample_d[j];
 
-                if (adc_datain2_r3 > nextrefsample_c[j])
+                if (compare_en_c[j] == 0)
+                    counter_incr_c[j] <= 0;
+                else if (adc_datain2_r3 > nextrefsample_c[j])
                     counter_incr_c[j] <= wadc_datain2_rpr3 - nextrefsample_c[j];
                 else
                     counter_incr_c[j] <= wadc_datain2_rmr3 + nextrefsample_c[j];
 
-                if (adc_datain2_r2 > nextrefsample_b[j])
+                if (compare_en_b[j] == 0)
+                    counter_incr_b[j] <= 0;
+                else if (adc_datain2_r2 > nextrefsample_b[j])
                     counter_incr_b[j] <= wadc_datain2_rpr2 - nextrefsample_b[j];
                 else
                     counter_incr_b[j] <= wadc_datain2_rmr2 + nextrefsample_b[j];
 
-                if (adc_datain2_r > nextrefsample_a[j])
+                if (compare_en_a[j] == 0)
+                    counter_incr_a[j] <= 0;
+                else if (adc_datain2_r > nextrefsample_a[j])
                     counter_incr_a[j] <= wadc_datain2_rpr - nextrefsample_a[j];
                 else
                     counter_incr_a[j] <= wadc_datain2_rmr + nextrefsample_a[j];
@@ -575,7 +615,7 @@ module sad_x4_slowclock #(
     integer block3start = 2;
     generate 
         for (k = 2; k < pREF_SAMPLES; k = k + pSADS_PER_CYCLE) begin: gen_sad_counters3
-            assign refsample[k+0] = refsamples[(k+0)*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
+            assign refsample[k] = refsamples[k*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
             always @(posedge slow_clk3) begin
                 if ((armed_and_ready_adc3 || always_armed) && active_adc3 && ~xadc_error) begin
                     if (k > block3start) ready2trigger3[k] <= ready2trigger3[k-pSADS_PER_CYCLE];
@@ -611,30 +651,46 @@ module sad_x4_slowclock #(
                     nextrefsample_b[block3start] <= refsample[master_counter3+2];
                     nextrefsample_c[block3start] <= refsample[master_counter3+1];
                     nextrefsample_d[block3start] <= refsample[master_counter3];
+                    compare_en_a[block3start] <= refen[master_counter3+3];
+                    compare_en_b[block3start] <= refen[master_counter3+2];
+                    compare_en_c[block3start] <= refen[master_counter3+1];
+                    compare_en_d[block3start] <= refen[master_counter3];
                 end
                 else begin
                     nextrefsample_a[k] <= nextrefsample_a[k-pSADS_PER_CYCLE];
                     nextrefsample_b[k] <= nextrefsample_b[k-pSADS_PER_CYCLE];
                     nextrefsample_c[k] <= nextrefsample_c[k-pSADS_PER_CYCLE];
                     nextrefsample_d[k] <= nextrefsample_d[k-pSADS_PER_CYCLE];
+                    compare_en_a[k] <= compare_en_a[k-pSADS_PER_CYCLE];
+                    compare_en_b[k] <= compare_en_b[k-pSADS_PER_CYCLE];
+                    compare_en_c[k] <= compare_en_c[k-pSADS_PER_CYCLE];
+                    compare_en_d[k] <= compare_en_d[k-pSADS_PER_CYCLE];
                 end
 
-                if (adc_datain3_r4 > nextrefsample_d[k])
+                if (compare_en_d[k] == 0)
+                    counter_incr_d[k] <= 0;
+                else if (adc_datain3_r4 > nextrefsample_d[k])
                     counter_incr_d[k] <= wadc_datain3_rpr4 - nextrefsample_d[k];
                 else
                     counter_incr_d[k] <= wadc_datain3_rmr4 + nextrefsample_d[k];
 
-                if (adc_datain3_r3 > nextrefsample_c[k])
+                if (compare_en_c[k] == 0)
+                    counter_incr_c[k] <= 0;
+                else if (adc_datain3_r3 > nextrefsample_c[k])
                     counter_incr_c[k] <= wadc_datain3_rpr3 - nextrefsample_c[k];
                 else
                     counter_incr_c[k] <= wadc_datain3_rmr3 + nextrefsample_c[k];
 
-                if (adc_datain3_r2 > nextrefsample_b[k])
+                if (compare_en_b[k] == 0)
+                    counter_incr_b[k] <= 0;
+                else if (adc_datain3_r2 > nextrefsample_b[k])
                     counter_incr_b[k] <= wadc_datain3_rpr2 - nextrefsample_b[k];
                 else
                     counter_incr_b[k] <= wadc_datain3_rmr2 + nextrefsample_b[k];
 
-                if (adc_datain3_r > nextrefsample_a[k])
+                if (compare_en_a[k] == 0)
+                    counter_incr_a[k] <= 0;
+                else if (adc_datain3_r > nextrefsample_a[k])
                     counter_incr_a[k] <= wadc_datain3_rpr - nextrefsample_a[k];
                 else
                     counter_incr_a[k] <= wadc_datain3_rmr + nextrefsample_a[k];
@@ -665,7 +721,7 @@ module sad_x4_slowclock #(
     integer block4start = 3;
     generate 
         for (l = 3; l < pREF_SAMPLES; l = l + pSADS_PER_CYCLE) begin: gen_sad_counters4
-            assign refsample[l+0] = refsamples[(l+0)*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
+            assign refsample[l] = refsamples[l*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
             always @(posedge slow_clk4) begin
                 if ((armed_and_ready_adc4 || always_armed) && active_adc4 && ~xadc_error) begin
                     if (l > block4start) ready2trigger4[l] <= ready2trigger4[l-pSADS_PER_CYCLE];
@@ -701,30 +757,46 @@ module sad_x4_slowclock #(
                     nextrefsample_b[block4start] <= refsample[master_counter4+2];
                     nextrefsample_c[block4start] <= refsample[master_counter4+1];
                     nextrefsample_d[block4start] <= refsample[master_counter4];
+                    compare_en_a[block4start] <= refen[master_counter4+3];
+                    compare_en_b[block4start] <= refen[master_counter4+2];
+                    compare_en_c[block4start] <= refen[master_counter4+1];
+                    compare_en_d[block4start] <= refen[master_counter4];
                 end
                 else begin
                     nextrefsample_a[l] <= nextrefsample_a[l-pSADS_PER_CYCLE];
                     nextrefsample_b[l] <= nextrefsample_b[l-pSADS_PER_CYCLE];
                     nextrefsample_c[l] <= nextrefsample_c[l-pSADS_PER_CYCLE];
                     nextrefsample_d[l] <= nextrefsample_d[l-pSADS_PER_CYCLE];
+                    compare_en_a[l] <= compare_en_a[l-pSADS_PER_CYCLE];
+                    compare_en_b[l] <= compare_en_b[l-pSADS_PER_CYCLE];
+                    compare_en_c[l] <= compare_en_c[l-pSADS_PER_CYCLE];
+                    compare_en_d[l] <= compare_en_d[l-pSADS_PER_CYCLE];
                 end
 
-                if (adc_datain4_r4 > nextrefsample_d[l])
+                if (compare_en_d[l] == 0)
+                    counter_incr_d[l] <= 0;
+                else if (adc_datain4_r4 > nextrefsample_d[l])
                     counter_incr_d[l] <= wadc_datain4_rpr4 - nextrefsample_d[l];
                 else
                     counter_incr_d[l] <= wadc_datain4_rmr4 + nextrefsample_d[l];
 
-                if (adc_datain4_r3 > nextrefsample_c[l])
+                if (compare_en_c[l] == 0)
+                    counter_incr_c[l] <= 0;
+                else if (adc_datain4_r3 > nextrefsample_c[l])
                     counter_incr_c[l] <= wadc_datain4_rpr3 - nextrefsample_c[l];
                 else
                     counter_incr_c[l] <= wadc_datain4_rmr3 + nextrefsample_c[l];
 
-                if (adc_datain4_r2 > nextrefsample_b[l])
+                if (compare_en_b[l] == 0)
+                    counter_incr_b[l] <= 0;
+                else if (adc_datain4_r2 > nextrefsample_b[l])
                     counter_incr_b[l] <= wadc_datain4_rpr2 - nextrefsample_b[l];
                 else
                     counter_incr_b[l] <= wadc_datain4_rmr2 + nextrefsample_b[l];
 
-                if (adc_datain4_r > nextrefsample_a[l])
+                if (compare_en_a[l] == 0)
+                    counter_incr_a[l] <= 0;
+                else if (adc_datain4_r > nextrefsample_a[l])
                     counter_incr_a[l] <= wadc_datain4_rpr - nextrefsample_a[l];
                 else
                     counter_incr_a[l] <= wadc_datain4_rmr + nextrefsample_a[l];

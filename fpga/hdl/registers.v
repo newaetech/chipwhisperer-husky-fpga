@@ -349,6 +349,7 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define SAD_REFERENCE_BASE      108
 `define SAD_VERSION             12 
 `define SAD_ALWAYS_ARMED        13
+`define SAD_REFEN               24
 
 `define FIFO_STATE              110
 `define CLOCKGLITCH_POWERED_DOWN 111
@@ -379,7 +380,6 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define REG_DDR_START_READ      125
 
 // list of holes in the register address space (to be used for new features):
-//`define UNUSED_ADDRESS 24
 //`define UNUSED_ADDRESS 54
 //`define UNUSED_ADDRESS 56
 //`define UNUSED_ADDRESS 57

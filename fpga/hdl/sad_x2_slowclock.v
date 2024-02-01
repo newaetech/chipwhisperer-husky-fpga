@@ -81,6 +81,8 @@ module sad_x2_slowclock #(
     reg always_armed;
     reg multiple_triggers;
     reg [pREF_SAMPLES*pBITS_PER_SAMPLE-1:0] refsamples;
+    reg [pREF_SAMPLES-1:0] refen = {pREF_SAMPLES{1'b1}}; // all samples enabled by default
+    reg [pREF_SAMPLES-1:0] compare_en_a, compare_en_b;
     reg [pSAD_COUNTER_WIDTH-1:0] threshold;
     reg [pMASTER_COUNTER_WIDTH-1:0] master_counter_even, master_counter_odd;
     reg resetter_even [0:pREF_SAMPLES-1];
@@ -152,6 +154,7 @@ module sad_x2_slowclock #(
         if (reg_read) begin
             case (reg_address)
                 `SAD_REFERENCE: reg_datao = refsamples[{refbase, reg_bytecnt}*8 +: 8];
+                `SAD_REFEN: reg_datao = refen[reg_bytecnt*8 +: 8];
                 `SAD_THRESHOLD: reg_datao = wide_threshold_reg[reg_bytecnt*8 +: 8];
                 `SAD_STATUS: reg_datao = status_reg[reg_bytecnt*8 +: 8];
                 `SAD_BITS_PER_SAMPLE: reg_datao = pBITS_PER_SAMPLE;
@@ -178,12 +181,14 @@ module sad_x2_slowclock #(
             sad_short <= 0;
             refbase <= 0;
             always_armed <= 0;
+            refen <= {pREF_SAMPLES{1'b1}}; // all samples enabled by default
         end 
         else begin
             clear_status_r <= clear_status;
             if (reg_write) begin
                 case (reg_address)
                     `SAD_REFERENCE: refsamples[{refbase, reg_bytecnt}*8 +: 8] <= reg_datai;
+                    `SAD_REFEN: refen[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_THRESHOLD: threshold[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_MULTIPLE_TRIGGERS: multiple_triggers <= reg_datai[0];
                     `SAD_SHORT: sad_short <= reg_datai[0];
@@ -312,7 +317,7 @@ module sad_x2_slowclock #(
     genvar i;
     generate 
         for (i = 0; i < pREF_SAMPLES; i = i + pSADS_PER_CYCLE) begin: gen_sad_even_counters
-            assign refsample[i+0] = refsamples[(i+0)*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
+            assign refsample[i] = refsamples[i*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
             always @(posedge slow_clk_even) begin
                 if ((armed_and_ready_adc_even || always_armed) && active_adc_even && ~xadc_error) begin
                     if (i > 0) ready2trigger_even[i] <= ready2trigger_even[i-pSADS_PER_CYCLE];
@@ -344,24 +349,32 @@ module sad_x2_slowclock #(
                 end
 
                 if (i == 0) begin
-                    nextrefsample_a[0] <= refsample[master_counter_even+1]; // don't need to worry about wrap-around (I think!)
-                    nextrefsample_b[0] <= refsample[master_counter_even];
+                    nextrefsample_a[i] <= refsample[master_counter_even+1]; // don't need to worry about wrap-around (I think!)
+                    nextrefsample_b[i] <= refsample[master_counter_even];
+                    compare_en_a[i] <= refen[master_counter_even+1];
+                    compare_en_b[i] <= refen[master_counter_even];
                 end
                 else begin
                     nextrefsample_a[i] <= nextrefsample_a[i-pSADS_PER_CYCLE];
                     nextrefsample_b[i] <= nextrefsample_b[i-pSADS_PER_CYCLE];
+                    compare_en_a[i] <= compare_en_a[i-pSADS_PER_CYCLE];
+                    compare_en_b[i] <= compare_en_b[i-pSADS_PER_CYCLE];
                 end
 
                 nextrefsample_r_a[i] <= nextrefsample_a[i];
                 nextrefsample_r_b[i] <= nextrefsample_b[i];
 
 
-                if (adc_datain_even_r2 > nextrefsample_b[i])
+                if (compare_en_b[i] == 0) // NOTE: yep, _a / _b are a bit mixed up here! TODO-fixit
+                    counter_incr_a[i] <= 0;
+                else if (adc_datain_even_r2 > nextrefsample_b[i])
                     counter_incr_a[i] <= wadc_datain_even_rpr2 - nextrefsample_b[i];
                 else
                     counter_incr_a[i] <= wadc_datain_even_rmr2 + nextrefsample_b[i];
 
-                if (adc_datain_even_r > nextrefsample_a[i])
+                if (compare_en_a[i] == 0)
+                    counter_incr_b[i] <= 0;
+                else if (adc_datain_even_r > nextrefsample_a[i])
                     counter_incr_b[i] <= wadc_datain_even_rpr - nextrefsample_a[i];
                 else
                     counter_incr_b[i] <= wadc_datain_even_rmr + nextrefsample_a[i];
@@ -388,7 +401,7 @@ module sad_x2_slowclock #(
     genvar j;
     generate 
         for (j = 1; j < pREF_SAMPLES-0; j = j + pSADS_PER_CYCLE) begin: gen_sad_odd_counters
-            assign refsample[j+0] = refsamples[(j+0)*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
+            assign refsample[j] = refsamples[j*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
             always @(posedge slow_clk_odd) begin
                 if ((armed_and_ready_adc_odd || always_armed) && active_adc_odd && ~xadc_error) begin
                     if (j > 1) ready2trigger_odd[j] <= ready2trigger_odd[j-pSADS_PER_CYCLE];
@@ -421,24 +434,32 @@ module sad_x2_slowclock #(
                 end
 
                 if (j == 1) begin
-                    nextrefsample_a[1] <= refsample[master_counter_odd+1]; // don't need to worry about wrap-around (I think!)
-                    nextrefsample_b[1] <= refsample[master_counter_odd];
+                    nextrefsample_a[j] <= refsample[master_counter_odd+1]; // don't need to worry about wrap-around (I think!)
+                    nextrefsample_b[j] <= refsample[master_counter_odd];
+                    compare_en_a[j] <= refen[master_counter_odd+1];
+                    compare_en_b[j] <= refen[master_counter_odd];
                 end
                 else begin
                     nextrefsample_a[j] <= nextrefsample_a[j-pSADS_PER_CYCLE];
                     nextrefsample_b[j] <= nextrefsample_b[j-pSADS_PER_CYCLE];
+                    compare_en_a[j] <= compare_en_a[j-pSADS_PER_CYCLE];
+                    compare_en_b[j] <= compare_en_b[j-pSADS_PER_CYCLE];
                 end
 
                 nextrefsample_r_a[j] <= nextrefsample_a[j];
                 nextrefsample_r_b[j] <= nextrefsample_b[j];
 
 
-                if (adc_datain_odd_r2 > nextrefsample_b[j])
+                if (compare_en_b[j] == 0)
+                    counter_incr_a[j] <= 0;
+                else if (adc_datain_odd_r2 > nextrefsample_b[j])
                     counter_incr_a[j] <= wadc_datain_odd_rpr2 - nextrefsample_b[j];
                 else
                     counter_incr_a[j] <= wadc_datain_odd_rmr2 + nextrefsample_b[j];
 
-                if (adc_datain_odd_r > nextrefsample_a[j])
+                if (compare_en_a[j] == 0)
+                    counter_incr_b[j] <= 0;
+                else if (adc_datain_odd_r > nextrefsample_a[j])
                     counter_incr_b[j] <= wadc_datain_odd_rpr - nextrefsample_a[j];
                 else
                     counter_incr_b[j] <= wadc_datain_odd_rmr + nextrefsample_a[j];

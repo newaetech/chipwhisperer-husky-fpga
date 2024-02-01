@@ -70,6 +70,7 @@ reg        usb_alen;
 
 reg [pBITS_PER_SAMPLE-1:0] adcin [0:128];
 reg [pBITS_PER_SAMPLE-1:0] pattern [0:pREF_SAMPLES-1];
+reg [pREF_SAMPLES-1:0] refen;
 reg [pBITS_PER_SAMPLE-4:0] linear_increment;
 reg [31:0] threshold;
 
@@ -167,6 +168,14 @@ initial begin
     else
         threshold = pTHRESHOLD;
 
+    for (i = 0; i < pattern_samples; i = i + 1) begin
+        // turn off comparison for a quarter of the samples
+        if ($urandom_range(0, 4))
+            refen[i] = 1;
+        else
+            refen[i] = 0;
+    end
+
     #(pCLK_USB_PERIOD*10) reset = 1'b1;
     #(pCLK_USB_PERIOD*10) reset = 1'b0;
     #(pCLK_USB_PERIOD*10);
@@ -181,6 +190,12 @@ initial begin
         write_next_byte(pattern[i]);
         //$display("Reference byte %d: %x", i, pattern[i]);
     end
+
+    // TODO: assuming 8-bit width for now
+    rw_lots_bytes(`SAD_REFEN);
+    for (i = 0; i < pattern_samples/8; i = i + 1)
+        write_next_byte(refen[i*8 +: 8]);
+
 
     rw_lots_bytes(`SAD_THRESHOLD);
     write_next_byte((threshold & 32'h0000_00FF));
@@ -214,7 +229,7 @@ initial begin
     // apply a pattern that's close, but (probably) over the threshold:
     for (i = 0; i < pattern_samples; i = i + 1) begin
         @(posedge clk_adc);
-        if ($urandom_range(0, pattern_samples/8) == 0) begin // deviate from pattern or not
+        if (refen[i] && ($urandom_range(0, pattern_samples/8) == 0)) begin // deviate from pattern or not
             if ($urandom_range(0,1)) begin // positive delta
                 delta = $urandom_range(0, 2**pBITS_PER_SAMPLE-1 - pattern[i]);
                 total_delta += delta;
@@ -280,7 +295,12 @@ initial begin
             end
             else
                 delta = 0;
-            adc_datain = pattern[i] + delta;
+            if (refen[i])
+                adc_datain = pattern[i] + delta;
+            else
+                // when comparison is disabled for a particular sample, throw random data at it:
+                adc_datain = $urandom_range(0, 2**pBITS_PER_SAMPLE-1);
+                //adc_datain = {pBITS_PER_SAMPLE{1'b1}};
         end
         @(posedge clk_adc)
         #1 trigger_expected = 1'b1;

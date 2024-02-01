@@ -71,6 +71,8 @@ module sad #(
 
     reg multiple_triggers;
     reg [pREF_SAMPLES*pBITS_PER_SAMPLE-1:0] refsamples;
+    reg [pREF_SAMPLES-1:0] refen = {pREF_SAMPLES{1'b1}}; // all samples enabled by default
+    reg [pREF_SAMPLES-1:0] compare_en, compare_en_r;
     reg [pSAD_COUNTER_WIDTH-1:0] threshold;
     reg [pMASTER_COUNTER_WIDTH-1:0] master_counter;
     reg [pREF_SAMPLES-1:0] resetter;
@@ -112,6 +114,7 @@ module sad #(
         if (reg_read) begin
             case (reg_address)
                 `SAD_REFERENCE: reg_datao = refsamples[{refbase, reg_bytecnt}*8 +: 8];
+                `SAD_REFEN: reg_datao = refen[reg_bytecnt*8 +: 8];
                 `SAD_THRESHOLD: reg_datao = wide_threshold_reg[reg_bytecnt*8 +: 8];
                 `SAD_STATUS: reg_datao = status_reg[reg_bytecnt*8 +: 8];
                 `SAD_BITS_PER_SAMPLE: reg_datao = pBITS_PER_SAMPLE;
@@ -136,12 +139,14 @@ module sad #(
             multiple_triggers <= 0;
             sad_short <= 0;
             refbase <= 0;
+            refen <= {pREF_SAMPLES{1'b1}}; // all samples enabled by default
         end 
         else begin
             clear_status_r <= clear_status;
             if (reg_write) begin
                 case (reg_address)
                     `SAD_REFERENCE: refsamples[{refbase, reg_bytecnt}*8 +: 8] <= reg_datai;
+                    `SAD_REFEN: refen[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_THRESHOLD: threshold[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_MULTIPLE_TRIGGERS: multiple_triggers <= reg_datai[0];
                     `SAD_SHORT: sad_short <= reg_datai[0];
@@ -246,18 +251,25 @@ module sad #(
             assign refsample[i] =  refsamples[i*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
 
             always @(posedge adc_sampleclk) begin
-                if (i == 0)
+                if (i == 0) begin
                     nextrefsample[i] <=  refsample[master_counter];
-                else
+                    compare_en[i] <= refen[master_counter];
+                end
+                else begin
                     nextrefsample[i] <=  nextrefsample[i-1];
+                    compare_en[i] <= compare_en[i-1];
+                end
                 nextrefsample_r[i] <=  nextrefsample[i];
+                compare_en_r[i] <= compare_en[i];
 
                 if (adc_datain_r > nextrefsample[i])
                     decision[i] <= 1'b1;
                 else
                     decision[i] <= 1'b0;
 
-                if (decision[i])
+                if (compare_en_r[i] == 0)
+                    counter_incr[i] <= 0;
+                else if (decision[i])
                     counter_incr[i] <= adc_datain_rpr - nextrefsample_r[i];
                 else
                     counter_incr[i] <= adc_datain_rmr + nextrefsample_r[i];
