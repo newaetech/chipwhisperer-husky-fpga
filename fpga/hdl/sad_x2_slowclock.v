@@ -352,19 +352,19 @@ module sad_x2_slowclock #(
                 nextrefsample_r_b[i] <= nextrefsample_b[i];
 
 
-                if (compare_en_b[i] == 0) // NOTE: yep, _a / _b are a bit mixed up here! TODO-fixit
-                    counter_incr_a[i] <= 0;
+                if (compare_en_b[i] == 0)
+                    counter_incr_b[i] <= 0;
                 else if (adc_datain_even_r2 > nextrefsample_b[i])
-                    counter_incr_a[i] <= wadc_datain_even_rpr2 - nextrefsample_b[i];
+                    counter_incr_b[i] <= wadc_datain_even_rpr2 - nextrefsample_b[i];
                 else
-                    counter_incr_a[i] <= wadc_datain_even_rmr2 + nextrefsample_b[i];
+                    counter_incr_b[i] <= wadc_datain_even_rmr2 + nextrefsample_b[i];
 
                 if (compare_en_a[i] == 0)
-                    counter_incr_b[i] <= 0;
+                    counter_incr_a[i] <= 0;
                 else if (adc_datain_even_r > nextrefsample_a[i])
-                    counter_incr_b[i] <= wadc_datain_even_rpr - nextrefsample_a[i];
+                    counter_incr_a[i] <= wadc_datain_even_rpr - nextrefsample_a[i];
                 else
-                    counter_incr_b[i] <= wadc_datain_even_rmr + nextrefsample_a[i];
+                    counter_incr_a[i] <= wadc_datain_even_rmr + nextrefsample_a[i];
 
 
                 // finally we get to the actual SAD counters:
