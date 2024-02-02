@@ -345,7 +345,6 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define SAD_REF_SAMPLES         104
 `define SAD_COUNTER_WIDTH       105
 `define SAD_MULTIPLE_TRIGGERS   106
-`define SAD_SHORT               107
 `define SAD_REFERENCE_BASE      108
 `define SAD_VERSION             12 
 `define SAD_ALWAYS_ARMED        13
@@ -387,6 +386,7 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 //`define UNUSED_ADDRESS 70
 //`define UNUSED_ADDRESS 83
 //`define UNUSED_ADDRESS 84
+//`define UNUSED_ADDRESS 107
 //`define UNUSED_ADDRESS 126
 //`define UNUSED_ADDRESS 127
 

@@ -137,7 +137,6 @@ module sad_x2_slowclock #(
 
 
     wire [23:0] status_reg = {num_triggers, 7'b0, triggered};
-    reg sad_short;
     wire [31:0] wide_threshold_reg = {{(32-pSAD_COUNTER_WIDTH){1'b0}}, threshold}; // having a variable-width register isn't very convenient for Python
     reg [7:0] refbase;
 
@@ -161,7 +160,6 @@ module sad_x2_slowclock #(
                 `SAD_REF_SAMPLES: reg_datao = ref_samples[reg_bytecnt*8 +: 8];
                 `SAD_COUNTER_WIDTH: reg_datao = pSAD_COUNTER_WIDTH;
                 `SAD_MULTIPLE_TRIGGERS: reg_datao = {7'b0, multiple_triggers};
-                `SAD_SHORT: reg_datao = {7'b0, sad_short};
                 `SAD_VERSION: reg_datao = version_bits;
                 `SAD_ALWAYS_ARMED: reg_datao <= {7'b0, always_armed};
                 default: reg_datao = 0;
@@ -178,7 +176,6 @@ module sad_x2_slowclock #(
             threshold <= 0;
             clear_status_r <= 0;
             multiple_triggers <= 0;
-            sad_short <= 0;
             refbase <= 0;
             always_armed <= 0;
             refen <= {pREF_SAMPLES{1'b1}}; // all samples enabled by default
@@ -191,7 +188,6 @@ module sad_x2_slowclock #(
                     `SAD_REFEN: refen[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_THRESHOLD: threshold[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_MULTIPLE_TRIGGERS: multiple_triggers <= reg_datai[0];
-                    `SAD_SHORT: sad_short <= reg_datai[0];
                     `SAD_REFERENCE_BASE: refbase <= reg_datai;
                     `SAD_ALWAYS_ARMED: always_armed <= reg_datai[0];
                     default: ;
@@ -293,7 +289,7 @@ module sad_x2_slowclock #(
     );
 
 
-    wire [pMASTER_COUNTER_WIDTH-1:0] master_counter_top = (sad_short)? pREF_SAMPLES/2-pSADS_PER_CYCLE : pREF_SAMPLES-pSADS_PER_CYCLE;
+    wire [pMASTER_COUNTER_WIDTH-1:0] master_counter_top = pREF_SAMPLES-pSADS_PER_CYCLE;
 
 
     always @(posedge adc_sampleclk) begin
@@ -334,18 +330,9 @@ module sad_x2_slowclock #(
                 else begin
                     if (i == 0) master_counter_even <= 0;
                     ready2trigger_even[i] <= 0;
-                    if (sad_short) begin
-                        // TODO-note: this seems to work for pREF_SAMPLES >= 32;
-                        if ((i == pREF_SAMPLES-(pSADS_PER_CYCLE*2)) ||
-                            (i == pREF_SAMPLES/2-(pSADS_PER_CYCLE*2))) resetter_even[i] <= 1'b1;
-                        else resetter_even[i] <= 1'b0;
-                    end
-                    else begin
-                        // TODO-note: there seems to be an issue when pREF_SAMPLES isn't a power of 2
-                        if (i == pREF_SAMPLES - (pSADS_PER_CYCLE*2)) resetter_even[i] <= 1'b1;
-                        else resetter_even[i] <= 1'b0;
-                    end
-
+                    // TODO-note: there seems to be an issue when pREF_SAMPLES isn't a power of 2
+                    if (i == pREF_SAMPLES - (pSADS_PER_CYCLE*2)) resetter_even[i] <= 1'b1;
+                    else resetter_even[i] <= 1'b0;
                 end
 
                 if (i == 0) begin
@@ -421,16 +408,8 @@ module sad_x2_slowclock #(
                     if (j == 1) master_counter_odd <= 0;
                     ready2trigger_odd[j] <= 0;
                     // NOTE: see comments in corresponding "even" code block
-                    if (sad_short) begin
-                        if ((j == pREF_SAMPLES-(pSADS_PER_CYCLE*2 - 1)) || 
-                            (j == pREF_SAMPLES/2-(pSADS_PER_CYCLE*2 - 1))) resetter_odd[j] <= 1'b1;
-                        else resetter_odd[j] <= 1'b0;
-                    end
-                    else begin
-                        if (j == pREF_SAMPLES - (pSADS_PER_CYCLE*2 - 1)) resetter_odd[j] <= 1'b1;
-                        else resetter_odd[j] <= 1'b0;
-                    end
-
+                    if (j == pREF_SAMPLES - (pSADS_PER_CYCLE*2 - 1)) resetter_odd[j] <= 1'b1;
+                    else resetter_odd[j] <= 1'b0;
                 end
 
                 if (j == 1) begin

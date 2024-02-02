@@ -97,7 +97,6 @@ module sad #(
     reg [pSAD_COUNTER_WIDTH-1:0] adc_datain_rpr, adc_datain_rmr; // sign extend
     reg [pBITS_PER_SAMPLE-1:0] adc_datain_r;
     wire [23:0] status_reg = {num_triggers, 7'b0, triggered};
-    reg sad_short;
     wire [31:0] wide_threshold_reg = {{(32-pSAD_COUNTER_WIDTH){1'b0}}, threshold}; // having a variable-width register isn't very convenient for Python
     reg [7:0] refbase;
     wire [15:0] ref_samples = pREF_SAMPLES;
@@ -121,7 +120,6 @@ module sad #(
                 `SAD_REF_SAMPLES: reg_datao = ref_samples[reg_bytecnt*8 +: 8];
                 `SAD_COUNTER_WIDTH: reg_datao = pSAD_COUNTER_WIDTH;
                 `SAD_MULTIPLE_TRIGGERS: reg_datao = {7'b0, multiple_triggers};
-                `SAD_SHORT: reg_datao = {7'b0, sad_short};
                 `SAD_VERSION: reg_datao = version_bits;
                 default: reg_datao = 0;
             endcase
@@ -137,7 +135,6 @@ module sad #(
             threshold <= 0;
             clear_status_r <= 0;
             multiple_triggers <= 0;
-            sad_short <= 0;
             refbase <= 0;
             refen <= {pREF_SAMPLES{1'b1}}; // all samples enabled by default
         end 
@@ -149,7 +146,6 @@ module sad #(
                     `SAD_REFEN: refen[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_THRESHOLD: threshold[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_MULTIPLE_TRIGGERS: multiple_triggers <= reg_datai[0];
-                    `SAD_SHORT: sad_short <= reg_datai[0];
                     `SAD_REFERENCE_BASE: refbase <= reg_datai;
                     default: ;
                 endcase
@@ -188,7 +184,7 @@ module sad #(
         .data_out_r     (armed_and_ready_adc_r)
     );
 
-    wire [pMASTER_COUNTER_WIDTH-1:0] master_counter_top = (sad_short)? pREF_SAMPLES/2-1 : pREF_SAMPLES-1;
+    wire [pMASTER_COUNTER_WIDTH-1:0] master_counter_top = pREF_SAMPLES-1;
 
     always @(posedge adc_sampleclk) begin
         if (armed_and_ready_adc && active && ~xadc_error) begin
@@ -215,10 +211,7 @@ module sad #(
             ready2trigger_pre <= 0;
             ready2trigger <= 0;
             */
-            if (sad_short)
-                resetter <= {2{2'b0, 1'b1, {(pREF_SAMPLES/2-3){1'b0}}}};
-            else
-                resetter <= {2'b0, 1'b1, {(pREF_SAMPLES-3){1'b0}}};
+            resetter <= {2'b0, 1'b1, {(pREF_SAMPLES-3){1'b0}}};
         end
     end
 

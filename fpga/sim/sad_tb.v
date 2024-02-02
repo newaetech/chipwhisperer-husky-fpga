@@ -31,7 +31,6 @@ parameter pDUMP = 0;
 parameter pLINEAR_RAMP = 0;
 parameter pINPUTS_FROM_FILE = 0;
 parameter pREF_SAMPLES = 8;
-parameter pSHORT_SAD = 0;
 parameter pBITS_PER_SAMPLE = 12;
 parameter pTHRESHOLD = 0;
 parameter pADDR_WIDTH = 8;
@@ -108,7 +107,7 @@ wire [3:0] trigger_cycles;
 wire usb_clk = clk_usb;
 `include "tb_reg_tasks.v"
 
-integer pattern_samples = (pSHORT_SAD)? pREF_SAMPLES/2 : pREF_SAMPLES;
+integer pattern_samples = pREF_SAMPLES;
 
 // initialization thread:
 initial begin
@@ -123,7 +122,6 @@ initial begin
     $display("pLINEAR_RAMP      = %d", pLINEAR_RAMP);    
     $display("pINPUTS_FROM_FILE = %d", pINPUTS_FROM_FILE);    
     $display("pREF_SAMPLES      = %d", pREF_SAMPLES);   
-    $display("pSHORT_SAD        = %d", pSHORT_SAD);   
     $display("pBITS_PER_SAMPLE  = %d", pBITS_PER_SAMPLE);
     $display("pTHRESHOLD        = %d", pTHRESHOLD);
     $display("pVERBOSE          = %d", pVERBOSE);
@@ -202,9 +200,6 @@ initial begin
     write_next_byte((threshold & 32'h0000_FF00)>>8);
     write_next_byte((threshold & 32'h00FF_0000)>>16);
     write_next_byte((threshold & 32'hFF00_0000)>>24);
-
-    if (pSHORT_SAD)
-        write_byte(`SAD_SHORT, 1);
 
     if (pFLUSH)
         write_1byte(`SAD_MULTIPLE_TRIGGERS, 0);
