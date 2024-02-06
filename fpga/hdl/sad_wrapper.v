@@ -57,6 +57,7 @@ module sad_wrapper #(
 
    wire [7:0] read_data_sad_base;
    wire [7:0] read_data_sad_x2;
+   wire [7:0] read_data_sad_x2b;
    wire [7:0] read_data_sad_x4;
 `ifdef SAD_X2
    always @(posedge clk_usb) read_data <= read_data_sad_x2;
@@ -64,7 +65,11 @@ module sad_wrapper #(
    `ifdef SAD_X4
        always @(posedge clk_usb) read_data <= read_data_sad_x4;
    `else
-       always @(posedge clk_usb) read_data <= read_data_sad_base;
+       `ifdef SAD_X2B
+           always @(posedge clk_usb) read_data <= read_data_sad_x2b;
+       `else
+           always @(posedge clk_usb) read_data <= read_data_sad_base;
+       `endif
    `endif
 `endif
 
@@ -120,6 +125,32 @@ sad #(
     .io4                (1'b0), // debug only
     .trigger            (trigger_base)
 );
+
+
+wire trigger_x2b;
+sad_x2 #(
+    .pBYTECNT_SIZE      (7),
+    .pREF_SAMPLES       (pREF_SAMPLES),
+    .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE)
+) U_x2b_dut (
+    .reset              (reset),
+    .xadc_error         (1'b0),
+    .adc_datain         (adc_datain_r[pBITS_PER_SAMPLE-1:0]),
+    .adc_sampleclk      (clk_adc),
+    .armed_and_ready    (armed_and_ready),
+    .active             (1'b1),
+    .clk_usb            (clk_usb),
+    .reg_address        (reg_address),
+    .reg_bytecnt        (reg_bytecnt),
+    .reg_datai          (write_data),
+    .reg_datao          (read_data_sad_base),
+    .reg_read           (reg_read),
+    .reg_write          (reg_write),
+    .ext_trigger        (1'b0), // debug only
+    .io4                (1'b0), // debug only
+    .trigger            (trigger_x2b)
+);
+
 
 reg ADC_slow_clk_even = 1'b0;
 reg ADC_slow_clk_odd  = 1'b1;
@@ -199,7 +230,11 @@ sad_x4_slowclock #(
     `ifdef SAD_X4
         assign trigger = trigger_x4;
     `else
-        assign trigger = trigger_base;
+        `ifdef SAD_X2B
+            assign trigger = trigger_x2b;
+        `else
+            assign trigger = trigger_base;
+        `endif
     `endif
 `endif
 

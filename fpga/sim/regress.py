@@ -236,13 +236,27 @@ tests.append(dict(name  = 'sad_base',
              THRESHOLD = [20,100], # keep threshold low to avoid unintentional triggers - testbench isn't smart enough
              TRIGGERS = 4,
              FLUSH = [0,1],
-             LINEAR_RAMP = 0,
+             LINEAR_RAMP = 1,
              TIMEOUT_CYCLES = 5000,
              SAD = 'SAD_BASE',
              TOP = 'sad_tb.v',
-             description = 'SAD block-level test.'))
+             description = 'SAD block-level test, base implementation.'))
 
-tests.append(dict(name  = 'sad_x2',
+tests.append(dict(name  = 'sad_x2b',
+             frequency = 1,
+             BITS_PER_SAMPLE = 8,
+             REF_SAMPLES = 128, # caution: large values can lead to slow simulation
+             THRESHOLD = [20,100], # keep threshold low to avoid unintentional triggers - testbench isn't smart enough
+             TRIGGERS = 4,
+             FLUSH = [0,1],
+             LINEAR_RAMP = 1,
+             TIMEOUT_CYCLES = 5000,
+             SAD = 'SAD_X2B',
+             TOP = 'sad_tb.v',
+             description = 'SAD block-level test, 2 samples per cycle.'))
+
+
+tests.append(dict(name  = 'sad_x2_slow',
              frequency = 4,
              BITS_PER_SAMPLE = 8,
              REF_SAMPLES = 128, # caution: large values can lead to slow simulation
@@ -253,9 +267,9 @@ tests.append(dict(name  = 'sad_x2',
              TIMEOUT_CYCLES = 5000,
              SAD = 'SAD_X2',
              TOP = 'sad_tb.v',
-             description = 'SAD block-level test.'))
+             description = 'SAD block-level test, 2 samples per cycle at half clock.'))
 
-tests.append(dict(name  = 'sad_x4',
+tests.append(dict(name  = 'sad_x4_slow',
              frequency = 100,
              BITS_PER_SAMPLE = 8,
              REF_SAMPLES = 128, # caution: large values can lead to slow simulation
@@ -266,7 +280,7 @@ tests.append(dict(name  = 'sad_x4',
              TIMEOUT_CYCLES = 5000,
              SAD = 'SAD_X4',
              TOP = 'sad_tb.v',
-             description = 'SAD block-level test.'))
+             description = 'SAD block-level test, 4 samples per cycle at quarter clock.'))
 
 tests.append(dict(name  = 'edge',
              frequency = 4,

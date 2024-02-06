@@ -581,35 +581,66 @@ module openadc_interface #(
 
 
     `else
+        `ifdef SAD_X2B
+           sad_x2 #(
+               .pBYTECNT_SIZE           (pBYTECNT_SIZE),
+        `ifdef PLUS
+               .pREF_SAMPLES            (256),
+               .pSAD_COUNTER_WIDTH      (13),
+        `else
+               .pREF_SAMPLES            (128),
+               .pSAD_COUNTER_WIDTH      (12),
+        `endif
+               .pBITS_PER_SAMPLE        (8)
+           ) U_sad (
+               .reset                   (reset        ),
+               .xadc_error              (xadc_error   ),
+               .adc_datain              (ADC_data_tofifo[11:4]),
+               .adc_sampleclk           (ADC_clk_sample),
+               .armed_and_ready         (armed_and_ready),
+               .active                  (sad_active   ),
+               .clk_usb                 (clk_usb      ),
+               .reg_address             (reg_address  ),
+               .reg_bytecnt             (reg_bytecnt  ),
+               .reg_datai               (reg_datai    ),
+               .reg_datao               (reg_datao_sad),
+               .reg_read                (reg_read     ),
+               .reg_write               (reg_write    ),
+               .ext_trigger             (DUT_trigger_i),
+               .io4                     (trigger_io4_i),
+               .trigger                 (trigger_sad  )
+           );
 
-       sad #(
-           .pBYTECNT_SIZE           (pBYTECNT_SIZE),
-    `ifdef PLUS
-           .pREF_SAMPLES            (256),
-           .pSAD_COUNTER_WIDTH      (13),
-    `else
-           .pREF_SAMPLES            (128),
-           .pSAD_COUNTER_WIDTH      (12),
-    `endif
-           .pBITS_PER_SAMPLE        (8)
-       ) U_sad (
-           .reset                   (reset        ),
-           .xadc_error              (xadc_error   ),
-           .adc_datain              (ADC_data_tofifo[11:4]),
-           .adc_sampleclk           (ADC_clk_sample),
-           .armed_and_ready         (armed_and_ready),
-           .active                  (sad_active   ),
-           .clk_usb                 (clk_usb      ),
-           .reg_address             (reg_address  ),
-           .reg_bytecnt             (reg_bytecnt  ),
-           .reg_datai               (reg_datai    ),
-           .reg_datao               (reg_datao_sad),
-           .reg_read                (reg_read     ),
-           .reg_write               (reg_write    ),
-           .ext_trigger             (DUT_trigger_i),
-           .io4                     (trigger_io4_i),
-           .trigger                 (trigger_sad  )
-       );
+        `else
+           sad #(
+               .pBYTECNT_SIZE           (pBYTECNT_SIZE),
+        `ifdef PLUS
+               .pREF_SAMPLES            (256),
+               .pSAD_COUNTER_WIDTH      (13),
+        `else
+               .pREF_SAMPLES            (128),
+               .pSAD_COUNTER_WIDTH      (12),
+        `endif
+               .pBITS_PER_SAMPLE        (8)
+           ) U_sad (
+               .reset                   (reset        ),
+               .xadc_error              (xadc_error   ),
+               .adc_datain              (ADC_data_tofifo[11:4]),
+               .adc_sampleclk           (ADC_clk_sample),
+               .armed_and_ready         (armed_and_ready),
+               .active                  (sad_active   ),
+               .clk_usb                 (clk_usb      ),
+               .reg_address             (reg_address  ),
+               .reg_bytecnt             (reg_bytecnt  ),
+               .reg_datai               (reg_datai    ),
+               .reg_datao               (reg_datao_sad),
+               .reg_read                (reg_read     ),
+               .reg_write               (reg_write    ),
+               .ext_trigger             (DUT_trigger_i),
+               .io4                     (trigger_io4_i),
+               .trigger                 (trigger_sad  )
+           );
+       `endif
 
    `endif
 

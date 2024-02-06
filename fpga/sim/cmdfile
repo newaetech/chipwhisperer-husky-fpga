@@ -26,6 +26,7 @@
 ../hdl/sad.v
 ../hdl/sad_x2_slowclock.v
 ../hdl/sad_x4_slowclock.v
+../hdl/sad_x2.v
 ../hdl/edge_trigger.v
 ../hdl/trigger_pulse_cdc.v
 ../fpga-common/hdl/cdc_pulse.v

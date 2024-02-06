@@ -90,16 +90,23 @@ wire [3:0] trigger_cycles;
 
 `ifdef SAD_X2
     integer sad_x2 = 1;
+    integer sad_x2b = 0;
     integer sad_x4 = 0;
     assign trigger_cycles = 2;
 `else
     integer sad_x2 = 0;
     `ifdef SAD_X4
+        integer sad_x2b = 0;
         integer sad_x4 = 1;
         assign trigger_cycles = 4;
     `else
         integer sad_x4 = 0;
         assign trigger_cycles = 1;
+        `ifdef SAD_X2B
+            integer sad_x2b = 1;
+        `else
+            integer sad_x2b = 0;
+        `endif
     `endif
 `endif
 
@@ -116,6 +123,7 @@ initial begin
     rdata = $urandom(seed);
 
     $display("SAD_X2            = %d", sad_x2);
+    $display("SAD_X2B           = %d", sad_x2b);
     $display("SAD_X4            = %d", sad_x4);
     $display("pTRIGGERS         = %d", pTRIGGERS);
     $display("pFLUSH            = %d", pFLUSH);
@@ -338,7 +346,11 @@ always @(posedge clk_adc)
     `ifdef SAD_X4
         assign trigger_expected_delayed = trigger_expected_pipe[13];
     `else
-        assign trigger_expected_delayed = trigger_expected_pipe[5];
+        `ifdef SAD_X2B
+            assign trigger_expected_delayed = trigger_expected_pipe[5];
+        `else
+            assign trigger_expected_delayed = trigger_expected_pipe[5];
+        `endif
     `endif
 `endif
 
