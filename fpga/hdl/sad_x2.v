@@ -269,11 +269,7 @@ module sad_x2 #(
 
                 else begin
                     ready2trigger[j] <= 0;
-                    //if (j == pREF_SAMPLES - pSADS_PER_CYCLE) resetter[j] <= 1'b1;
-                    //if (j == pREF_SAMPLES - 4) resetter[j] <= 1'b1; // TODO: works for first and last triggers!
-                    //if (j == pREF_SAMPLES - 3) resetter[j] <= 1'b1; // TODO: works!
-                    if (j == pREF_SAMPLES - pSADS_PER_CYCLE - 1) resetter[j] <= 1'b1; // TODO: works!
-                    //if (j == pREF_SAMPLES - 2) resetter[j] <= 1'b1; // TODO: works for middle two triggers!
+                    if (j == pREF_SAMPLES - pSADS_PER_CYCLE - 1) resetter[j] <= 1'b1;
                     else resetter[j] <= 1'b0;
                 end
 
@@ -302,13 +298,6 @@ module sad_x2 #(
         end
 
     endgenerate
-
-    wire ready2trigger10 = ready2trigger[10];
-    wire ready2trigger11 = ready2trigger[11];
-    wire ready2trigger12 = ready2trigger[12];
-    wire ready2trigger31 = ready2trigger[31];
-    wire resetter31 = resetter[31];
-    wire individual_trigger31 = individual_trigger[31];
 
 
     // heavy lifting part 2: per-**counter** generated logic:
@@ -382,6 +371,13 @@ module sad_x2 #(
     wire decision_a4 = decision_a[4];
     wire decision_a28 = decision_a[28];
     wire decision_b28 = decision_b[28];
+
+    wire ready2trigger10 = ready2trigger[10];
+    wire ready2trigger11 = ready2trigger[11];
+    wire ready2trigger12 = ready2trigger[12];
+    wire ready2trigger31 = ready2trigger[31];
+    wire resetter31 = resetter[31];
+    wire individual_trigger31 = individual_trigger[31];
 
     wire [pBITS_PER_SAMPLE-1:0] nextrefsample_a0 = nextrefsample_a[0];
     wire [pBITS_PER_SAMPLE-1:0] nextrefsample_a2 = nextrefsample_a[2];
