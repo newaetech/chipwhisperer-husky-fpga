@@ -239,7 +239,10 @@ module sad_x2 #(
     always @(posedge adc_sampleclk) begin
         // TODO: this condition is being used in several places, should declare a meaningful wire instead
         if ((armed_and_ready_adc || always_armed) && active_adc && ~xadc_error)
-            master_counter_full <= master_counter_full + 1; // overflow ok
+            if (master_counter_full == pREF_SAMPLES-1)
+                master_counter_full <= 0;
+            else
+                master_counter_full <= master_counter_full + 1;
         else
             master_counter_full <= 0;
     end
