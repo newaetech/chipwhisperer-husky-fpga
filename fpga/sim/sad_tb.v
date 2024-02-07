@@ -347,7 +347,7 @@ always @(posedge clk_adc)
         assign trigger_expected_delayed = trigger_expected_pipe[13];
     `else
         `ifdef SAD_X2B
-            assign trigger_expected_delayed = trigger_expected_pipe[5];
+            assign trigger_expected_delayed = trigger_expected_pipe[6];
         `else
             assign trigger_expected_delayed = trigger_expected_pipe[5];
         `endif

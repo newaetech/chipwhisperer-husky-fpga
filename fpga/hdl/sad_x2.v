@@ -75,6 +75,7 @@ module sad_x2 #(
     reg [pREF_SAMPLES*pBITS_PER_SAMPLE-1:0] refsamples;
     reg [pREF_SAMPLES-1:0] refen = {pREF_SAMPLES{1'b1}}; // all samples enabled by default
     reg [pREF_SAMPLES-1:0] compare_en_a, compare_en_b;
+    reg [pREF_SAMPLES-1:0] compare_en_ar, compare_en_br;
     reg [pSAD_COUNTER_WIDTH-1:0] threshold;
     wire [pMASTER_COUNTER_WIDTH-1:0] master_counter;
     reg [pMASTER_COUNTER_WIDTH-1:0] master_counter_full;
@@ -96,6 +97,8 @@ module sad_x2 #(
     reg decision_b [0:pREF_SAMPLES-1];
     reg [pBITS_PER_SAMPLE-1:0]  nextrefsample_a [0:pREF_SAMPLES-1];
     reg [pBITS_PER_SAMPLE-1:0]  nextrefsample_b [0:pREF_SAMPLES-1];
+    reg [pBITS_PER_SAMPLE-1:0]  nextrefsample_ar [0:pREF_SAMPLES-1];
+    reg [pBITS_PER_SAMPLE-1:0]  nextrefsample_br [0:pREF_SAMPLES-1];
     wire [pBITS_PER_SAMPLE-1:0]  refsample [0:pREF_SAMPLES-1];
     reg [pBITS_PER_SAMPLE-1:0] adc_datain_r;
     reg [pBITS_PER_SAMPLE-1:0] datain_a;
@@ -117,7 +120,7 @@ module sad_x2 #(
     // used in different targets or builds.
     // Format: 2 MSB = version code (00: sad.v, 01: sad_x2_slowclock.v, 10: sad_x4_slowclock.v, 11: sad_x2.v
     //         6 LSB = trigger latency
-    wire [7:0] version_bits = {2'b11, 6'd09};
+    wire [7:0] version_bits = {2'b11, 6'd10};
     wire [15:0] ref_samples = pREF_SAMPLES;
 
     // register reads:
@@ -227,10 +230,10 @@ module sad_x2 #(
         adc_datain_r  <= adc_datain;
         datain_b      <= adc_datain;
         datain_a      <= adc_datain_r;
-        datain_b_rpr  <=  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain};
-        datain_b_rmr  <= -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain};
-        datain_a_rpr  <=  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_r};
-        datain_a_rmr  <= -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_r};
+        datain_b_rpr  <=  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, datain_b};
+        datain_b_rmr  <= -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, datain_b};
+        datain_a_rpr  <=  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, datain_a};
+        datain_a_rmr  <= -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, datain_a};
     end
 
     always @(posedge adc_sampleclk) begin
@@ -263,20 +266,25 @@ module sad_x2 #(
 
                 else begin
                     ready2trigger[j] <= 0;
-                    if (j == pREF_SAMPLES - pSADS_PER_CYCLE) resetter[j] <= 1'b1; // NOTE: works for odd-numbered triggers!
+                    //if (j == pREF_SAMPLES - pSADS_PER_CYCLE) resetter[j] <= 1'b1;
+                    //if (j == pREF_SAMPLES - 4) resetter[j] <= 1'b1; // TODO: works for first and last triggers!
+                    //if (j == pREF_SAMPLES - 3) resetter[j] <= 1'b1; // TODO: works!
+                    if (j == pREF_SAMPLES - pSADS_PER_CYCLE - 1) resetter[j] <= 1'b1; // TODO: works!
+                    //if (j == pREF_SAMPLES - 2) resetter[j] <= 1'b1; // TODO: works for middle two triggers!
                     else resetter[j] <= 1'b0;
                 end
 
                 if (j%2) begin
                     if (resetter[j])
                         sad_counter[j] <= counter_incr_a[j-1] + counter_incr_b[j-1];
-                    else if (tick_tock && ~sad_counter[j][pSAD_COUNTER_WIDTH-1]) // MSB of counter is used to indicate saturation
+                    // TODO: this is not guaranteed to avoid overflow! need a better counter saturation scheme
+                    else if (~tick_tock && ~sad_counter[j][pSAD_COUNTER_WIDTH-1]) // MSB of counter is used to indicate saturation
                         sad_counter[j] <= sad_counter[j] + counter_incr_a[j-1] + counter_incr_b[j-1];
                 end
                 else begin
                     if (resetter[j])
                         sad_counter[j] <= counter_incr_a[j] + counter_incr_b[j];
-                    else if (~tick_tock && ~sad_counter[j][pSAD_COUNTER_WIDTH-1]) // MSB of counter is used to indicate saturation
+                    else if (tick_tock && ~sad_counter[j][pSAD_COUNTER_WIDTH-1]) // MSB of counter is used to indicate saturation
                         sad_counter[j] <= sad_counter[j] + counter_incr_a[j] + counter_incr_b[j];
                 end
 
@@ -295,6 +303,9 @@ module sad_x2 #(
     wire ready2trigger10 = ready2trigger[10];
     wire ready2trigger11 = ready2trigger[11];
     wire ready2trigger12 = ready2trigger[12];
+    wire ready2trigger31 = ready2trigger[31];
+    wire resetter31 = resetter[31];
+    wire individual_trigger31 = individual_trigger[31];
 
 
     // heavy lifting part 2: per-**counter** generated logic:
@@ -319,20 +330,37 @@ module sad_x2 #(
                     end
                 end
 
+                //if (~tick_tock) begin
+                    nextrefsample_ar[i] <= nextrefsample_a[i];
+                    nextrefsample_br[i] <= nextrefsample_b[i];
+                    compare_en_ar[i] <= compare_en_a[i];
+                    compare_en_br[i] <= compare_en_b[i];
+                //end
 
-                if (compare_en_b[i] == 0)
+                if (datain_b > nextrefsample_b[i])
+                    decision_b[i] <= 1'b1;
+                else
+                    decision_b[i] <= 1'b0;
+
+                if (datain_a > nextrefsample_a[i])
+                    decision_a[i] <= 1'b1;
+                else
+                    decision_a[i] <= 1'b0;
+
+
+                if (compare_en_br[i] == 0)
                     counter_incr_b[i] <= 0;
-                else if (datain_b > nextrefsample_b[i])
-                    counter_incr_b[i] <= datain_b_rpr - nextrefsample_b[i];
+                else if (decision_b[i])
+                    counter_incr_b[i] <= datain_b_rpr - nextrefsample_br[i];
                 else
-                    counter_incr_b[i] <= datain_b_rmr + nextrefsample_b[i];
+                    counter_incr_b[i] <= datain_b_rmr + nextrefsample_br[i];
 
-                if (compare_en_a[i] == 0)
+                if (compare_en_ar[i] == 0)
                     counter_incr_a[i] <= 0;
-                else if (datain_a > nextrefsample_a[i])
-                    counter_incr_a[i] <= datain_a_rpr - nextrefsample_a[i];
+                else if (decision_a[i])
+                    counter_incr_a[i] <= datain_a_rpr - nextrefsample_ar[i];
                 else
-                    counter_incr_a[i] <= datain_a_rmr + nextrefsample_a[i];
+                    counter_incr_a[i] <= datain_a_rmr + nextrefsample_ar[i];
 
             end
 
@@ -348,12 +376,17 @@ module sad_x2 #(
     wire [pBITS_PER_SAMPLE-1:0] refsample2 = refsample[2];
     wire [pBITS_PER_SAMPLE-1:0] refsample3 = refsample[3];
 
+    wire decision_a4 = decision_a[4];
+    wire decision_a28 = decision_a[28];
+    wire decision_b28 = decision_b[28];
+
     wire [pBITS_PER_SAMPLE-1:0] nextrefsample_a0 = nextrefsample_a[0];
     wire [pBITS_PER_SAMPLE-1:0] nextrefsample_a2 = nextrefsample_a[2];
     wire [pBITS_PER_SAMPLE-1:0] nextrefsample_a4 = nextrefsample_a[4];
     wire [pBITS_PER_SAMPLE-1:0] nextrefsample_a6 = nextrefsample_a[6];
     wire [pBITS_PER_SAMPLE-1:0] nextrefsample_a10 = nextrefsample_a[10];
     wire [pBITS_PER_SAMPLE-1:0] nextrefsample_a20 = nextrefsample_a[20];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample_a28 = nextrefsample_a[28];
 
     wire [pBITS_PER_SAMPLE-1:0] nextrefsample_b0 = nextrefsample_b[0];
     wire [pBITS_PER_SAMPLE-1:0] nextrefsample_b2 = nextrefsample_b[2];
@@ -361,6 +394,17 @@ module sad_x2 #(
     wire [pBITS_PER_SAMPLE-1:0] nextrefsample_b6 = nextrefsample_b[6];
     wire [pBITS_PER_SAMPLE-1:0] nextrefsample_b10 = nextrefsample_b[10];
     wire [pBITS_PER_SAMPLE-1:0] nextrefsample_b20 = nextrefsample_b[20];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample_b28 = nextrefsample_b[28];
+
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample_ar0 = nextrefsample_ar[0];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample_ar2 = nextrefsample_ar[2];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample_ar4 = nextrefsample_ar[4];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample_ar28 = nextrefsample_ar[28];
+
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample_br0 = nextrefsample_br[0];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample_br2 = nextrefsample_br[2];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample_br4 = nextrefsample_br[4];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample_br28 = nextrefsample_br[28];
 
     wire [pSAD_COUNTER_WIDTH-1:0] sad_counter0  = sad_counter[0 ];
     wire [pSAD_COUNTER_WIDTH-1:0] sad_counter1  = sad_counter[1 ];
@@ -402,6 +446,8 @@ module sad_x2 #(
     wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_a8 = counter_incr_a[8];
     wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_a10 = counter_incr_a[10];
     wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_a20 = counter_incr_a[20];
+    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_a22 = counter_incr_a[22];
+    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_a28 = counter_incr_a[28];
 
     wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_b0 = counter_incr_b[0];
     wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_b2 = counter_incr_b[2];
@@ -410,6 +456,8 @@ module sad_x2 #(
     wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_b8 = counter_incr_b[8];
     wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_b10 = counter_incr_b[10];
     wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_b20 = counter_incr_b[20];
+    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_b22 = counter_incr_b[22];
+    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_b28 = counter_incr_b[28];
 
     wire ready2trigger_debug = ready2trigger[pREF_SAMPLES-2];
 
