@@ -76,6 +76,7 @@ reg [31:0] threshold;
 integer errors;
 integer warnings;
 integer i;
+reg [7:0] base;
 integer seed;
 integer delta;
 integer abs_delta;
@@ -191,8 +192,16 @@ initial begin
     //$display("Read %d", rdata);
 
     // TODO: assuming 8-bit width for now (12 is cumbersome!)
+    base = 0;
+    write_1byte(`SAD_REFERENCE_BASE, base);
+    base = base + 1;
     rw_lots_bytes(`SAD_REFERENCE);
     for (i = 0; i < pattern_samples; i = i + 1) begin
+        if (i == base * 128) begin
+            write_1byte(`SAD_REFERENCE_BASE, base);
+            base = base + 1;
+            rw_lots_bytes(`SAD_REFERENCE);
+        end
         write_next_byte(pattern[i]);
         //$display("Reference byte %d: %x", i, pattern[i]);
     end
