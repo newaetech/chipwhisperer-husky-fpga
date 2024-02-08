@@ -84,8 +84,7 @@ module sad_x2 #(
 
     reg individual_trigger [0:pREF_SAMPLES-1];
     reg [pSAD_COUNTER_WIDTH-1:0] sad_counter [0:pREF_SAMPLES-1];
-    reg [pSAD_COUNTER_WIDTH-1:0] counter_incr_a [0:pREF_SAMPLES-1];
-    reg [pSAD_COUNTER_WIDTH-1:0] counter_incr_b [0:pREF_SAMPLES-1];
+    reg [pSAD_COUNTER_WIDTH-1:0] counter_incr [0:pREF_SAMPLES-1];
 
     wire armed_and_ready_adc;
     wire armed_and_ready_adc_r;
@@ -275,16 +274,16 @@ module sad_x2 #(
 
                 if (j%2) begin
                     if (resetter[j])
-                        sad_counter[j] <= counter_incr_a[j-1] + counter_incr_b[j-1];
+                        sad_counter[j] <= counter_incr[j-1];
                     // TODO: this is not guaranteed to avoid overflow! need a better counter saturation scheme
                     else if (~tick_tock && ~sad_counter[j][pSAD_COUNTER_WIDTH-1]) // MSB of counter is used to indicate saturation
-                        sad_counter[j] <= sad_counter[j] + counter_incr_a[j-1] + counter_incr_b[j-1];
+                        sad_counter[j] <= sad_counter[j] + counter_incr[j-1];
                 end
                 else begin
                     if (resetter[j])
-                        sad_counter[j] <= counter_incr_a[j] + counter_incr_b[j];
+                        sad_counter[j] <= counter_incr[j];
                     else if (tick_tock && ~sad_counter[j][pSAD_COUNTER_WIDTH-1]) // MSB of counter is used to indicate saturation
-                        sad_counter[j] <= sad_counter[j] + counter_incr_a[j] + counter_incr_b[j];
+                        sad_counter[j] <= sad_counter[j] + counter_incr[j];
                 end
 
 
@@ -300,7 +299,7 @@ module sad_x2 #(
     endgenerate
 
 
-    // heavy lifting part 2: per-**counter** generated logic:
+    // heavy lifting part 2: per-every-other-sample generated logic: (this is where we save logic c.f. sad.v)
     genvar i;
     generate 
         for (i = 0; i < pREF_SAMPLES; i = i + pSADS_PER_CYCLE) begin: gen_sad_counters
@@ -322,12 +321,10 @@ module sad_x2 #(
                     end
                 end
 
-                //if (~tick_tock) begin
-                    nextrefsample_ar[i] <= nextrefsample_a[i];
-                    nextrefsample_br[i] <= nextrefsample_b[i];
-                    compare_en_ar[i] <= compare_en_a[i];
-                    compare_en_br[i] <= compare_en_b[i];
-                //end
+                nextrefsample_ar[i] <= nextrefsample_a[i];
+                nextrefsample_br[i] <= nextrefsample_b[i];
+                compare_en_ar[i] <= compare_en_a[i];
+                compare_en_br[i] <= compare_en_b[i];
 
                 if (datain_b > nextrefsample_b[i])
                     decision_b[i] <= 1'b1;
@@ -339,20 +336,13 @@ module sad_x2 #(
                 else
                     decision_a[i] <= 1'b0;
 
-
-                if (compare_en_br[i] == 0)
-                    counter_incr_b[i] <= 0;
-                else if (decision_b[i])
-                    counter_incr_b[i] <= datain_b_rpr - nextrefsample_br[i];
-                else
-                    counter_incr_b[i] <= datain_b_rmr + nextrefsample_br[i];
-
-                if (compare_en_ar[i] == 0)
-                    counter_incr_a[i] <= 0;
-                else if (decision_a[i])
-                    counter_incr_a[i] <= datain_a_rpr - nextrefsample_ar[i];
-                else
-                    counter_incr_a[i] <= datain_a_rmr + nextrefsample_ar[i];
+                // Here is where the logic savings are (c.f. sad.v) since we have half the number of counter_incr registers:
+                case ({decision_b[i], decision_a[i]})
+                    2'b00: counter_incr[i] <= (compare_en_br[i]? (datain_b_rmr + nextrefsample_br[i]) : 0) + (compare_en_ar[i]? (datain_a_rmr + nextrefsample_ar[i]) : 0);
+                    2'b01: counter_incr[i] <= (compare_en_br[i]? (datain_b_rmr + nextrefsample_br[i]) : 0) + (compare_en_ar[i]? (datain_a_rpr - nextrefsample_ar[i]) : 0);
+                    2'b10: counter_incr[i] <= (compare_en_br[i]? (datain_b_rpr - nextrefsample_br[i]) : 0) + (compare_en_ar[i]? (datain_a_rmr + nextrefsample_ar[i]) : 0);
+                    2'b11: counter_incr[i] <= (compare_en_br[i]? (datain_b_rpr - nextrefsample_br[i]) : 0) + (compare_en_ar[i]? (datain_a_rpr - nextrefsample_ar[i]) : 0);
+                endcase
 
             end
 
@@ -438,25 +428,15 @@ module sad_x2 #(
     wire [pSAD_COUNTER_WIDTH-1:0] sad_counter30 = sad_counter[30];
     wire [pSAD_COUNTER_WIDTH-1:0] sad_counter31 = sad_counter[31];
 
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_a0 = counter_incr_a[0];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_a2 = counter_incr_a[2];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_a4 = counter_incr_a[4];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_a6 = counter_incr_a[6];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_a8 = counter_incr_a[8];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_a10 = counter_incr_a[10];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_a20 = counter_incr_a[20];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_a22 = counter_incr_a[22];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_a28 = counter_incr_a[28];
-
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_b0 = counter_incr_b[0];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_b2 = counter_incr_b[2];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_b4 = counter_incr_b[4];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_b6 = counter_incr_b[6];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_b8 = counter_incr_b[8];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_b10 = counter_incr_b[10];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_b20 = counter_incr_b[20];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_b22 = counter_incr_b[22];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_b28 = counter_incr_b[28];
+    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_0  = counter_incr[0];
+    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_2  = counter_incr[2];
+    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_4  = counter_incr[4];
+    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_6  = counter_incr[6];
+    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_8  = counter_incr[8];
+    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_10 = counter_incr[10];
+    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_20 = counter_incr[20];
+    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_22 = counter_incr[22];
+    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_28 = counter_incr[28];
 
     wire ready2trigger_debug = ready2trigger[pREF_SAMPLES-2];
 
