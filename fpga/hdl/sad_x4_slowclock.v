@@ -94,10 +94,10 @@ module sad_x4_slowclock #(
 
     reg individual_trigger [0:pREF_SAMPLES-1];
     reg [pSAD_COUNTER_WIDTH-1:0] sad_counter [0:pREF_SAMPLES-1];
-    reg [pSAD_COUNTER_WIDTH-1:0] counter_incr_a [0:pREF_SAMPLES-1];
-    reg [pSAD_COUNTER_WIDTH-1:0] counter_incr_b [0:pREF_SAMPLES-1];
-    reg [pSAD_COUNTER_WIDTH-1:0] counter_incr_c [0:pREF_SAMPLES-1];
-    reg [pSAD_COUNTER_WIDTH-1:0] counter_incr_d [0:pREF_SAMPLES-1];
+    reg [pBITS_PER_SAMPLE-1:0] counter_incr_a [0:pREF_SAMPLES-1];
+    reg [pBITS_PER_SAMPLE-1:0] counter_incr_b [0:pREF_SAMPLES-1];
+    reg [pBITS_PER_SAMPLE-1:0] counter_incr_c [0:pREF_SAMPLES-1];
+    reg [pBITS_PER_SAMPLE-1:0] counter_incr_d [0:pREF_SAMPLES-1];
 
     wire armed_and_ready_adc;
     wire armed_and_ready_adc_r;
@@ -148,41 +148,41 @@ module sad_x4_slowclock #(
 
 
     // sign extension:
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain1_rpr  =  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain1_r};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain1_rmr  = -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain1_r};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain1_rpr2 =  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain1_r2};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain1_rmr2 = -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain1_r2};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain1_rpr3 =  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain1_r3};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain1_rmr3 = -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain1_r3};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain1_rpr4 =  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain1_r4};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain1_rmr4 = -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain1_r4};
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain1_rpr  =  adc_datain1_r;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain1_rmr  = -adc_datain1_r;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain1_rpr2 =  adc_datain1_r2;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain1_rmr2 = -adc_datain1_r2;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain1_rpr3 =  adc_datain1_r3;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain1_rmr3 = -adc_datain1_r3;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain1_rpr4 =  adc_datain1_r4;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain1_rmr4 = -adc_datain1_r4;
 
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain2_rpr  =  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain2_r};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain2_rmr  = -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain2_r};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain2_rpr2 =  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain2_r2};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain2_rmr2 = -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain2_r2};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain2_rpr3 =  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain2_r3};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain2_rmr3 = -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain2_r3};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain2_rpr4 =  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain2_r4};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain2_rmr4 = -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain2_r4};
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain2_rpr  =  adc_datain2_r;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain2_rmr  = -adc_datain2_r;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain2_rpr2 =  adc_datain2_r2;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain2_rmr2 = -adc_datain2_r2;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain2_rpr3 =  adc_datain2_r3;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain2_rmr3 = -adc_datain2_r3;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain2_rpr4 =  adc_datain2_r4;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain2_rmr4 = -adc_datain2_r4;
 
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain3_rpr  =  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain3_r};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain3_rmr  = -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain3_r};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain3_rpr2 =  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain3_r2};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain3_rmr2 = -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain3_r2};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain3_rpr3 =  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain3_r3};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain3_rmr3 = -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain3_r3};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain3_rpr4 =  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain3_r4};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain3_rmr4 = -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain3_r4};
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain3_rpr  =  adc_datain3_r;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain3_rmr  = -adc_datain3_r;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain3_rpr2 =  adc_datain3_r2;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain3_rmr2 = -adc_datain3_r2;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain3_rpr3 =  adc_datain3_r3;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain3_rmr3 = -adc_datain3_r3;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain3_rpr4 =  adc_datain3_r4;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain3_rmr4 = -adc_datain3_r4;
 
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain4_rpr  =  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain4_r};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain4_rmr  = -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain4_r};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain4_rpr2 =  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain4_r2};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain4_rmr2 = -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain4_r2};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain4_rpr3 =  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain4_r3};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain4_rmr3 = -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain4_r3};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain4_rpr4 =  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain4_r4};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain4_rmr4 = -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain4_r4};
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain4_rpr  =  adc_datain4_r;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain4_rmr  = -adc_datain4_r;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain4_rpr2 =  adc_datain4_r2;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain4_rmr2 = -adc_datain4_r2;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain4_rpr3 =  adc_datain4_r3;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain4_rmr3 = -adc_datain4_r3;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain4_rpr4 =  adc_datain4_r4;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain4_rmr4 = -adc_datain4_r4;
 
 
     wire [23:0] status_reg = {num_triggers, 7'b0, triggered};

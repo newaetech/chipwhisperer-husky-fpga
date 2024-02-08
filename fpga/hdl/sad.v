@@ -79,7 +79,7 @@ module sad #(
 
     reg individual_trigger [0:pREF_SAMPLES-1];
     reg [pSAD_COUNTER_WIDTH-1:0] sad_counter [0:pREF_SAMPLES-1];
-    reg [pSAD_COUNTER_WIDTH-1:0] counter_incr [0:pREF_SAMPLES-1];
+    reg [pBITS_PER_SAMPLE-1:0] counter_incr [0:pREF_SAMPLES-1];
 
     wire armed_and_ready_adc;
     wire armed_and_ready_adc_r;
@@ -94,7 +94,7 @@ module sad #(
     reg [pBITS_PER_SAMPLE-1:0]  nextrefsample [0:pREF_SAMPLES-1];
     reg [pBITS_PER_SAMPLE-1:0]  nextrefsample_r [0:pREF_SAMPLES-1];
     wire [pBITS_PER_SAMPLE-1:0]  refsample [0:pREF_SAMPLES-1];
-    reg [pSAD_COUNTER_WIDTH-1:0] adc_datain_rpr, adc_datain_rmr; // sign extend
+    reg [pBITS_PER_SAMPLE-1:0] adc_datain_rpr, adc_datain_rmr; // sign extend
     reg [pBITS_PER_SAMPLE-1:0] adc_datain_r;
     wire [23:0] status_reg = {num_triggers, 7'b0, triggered};
     wire [31:0] wide_threshold_reg = {{(32-pSAD_COUNTER_WIDTH){1'b0}}, threshold}; // having a variable-width register isn't very convenient for Python
@@ -233,8 +233,8 @@ module sad #(
 
     always @(posedge adc_sampleclk) begin
         adc_datain_r <= adc_datain;
-        adc_datain_rpr <= {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_r};
-        adc_datain_rmr <= -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_r};
+        adc_datain_rpr <= adc_datain_r;
+        adc_datain_rmr <= -adc_datain_r;
     end
 
     // instantiate counters and do most of the heavy lifting:

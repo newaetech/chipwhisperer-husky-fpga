@@ -90,8 +90,8 @@ module sad_x2_slowclock #(
 
     reg individual_trigger [0:pREF_SAMPLES-1];
     reg [pSAD_COUNTER_WIDTH-1:0] sad_counter [0:pREF_SAMPLES-1];
-    reg [pSAD_COUNTER_WIDTH-1:0] counter_incr_a [0:pREF_SAMPLES-1];
-    reg [pSAD_COUNTER_WIDTH-1:0] counter_incr_b [0:pREF_SAMPLES-1];
+    reg [pBITS_PER_SAMPLE-1:0] counter_incr_a [0:pREF_SAMPLES-1];
+    reg [pBITS_PER_SAMPLE-1:0] counter_incr_b [0:pREF_SAMPLES-1];
 
     wire armed_and_ready_adc;
     wire armed_and_ready_adc_r;
@@ -124,15 +124,15 @@ module sad_x2_slowclock #(
     reg [pBITS_PER_SAMPLE-1:0] adc_datain_odd_r2;
 
     // sign extension:
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain_even_rpr  =  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_even_r};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain_even_rmr  = -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_even_r};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain_even_rpr2 =  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_even_r2};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain_even_rmr2 = -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_even_r2};
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain_even_rpr  =  adc_datain_even_r;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain_even_rmr  = -adc_datain_even_r;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain_even_rpr2 =  adc_datain_even_r2;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain_even_rmr2 = -adc_datain_even_r2;
 
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain_odd_rpr  =  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_odd_r};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain_odd_rmr  = -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_odd_r};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain_odd_rpr2 =  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_odd_r2};
-    wire [pSAD_COUNTER_WIDTH-1:0] wadc_datain_odd_rmr2 = -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, adc_datain_odd_r2};
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain_odd_rpr  =  adc_datain_odd_r;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain_odd_rmr  = -adc_datain_odd_r;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain_odd_rpr2 =  adc_datain_odd_r2;
+    wire [pBITS_PER_SAMPLE-1:0] wadc_datain_odd_rmr2 = -adc_datain_odd_r2;
 
 
 

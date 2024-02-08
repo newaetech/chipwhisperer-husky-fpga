@@ -84,7 +84,7 @@ module sad_x2 #(
 
     reg individual_trigger [0:pREF_SAMPLES-1];
     reg [pSAD_COUNTER_WIDTH-1:0] sad_counter [0:pREF_SAMPLES-1];
-    reg [pSAD_COUNTER_WIDTH-1:0] counter_incr [0:pREF_SAMPLES-1];
+    reg [pBITS_PER_SAMPLE-1:0] counter_incr [0:pREF_SAMPLES-1];
 
     wire armed_and_ready_adc;
     wire armed_and_ready_adc_r;
@@ -104,10 +104,10 @@ module sad_x2 #(
     reg [pBITS_PER_SAMPLE-1:0] datain_b;
 
     // sign extension:
-    reg [pSAD_COUNTER_WIDTH-1:0] datain_a_rpr;
-    reg [pSAD_COUNTER_WIDTH-1:0] datain_a_rmr;
-    reg [pSAD_COUNTER_WIDTH-1:0] datain_b_rpr;
-    reg [pSAD_COUNTER_WIDTH-1:0] datain_b_rmr;
+    reg [pBITS_PER_SAMPLE-1:0] datain_a_rpr;
+    reg [pBITS_PER_SAMPLE-1:0] datain_a_rmr;
+    reg [pBITS_PER_SAMPLE-1:0] datain_b_rpr;
+    reg [pBITS_PER_SAMPLE-1:0] datain_b_rmr;
 
 
     wire [23:0] status_reg = {num_triggers, 7'b0, triggered};
@@ -229,10 +229,10 @@ module sad_x2 #(
         adc_datain_r  <= adc_datain;
         datain_b      <= adc_datain;
         datain_a      <= adc_datain_r;
-        datain_b_rpr  <=  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, datain_b};
-        datain_b_rmr  <= -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, datain_b};
-        datain_a_rpr  <=  {{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, datain_a};
-        datain_a_rmr  <= -{{(pSAD_COUNTER_WIDTH-pBITS_PER_SAMPLE){1'b0}}, datain_a};
+        datain_b_rpr  <=  datain_b;
+        datain_b_rmr  <= -datain_b;
+        datain_a_rpr  <=  datain_a;
+        datain_a_rmr  <= -datain_a;
     end
 
     always @(posedge adc_sampleclk) begin
