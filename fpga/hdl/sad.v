@@ -61,7 +61,8 @@ module sad #(
                                        (pREF_SAMPLES <= 64)?  6 :
                                        (pREF_SAMPLES <= 128)? 7 :
                                        (pREF_SAMPLES <= 256)? 8 :
-                                       (pREF_SAMPLES <= 512)? 9 : 10;
+                                       (pREF_SAMPLES <= 512)? 9 :
+                                       (pREF_SAMPLES <= 1024)? 10 : 11;
 
     reg  triggered;
     reg [15:0] num_triggers;
