@@ -124,6 +124,26 @@ compile_sad:
 	-P sad_tb.pTIMEOUT_CYCLES=$(TIMEOUT_CYCLES) \
 	-o $(EXEFILE) \
 
+compile_sad_top:
+	iverilog \
+	../hdl/sad.v \
+	../hdl/sad_x2.v \
+	../hdl/sad_x2_slowclock.v \
+	../hdl/sad_x4_slowclock.v \
+	../hdl/sad_top.v \
+	../hdl/reg_sad_control.v \
+	../hdl/usb_reg_main.v \
+	../fpga-common/hdl/cdc_pulse.v \
+	../fpga-common/hdl/cdc_simple.v \
+	-y/$(VIVADO_PATH)/$(VIVADO_VERSION)/ids_lite/ISE/verilog/src/unisims/ \
+	-g2005-sv \
+	-I../hdl \
+	-Wportbind \
+	-Wselect-range \
+	-D$(VARIANT) \
+	-D$(SAD) \
+	-o $(EXEFILE) \
+
 sad_nofifo:
 	iverilog \
 	../hdl/sad.v \

@@ -190,7 +190,11 @@ module sad_x4_slowclock #(
     wire [pBITS_PER_SAMPLE-1:0] wadc_datain4_rmr4 = -adc_datain4_r4;
 
 
+`ifdef HIPERF
+    wire [23:0] status_reg = 24'b0;
+`else
     wire [23:0] status_reg = {num_triggers, 7'b0, triggered};
+`endif
     wire [31:0] wide_threshold_reg = {{(32-pSAD_COUNTER_WIDTH){1'b0}}, threshold}; // having a variable-width register isn't very convenient for Python
     reg [7:0] refbase;
 
@@ -241,7 +245,9 @@ module sad_x4_slowclock #(
                     `SAD_REFERENCE: refsamples[{refbase, reg_bytecnt}*8 +: 8] <= reg_datai;
                     `SAD_REFEN: refen[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_THRESHOLD: threshold[reg_bytecnt*8 +: 8] <= reg_datai;
+                `ifndef HIPERF
                     `SAD_MULTIPLE_TRIGGERS: multiple_triggers <= reg_datai[0];
+                `endif
                     `SAD_REFERENCE_BASE: refbase <= reg_datai;
                     `SAD_ALWAYS_ARMED: always_armed <= reg_datai[0];
                     default: ;
