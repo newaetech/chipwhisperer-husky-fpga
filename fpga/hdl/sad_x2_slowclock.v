@@ -56,7 +56,7 @@ module sad_x2_slowclock #(
     input  wire         ext_trigger,  // debug only
     input  wire         io4,  // debug only
     // verilator lint_on UNUSED
-    output reg          trigger
+    output wire         trigger
 );
 
     localparam pSADS_PER_CYCLE = 2;
@@ -67,11 +67,7 @@ module sad_x2_slowclock #(
                                        (pREF_SAMPLES <= 512)? 9 :
                                        (pREF_SAMPLES <= 1024)? 10 : 11;
 
-    reg  trigger_even;
-    reg  trigger_odd;
     reg  triggered;
-    reg  triggered_even;
-    reg  triggered_odd;
     reg [15:0] num_triggers;
     reg clear_status;
     reg clear_status_r;
@@ -88,6 +84,8 @@ module sad_x2_slowclock #(
     reg [pMASTER_COUNTER_WIDTH-1:0] master_counter_even, master_counter_odd;
     reg resetter_even [0:pREF_SAMPLES-1];
     reg resetter_odd  [0:pREF_SAMPLES-1];
+    reg trigger_even;
+    reg trigger_odd;
 
     reg individual_trigger [0:pREF_SAMPLES-1];
     reg [pSAD_COUNTER_WIDTH-1:0] sad_counter [0:pREF_SAMPLES-1];
@@ -226,28 +224,37 @@ module sad_x2_slowclock #(
    );
 
 
-
-    integer c;
-    reg trigger_r;
     always @(posedge adc_sampleclk) begin
         if (clear_status_adc || (armed_and_ready_adc && ~armed_and_ready_adc_r)) begin
             triggered <= 1'b0;
             num_triggers <= 0;
         end
-        else if (trigger && ~trigger_r) begin
+        else if (trigger) begin
             triggered <= 1'b1;
             num_triggers <= num_triggers + 1;
         end
+    end
 
-        // TODO: active check? would it be redundant?
-        trigger <= 1'b0;
-        trigger_r <= trigger;
-        for (c = 0; c < pREF_SAMPLES; c = c + 1) begin
-            if (individual_trigger[c] && ~(triggered && ~multiple_triggers)) 
-                trigger <= 1'b1;
+
+    integer c, d;
+
+    always @(posedge slow_clk_even) begin
+        trigger_even <= 1'b0;
+        for (c = 0; c < pREF_SAMPLES; c = c + pSADS_PER_CYCLE) begin
+            if (individual_trigger[c])
+                trigger_even <= 1'b1;
         end
     end
 
+    always @(posedge slow_clk_odd) begin
+        trigger_odd <= 1'b0;
+        for (d = 1; d < pREF_SAMPLES; d = d + pSADS_PER_CYCLE) begin
+            if (individual_trigger[d])
+                trigger_odd <= 1'b1;
+        end
+    end
+
+    assign trigger = trigger_even || trigger_odd;
 
     cdc_simple U_armed_and_ready_cdc (
         .reset          (reset),
@@ -375,7 +382,7 @@ module sad_x2_slowclock #(
                     sad_counter[i] <= sad_counter[i] + counter_incr_a[i] + counter_incr_b[i];
 
                 // and the triggers:
-                if ((sad_counter[i] <= threshold) && resetter_even[i] && ready2trigger_even[i])
+                if ((sad_counter[i] <= threshold) && resetter_even[i] && ready2trigger_even[i] && ~(triggered && ~multiple_triggers))
                     individual_trigger[i] <= 1'b1;
                 else
                     individual_trigger[i] <= 1'b0;
@@ -452,7 +459,7 @@ module sad_x2_slowclock #(
                     sad_counter[j] <= sad_counter[j] + counter_incr_a[j] + counter_incr_b[j];
 
                 // and the triggers:
-                if ((sad_counter[j] <= threshold) && resetter_odd[j] && ready2trigger_odd[j])
+                if ((sad_counter[j] <= threshold) && resetter_odd[j] && ready2trigger_odd[j] && ~(triggered && ~multiple_triggers))
                     individual_trigger[j] <= 1'b1;
                 else
                     individual_trigger[j] <= 1'b0;

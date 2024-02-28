@@ -58,7 +58,7 @@ module sad_x4_slowclock #(
     input  wire         ext_trigger,  // debug only
     input  wire         io4,  // debug only
     // verilator lint_on UNUSED
-    output reg          trigger
+    output wire         trigger
 );
 
     localparam pSADS_PER_CYCLE = 4;
@@ -70,6 +70,10 @@ module sad_x4_slowclock #(
                                        (pREF_SAMPLES <= 1024)? 10 : 11;
 
     reg  triggered;
+    reg  trigger1;
+    reg  trigger2;
+    reg  trigger3;
+    reg  trigger4;
     reg [15:0] num_triggers;
     reg clear_status;
     reg clear_status_r;
@@ -259,26 +263,53 @@ module sad_x4_slowclock #(
    );
 
 
-    integer c;
-    reg trigger_r;
     always @(posedge adc_sampleclk) begin
         if (clear_status_adc || (armed_and_ready_adc && ~armed_and_ready_adc_r)) begin
             triggered <= 1'b0;
             num_triggers <= 0;
         end
-        else if (trigger && ~trigger_r) begin
+        else if (trigger) begin
             triggered <= 1'b1;
             num_triggers <= num_triggers + 1;
         end
+    end
 
-        // TODO: active check? would it be redundant?
-        trigger <= 1'b0;
-        trigger_r <= trigger;
-        for (c = 0; c < pREF_SAMPLES; c = c + 1) begin
-            if (individual_trigger[c] && ~(triggered && ~multiple_triggers)) 
-                trigger <= 1'b1;
+    integer c, d, e, f;
+
+    always @(posedge slow_clk1) begin
+        trigger1 <= 1'b0;
+        for (c = 0; c < pREF_SAMPLES; c = c + pSADS_PER_CYCLE) begin
+            if (individual_trigger[c])
+                trigger1 <= 1'b1;
         end
     end
+
+    always @(posedge slow_clk2) begin
+        trigger2 <= 1'b0;
+        for (d = 1; d < pREF_SAMPLES; d = d + pSADS_PER_CYCLE) begin
+            if (individual_trigger[d])
+                trigger2 <= 1'b1;
+        end
+    end
+
+    always @(posedge slow_clk3) begin
+        trigger3 <= 1'b0;
+        for (e = 2; e < pREF_SAMPLES; e = e + pSADS_PER_CYCLE) begin
+            if (individual_trigger[e])
+                trigger3 <= 1'b1;
+        end
+    end
+
+    always @(posedge slow_clk4) begin
+        trigger4 <= 1'b0;
+        for (f = 3; f < pREF_SAMPLES; f = f + pSADS_PER_CYCLE) begin
+            if (individual_trigger[f])
+                trigger4 <= 1'b1;
+        end
+    end
+
+
+    assign trigger = trigger1 || trigger2 || trigger3 || trigger4;
 
 
     cdc_simple U_armed_and_ready_cdc (
@@ -481,7 +512,7 @@ module sad_x4_slowclock #(
                     sad_counter[i] <= sad_counter[i] + counter_incr_a[i] + counter_incr_b[i] + counter_incr_c[i] + counter_incr_d[i];
 
                 // and the triggers:
-                if ((sad_counter[i] <= threshold) && resetter1[i] && ready2trigger1[i])
+                if ((sad_counter[i] <= threshold) && resetter1[i] && ready2trigger1[i] && ~(triggered && ~multiple_triggers))
                     individual_trigger[i] <= 1'b1;
                 else
                     individual_trigger[i] <= 1'b0;
@@ -577,7 +608,7 @@ module sad_x4_slowclock #(
                     sad_counter[j] <= sad_counter[j] + counter_incr_a[j] + counter_incr_b[j] + counter_incr_c[j] + counter_incr_d[j];
 
                 // and the triggers:
-                if ((sad_counter[j] <= threshold) && resetter2[j] && ready2trigger2[j])
+                if ((sad_counter[j] <= threshold) && resetter2[j] && ready2trigger2[j] && ~(triggered && ~multiple_triggers))
                     individual_trigger[j] <= 1'b1;
                 else
                     individual_trigger[j] <= 1'b0;
@@ -673,7 +704,7 @@ module sad_x4_slowclock #(
                     sad_counter[k] <= sad_counter[k] + counter_incr_a[k] + counter_incr_b[k] + counter_incr_c[k] + counter_incr_d[k];
 
                 // and the triggers:
-                if ((sad_counter[k] <= threshold) && resetter3[k] && ready2trigger3[k])
+                if ((sad_counter[k] <= threshold) && resetter3[k] && ready2trigger3[k] && ~(triggered && ~multiple_triggers))
                     individual_trigger[k] <= 1'b1;
                 else
                     individual_trigger[k] <= 1'b0;
@@ -770,7 +801,7 @@ module sad_x4_slowclock #(
                     sad_counter[l] <= sad_counter[l] + counter_incr_a[l] + counter_incr_b[l] + counter_incr_c[l] + counter_incr_d[l];
 
                 // and the triggers:
-                if ((sad_counter[l] <= threshold) && resetter4[l] && ready2trigger4[l])
+                if ((sad_counter[l] <= threshold) && resetter4[l] && ready2trigger4[l] && ~(triggered && ~multiple_triggers))
                     individual_trigger[l] <= 1'b1;
                 else
                     individual_trigger[l] <= 1'b0;
