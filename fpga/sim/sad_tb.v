@@ -95,23 +95,22 @@ wire [3:0] trigger_cycles;
     integer sad_x2b = 0;
     integer sad_x4 = 0;
     assign trigger_cycles = 2;
+`elsif  SAD_X4
+    integer sad_x2 = 0;
+    integer sad_x2b = 0;
+    integer sad_x4 = 1;
+    assign trigger_cycles = 4;
+`elsif SAD_X2B
+    integer sad_x2 = 0;
+    integer sad_x2b = 1;
+    integer sad_x4 = 0;
+    assign trigger_cycles = 1;
 `else
     integer sad_x2 = 0;
-    `ifdef SAD_X4
-        integer sad_x2b = 0;
-        integer sad_x4 = 1;
-        assign trigger_cycles = 4;
-    `else
-        integer sad_x4 = 0;
-        assign trigger_cycles = 1;
-        `ifdef SAD_X2B
-            integer sad_x2b = 1;
-        `else
-            integer sad_x2b = 0;
-        `endif
-    `endif
+    integer sad_x2b = 0;
+    integer sad_x4 = 0;
+    assign trigger_cycles = 1;
 `endif
-
 
 wire usb_clk = clk_usb;
 `include "tb_reg_tasks.v"
@@ -354,16 +353,12 @@ always @(posedge clk_adc) begin
 end
 `ifdef SAD_X2
     assign trigger_expected_delayed = trigger_expected_pipe[9];
+`elsif  SAD_X4
+    assign trigger_expected_delayed = trigger_expected_pipe[17];
+`elsif SAD_X2B
+    assign trigger_expected_delayed = trigger_expected_pipe[7];
 `else
-    `ifdef SAD_X4
-        assign trigger_expected_delayed = trigger_expected_pipe[17];
-    `else
-        `ifdef SAD_X2B
-            assign trigger_expected_delayed = trigger_expected_pipe[7];
-        `else
-            assign trigger_expected_delayed = trigger_expected_pipe[6];
-        `endif
-    `endif
+    assign trigger_expected_delayed = trigger_expected_pipe[6];
 `endif
 
 // trigger check thread:
