@@ -52,7 +52,8 @@ reg clk_usb;
 reg clk_adc;
 reg reset;
 reg armed_and_ready;
-wire trigger;
+reg  trigger;
+wire trigger_presync;
 reg [11:0] adc_datain;
 
 reg setup_done;
@@ -346,19 +347,21 @@ initial begin
 
 end
 
-reg [13:0] trigger_expected_pipe;
-always @(posedge clk_adc)
-    trigger_expected_pipe <= {trigger_expected_pipe[12:0], trigger_expected};
+reg [17:0] trigger_expected_pipe;
+always @(posedge clk_adc) begin
+    trigger <= trigger_presync;
+    trigger_expected_pipe <= {trigger_expected_pipe[16:0], trigger_expected};
+end
 `ifdef SAD_X2
-    assign trigger_expected_delayed = trigger_expected_pipe[7];
+    assign trigger_expected_delayed = trigger_expected_pipe[9];
 `else
     `ifdef SAD_X4
-        assign trigger_expected_delayed = trigger_expected_pipe[13];
+        assign trigger_expected_delayed = trigger_expected_pipe[17];
     `else
         `ifdef SAD_X2B
-            assign trigger_expected_delayed = trigger_expected_pipe[6];
+            assign trigger_expected_delayed = trigger_expected_pipe[7];
         `else
-            assign trigger_expected_delayed = trigger_expected_pipe[5];
+            assign trigger_expected_delayed = trigger_expected_pipe[6];
         `endif
     `endif
 `endif
@@ -493,7 +496,7 @@ sad_wrapper #(
     .USB_WRn            (usb_wrn_out  ),
     .USB_CEn            (usb_cen_out  ),
     .USB_ALEn           (usb_alen_out ),
-    .trigger            (trigger)
+    .trigger            (trigger_presync)
 );
 
 

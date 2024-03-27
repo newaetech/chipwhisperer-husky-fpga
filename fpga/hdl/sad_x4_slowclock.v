@@ -70,6 +70,7 @@ module sad_x4_slowclock #(
                                        (pREF_SAMPLES <= 1024)? 10 : 11;
 
     reg  triggered;
+    reg  trigger_r;
     reg  trigger1;
     reg  trigger2;
     reg  trigger3;
@@ -203,7 +204,7 @@ module sad_x4_slowclock #(
     // used in different targets or builds.
     // Format: 2 MSB = version code (00: sad.v, 01: sad_x2_slowclock.v, 10: sad_x4_slowclock.v)
     //         6 LSB = trigger latency
-    wire [7:0] version_bits = {2'b10, 6'd18}; // NOTE: latency not verified on-target (yet)
+    wire [7:0] version_bits = {2'b10, 6'd21}; // NOTE: latency not verified on-target (yet)
     wire [15:0] ref_samples = pREF_SAMPLES;
 
     // register reads:
@@ -270,11 +271,12 @@ module sad_x4_slowclock #(
 
 
     always @(posedge adc_sampleclk) begin
+        trigger_r <= trigger;
         if (clear_status_adc || (armed_and_ready_adc && ~armed_and_ready_adc_r)) begin
             triggered <= 1'b0;
             num_triggers <= 0;
         end
-        else if (trigger) begin
+        else if (trigger && ~trigger_r) begin // trigger pulse will be 2 cycles of adc_sampleclk
             triggered <= 1'b1;
             num_triggers <= num_triggers + 1;
         end
