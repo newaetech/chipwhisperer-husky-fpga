@@ -53,8 +53,8 @@ module sad_top(
 );
 
    localparam pBYTECNT_SIZE = 7;
-   localparam pREF_SAMPLES  = 144;
-   localparam pSAD_COUNTER_WIDTH = 12;
+   localparam pREF_SAMPLES  = 320;
+   localparam pSAD_COUNTER_WIDTH = 14;
 
    wire         reset;
 
@@ -429,6 +429,32 @@ module sad_top(
        .io4                     (),
        .trigger                 (trigger_sad  )
    );
+
+`elsif ESAD
+   esad #(
+       .pBYTECNT_SIZE           (pBYTECNT_SIZE),
+       .pREF_SAMPLES            (pREF_SAMPLES),
+       .pSAD_COUNTER_WIDTH      (pSAD_COUNTER_WIDTH),
+       .pBITS_PER_SAMPLE        (8)
+   ) U_sad (
+       .reset                   (reset        ),
+       .xadc_error              (xadc_error   ),
+       .adc_datain              (ADC_data[11:4]),
+       .adc_sampleclk           (ADC_clk_sample),
+       .armed_and_ready         (armed_and_ready),
+       .active                  (sad_active   ),
+       .clk_usb                 (clk_usb_buf  ),
+       .reg_address             (reg_address  ),
+       .reg_bytecnt             (reg_bytecnt  ),
+       .reg_datai               (write_data   ),
+       .reg_datao               (read_data_sad),
+       .reg_read                (reg_read     ),
+       .reg_write               (reg_write    ),
+       .ext_trigger             (),
+       .io4                     (),
+       .trigger                 (trigger_sad  )
+   );
+
 
 `else
    sad #(

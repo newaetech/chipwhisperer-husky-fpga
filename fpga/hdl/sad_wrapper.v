@@ -126,6 +126,31 @@ sad #(
     .trigger            (trigger_base)
 );
 
+wire trigger_esad;
+esad #(
+    .pBYTECNT_SIZE      (7),
+    .pREF_SAMPLES       (pREF_SAMPLES),
+    .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE)
+) U_edut (
+    .reset              (reset),
+    .xadc_error         (1'b0),
+    .adc_datain         (adc_datain_r[pBITS_PER_SAMPLE-1:0]),
+    .adc_sampleclk      (clk_adc),
+    .armed_and_ready    (armed_and_ready),
+    .active             (1'b1),
+    .clk_usb            (clk_usb),
+    .reg_address        (reg_address),
+    .reg_bytecnt        (reg_bytecnt),
+    .reg_datai          (write_data),
+    .reg_datao          (read_data_sad_base),
+    .reg_read           (reg_read),
+    .reg_write          (reg_write),
+    .ext_trigger        (1'b0), // debug only
+    .io4                (1'b0), // debug only
+    .trigger            (trigger_esad)
+);
+
+
 
 wire trigger_x2b;
 sad_x2 #(

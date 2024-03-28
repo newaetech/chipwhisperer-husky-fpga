@@ -94,6 +94,7 @@ endif
 
 compile_sad:
 	iverilog \
+	../hdl/esad.v \
 	../hdl/sad.v \
 	../hdl/sad_x2.v \
 	../hdl/sad_x2_slowclock.v \
