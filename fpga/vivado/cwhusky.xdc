@@ -104,7 +104,7 @@ set_clock_groups -asynchronous \
 
 set_clock_groups -asynchronous \
                  -group [get_clocks observer_clk*] \
-                 -group [get_clocks ADC_clk_fb]
+                 -group [get_clocks {ADC_clk_fb adc_slow_clk_even adc_slow_clk_odd}]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks TRACECLOCK ] \
