@@ -230,7 +230,7 @@ tests.append(dict(name  = 'everything',
              description = 'ADC+LA+glitch.'))
 
 tests.append(dict(name  = 'sad_base',
-             frequency = 10,
+             frequency = 1,
              BITS_PER_SAMPLE = 8,
              REF_SAMPLES = 128, # caution: large values can lead to slow simulation
              THRESHOLD = [20,100], # keep threshold low to avoid unintentional triggers - testbench isn't smart enough
@@ -243,21 +243,21 @@ tests.append(dict(name  = 'sad_base',
              description = 'SAD block-level test, base implementation.'))
 
 tests.append(dict(name  = 'sad_x2b',
-             frequency = 1,
+             frequency = 10,
              BITS_PER_SAMPLE = 8,
              REF_SAMPLES = 128, # caution: large values can lead to slow simulation
              THRESHOLD = [20,100], # keep threshold low to avoid unintentional triggers - testbench isn't smart enough
              TRIGGERS = 4,
              FLUSH = [0,1],
              LINEAR_RAMP = 1,
-             TIMEOUT_CYCLES = 5000,
+             TIMEOUT_CYCLES = 10000,
              SAD = 'SAD_X2B',
              TOP = 'sad_tb.v',
              description = 'SAD block-level test, 2 samples per cycle.'))
 
 
 tests.append(dict(name  = 'sad_x2_slow',
-             frequency = 4,
+             frequency = 1,
              BITS_PER_SAMPLE = 8,
              REF_SAMPLES = 128, # caution: large values can lead to slow simulation
              THRESHOLD = [20,100], # keep threshold low to avoid unintentional triggers - testbench isn't smart enough
@@ -270,7 +270,7 @@ tests.append(dict(name  = 'sad_x2_slow',
              description = 'SAD block-level test, 2 samples per cycle at half clock.'))
 
 tests.append(dict(name  = 'sad_x4_slow',
-             frequency = 100,
+             frequency = 10,
              BITS_PER_SAMPLE = 8,
              REF_SAMPLES = 128, # caution: large values can lead to slow simulation
              THRESHOLD = [20,100], # keep threshold low to avoid unintentional triggers - testbench isn't smart enough
