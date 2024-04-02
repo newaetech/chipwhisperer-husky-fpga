@@ -63,7 +63,6 @@ module sad_single_counter #(
 
     reg [pSAD_COUNTER_WIDTH-1:0] sad_counter;
     reg [pSAD_COUNTER_WIDTH-1:0] sad_counter_r;
-    reg [pBITS_PER_SAMPLE-1:0] counter_incr [0:pREF_SAMPLES-1];
 
     wire [pBITS_PER_SAMPLE-1:0] refsample [0:pREF_SAMPLES-1];
     reg [pBITS_PER_SAMPLE-1:0] adc_datain_rpr, adc_datain_rmr; // sign extend
@@ -116,9 +115,6 @@ module sad_single_counter #(
         end
     end
 
-    // TODO: without worrying about correctness, figure out how to do
-    // generate-based sad_counter computation across all samples, in a way
-    // that's accepted by both iverilog and Vivado!
     genvar i;
     generate 
         for (i = 0; i < pREF_SAMPLES; i = i + 1) begin: gen_sad_counters
