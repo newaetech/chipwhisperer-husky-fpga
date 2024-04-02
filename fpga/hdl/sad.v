@@ -24,9 +24,6 @@ Author: Jean-Pierre Thibault <jpthibault@newae.com>
 *************************************************************************/
 
 module sad #(
-    // Note: pREF_SAMPLES * pBITS_PER_SAMPLE / 8 must not exceed 2**pBYTECNT_SIZE
-    // FIFO allows up to 1024 pREF_SAMPLES and 12 pBITS_PER_SAMPLE; if either is
-    // exceeded, the FIFO must be updated in Vivado.
     parameter pBYTECNT_SIZE = 7,
     parameter pREF_SAMPLES = 32, 
     parameter pBITS_PER_SAMPLE = 8,
