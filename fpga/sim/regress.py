@@ -243,7 +243,7 @@ tests.append(dict(name  = 'sad_base',
              description = 'SAD block-level test, base implementation.'))
 
 tests.append(dict(name  = 'sad_x2b',
-             frequency = 10,
+             frequency = 100,
              BITS_PER_SAMPLE = 8,
              REF_SAMPLES = 128, # caution: large values can lead to slow simulation
              THRESHOLD = [20,100], # keep threshold low to avoid unintentional triggers - testbench isn't smart enough
@@ -270,7 +270,7 @@ tests.append(dict(name  = 'sad_x2_slow',
              description = 'SAD block-level test, 2 samples per cycle at half clock.'))
 
 tests.append(dict(name  = 'sad_x4_slow',
-             frequency = 10,
+             frequency = 100,
              BITS_PER_SAMPLE = 8,
              REF_SAMPLES = 128, # caution: large values can lead to slow simulation
              THRESHOLD = [20,100], # keep threshold low to avoid unintentional triggers - testbench isn't smart enough

@@ -96,17 +96,22 @@ compile_sad:
 	iverilog \
 	../hdl/esad.v \
 	../hdl/sad.v \
+	../hdl/sad_single_counter.v \
 	../hdl/sad_x2.v \
+	../hdl/sad_x2_fastclock.v \
 	../hdl/sad_x2_slowclock.v \
 	../hdl/sad_x4_slowclock.v \
 	../hdl/sad_wrapper.v \
 	../hdl/usb_reg_main.v \
+	../fpga-common/hdl/fifo_sync.v \
+	vivado/xpm_memory.sv \
 	../fpga-common/hdl/cdc_pulse.v \
 	../fpga-common/hdl/cdc_simple.v \
 	sad_tb.v \
 	vivado/sad_fifo_sim_netlist.v \
 	-y/$(VIVADO_PATH)/$(VIVADO_VERSION)/ids_lite/ISE/verilog/src/unisims/ \
 	-g2005-sv \
+	-gsupported-assertions \
 	-I../hdl \
 	-Wportbind \
 	-Wselect-range \
