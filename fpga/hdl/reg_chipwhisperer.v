@@ -97,6 +97,7 @@ module reg_chipwhisperer #(
 
    output wire        enable_output_nrst,
    output wire        output_nrst,
+   output wire        nrst_ignore_highz,
    output wire        enable_output_pdid,
    output wire        output_pdid,
    output wire        enable_output_pdic,
@@ -553,6 +554,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
    assign enable_output_nrst = registers_iorouting[48];
    assign output_nrst = registers_iorouting[49];
+   assign nrst_ignore_highz = registers_iorouting[54];
    assign enable_output_pdid = registers_iorouting[50];
    assign output_pdid = registers_iorouting[51];
    assign enable_output_pdic = registers_iorouting[52];
