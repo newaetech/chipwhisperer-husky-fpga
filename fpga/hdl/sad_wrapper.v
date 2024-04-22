@@ -61,16 +61,12 @@ module sad_wrapper #(
    wire [7:0] read_data_sad_x4;
 `ifdef SAD_X2
    always @(posedge clk_usb) read_data <= read_data_sad_x2;
-   `else
-   `ifdef SAD_X4
-       always @(posedge clk_usb) read_data <= read_data_sad_x4;
-   `else
-       `ifdef SAD_X2B
-           always @(posedge clk_usb) read_data <= read_data_sad_x2b;
-       `else
-           always @(posedge clk_usb) read_data <= read_data_sad_base;
-       `endif
-   `endif
+`elsif SAD_X4
+   always @(posedge clk_usb) read_data <= read_data_sad_x4;
+`elsif SAD_X2B
+   always @(posedge clk_usb) read_data <= read_data_sad_x2b;
+`else
+   always @(posedge clk_usb) read_data <= read_data_sad_base;
 `endif
 
    assign USB_Data = cmdfifo_isout ? cmdfifo_dout : 8'bZ;
