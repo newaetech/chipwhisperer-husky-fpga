@@ -51,7 +51,7 @@ module esad #(
     // FIFO allows up to 1024 pREF_SAMPLES and 12 pBITS_PER_SAMPLE; if either is
     // exceeded, the FIFO must be updated in Vivado.
     parameter pBYTECNT_SIZE = 7,
-    parameter pREF_SAMPLES = 32, 
+    parameter pREF_SAMPLES = 32,  // note this is the number of samples in extended-mode
     parameter pBITS_PER_SAMPLE = 8,
     parameter pSAD_COUNTER_WIDTH = 16
 )(
@@ -95,6 +95,7 @@ module esad #(
     wire clear_status_adc;
 
     reg always_armed;
+    reg emode;
     reg multiple_triggers;
     reg [pREF_SAMPLES*pBITS_PER_SAMPLE-1:0] refsamples;
     reg [pREF_SAMPLES-1:0] refen = {pREF_SAMPLES{1'b1}}; // all samples enabled by default
@@ -141,9 +142,9 @@ module esad #(
     // These are a property of this module; used here to make sure Python
     // knows what it's talking to, in case there may be different SAD modules
     // used in different targets or builds.
-    // Format: 2 MSB = version code (00: sad.v, 01: sad_x2_slowclock.v)
+    // Format: 2 MSB = version code (00: sad.v, 01: sad_x2_slowclock.v, 10: sad_x4_slowclock.v, 11: esad.v)
     //         6 LSB = trigger latency
-    wire [7:0] version_bits = {2'b00, 6'd09}; // TODO: adjust
+    wire [7:0] version_bits = {2'b11, 6'd09};
 
     // register reads:
     always @(*) begin
@@ -158,6 +159,7 @@ module esad #(
                 `SAD_COUNTER_WIDTH: reg_datao = pSAD_COUNTER_WIDTH;
                 `SAD_MULTIPLE_TRIGGERS: reg_datao = {7'b0, multiple_triggers};
                 `SAD_ALWAYS_ARMED: reg_datao <= {7'b0, always_armed};
+                `SAD_EMODE: reg_datao <= {7'b0, emode};
                 `SAD_VERSION: reg_datao = version_bits;
                 default: reg_datao = 0;
             endcase
@@ -175,6 +177,7 @@ module esad #(
             multiple_triggers <= 0;
             refbase <= 0;
             always_armed <= 0;
+            emode <= 1'b0;
             refen <= {pREF_SAMPLES{1'b1}}; // all samples enabled by default
         end 
         else begin
@@ -189,6 +192,7 @@ module esad #(
                 `endif
                     `SAD_REFERENCE_BASE: refbase <= reg_datai;
                     `SAD_ALWAYS_ARMED: always_armed <= reg_datai[0];
+                    `SAD_EMODE: emode <= reg_datai[0];
                     default: ;
                 endcase
                 if (reg_address == `SAD_STATUS)
@@ -329,10 +333,16 @@ module esad #(
 
                 if (~(armed_and_ready_adc && active && ~xadc_error)) begin
                     // important to reset this! However, it's not necessary to reset sad_counter - they will take care of themselves
-                    extended_mode[i] <= {pNUM_COUNTERS{1'b0}}; 
-                    trigger_possible[i] <= {pNUM_COUNTERS{1'b0}}; // this is the culprit which somehow makes Vivado eliminate adc_sampleclk!
+                    if (emode) begin
+                        extended_mode[i] <= {pNUM_COUNTERS{1'b0}}; 
+                        trigger_possible[i] <= {pNUM_COUNTERS{1'b0}}; // this is the culprit which somehow makes Vivado eliminate adc_sampleclk!
+                    end
+                    else begin
+                        extended_mode[i] <= {pNUM_COUNTERS{1'b0}}; 
+                        trigger_possible[i] <= {pNUM_COUNTERS{1'b1}}; // this is the culprit which somehow makes Vivado eliminate adc_sampleclk!
+                    end
                 end
-                else if (halfpoint[i]) begin
+                else if (halfpoint[i] && emode) begin
                     if (extended_mode[i]) begin
                         extended_mode[i] <= 1'b0;
                         trigger_possible[i] <= 1'b1;
