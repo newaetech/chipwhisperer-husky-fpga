@@ -94,6 +94,7 @@ module esad #(
     reg clear_status_r;
     wire clear_status_adc;
 
+    reg always_armed;
     reg multiple_triggers;
     reg [pREF_SAMPLES*pBITS_PER_SAMPLE-1:0] refsamples;
     reg [pREF_SAMPLES-1:0] refen = {pREF_SAMPLES{1'b1}}; // all samples enabled by default
@@ -117,8 +118,6 @@ module esad #(
     reg ready2trigger0;
     reg [pNUM_COUNTERS-1:1] ready2trigger_1andup;
     wire [pNUM_COUNTERS-1:0] ready2trigger_all = {ready2trigger_1andup, ready2trigger0};
-    //reg ready2trigger_pre;
-    //reg ready2trigger;
 
     reg  decision [0:pNUM_COUNTERS-1];
     reg [pBITS_PER_SAMPLE-1:0]  nextrefsample [0:pNUM_COUNTERS-1];
@@ -158,6 +157,7 @@ module esad #(
                 `SAD_REF_SAMPLES: reg_datao = ref_samples[reg_bytecnt*8 +: 8];
                 `SAD_COUNTER_WIDTH: reg_datao = pSAD_COUNTER_WIDTH;
                 `SAD_MULTIPLE_TRIGGERS: reg_datao = {7'b0, multiple_triggers};
+                `SAD_ALWAYS_ARMED: reg_datao <= {7'b0, always_armed};
                 `SAD_VERSION: reg_datao = version_bits;
                 default: reg_datao = 0;
             endcase
@@ -174,6 +174,7 @@ module esad #(
             clear_status_r <= 0;
             multiple_triggers <= 0;
             refbase <= 0;
+            always_armed <= 0;
             refen <= {pREF_SAMPLES{1'b1}}; // all samples enabled by default
         end 
         else begin
@@ -187,6 +188,7 @@ module esad #(
                     `SAD_MULTIPLE_TRIGGERS: multiple_triggers <= reg_datai[0];
                 `endif
                     `SAD_REFERENCE_BASE: refbase <= reg_datai;
+                    `SAD_ALWAYS_ARMED: always_armed <= reg_datai[0];
                     default: ;
                 endcase
                 if (reg_address == `SAD_STATUS)
@@ -227,19 +229,13 @@ module esad #(
     wire [pMASTER_COUNTER_WIDTH-1:0] master_counter_top = pREF_SAMPLES-1;
 
     always @(posedge adc_sampleclk) begin
-        if (armed_and_ready_adc && active && ~xadc_error) begin
+        if ((armed_and_ready_adc || always_armed) && active && ~xadc_error) begin
             ready2trigger_1andup <= {ready2trigger_1andup[pNUM_COUNTERS-2:1], ready2trigger0};
             resetter <= {resetter[pNUM_COUNTERS-2:0], resetter[pNUM_COUNTERS-1]};
             halfpoint <= {halfpoint[pNUM_COUNTERS-2:0], halfpoint[pNUM_COUNTERS-1]};
             if (master_counter == master_counter_top) begin
                 ready2trigger0 <= 1;
                 master_counter <= 0;
-                /* for better timing (see NOTE comment below on trigger assignment)
-                if (ready2trigger_pre)
-                    ready2trigger <= 1;
-                else
-                    ready2trigger_pre <= 1;
-                */
             end
             else
                 master_counter <= master_counter + 1;
@@ -248,10 +244,6 @@ module esad #(
             master_counter <= 0;
             ready2trigger0 <= 0;
             ready2trigger_1andup <= 0;
-            /*
-            ready2trigger_pre <= 0;
-            ready2trigger <= 0;
-            */
             resetter <= {2'b0, 1'b1, {(pNUM_COUNTERS-3){1'b0}}};
             halfpoint <= {{(pNUM_COUNTERS-2){1'b0}}, 1'b1, 1'b0};
         end
@@ -259,16 +251,12 @@ module esad #(
 
     integer c;
     always @(posedge adc_sampleclk) begin
-        if (~active || ~armed_and_ready_adc)
+        if (~active || (~armed_and_ready_adc && ~always_armed))
             trigger <= 1'b0;
         else begin
             trigger <= 1'b0;
             for (c = 0; c < pNUM_COUNTERS; c = c + 1) begin
                 if (individual_trigger[c] && ~(triggered && ~multiple_triggers)) trigger <= 1'b1;
-                // NOTE: the alternative below results in better timing, but in the case of multiple triggers it
-                // *can* result in missed triggers if they are too close together. If trying this, also remove
-                // the ready2trigger_all condition onthe individual_trigger assignment (in a later block).
-                //if (individual_trigger[c] && ready2trigger && ~(triggered && ~multiple_triggers)) trigger <= 1'b1;
             end
         end
     end
@@ -299,13 +287,11 @@ module esad #(
                     compare_en_short[0] <= refen[master_counter_short];
                     compare_en_extended[0] <= refen[master_counter];
                     if (extended_mode[0]) begin
-                        //nextrefsample[0] <= refsample[master_counter];
-                        nextrefsample[0] <= nextrefsample_extended[0]; // NON-FUNCTIONAL EXPERIMENT!
+                        nextrefsample[0] <= refsample[master_counter];
                         compare_en[0] <= refen[master_counter];
                     end
                     else begin
-                        //nextrefsample[0] <= refsample[master_counter_short];
-                        nextrefsample[0] <= nextrefsample_short[0]; // NON-FUNCTIONAL EXPERIMENT!
+                        nextrefsample[0] <= refsample[master_counter_short];
                         compare_en[0] <= refen[master_counter_short];
                     end
                 end
