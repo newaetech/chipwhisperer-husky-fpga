@@ -153,6 +153,10 @@ sad_x2_slowclock #(
     .trigger            (trigger_x2)
 );
 
+reg trigger_x2_r;
+always @(posedge clk_adc) trigger_x2_r <= trigger_x2;
+wire trigger_x2_1cycle = trigger_x2_r && trigger_x2;
+
 
 /* NOTE: these can be uncommented if you want to see them in action;
   commenting them out for faster compilation of the SAD modules that *are*
@@ -206,33 +210,34 @@ sad_x2_fastclock #(
     .io4                (1'b0), // debug only
     .trigger            (trigger_fast)
 );
-
-
-wire trigger_esad;
-esad #(
-    .pBYTECNT_SIZE      (7),
-    .pREF_SAMPLES       (pREF_SAMPLES),
-    .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE)
-) U_edut (
-    .reset              (reset),
-    .xadc_error         (1'b0),
-    .adc_datain         (adc_datain_r[pBITS_PER_SAMPLE-1:0]),
-    .adc_sampleclk      (clk_adc),
-    .armed_and_ready    (armed_and_ready),
-    .active             (1'b1),
-    .clk_usb            (clk_usb),
-    .reg_address        (reg_address),
-    .reg_bytecnt        (reg_bytecnt),
-    .reg_datai          (write_data),
-    .reg_datao          (read_data_sad_base),
-    .reg_read           (reg_read),
-    .reg_write          (reg_write),
-    .ext_trigger        (1'b0), // debug only
-    .io4                (1'b0), // debug only
-    .trigger            (trigger_esad)
-);
-
 */
+
+
+`ifdef ESAD
+    wire trigger_esad;
+    esad #(
+        .pBYTECNT_SIZE      (7),
+        .pREF_SAMPLES       (pREF_SAMPLES*2), // TODO: temp - for when emode is off
+        .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE)
+    ) U_edut (
+        .reset              (reset),
+        .xadc_error         (1'b0),
+        .adc_datain         (adc_datain_r[pBITS_PER_SAMPLE-1:0]),
+        .adc_sampleclk      (clk_adc),
+        .armed_and_ready    (armed_and_ready),
+        .active             (1'b1),
+        .clk_usb            (clk_usb),
+        .reg_address        (reg_address),
+        .reg_bytecnt        (reg_bytecnt),
+        .reg_datai          (write_data),
+        .reg_datao          (read_data_sad_base),
+        .reg_read           (reg_read),
+        .reg_write          (reg_write),
+        .ext_trigger        (1'b0), // debug only
+        .io4                (1'b0), // debug only
+        .trigger            (trigger_esad)
+    );
+`endif
 
 
 `ifdef SAD_X2B
@@ -301,15 +306,22 @@ esad #(
         .io4                (1'b0), // debug only
         .trigger            (trigger_x4)
     );
+
+    reg [1:0] trigger_x4_r;
+    always @(posedge clk_adc) trigger_x4_r <= {trigger_x4_r[0], trigger_x4};
+    wire trigger_x4_1cycle = trigger_x4_r[0] && ~trigger_x4_r[1];
+
 `endif
 
 
 `ifdef SAD_X2
-    assign trigger = trigger_x2;
+    assign trigger = trigger_x2_1cycle;
 `elsif SAD_X4
-    assign trigger = trigger_x4;
+    assign trigger = trigger_x4_1cycle;
 `elsif SAD_X2B
     assign trigger = trigger_x2b;
+`elsif ESAD
+    assign trigger = trigger_esad;
 `else
     assign trigger = trigger_base;
 `endif

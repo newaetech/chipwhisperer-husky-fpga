@@ -33,7 +33,6 @@ class Registers(object):
                 self.dut.USB_CEn.value = 1
                 await ClockCycles(self.dut.clk_usb, 1)
         finally:
-            self.dut.w.value = 0
             self.lock.release()
 
     async def read(self, address, size=1) -> bytearray:

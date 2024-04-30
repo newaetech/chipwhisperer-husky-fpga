@@ -229,6 +229,19 @@ tests.append(dict(name  = 'everything',
              GLITCH_CAPTURE = 1,
              description = 'ADC+LA+glitch.'))
 
+tests.append(dict(name  = 'sad_coco',
+             frequency = 1,
+             BITS_PER_SAMPLE = 8,
+             REF_SAMPLES = 32,
+             TRIGGERS = 4,
+             LINEAR_RAMP = 1,
+             TIMEOUT_CYCLES = 5000,
+             MULTIPLE_TRIGGERS = 1,
+             SAD = 'SAD_BASE',
+             #SAD = 'SAD_X2',
+             TOP = 'sad_cocowrapper.v',
+             description = 'SAD block-level test, base implementation.'))
+
 tests.append(dict(name  = 'sad_base',
              frequency = 1,
              BITS_PER_SAMPLE = 8,
@@ -241,6 +254,20 @@ tests.append(dict(name  = 'sad_base',
              SAD = 'SAD_BASE',
              TOP = 'sad_tb.v',
              description = 'SAD block-level test, base implementation.'))
+
+tests.append(dict(name  = 'esad',
+             frequency = 1,
+             BITS_PER_SAMPLE = 8,
+             REF_SAMPLES = 128, # caution: large values can lead to slow simulation
+             THRESHOLD = [20,100], # keep threshold low to avoid unintentional triggers - testbench isn't smart enough
+             TRIGGERS = 4,
+             FLUSH = [0,1],
+             LINEAR_RAMP = 1,
+             TIMEOUT_CYCLES = 5000,
+             SAD = 'ESAD',
+             TOP = 'sad_tb.v',
+             description = 'SAD block-level test, eSAD implementation.'))
+
 
 tests.append(dict(name  = 'sad_x2b',
              frequency = 100,
@@ -472,6 +499,8 @@ for test in tests:
              cocotb = False
          elif key == 'TOP' and test[key] == 'trigger_sequencer_cocowrapper.v':
              makeargs[1] = 'all_trigger_sequencer'
+         elif key == 'TOP' and test[key] == 'sad_cocowrapper.v':
+             makeargs[1] = 'all_sad_coco'
          else:
             if type(test[key]) == list:
                value = random.randint(test[key][0], test[key][1])

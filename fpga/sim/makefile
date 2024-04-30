@@ -52,7 +52,9 @@ MAX_SIZE=100
 NO_DOWNSTREAM_TRIGGERS=0
 VIVADO_VERSION=2020.2
 VARIANT=REGULAR
-SAD=SAD_X2
+SAD=SAD
+EMODE=0
+INTERVAL_MATCH=0
 FIFO_TYPE=NOXILINXFIFO
 NUM_TRIGGERS=4
 COUNTER_WIDTH=16
@@ -62,6 +64,7 @@ all: compile run
 all_sad: compile_sad run
 all_edge: compile_edge run
 all_trigger_sequencer: compile_trigger_sequencer run_trigger_sequencer
+all_sad_coco: compile_sad_coco run_sad_coco
 coco: compile_coco run_coco
 
 ifeq ($(VIVADO_PATH),)
@@ -207,6 +210,37 @@ compile_trigger_sequencer:
 	-o $(EXEFILE) \
 	../hdl/trigger_sequencer.v \
 	trigger_sequencer_cocowrapper.v \
+
+compile_sad_coco:
+	iverilog -g2005-sv \
+	-gsupported-assertions \
+	-s sad_cocowrapper \
+	-Wportbind \
+	-Wselect-range \
+	-DCOCOTB_SIM=1 \
+	-D$(SAD) \
+	-I../hdl \
+	-P sad_cocowrapper.pDUMP=$(DUMP) \
+	-P sad_cocowrapper.pBITS_PER_SAMPLE=$(BITS_PER_SAMPLE) \
+	-P sad_cocowrapper.pREF_SAMPLES=$(REF_SAMPLES) \
+	-P sad_cocowrapper.pINTERVAL_MATCH=$(INTERVAL_MATCH) \
+	-P sad_cocowrapper.pCOUNTER_WIDTH=$(COUNTER_WIDTH) \
+	-P sad_cocowrapper.pEMODE=$(EMODE) \
+	-o $(EXEFILE) \
+	../hdl/sad_top.v \
+	../hdl/sad_wrapper.v \
+	../hdl/esad.v \
+	../hdl/sad.v \
+	../hdl/sad_single_counter.v \
+	../hdl/sad_x2.v \
+	../hdl/sad_x2_fastclock.v \
+	../hdl/sad_x2_slowclock.v \
+	../hdl/sad_x4_slowclock.v \
+	../hdl/usb_reg_main.v \
+	../fpga-common/hdl/cdc_pulse.v \
+	../fpga-common/hdl/cdc_simple.v \
+	sad_cocowrapper.v \
+
 
 compile:
 	iverilog -ccmdfile \
@@ -408,6 +442,18 @@ run_trigger_sequencer:
 	vvp -M $(shell cocotb-config --lib-dir) \
 	-m $(shell cocotb-config --lib-name vpi icarus) \
 	-l$(LOGFILE) $(EXEFILE) -$(WAVEFORMAT) \
+
+run_sad_coco:
+	COCOTB_RESOLVE_X=RANDOM \
+	TOPLEVEL=sad_cocowrapper \
+	TOPLEVEL_LANG=verilog \
+	MODULE=test_sad \
+	COCOTB_LOG_LEVEL=$(COCOTB_LOG_LEVEL) \
+	LIBPYTHON_LOC=$(shell cocotb-config --libpython) \
+	vvp -M $(shell cocotb-config --lib-dir) \
+	-m $(shell cocotb-config --lib-name vpi icarus) \
+	-l$(LOGFILE) $(EXEFILE) -$(WAVEFORMAT) \
+
 
 clean:
 	rm -f a.out results/*.vvp
