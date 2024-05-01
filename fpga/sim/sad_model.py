@@ -42,6 +42,7 @@ class Counter(object):
         self.valid = False
         self.starting_sample = None
         self.current_idx = -1
+        self.ready2trigger = False
         self.SAD = 0
 
     def activate(self, time=-1):
@@ -64,6 +65,10 @@ class Counter(object):
         # - covered: True is sample is covered by a counter *as the first sample of a potential match pattern*
         match = False
         covered = True
+        if not armed_and_ready:
+            self.reset()
+            return (match, covered)
+
         if not self.started:
             return (match, covered)
 
@@ -134,7 +139,6 @@ class SAD(object):
         self.match_counters = []
         self.uncovered_samples = []
         self.covered = []
-        self.active_counters = 0
         for i in range(self.num_counters):
             self.counters.append(Counter(i, ref, refen, half_threshold, threshold, startup_latency, emode, verbose))
 
@@ -175,7 +179,7 @@ class SAD(object):
         # on the first run through, counters are started one at a time:
         #if i < self.num_counters:
         #    self.counters[i].activate(i)
-        if self.active_counters < self.num_counters:
+        if armed_and_ready:
             self.activate_next_counter()
         # all activated counters are in free-running mode:
         matched = False

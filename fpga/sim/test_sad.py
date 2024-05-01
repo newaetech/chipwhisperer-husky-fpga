@@ -178,15 +178,10 @@ class SADTest(object):
 
         self.errors = 0
 
-        #self.trigger_queue = Queue(maxsize=num_triggers)
+        self.blackout_request_queue = Queue()
+        self.blackout_done_queue = Queue()
 
-        self.trigger_expected = False
-        self._trigger_allowed_queue = Queue()
-
-        self.armed = Event()
         self._coro = None
-        self._checkcoro = None
-        self._trigger_watch_coro = None
 
         # establish SAD reference (and which samples are enabled):
         self.pattern = []
@@ -214,7 +209,7 @@ class SADTest(object):
         self.dut._log.info('SAD threshold randomized to: %d' % self.threshold)
 
         # instantiate SAD model:
-        self.SAD_model = SAD(self.pattern, self.refen, 0, self.threshold, 5, False, False)
+        self.SAD_model = SAD(self.pattern, self.refen, 0, self.threshold, 3, False, False)
 
     def start(self):
         """Start test thread"""
@@ -295,6 +290,7 @@ class SADTest(object):
     async def _run(self):
         self.dut._log.debug('_run starting')
         await self.dut_setup()
+        self._armed_generator = cocotb.start_soon(self._armed_generator_thread())
         self._sample_generator = cocotb.start_soon(self._sample_generator_thread())
         self._model_feeder = cocotb.start_soon(self._model_feeder_thread())
         self._trigger_watch_coro = cocotb.start_soon(self._trigger_watch_thread())
@@ -312,19 +308,24 @@ class SADTest(object):
         # under_threshold is True, we may sometimes (randomly) end up over threshold (but that's
         # ok!).
         # We rely on SAD_model to known when triggers should occur.
-        self.dut.armed_and_ready.value = 1  # TODO: randomize and move to separate thread?
-        # start with a variable-length pattern which definitely won't trigger, because DUT and model have different start-up phases
-        #delta = max(2, int(self.threshold / self.samples_enabled * 4))
-        #self.dut._log.info('DEBUG: delta = %d' % delta)
-        #for i in range(random.randint(self.ref_samples, self.ref_samples*2)):
-        #    if self.pattern[i % self.ref_samples] > delta:
-        #        value = self.pattern[i % self.ref_samples] - delta
-        #    else:
-        #        value = min(2**bits_per_sample-1, self.pattern[i % self.ref_samples] + delta)
-        #    self.dut.adc_datain.value = value
-        #    await ClockCycles(self.dut.clk_adc, 1)
-
         while True:
+            if not self.blackout_request_queue.empty():
+                # check whether _armed_generator_thread wants to change armed_and_ready;
+                # see comments there to understand what we do here when this happend.
+                self.blackout_request_queue.get_nowait()
+                self.dut._log.info('sample generator: blackout request received')
+                delta = max(2, int(self.threshold / self.samples_enabled * 4))
+                #self.dut._log.info('DEBUG: delta = %d' % delta)
+
+                for i in range(self.ref_samples*2):
+                    if self.pattern[i % self.ref_samples] > delta:
+                        value = self.pattern[i % self.ref_samples] - delta
+                    else:
+                        value = min(2**bits_per_sample-1, self.pattern[i % self.ref_samples] + delta)
+                    self.dut.adc_datain.value = value
+                    await ClockCycles(self.dut.clk_adc, 1)
+                self.blackout_done_queue.put_nowait(0)
+
             if random.randint(0, 4) > 0:
                 under_threshold = 0
             else:
@@ -369,12 +370,14 @@ class SADTest(object):
     async def _model_feeder_thread(self):
         # feed self.dut.adc_datain inputs to SAD_model and generate expected_trigger:
         while True:
-            match = self.SAD_model.step(int(self.dut.adc_datain), self.dut.armed_and_ready)
+            match = self.SAD_model.step(int(self.dut.adc_datain), int(self.dut.armed_and_ready))
             self.dut.expected_trigger.value = match
             for j in range(32):
                 self.dut.model_counter[j].value = self.SAD_model.counters[j].SAD
                 if self.SAD_model.counters[j].ready2trigger:
                     self.dut.model_ready2trigger[j] = 1;
+                else:
+                    self.dut.model_ready2trigger[j] = 0;
             await ClockCycles(self.dut.clk_adc, 1)
 
 
@@ -385,6 +388,40 @@ class SADTest(object):
             await Edge(self.trigger_error)
             self.harness.inc_error()
             self.dut._log.error('ERROR: unexpected trigger value!')
+
+    async def _armed_generator_thread(self):
+        # So... this could be simple, randomly arming and disarming, and that would work *most* of the time,
+        # but not *all* of the time, because sad_model.py is not cycle-accurate -- it doesn't have the
+        # Verilog implementations' latency. This means that it's possible for model and DUT triggering to
+        # diverge near arming/disarming events. IRL this doesn't matter since precise triggering behaviour
+        # so close to arming/disarming isnt't really important.
+        # The objective here is to keep things simple, and avoid false failures. So, instead of going 
+        # through the trouble of making the model cycle-accurate (for each of the many DUT 
+        # implementations!), we put a "blackout" period before any change to armed_and_ready where we ensure
+        # that no trigger can happen. We do this by sending a message over to the _sample_generator_thread
+        # to tell it to avoid generating triggers; we wait for it to acknowledge receipt and carry out the
+        # blackout period, and then we change the armed state.
+        armed = False
+        while True:
+            # bias towards spending most of the time armed:
+            if armed:
+                min_wait = self.ref_samples*10
+                max_wait = self.ref_samples*20
+            else:
+                min_wait = self.ref_samples*2
+                max_wait = self.ref_samples*4
+            await ClockCycles(self.dut.clk_adc, random.randint(min_wait, max_wait))
+            # put in request to change armed_and_ready
+            self.dut._log.info('armed_and_ready: requesting to change...')
+            self.blackout_request_queue.put_nowait(0)
+            # wait for until we're allowed:
+            await self.blackout_done_queue.get()
+            #self.dut._log.info('armed_and_ready: request granted, running out blackout period')
+            #await ClockCycles(self.dut.clk_adc, self.ref_samples*2)
+            armed = not armed
+            self.dut._log.info('armed_and_ready: blackout done, setting to %s' % armed)
+            self.dut.armed_and_ready.value = armed
+            #await ClockCycles(self.dut.clk_adc, self.ref_samples*2)
 
 
     async def wait_for_triggers(self):
