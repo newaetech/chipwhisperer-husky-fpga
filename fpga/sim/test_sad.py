@@ -269,6 +269,7 @@ class SADTest(object):
         await self.registers.write(self.reg_addr['SAD_MULTIPLE_TRIGGERS'], [self.multiple_triggers])
         # check selected DUT latency so we can adjust our expected triggers accordingly:
         latency = (await self.registers.read(self.reg_addr['SAD_VERSION'], 1))[0] & 0x3f
+        assert latency < 23, "DUT's reported latency is too high! (%d)" % latency
         self.dut._log.info('Expected trigger latency: %d' % latency)
         self.dut.latency.value = latency
         self.dut.multiple_triggers.value = self.multiple_triggers

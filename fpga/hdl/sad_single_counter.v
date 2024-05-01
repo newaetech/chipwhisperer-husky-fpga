@@ -77,7 +77,8 @@ module sad_single_counter #(
     // used in different targets or builds.
     // Format: 2 MSB = version code (00: sad.v, 01: sad_x2_slowclock.v)
     //         6 LSB = trigger latency
-    wire [7:0] version_bits = 8'hFF; // not valid, but ok since nobody should actually use this
+    //wire [7:0] version_bits = 8'hFF; // not valid, but ok since nobody should actually use this
+    wire [7:0] version_bits = {2'b00, 6'd08};
 
     // register reads:
     always @(*) begin

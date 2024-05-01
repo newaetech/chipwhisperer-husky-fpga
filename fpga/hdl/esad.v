@@ -231,13 +231,14 @@ module esad #(
     );
 
     wire [pMASTER_COUNTER_WIDTH-1:0] master_counter_top = pREF_SAMPLES-1;
+    wire [pMASTER_COUNTER_WIDTH-1:0] master_counter_half = pREF_SAMPLES/2-1;
 
     always @(posedge adc_sampleclk) begin
         if ((armed_and_ready_adc || always_armed) && active && ~xadc_error) begin
             ready2trigger_1andup <= {ready2trigger_1andup[pNUM_COUNTERS-2:1], ready2trigger0};
             resetter <= {resetter[pNUM_COUNTERS-2:0], resetter[pNUM_COUNTERS-1]};
             halfpoint <= {halfpoint[pNUM_COUNTERS-2:0], halfpoint[pNUM_COUNTERS-1]};
-            if (master_counter == master_counter_top) begin
+            if (master_counter == (emode ? master_counter_top : master_counter_half)) begin
                 ready2trigger0 <= 1;
                 master_counter <= 0;
             end
