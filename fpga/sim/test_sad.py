@@ -189,8 +189,7 @@ class SADTest(object):
         self.samples_enabled = 0
         for i in range(ref_samples):
             if (not linear_ramp) or (i == 0):
-                sample = 128 # TODO-temp
-                #sample = random.randint(0, 2**bits_per_sample-1)
+                sample = random.randint(0, 2**bits_per_sample-1)
             else:
                 sample = (sample + 1) % 2**bits_per_sample
             self.pattern.append(sample)
@@ -204,12 +203,12 @@ class SADTest(object):
         self.dut._log.info('refen = %s' % self.refen)
 
         # determine thresholds, with counter_width in mind:
-        self.threshold = 10 # TODO-temp!
-        #self.threshold = random.randint(4, 2**(counter_width-1))
+        # huge thresholds are not realistic and can lead to mismatch between DUT and model:
+        self.threshold = random.randint(4, min(2**(counter_width-2), ref_samples*2))
         self.dut._log.info('SAD threshold randomized to: %d' % self.threshold)
 
-        # instantiate SAD model:
-        self.SAD_model = SAD(self.pattern, self.refen, 0, self.threshold, 3, False, False)
+        # instantiate SAD model which will tell us when triggers are expected:
+        self.SAD_model = SAD(self.pattern, self.refen, 0, self.threshold, 3, multiple_triggers, False, False)
 
     def start(self):
         """Start test thread"""
@@ -272,6 +271,7 @@ class SADTest(object):
         latency = (await self.registers.read(self.reg_addr['SAD_VERSION'], 1))[0] & 0x3f
         self.dut._log.info('Expected trigger latency: %d' % latency)
         self.dut.latency.value = latency
+        self.dut.multiple_triggers.value = self.multiple_triggers
         # TODO: emode
 
 
@@ -317,14 +317,15 @@ class SADTest(object):
                 delta = max(2, int(self.threshold / self.samples_enabled * 4))
                 #self.dut._log.info('DEBUG: delta = %d' % delta)
 
-                for i in range(self.ref_samples*2):
+                for i in range(self.ref_samples*4):
                     if self.pattern[i % self.ref_samples] > delta:
                         value = self.pattern[i % self.ref_samples] - delta
                     else:
-                        value = min(2**bits_per_sample-1, self.pattern[i % self.ref_samples] + delta)
+                        value = min(2**self.bits_per_sample-1, self.pattern[i % self.ref_samples] + delta)
                     self.dut.adc_datain.value = value
                     await ClockCycles(self.dut.clk_adc, 1)
-                self.blackout_done_queue.put_nowait(0)
+                    if i == self.ref_samples*2:
+                        self.blackout_done_queue.put_nowait(0)
 
             if random.randint(0, 4) > 0:
                 under_threshold = 0
@@ -405,8 +406,12 @@ class SADTest(object):
         while True:
             # bias towards spending most of the time armed:
             if armed:
-                min_wait = self.ref_samples*10
-                max_wait = self.ref_samples*20
+                if self.multiple_triggers:
+                    min_wait = self.ref_samples*10
+                    max_wait = self.ref_samples*20
+                else:
+                    min_wait = self.ref_samples*5
+                    max_wait = self.ref_samples*10
             else:
                 min_wait = self.ref_samples*2
                 max_wait = self.ref_samples*4
@@ -443,7 +448,7 @@ async def sad_test(dut):
     ref_samples       = int(os.getenv('REF_SAMPLES', '32'))
     counter_width     = int(os.getenv('COUNTER_WIDTH', '12'))
     triggers          = int(os.getenv('TRIGGERS', '4'))
-    multiple_triggers = int(os.getenv('MULTIPLE_TRIGGERS', '0')) # TODO: we should randomize this ourselves (more often yes than no)
+    multiple_triggers = int(os.getenv('MULTIPLE_TRIGGERS', '0'))
     interval_match    = int(os.getenv('INTERVAL_MATCH', '0'))
     emode             = int(os.getenv('EMODE', '0'))
     implementation    = os.getenv('SAD', 'SAD_BASE')

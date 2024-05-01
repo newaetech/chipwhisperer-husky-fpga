@@ -119,11 +119,12 @@ class Counter(object):
 
 
 class SAD(object):
-    def __init__(self, ref, refen, half_threshold, threshold, startup_latency, emode=True, verbose=False):
+    def __init__(self, ref, refen, half_threshold, threshold, startup_latency, multiple_triggers, emode=True, verbose=False):
         self.emode = emode # True: eSAD; False: regular SAD
         self.ref = ref
         self.refen = refen
         self.startup_latency = startup_latency
+        self.multiple_triggers = multiple_triggers
         self.half_threshold = half_threshold
         self.threshold = threshold
         self.verbose = verbose
@@ -139,6 +140,7 @@ class SAD(object):
         self.match_counters = []
         self.uncovered_samples = []
         self.covered = []
+        self.triggered = False
         for i in range(self.num_counters):
             self.counters.append(Counter(i, ref, refen, half_threshold, threshold, startup_latency, emode, verbose))
 
@@ -175,12 +177,23 @@ class SAD(object):
                 c.activate()
                 break
 
+    @property
+    def trigger_allowed(self):
+        if self.triggered and not self.multiple_triggers:
+            return False
+        else:
+            return True
+
     def step(self, sample, armed_and_ready):
         # on the first run through, counters are started one at a time:
         #if i < self.num_counters:
         #    self.counters[i].activate(i)
-        if armed_and_ready:
+        if armed_and_ready and self.trigger_allowed:
             self.activate_next_counter()
+        elif not armed_and_ready:
+            self.triggered = False
+        if not self.trigger_allowed:
+            armed_and_ready = False
         # all activated counters are in free-running mode:
         matched = False
         for c in self.counters:
@@ -189,6 +202,7 @@ class SAD(object):
                 matched = True
                 self.match_times.append(0)
                 self.match_counters.append(c.idx)
+                self.triggered = True
                 print("counter %d matched with score: %d" % (c.idx, c.SAD))
                 #if self.verbose: print("counter %d matched at time %6d with score: %d" % (c.idx, i, c.SAD))
             #if not covered:
