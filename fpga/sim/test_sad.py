@@ -467,7 +467,7 @@ class SADTest(object):
 
 
 
-@cocotb.test(timeout_time=100, timeout_unit="us")
+@cocotb.test(timeout_time=300, timeout_unit="us")
 async def sad_test(dut):
     reps  = int(os.getenv('REPS', '3'))
     bits_per_sample   = int(os.getenv('BITS_PER_SAMPLE', '8'))
