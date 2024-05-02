@@ -104,6 +104,7 @@ module esad #(
     wire [pSAD_COUNTER_WIDTH-2:0] half_threshold = threshold[pSAD_COUNTER_WIDTH-1:1];
     reg [pMASTER_COUNTER_WIDTH-1:0] master_counter;
     wire [pMASTER_COUNTER_WIDTH-2:0] master_counter_short = master_counter[pMASTER_COUNTER_WIDTH-2:0];
+    wire [pMASTER_COUNTER_WIDTH-1:0] master_counter_extended = {1'b1, master_counter_short};
     reg [pNUM_COUNTERS-1:0] resetter;
     reg [pNUM_COUNTERS-1:0] halfpoint;
     reg [pNUM_COUNTERS-1:0] trigger_possible;
@@ -288,12 +289,12 @@ module esad #(
             always @(posedge adc_sampleclk) begin
                 if (i == 0) begin
                     nextrefsample_short[0] <= refsample[master_counter_short];
-                    nextrefsample_extended[0] <= refsample[master_counter];
+                    nextrefsample_extended[0] <= refsample[master_counter_extended];
                     compare_en_short[0] <= refen[master_counter_short];
-                    compare_en_extended[0] <= refen[master_counter];
+                    compare_en_extended[0] <= refen[master_counter_extended];
                     if (extended_mode[0]) begin
-                        nextrefsample[0] <= refsample[master_counter];
-                        compare_en[0] <= refen[master_counter];
+                        nextrefsample[0] <= refsample[master_counter_extended];
+                        compare_en[0] <= refen[master_counter_extended];
                     end
                     else begin
                         nextrefsample[0] <= refsample[master_counter_short];
