@@ -76,6 +76,7 @@ module esad #(
     // verilator lint_off UNUSED
     input  wire         ext_trigger,  // debug only
     input  wire         io4,  // debug only
+    output wire [pREF_SAMPLES/2-1:0] debug_emode,
     // verilator lint_on UNUSED
     output reg          trigger
 );
@@ -139,6 +140,8 @@ module esad #(
     wire [31:0] wide_threshold_reg = {{(32-pSAD_COUNTER_WIDTH){1'b0}}, threshold}; // having a variable-width register isn't very convenient for Python
     reg [7:0] refbase;
     wire [15:0] ref_samples = pREF_SAMPLES;
+
+    assign debug_emode = extended_mode | trigger_possible;
 
     // These are a property of this module; used here to make sure Python
     // knows what it's talking to, in case there may be different SAD modules

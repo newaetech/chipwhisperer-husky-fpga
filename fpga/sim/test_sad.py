@@ -160,6 +160,7 @@ class SADTest(object):
                  ref_samples, 
                  triggers, 
                  multiple_triggers,  
+                 emode,
                  counter_width):
 
         self.dut = dut
@@ -167,11 +168,12 @@ class SADTest(object):
         self.registers = registers
         self.reg_addr = self.harness.reg_addr
         self.name = name
+        self.ref_samples = ref_samples
         self.bits_per_sample = bits_per_sample
         self.linear_ramp = linear_ramp
-        self.ref_samples = ref_samples
         self.triggers = triggers
         self.multiple_triggers = multiple_triggers
+        self.emode = emode
         self.counter_width = counter_width
 
         self.trigger_error = self.dut.trigger_error
@@ -208,7 +210,12 @@ class SADTest(object):
         self.dut._log.info('SAD threshold randomized to: %d' % self.threshold)
 
         # instantiate SAD model which will tell us when triggers are expected:
-        self.SAD_model = SAD(self.pattern, self.refen, 0, self.threshold, 3, multiple_triggers, False, False)
+        if emode:
+            startup_latency = 2
+        else:
+            startup_latency = 3
+
+        self.SAD_model = SAD(self.pattern, self.refen, self.threshold//2, self.threshold, startup_latency, multiple_triggers, emode, False)
 
     def start(self):
         """Start test thread"""
@@ -267,13 +274,13 @@ class SADTest(object):
         # 4. Rest of setup:
         await self.registers.write(self.reg_addr['SAD_THRESHOLD'], self.registers.to_bytes(self.threshold, 4))
         await self.registers.write(self.reg_addr['SAD_MULTIPLE_TRIGGERS'], [self.multiple_triggers])
+        await self.registers.write(self.reg_addr['SAD_EMODE'], [self.emode])
         # check selected DUT latency so we can adjust our expected triggers accordingly:
         latency = (await self.registers.read(self.reg_addr['SAD_VERSION'], 1))[0] & 0x3f
         assert latency < 23, "DUT's reported latency is too high! (%d)" % latency
         self.dut._log.info('Expected trigger latency: %d' % latency)
         self.dut.latency.value = latency
         self.dut.multiple_triggers.value = self.multiple_triggers
-        # TODO: emode
 
 
 
@@ -295,6 +302,8 @@ class SADTest(object):
         self._sample_generator = cocotb.start_soon(self._sample_generator_thread())
         self._model_feeder = cocotb.start_soon(self._model_feeder_thread())
         self._trigger_watch_coro = cocotb.start_soon(self._trigger_watch_thread())
+        if self.emode:
+            self._emode_watch_coro = cocotb.start_soon(self._emode_watch_thread())
         await self.wait_for_triggers() # wait for expected number of triggers
         await ClockCycles(self.dut.clk_adc, self.ref_samples * 4) # wait a bit more to ensure no funny business
 
@@ -374,12 +383,18 @@ class SADTest(object):
         while True:
             match = self.SAD_model.step(int(self.dut.adc_datain), int(self.dut.armed_and_ready))
             self.dut.expected_trigger.value = match
-            for j in range(32):
+            if self.emode:
+                counters = self.ref_samples//2
+            else:
+                counters = self.ref_samples
+            for j in range(counters):
                 self.dut.model_counter[j].value = self.SAD_model.counters[j].SAD
+                if self.emode:
+                    self.dut.model_extended_mode[j].value = self.SAD_model.counters[j].extended_mode
                 if self.SAD_model.counters[j].ready2trigger:
-                    self.dut.model_ready2trigger[j] = 1;
+                    self.dut.model_ready2trigger[j].value = 1;
                 else:
-                    self.dut.model_ready2trigger[j] = 0;
+                    self.dut.model_ready2trigger[j].value = 0;
             await ClockCycles(self.dut.clk_adc, 1)
 
 
@@ -390,6 +405,17 @@ class SADTest(object):
             await Edge(self.trigger_error)
             self.harness.inc_error()
             self.dut._log.error('ERROR: unexpected trigger value!')
+
+
+    async def _emode_watch_thread(self) -> None:
+        """ Checks for mismatch between DUT and model counters' extended-mode status;
+        intended to help debug trigger errors.
+        """
+        while True:
+            await RisingEdge(self.dut.debug_emode_mismatch)
+            if int(self.dut.armed_and_ready):
+                self.dut._log.warning('WARNING: internal emode mismatch')
+
 
     async def _armed_generator_thread(self):
         # So... this could be simple, randomly arming and disarming, and that would work *most* of the time,
@@ -427,7 +453,7 @@ class SADTest(object):
             armed = not armed
             self.dut._log.info('armed_and_ready: blackout done, setting to %s' % armed)
             self.dut.armed_and_ready.value = armed
-            #await ClockCycles(self.dut.clk_adc, self.ref_samples*2)
+            #break
 
 
     async def wait_for_triggers(self):
@@ -441,7 +467,7 @@ class SADTest(object):
 
 
 
-@cocotb.test(timeout_time=1000, timeout_unit="us")
+@cocotb.test(timeout_time=100, timeout_unit="us")
 async def sad_test(dut):
     reps  = int(os.getenv('REPS', '3'))
     bits_per_sample   = int(os.getenv('BITS_PER_SAMPLE', '8'))
@@ -453,6 +479,9 @@ async def sad_test(dut):
     interval_match    = int(os.getenv('INTERVAL_MATCH', '0'))
     emode             = int(os.getenv('EMODE', '0'))
     implementation    = os.getenv('SAD', 'SAD_BASE')
+
+    if implementation == 'ESAD' and not emode:
+        ref_samples = ref_samples//2
 
     dut._log.info("bits_per_sample: %d" % bits_per_sample)
     dut._log.info("linear_ramp: %d" % linear_ramp)
@@ -474,6 +503,7 @@ async def sad_test(dut):
                       ref_samples = ref_samples,
                       triggers = triggers,
                       multiple_triggers = multiple_triggers,
+                      emode = emode,
                       counter_width = counter_width
                      )
     harness.register_test(sadtest)

@@ -40,7 +40,10 @@ module sad_wrapper #(
 
     input wire [11:0]   adc_datain,
     input wire          armed_and_ready,
-    output wire         trigger
+    output wire         trigger,
+
+    // debug only:
+    output wire [pREF_SAMPLES/2-1:0] debug_emode
 );
 
    wire cmdfifo_isout;
@@ -136,7 +139,7 @@ sad #(
     wire trigger_esad;
     esad #(
         .pBYTECNT_SIZE      (7),
-        .pREF_SAMPLES       (pREF_SAMPLES*2), // TODO: temp - for when emode is off
+        .pREF_SAMPLES       (pREF_SAMPLES),
         .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE)
     ) U_edut (
         .reset              (reset),
@@ -154,6 +157,7 @@ sad #(
         .reg_write          (reg_write),
         .ext_trigger        (1'b0), // debug only
         .io4                (1'b0), // debug only
+        .debug_emode        (debug_emode),
         .trigger            (trigger_esad)
     );
 `endif

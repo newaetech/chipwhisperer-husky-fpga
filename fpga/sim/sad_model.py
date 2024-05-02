@@ -22,6 +22,7 @@ class Counter(object):
         self.current_idx = None
         self.ready2trigger = False
         self.armed_and_ready = False
+        self.extended_mode = 0
         self.SAD = 0
         self.SADS = []
 
@@ -87,16 +88,19 @@ class Counter(object):
         self.SADS.append(self.SAD)
 
         self.current_idx += 1
-        if self.current_idx == self.reflen//2 and self.emode:
+        # Note: DUT decides to extend to full pattern a few cycles before the halfway point:
+        if (self.current_idx == self.reflen//2 - 4) and self.emode:
             if self.SAD < self.half_threshold:
-            #if self.SAD < self.half_threshold and self.started:
                 covered = False
+                self.extended_mode = 1
                 if self.verbose: print("%4d: counter %d reached halfway point and is still alive" % (time, self.idx))
             else:
-                self.current_idx = 0
+                self.extended_mode = 0
                 if self.verbose: print("%4d: counter %d stopping halfway" % (time, self.idx))
-                self.SAD = 0
 
+        elif self.current_idx == self.reflen//2 and self.emode and not self.extended_mode:
+                self.current_idx = 0
+                self.SAD = 0
 
         elif self.current_idx == self.reflen:
             self.ready2trigger = True
@@ -119,7 +123,7 @@ class Counter(object):
 
 
 class SAD(object):
-    def __init__(self, ref, refen, half_threshold, threshold, startup_latency, multiple_triggers, emode=True, verbose=False):
+    def __init__(self, ref, refen, half_threshold, threshold, startup_latency, multiple_triggers, emode=False, verbose=False):
         self.emode = emode # True: eSAD; False: regular SAD
         self.ref = ref
         self.refen = refen
@@ -221,8 +225,11 @@ class SAD(object):
 
 
 class eSAD(object):
-    def __init__(self, ref, half_threshold, threshold, verbose=False):
+    def __init__(self, ref, refen, half_threshold, threshold, startup_latency, multiple_triggers, verbose=False):
         self.ref = ref
+        self.refen = refen
+        self.startup_latency = startup_latency
+        self.multiple_triggers = multiple_triggers
         self.half_threshold = half_threshold
         self.threshold = threshold
         self.verbose = verbose
@@ -230,8 +237,8 @@ class eSAD(object):
         if self.reflen % 2:
             raise ValueError('Reference length must be even')
         self.num_counters = self.reflen // 2
-        self.esad = SAD(ref, half_threshold, threshold, True, verbose)
-        self.fsad = SAD(ref, half_threshold, threshold, False, verbose)
+        self.esad = SAD(ref, refen, half_threshold, startup_latency, multiple_triggers, threshold, True, verbose)
+        self.fsad = SAD(ref, refen, half_threshold, startup_latency, multiple_triggers, threshold, False, verbose)
 
     def _dict_repr(self):
         rtn = {}
@@ -266,6 +273,10 @@ class eSAD(object):
     def run(self, wave):
         self.esad.run(wave)
         self.fsad.run(wave)
+
+    def step(self, sample, armed_and_ready):
+        self.fsad.step(sample, armed_and_ready)
+        return self.esad.step(sample, armed_and_ready)
 
     def __repr__(self):
         return util.dict_to_str(self._dict_repr())

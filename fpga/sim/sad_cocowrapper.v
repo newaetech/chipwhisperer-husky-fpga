@@ -22,7 +22,9 @@ Author: Jean-Pierre Thibault <jpthibault@newae.com>
   along with chipwhisperer.  If not, see <http://www.gnu.org/licenses/>.
 *************************************************************************/
 
-module sad_cocowrapper (
+module sad_cocowrapper #(
+    parameter pREF_SAMPLES = 8
+)(
     // DUT things:
     input wire         clk_usb,
     input wire         clk_adc,
@@ -42,19 +44,20 @@ module sad_cocowrapper (
     // testbench things:
     input  wire [31:0]  errors,
     input  wire [5:0]   latency,
-    input  wire [15:0]  model_counter[0:31],
+    input  wire [15:0]  model_counter[0:pREF_SAMPLES-1],
+    input  wire [pREF_SAMPLES/2-1:0]  model_extended_mode,
     input  wire [31:0]  model_ready2trigger,
     input  wire         under_threshold,
     input  wire         long_enough,
     input  wire         expected_trigger,
     input  wire         multiple_triggers,
-    output reg          trigger_error
+    output reg          trigger_error,
+    output reg          debug_emode_mismatch
 
 );
 
     parameter pDUMP = 0;
     parameter pBYTECNT_SIZE = 7;
-    parameter pREF_SAMPLES = 8;
     parameter pBITS_PER_SAMPLE = 12;
 
     parameter pINTERVAL_MATCH = 0;
@@ -85,6 +88,17 @@ module sad_cocowrapper (
             trigger_error <= 1'b0;
     end
 
+    wire [pREF_SAMPLES/2-1:0] debug_emode;
+    reg [pREF_SAMPLES/2-1:0] model_extended_mode_r1, model_extended_mode_r2, model_extended_mode_r3, model_extended_mode_r4, model_extended_mode_r5;
+    always @(posedge clk_adc) begin
+        model_extended_mode_r1 <= model_extended_mode;
+        model_extended_mode_r2 <= model_extended_mode_r1;
+        model_extended_mode_r3 <= model_extended_mode_r2;
+        model_extended_mode_r4 <= model_extended_mode_r3;
+        model_extended_mode_r5 <= model_extended_mode_r4;
+        debug_emode_mismatch <= (debug_emode !== model_extended_mode_r5);
+    end
+
 
     sad_wrapper #(
         .pBYTECNT_SIZE      (7),
@@ -102,7 +116,8 @@ module sad_cocowrapper (
         .USB_WRn            (USB_WRn      ),
         .USB_CEn            (USB_CEn      ),
         .USB_ALEn           (USB_ALEn     ),
-        .trigger            (trigger_presync)
+        .trigger            (trigger_presync),
+        .debug_emode        (debug_emode  )
     );
 
     // debug only:
