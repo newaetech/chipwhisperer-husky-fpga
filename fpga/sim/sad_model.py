@@ -6,15 +6,18 @@ from chipwhisperer.common.utils import util
 # ALSO: offer a way to visualize which samples were NOT covered (due to eSAD)
 
 class Counter(object):
-    def __init__(self, idx, ref, refen, half_threshold, threshold, startup_latency, emode=True, verbose=False):
+    def __init__(self, idx, counter_width, ref, refen, half_threshold, threshold, interval_threshold, startup_latency, emode=False, interval_matching=False, verbose=False):
         self.verbose = verbose
         self.emode = emode # True: eSAD; False: regular SAD
         self.idx = idx
+        self.counter_width = counter_width
         self.ref = ref
         self.refen = refen
         self.half_threshold = half_threshold
         self.threshold = threshold
+        self.interval_threshold = interval_threshold
         self.startup_latency = startup_latency
+        self.interval_matching = interval_matching
         self.reflen = len(ref)
         self.started = False
         self.valid = False
@@ -80,10 +83,21 @@ class Counter(object):
         #self.SAD += np.abs(sample - self.ref[self.current_idx])
         # samples and references likely come in as np.uint8's so need to avoid inadvertent overflow!
         if self.refen[self.current_idx]:
-            if sample > self.ref[self.current_idx]:
-                self.SAD += sample - self.ref[self.current_idx]
+            if self.interval_matching:
+                if self.SAD < 2**self.counter_width-1: # don't overflow
+                    if sample > self.ref[self.current_idx]:
+                        if sample > self.ref[self.current_idx] + self.interval_threshold:
+                            self.SAD += 1
+                    else:
+                        if sample < self.ref[self.current_idx] - self.interval_threshold:
+                            self.SAD += 1
+
             else:
-                self.SAD += self.ref[self.current_idx] - sample
+                if self.SAD < 2**(self.counter_width-1): # don't overflow
+                    if sample > self.ref[self.current_idx]:
+                        self.SAD += sample - self.ref[self.current_idx]
+                    else:
+                        self.SAD += self.ref[self.current_idx] - sample
 
         self.SADS.append(self.SAD)
 
@@ -105,7 +119,7 @@ class Counter(object):
         elif self.current_idx == self.reflen:
             self.ready2trigger = True
             self.current_idx = 0
-            if self.verbose: print("%4d: counter %d done" % (time, self.idx))
+            if self.verbose: print("%4d: counter %d done, SAD=%d" % (time, self.idx, self.SAD))
             if self.SAD <= self.threshold:
                 if self.verbose: print("%4d: counter %d MATCHED at time %6d with score: %d ===============================" % (time, self.idx, time, self.SAD))
                 match = True
@@ -123,7 +137,7 @@ class Counter(object):
 
 
 class SAD(object):
-    def __init__(self, ref, refen, half_threshold, threshold, startup_latency, multiple_triggers, emode=False, verbose=False):
+    def __init__(self, counter_width, ref, refen, half_threshold, threshold, interval_threshold, startup_latency, multiple_triggers, emode=False, interval_matching=False, verbose=False):
         self.emode = emode # True: eSAD; False: regular SAD
         self.ref = ref
         self.refen = refen
@@ -131,6 +145,8 @@ class SAD(object):
         self.multiple_triggers = multiple_triggers
         self.half_threshold = half_threshold
         self.threshold = threshold
+        self.interval_matching = interval_matching
+        self.interval_threshold = interval_threshold
         self.verbose = verbose
         self.reflen = len(ref)
         if emode:
@@ -146,7 +162,7 @@ class SAD(object):
         self.covered = []
         self.triggered = False
         for i in range(self.num_counters):
-            self.counters.append(Counter(i, ref, refen, half_threshold, threshold, startup_latency, emode, verbose))
+            self.counters.append(Counter(i, counter_width, ref, refen, half_threshold, threshold, interval_threshold, startup_latency, emode, interval_matching, verbose))
 
 
     def _dict_repr(self):

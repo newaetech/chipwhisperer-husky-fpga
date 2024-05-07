@@ -60,7 +60,7 @@ module sad_cocowrapper #(
     parameter pBYTECNT_SIZE = 7;
     parameter pBITS_PER_SAMPLE = 12;
 
-    parameter pINTERVAL_MATCH = 0;
+    parameter pINTERVAL_MATCHING = 0;
     parameter pCOUNTER_WIDTH = 12;
     parameter pEMODE = 0;
 
@@ -73,6 +73,7 @@ module sad_cocowrapper #(
     end
 
     wire trigger_presync;
+    assign trigger = trigger_presync_r;
 
     reg [18:0] trigger_expected_pipe;
     always @(posedge clk_adc)

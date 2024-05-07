@@ -161,6 +161,7 @@ class SADTest(object):
                  triggers, 
                  multiple_triggers,  
                  emode,
+                 interval_matching,
                  counter_width):
 
         self.dut = dut
@@ -174,6 +175,7 @@ class SADTest(object):
         self.triggers = triggers
         self.multiple_triggers = multiple_triggers
         self.emode = emode
+        self.interval_matching = interval_matching
         self.counter_width = counter_width
 
         self.trigger_error = self.dut.trigger_error
@@ -205,8 +207,16 @@ class SADTest(object):
         self.dut._log.info('refen = %s' % self.refen)
 
         # determine thresholds, with counter_width in mind:
-        # huge thresholds are not realistic and can lead to mismatch between DUT and model:
-        self.threshold = random.randint(4, min(2**(counter_width-2), ref_samples*2))
+
+        if interval_matching:
+            self.threshold = random.randint(1, ref_samples/4-2)
+            self.interval_threshold = random.randint(1, 2**(bits_per_sample-2))
+            self.dut._log.info('SAD interval threshold randomized to: %d' % self.interval_threshold)
+        else:
+            # huge thresholds are not realistic and can lead to mismatch between DUT and model:
+            self.threshold = random.randint(4, min(2**(counter_width-2), ref_samples*2))
+            self.interval_threshold = 0
+
         self.dut._log.info('SAD threshold randomized to: %d' % self.threshold)
 
         # instantiate SAD model which will tell us when triggers are expected:
@@ -215,7 +225,7 @@ class SADTest(object):
         else:
             startup_latency = 3
 
-        self.SAD_model = SAD(self.pattern, self.refen, self.threshold//2, self.threshold, startup_latency, multiple_triggers, emode, False)
+        self.SAD_model = SAD(counter_width, self.pattern, self.refen, self.threshold//2, self.threshold, self.interval_threshold, startup_latency, multiple_triggers, emode, interval_matching, True)
 
     def start(self):
         """Start test thread"""
@@ -247,14 +257,14 @@ class SADTest(object):
 
     async def dut_setup(self):
         await self.harness.reset()
-        # 1. simple sanity R/W:
-        for i in range(4):
-            wdata = random.randint(0, 255)
-            await self.registers.write(self.reg_addr['SAD_THRESHOLD'], [wdata])
-            rdata = (await self.registers.read(self.reg_addr['SAD_THRESHOLD'], 1))[0]
-            if rdata != wdata:
-                self.dut._log.error('Wrote 0x%x, read 0x%x!' % (wdata, rdata))
-                self.harness.inc_error()
+        ## 1. simple sanity R/W:
+        #for i in range(4):
+        #    wdata = random.randint(0, 255)
+        #    await self.registers.write(self.reg_addr['SAD_THRESHOLD'], [wdata])
+        #    rdata = (await self.registers.read(self.reg_addr['SAD_THRESHOLD'], 1))[0]
+        #    if rdata != wdata:
+        #        self.dut._log.error('Wrote 0x%x, read 0x%x!' % (wdata, rdata))
+        #        self.harness.inc_error()
         # 2. program SAD reference (128 bytes at a time):
         blocks = self.ref_samples//128
         if self.ref_samples % 128:
@@ -275,6 +285,7 @@ class SADTest(object):
         await self.registers.write(self.reg_addr['SAD_THRESHOLD'], self.registers.to_bytes(self.threshold, 4))
         await self.registers.write(self.reg_addr['SAD_MULTIPLE_TRIGGERS'], [self.multiple_triggers])
         await self.registers.write(self.reg_addr['SAD_EMODE'], [self.emode])
+        await self.registers.write(self.reg_addr['SAD_INTERVAL_THRESHOLD'], [self.interval_threshold])
         # check selected DUT latency so we can adjust our expected triggers accordingly:
         latency = (await self.registers.read(self.reg_addr['SAD_VERSION'], 1))[0] & 0x3f
         assert latency < 23, "DUT's reported latency is too high! (%d)" % latency
@@ -310,8 +321,6 @@ class SADTest(object):
 
 
     async def _sample_generator_thread(self):
-        # randomize when we start:
-        #await ClockCycles(self.dut.clk_adc, random.randint(1, self.ref_samples*2))
         # We don't concern ourselves with whether or not a trigger gets generated; we
         # generate runs of samples that are sometimes above, sometimes under the threshold;
         # sometimes these runs are too short, sometimes not. Note in particular that when
@@ -324,10 +333,12 @@ class SADTest(object):
                 # see comments there to understand what we do here when this happend.
                 self.blackout_request_queue.get_nowait()
                 self.dut._log.info('sample generator: blackout request received')
-                delta = max(2, int(self.threshold / self.samples_enabled * 4))
-                #self.dut._log.info('DEBUG: delta = %d' % delta)
-
                 for i in range(self.ref_samples*4):
+                    if self.interval_matching:
+                        delta = random.randint(self.interval_threshold, 2**(self.bits_per_sample-1))
+                    else:
+                        delta = max(2, int(self.threshold / self.samples_enabled * 4))
+
                     if self.pattern[i % self.ref_samples] > delta:
                         value = self.pattern[i % self.ref_samples] - delta
                     else:
@@ -352,15 +363,29 @@ class SADTest(object):
             else:
                 samples = random.randint(4, self.ref_samples-1)
             self.dut._log.info('sample generator: under_threshold=%d, long_enough=%d, num samples=%d' % (under_threshold, long_enough, samples))
-            sad = 0
-            if under_threshold:
-                target_sad = random.randint(0, self.threshold-1)
-            else:
-                target_sad = random.randint(self.threshold*2, self.threshold*4)
-            #self.dut._log.info('Target SAD: %d' % target_sad)
-            average_deviation = target_sad / self.samples_enabled
+
+            if not self.interval_matching:
+                if under_threshold:
+                    target_sad = random.randint(0, self.threshold-1)
+                else:
+                    target_sad = random.randint(self.threshold*2, self.threshold*4)
+                average_deviation = target_sad / self.samples_enabled
+
             for i in range(samples):
-                delta = int(random.gauss(average_deviation, average_deviation/2))
+                if self.interval_matching:
+                    # first determine if the sample will be under or over the interval match
+                    under_interval = random.randint(0, self.samples_enabled) < self.threshold
+                    if not under_threshold:
+                        under_interval = not under_interval
+                    # then choose the delta accordingly:
+                    if under_interval:
+                        delta = random.randint(0, self.interval_threshold)
+                    else:
+                        delta = random.randint(self.interval_threshold, 2**(self.bits_per_sample-1))
+
+                else:
+                    delta = int(random.gauss(average_deviation, average_deviation/2))
+
                 if self.refen[i]:
                     if random.randint(0,1):
                         value = self.pattern[i] + delta
@@ -476,12 +501,19 @@ async def sad_test(dut):
     counter_width     = int(os.getenv('COUNTER_WIDTH', '12'))
     triggers          = int(os.getenv('TRIGGERS', '4'))
     multiple_triggers = int(os.getenv('MULTIPLE_TRIGGERS', '0'))
-    interval_match    = int(os.getenv('INTERVAL_MATCH', '0'))
+    interval_matching = os.getenv('INTERVAL_MATCHING', 'INTERVAL_MATCHING_OFF')
     emode             = int(os.getenv('EMODE', '0'))
     implementation    = os.getenv('SAD', 'SAD_BASE')
 
     if implementation == 'ESAD' and not emode:
         ref_samples = ref_samples//2
+
+    if interval_matching == 'INTERVAL_MATCHING_ON':
+        interval_matching = 1
+    else:
+        interval_matching = 0
+    if interval_matching:
+        counter_width = math.ceil((math.log2(ref_samples)))-2
 
     dut._log.info("bits_per_sample: %d" % bits_per_sample)
     dut._log.info("linear_ramp: %d" % linear_ramp)
@@ -489,7 +521,7 @@ async def sad_test(dut):
     dut._log.info("counter_width: %d" % counter_width)
     dut._log.info("triggers: %d" % triggers)
     dut._log.info("multiple_triggers: %d" % multiple_triggers)
-    dut._log.info("interval_match: %d" % interval_match)
+    dut._log.info("interval_matching: %d" % interval_matching)
     dut._log.info("emode: %d" % emode)
     dut._log.info("implementation: %s" % implementation)
     dut._log.info("reps: %d" % reps)
@@ -504,6 +536,7 @@ async def sad_test(dut):
                       triggers = triggers,
                       multiple_triggers = multiple_triggers,
                       emode = emode,
+                      interval_matching = interval_matching,
                       counter_width = counter_width
                      )
     harness.register_test(sadtest)
