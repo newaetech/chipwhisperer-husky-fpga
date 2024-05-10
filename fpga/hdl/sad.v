@@ -61,11 +61,7 @@ module sad #(
                                        (pREF_SAMPLES <= 512)? 9 :
                                        (pREF_SAMPLES <= 1024)? 10 : 11;
 
-`ifdef INTERVAL_MATCHING_ON
-    localparam pACTUAL_SAD_COUNTER_WIDTH = pMASTER_COUNTER_WIDTH-2;
-`else
-    localparam pACTUAL_SAD_COUNTER_WIDTH = pSAD_COUNTER_WIDTH;
-`endif
+localparam pACTUAL_SAD_COUNTER_WIDTH = (`INTERVAL_MATCHING == 1)? (pMASTER_COUNTER_WIDTH-2) : pSAD_COUNTER_WIDTH;
 
     reg  triggered;
     reg [15:0] num_triggers;
@@ -271,19 +267,18 @@ module sad #(
                     counter_incr[i] <= adc_datain_rmr + nextrefsample_r[i];
 
 
-                /*
-                `ifdef INTERVAL_MATCHING_ON
+                if (`INTERVAL_MATCHING == 1) begin
                     if (resetter[i])
                         sad_counter[i] <= ((counter_incr[i] <= interval_threshold)? 0 : 1);
                     else if (~(&(sad_counter[i]))) // don't overflow
                         sad_counter[i] <= sad_counter[i] + ((counter_incr[i] <= interval_threshold)? 0 : 1);
-                `else
+                end
+                else begin
                     if (resetter[i])
                         sad_counter[i] <= counter_incr[i];
                     else if (~sad_counter[i][pACTUAL_SAD_COUNTER_WIDTH-1]) // MSB of counter is used to indicate saturation
                         sad_counter[i] <= sad_counter[i] + counter_incr[i];
-                `endif
-                */
+                end
 
             end
 
@@ -297,34 +292,6 @@ module sad #(
         end
     endgenerate
 
-
-`ifdef INTERVAL_MATCHING_ON
-    genvar j;
-    generate 
-        for (j = 0; j < pREF_SAMPLES; j = j + 1) begin: gen_sad_counters2
-                always @(posedge adc_sampleclk) begin
-                    if (resetter[j])
-                        sad_counter[j] <= ((counter_incr[j] <= interval_threshold)? 0 : 1);
-                    else if (~(&(sad_counter[j]))) // don't overflow
-                        sad_counter[j] <= sad_counter[j] + ((counter_incr[j] <= interval_threshold)? 0 : 1);
-                end
-        end
-    endgenerate
-
-`else
-    genvar j;
-    generate 
-        for (j = 0; j < pREF_SAMPLES; j = j + 1) begin: gen_sad_counters2
-                always @(posedge adc_sampleclk) begin
-                    if (resetter[j])
-                        sad_counter[j] <= counter_incr[j];
-                    else if (~sad_counter[j][pACTUAL_SAD_COUNTER_WIDTH-1]) // MSB of counter is used to indicate saturation
-                        sad_counter[j] <= sad_counter[j] + counter_incr[j];
-                end
-        end
-    endgenerate
-
-`endif
 
 
     // for debug only:

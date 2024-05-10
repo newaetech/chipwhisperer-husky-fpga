@@ -501,17 +501,13 @@ async def sad_test(dut):
     counter_width     = int(os.getenv('COUNTER_WIDTH', '12'))
     triggers          = int(os.getenv('TRIGGERS', '4'))
     multiple_triggers = int(os.getenv('MULTIPLE_TRIGGERS', '0'))
-    interval_matching = os.getenv('INTERVAL_MATCHING', 'INTERVAL_MATCHING_OFF')
+    interval_matching = int(os.getenv('INTERVAL_MATCHING', '0'))
     emode             = int(os.getenv('EMODE', '0'))
     implementation    = os.getenv('SAD', 'SAD_BASE')
 
     if implementation == 'ESAD' and not emode:
         ref_samples = ref_samples//2
 
-    if interval_matching == 'INTERVAL_MATCHING_ON':
-        interval_matching = 1
-    else:
-        interval_matching = 0
     if interval_matching:
         counter_width = math.ceil((math.log2(ref_samples)))-2
 

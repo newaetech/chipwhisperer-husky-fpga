@@ -54,7 +54,7 @@ VIVADO_VERSION=2020.2
 VARIANT=REGULAR
 SAD=SAD
 EMODE=0
-INTERVAL_MATCHING=INTERVAL_MATCHING_OFF
+INTERVAL_MATCHING=0
 FIFO_TYPE=NOXILINXFIFO
 NUM_TRIGGERS=4
 COUNTER_WIDTH=16
@@ -120,7 +120,7 @@ compile_sad:
 	-Wselect-range \
 	-D$(VARIANT) \
 	-D$(SAD) \
-	-D$(INTERVAL_MATCHING) \
+	-DINTERVAL_MATCHING=$(INTERVAL_MATCHING) \
 	-P sad_tb.pLINEAR_RAMP=$(LINEAR_RAMP) \
 	-P sad_tb.pINPUTS_FROM_FILE=$(INPUTS_FROM_FILE) \
 	-P sad_tb.pREF_SAMPLES=$(REF_SAMPLES) \
@@ -152,7 +152,7 @@ compile_sad_top:
 	-Wselect-range \
 	-D$(VARIANT) \
 	-D$(SAD) \
-	-D$(INTERVAL_MATCHING) \
+	-DINTERVAL_MATCHING=$(INTERVAL_MATCHING) \
 	-o $(EXEFILE) \
 
 sad_nofifo:
@@ -167,7 +167,7 @@ sad_nofifo:
 	-DNOFIFO \
 	-D$(VARIANT) \
 	-D$(SAD) \
-	-D$(INTERVAL_MATCHING) \
+	-DINTERVAL_MATCHING=$(INTERVAL_MATCHING) \
 	-I../hdl \
 	-Wportbind \
 	-Wselect-range \
@@ -222,12 +222,11 @@ compile_sad_coco:
 	-Wselect-range \
 	-DCOCOTB_SIM=1 \
 	-D$(SAD) \
-	-D$(INTERVAL_MATCHING) \
+	-DINTERVAL_MATCHING=$(INTERVAL_MATCHING) \
 	-I../hdl \
 	-P sad_cocowrapper.pDUMP=$(DUMP) \
 	-P sad_cocowrapper.pBITS_PER_SAMPLE=$(BITS_PER_SAMPLE) \
 	-P sad_cocowrapper.pREF_SAMPLES=$(REF_SAMPLES) \
-	-P sad_cocowrapper.pINTERVAL_MATCHING=$(INTERVAL_MATCHING) \
 	-P sad_cocowrapper.pCOUNTER_WIDTH=$(COUNTER_WIDTH) \
 	-P sad_cocowrapper.pEMODE=$(EMODE) \
 	-o $(EXEFILE) \
@@ -258,7 +257,7 @@ compile:
 	-D$(FIFOSIZE) \
 	-D$(FAST_FIFO_SIM) \
 	-D$(SAD) \
-	-D$(INTERVAL_MATCHING) \
+	-DINTERVAL_MATCHING=$(INTERVAL_MATCHING) \
 	-DTRACE \
 	-D$(VARIANT) \
 	-D$(FIFO_TYPE) \
@@ -312,7 +311,7 @@ compile_coco:
 	-D$(VARIANT) \
 	-D$(FAST_FIFO_SIM) \
 	-D$(SAD) \
-	-D$(INTERVAL_MATCHING) \
+	-DINTERVAL_MATCHING=$(INTERVAL_MATCHING) \
 	-DCOCOTB_SIM=1 \
 	-P $(TOP).pDUMP=$(DUMP) \
 	-o $(EXEFILE) \

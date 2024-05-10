@@ -60,7 +60,6 @@ module sad_cocowrapper #(
     parameter pBYTECNT_SIZE = 7;
     parameter pBITS_PER_SAMPLE = 12;
 
-    parameter pINTERVAL_MATCHING = 0;
     parameter pCOUNTER_WIDTH = 12;
     parameter pEMODE = 0;
 
