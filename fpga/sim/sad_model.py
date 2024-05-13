@@ -82,23 +82,28 @@ class Counter(object):
 
         #self.SAD += np.abs(sample - self.ref[self.current_idx])
         # samples and references likely come in as np.uint8's so need to avoid inadvertent overflow!
+        incr = 0
         if self.refen[self.current_idx]:
             if self.interval_matching:
-                if self.SAD < 2**self.counter_width-1: # don't overflow
+                if self.current_idx == 0 or self.SAD < 2**self.counter_width-1: # don't overflow
                     if sample > self.ref[self.current_idx]:
                         if sample > self.ref[self.current_idx] + self.interval_threshold:
-                            self.SAD += 1
+                            incr = 1
                     else:
                         if sample < self.ref[self.current_idx] - self.interval_threshold:
-                            self.SAD += 1
+                            incr = 1
 
             else:
-                if self.SAD < 2**(self.counter_width-1): # don't overflow
+                if self.current_idx == 0 or self.SAD < 2**(self.counter_width-1): # don't overflow
                     if sample > self.ref[self.current_idx]:
-                        self.SAD += sample - self.ref[self.current_idx]
+                        incr = sample - self.ref[self.current_idx]
                     else:
-                        self.SAD += self.ref[self.current_idx] - sample
+                        incr = self.ref[self.current_idx] - sample
 
+        if self.current_idx == 0:
+            self.SAD = incr
+        else:
+            self.SAD += incr
         self.SADS.append(self.SAD)
 
         self.current_idx += 1
@@ -114,7 +119,6 @@ class Counter(object):
 
         elif self.current_idx == self.reflen//2 and self.emode and not self.extended_mode:
                 self.current_idx = 0
-                self.SAD = 0
 
         elif self.current_idx == self.reflen:
             self.ready2trigger = True
@@ -123,7 +127,6 @@ class Counter(object):
             if self.SAD <= self.threshold:
                 if self.verbose: print("%4d: counter %d MATCHED at time %6d with score: %d ===============================" % (time, self.idx, time, self.SAD))
                 match = True
-            self.SAD = 0
 
         return (match, covered)
 

@@ -59,9 +59,7 @@ module sad_cocowrapper #(
     parameter pDUMP = 0;
     parameter pBYTECNT_SIZE = 7;
     parameter pBITS_PER_SAMPLE = 12;
-
-    parameter pCOUNTER_WIDTH = 12;
-    parameter pEMODE = 0;
+    parameter pSAD_COUNTER_WIDTH = 12;
 
 
     initial begin
@@ -103,7 +101,8 @@ module sad_cocowrapper #(
     sad_wrapper #(
         .pBYTECNT_SIZE      (7),
         .pREF_SAMPLES       (pREF_SAMPLES),
-        .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE)
+        .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE),
+        .pSAD_COUNTER_WIDTH (pSAD_COUNTER_WIDTH)
     ) U_dut (
         .reset              (reset),
         .clk_usb            (clk_usb),

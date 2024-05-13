@@ -61,7 +61,7 @@ module sad #(
                                        (pREF_SAMPLES <= 512)? 9 :
                                        (pREF_SAMPLES <= 1024)? 10 : 11;
 
-localparam pACTUAL_SAD_COUNTER_WIDTH = (`INTERVAL_MATCHING == 1)? (pMASTER_COUNTER_WIDTH-2) : pSAD_COUNTER_WIDTH;
+    localparam pACTUAL_SAD_COUNTER_WIDTH = (`INTERVAL_MATCHING == 1)? (pMASTER_COUNTER_WIDTH-2) : pSAD_COUNTER_WIDTH;
 
     reg  triggered;
     reg [15:0] num_triggers;
@@ -145,6 +145,7 @@ localparam pACTUAL_SAD_COUNTER_WIDTH = (`INTERVAL_MATCHING == 1)? (pMASTER_COUNT
             multiple_triggers <= 0;
             refbase <= 0;
             always_armed <= 0;
+            interval_threshold <= 1;
             refen <= {pREF_SAMPLES{1'b1}}; // all samples enabled by default
         end 
         else begin

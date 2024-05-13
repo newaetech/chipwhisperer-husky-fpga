@@ -217,6 +217,9 @@ class SADTest(object):
             self.threshold = random.randint(4, min(2**(counter_width-2), ref_samples*2))
             self.interval_threshold = 0
 
+        if self.emode and interval_matching and self.threshold == 1:
+            self.threshold = 2 # otherwise triggers are too rare for practical testing
+
         self.dut._log.info('SAD threshold randomized to: %d' % self.threshold)
 
         # instantiate SAD model which will tell us when triggers are expected:
@@ -498,7 +501,7 @@ async def sad_test(dut):
     bits_per_sample   = int(os.getenv('BITS_PER_SAMPLE', '8'))
     linear_ramp       = int(os.getenv('LINEAR_RAMP', '0'))
     ref_samples       = int(os.getenv('REF_SAMPLES', '32'))
-    counter_width     = int(os.getenv('COUNTER_WIDTH', '12'))
+    counter_width     = int(os.getenv('SAD_COUNTER_WIDTH', '12'))
     triggers          = int(os.getenv('TRIGGERS', '4'))
     multiple_triggers = int(os.getenv('MULTIPLE_TRIGGERS', '0'))
     interval_matching = int(os.getenv('INTERVAL_MATCHING', '0'))

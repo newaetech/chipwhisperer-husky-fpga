@@ -69,6 +69,9 @@ module sad_x4_slowclock #(
                                        (pREF_SAMPLES <= 512)? 9 :
                                        (pREF_SAMPLES <= 1024)? 10 : 11;
 
+    // note that in INTERVAL_MATCHING mode, usable width is pMASTER_COUNTER_WIDTH-2; extra bit is saturation indicator
+    localparam pACTUAL_SAD_COUNTER_WIDTH = (`INTERVAL_MATCHING == 1)? (pMASTER_COUNTER_WIDTH-1) : pSAD_COUNTER_WIDTH;
+
     reg  triggered;
     reg  trigger_r;
     reg  trigger1;
@@ -88,7 +91,8 @@ module sad_x4_slowclock #(
     reg [pREF_SAMPLES-1:0] compare_en_b;
     reg [pREF_SAMPLES-1:0] compare_en_c;
     reg [pREF_SAMPLES-1:0] compare_en_d;
-    reg [pSAD_COUNTER_WIDTH-1:0] threshold;
+    reg [pACTUAL_SAD_COUNTER_WIDTH-1:0] threshold;
+    reg [pBITS_PER_SAMPLE-1:0] interval_threshold;      // NOTE: pBITS_PER_SAMPLE is assumed to be <= 8
     reg [pMASTER_COUNTER_WIDTH-1:0] master_counter1;
     reg [pMASTER_COUNTER_WIDTH-1:0] master_counter2;
     reg [pMASTER_COUNTER_WIDTH-1:0] master_counter3;
@@ -99,7 +103,7 @@ module sad_x4_slowclock #(
     reg resetter4 [0:pREF_SAMPLES-1];
 
     reg individual_trigger [0:pREF_SAMPLES-1];
-    reg [pSAD_COUNTER_WIDTH-1:0] sad_counter [0:pREF_SAMPLES-1];
+    reg [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter [0:pREF_SAMPLES-1];
     reg [pBITS_PER_SAMPLE-1:0] counter_incr_a [0:pREF_SAMPLES-1];
     reg [pBITS_PER_SAMPLE-1:0] counter_incr_b [0:pREF_SAMPLES-1];
     reg [pBITS_PER_SAMPLE-1:0] counter_incr_c [0:pREF_SAMPLES-1];
@@ -196,7 +200,7 @@ module sad_x4_slowclock #(
 `else
     wire [23:0] status_reg = {num_triggers, 7'b0, triggered};
 `endif
-    wire [31:0] wide_threshold_reg = {{(32-pSAD_COUNTER_WIDTH){1'b0}}, threshold}; // having a variable-width register isn't very convenient for Python
+    wire [31:0] wide_threshold_reg = {{(32-pACTUAL_SAD_COUNTER_WIDTH){1'b0}}, threshold}; // having a variable-width register isn't very convenient for Python
     reg [7:0] refbase;
 
     // These are a property of this module; used here to make sure Python
@@ -214,10 +218,11 @@ module sad_x4_slowclock #(
                 `SAD_REFERENCE: reg_datao = refsamples[{refbase, reg_bytecnt}*8 +: 8];
                 `SAD_REFEN: reg_datao = refen[reg_bytecnt*8 +: 8];
                 `SAD_THRESHOLD: reg_datao = wide_threshold_reg[reg_bytecnt*8 +: 8];
+                `SAD_INTERVAL_THRESHOLD: reg_datao = interval_threshold;
                 `SAD_STATUS: reg_datao = status_reg[reg_bytecnt*8 +: 8];
                 `SAD_BITS_PER_SAMPLE: reg_datao = pBITS_PER_SAMPLE;
                 `SAD_REF_SAMPLES: reg_datao = ref_samples[reg_bytecnt*8 +: 8];
-                `SAD_COUNTER_WIDTH: reg_datao = pSAD_COUNTER_WIDTH;
+                `SAD_COUNTER_WIDTH: reg_datao = pACTUAL_SAD_COUNTER_WIDTH;
                 `SAD_MULTIPLE_TRIGGERS: reg_datao = {7'b0, multiple_triggers};
                 `SAD_VERSION: reg_datao = version_bits;
                 `SAD_ALWAYS_ARMED: reg_datao = {7'b0, always_armed};
@@ -237,6 +242,7 @@ module sad_x4_slowclock #(
             multiple_triggers <= 0;
             refbase <= 0;
             always_armed <= 0;
+            interval_threshold <= 1;
             refen <= {pREF_SAMPLES{1'b1}}; // all samples enabled by default
         end 
         else begin
@@ -246,6 +252,8 @@ module sad_x4_slowclock #(
                     `SAD_REFERENCE: refsamples[{refbase, reg_bytecnt}*8 +: 8] <= reg_datai;
                     `SAD_REFEN: refen[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_THRESHOLD: threshold[reg_bytecnt*8 +: 8] <= reg_datai;
+                    `SAD_INTERVAL_THRESHOLD: interval_threshold <= reg_datai;
+                    `SAD_INTERVAL_THRESHOLD: interval_threshold <= reg_datai;
                 `ifndef HIPERF
                     `SAD_MULTIPLE_TRIGGERS: multiple_triggers <= reg_datai[0];
                 `endif
@@ -514,10 +522,25 @@ module sad_x4_slowclock #(
 
 
                 // finally we get to the actual SAD counters:
-                if (resetter1[i])
-                    sad_counter[i] <= counter_incr_a[i] + counter_incr_b[i] + counter_incr_c[i] + counter_incr_d[i];
-                else if (~sad_counter[i][pSAD_COUNTER_WIDTH-1]) // MSB of counter is used to indicate saturation
-                    sad_counter[i] <= sad_counter[i] + counter_incr_a[i] + counter_incr_b[i] + counter_incr_c[i] + counter_incr_d[i];
+                if (`INTERVAL_MATCHING == 1) begin
+                    if (resetter1[i])
+                        sad_counter[i] <= ((counter_incr_a[i] <= interval_threshold)? 0 : 1) + 
+                                          ((counter_incr_b[i] <= interval_threshold)? 0 : 1) +
+                                          ((counter_incr_c[i] <= interval_threshold)? 0 : 1) +
+                                          ((counter_incr_d[i] <= interval_threshold)? 0 : 1);
+                    else if (~sad_counter[i][pACTUAL_SAD_COUNTER_WIDTH-1]) // MSB of counter is used to indicate saturation
+                        sad_counter[i] <= sad_counter[i] + 
+                                          ((counter_incr_a[i] <= interval_threshold)? 0 : 1) + 
+                                          ((counter_incr_b[i] <= interval_threshold)? 0 : 1) +
+                                          ((counter_incr_c[i] <= interval_threshold)? 0 : 1) +
+                                          ((counter_incr_d[i] <= interval_threshold)? 0 : 1);
+                end
+                else begin
+                    if (resetter1[i])
+                        sad_counter[i] <= counter_incr_a[i] + counter_incr_b[i] + counter_incr_c[i] + counter_incr_d[i];
+                    else if (~sad_counter[i][pACTUAL_SAD_COUNTER_WIDTH-1]) // MSB of counter is used to indicate saturation
+                        sad_counter[i] <= sad_counter[i] + counter_incr_a[i] + counter_incr_b[i] + counter_incr_c[i] + counter_incr_d[i];
+                end
 
                 // and the triggers:
                 if ((sad_counter[i] <= threshold) && resetter1[i] && ready2trigger1[i] && ~(triggered && ~multiple_triggers))
@@ -610,10 +633,26 @@ module sad_x4_slowclock #(
 
 
                 // finally we get to the actual SAD counters:
-                if (resetter2[j])
-                    sad_counter[j] <= counter_incr_a[j] + counter_incr_b[j] + counter_incr_c[j] + counter_incr_d[j];
-                else if (~sad_counter[j][pSAD_COUNTER_WIDTH-1]) // MSB of counter is used to indicate saturation
-                    sad_counter[j] <= sad_counter[j] + counter_incr_a[j] + counter_incr_b[j] + counter_incr_c[j] + counter_incr_d[j];
+                if (`INTERVAL_MATCHING == 1) begin
+                    if (resetter2[j])
+                        sad_counter[j] <= ((counter_incr_a[j] <= interval_threshold)? 0 : 1) + 
+                                          ((counter_incr_b[j] <= interval_threshold)? 0 : 1) +
+                                          ((counter_incr_c[j] <= interval_threshold)? 0 : 1) +
+                                          ((counter_incr_d[j] <= interval_threshold)? 0 : 1);
+                    else if (~sad_counter[j][pACTUAL_SAD_COUNTER_WIDTH-1]) // MSB of counter is used to indicate saturation
+                        sad_counter[j] <= sad_counter[j] + 
+                                          ((counter_incr_a[j] <= interval_threshold)? 0 : 1) + 
+                                          ((counter_incr_b[j] <= interval_threshold)? 0 : 1) +
+                                          ((counter_incr_c[j] <= interval_threshold)? 0 : 1) +
+                                          ((counter_incr_d[j] <= interval_threshold)? 0 : 1);
+                end
+                else begin
+                    if (resetter2[j])
+                        sad_counter[j] <= counter_incr_a[j] + counter_incr_b[j] + counter_incr_c[j] + counter_incr_d[j];
+                    else if (~sad_counter[j][pACTUAL_SAD_COUNTER_WIDTH-1]) // MSB of counter is used to indicate saturation
+                        sad_counter[j] <= sad_counter[j] + counter_incr_a[j] + counter_incr_b[j] + counter_incr_c[j] + counter_incr_d[j];
+                end
+
 
                 // and the triggers:
                 if ((sad_counter[j] <= threshold) && resetter2[j] && ready2trigger2[j] && ~(triggered && ~multiple_triggers))
@@ -706,10 +745,26 @@ module sad_x4_slowclock #(
 
 
                 // finally we get to the actual SAD counters:
-                if (resetter3[k])
-                    sad_counter[k] <= counter_incr_a[k] + counter_incr_b[k] + counter_incr_c[k] + counter_incr_d[k];
-                else if (~sad_counter[k][pSAD_COUNTER_WIDTH-1]) // MSB of counter is used to indicate saturation
-                    sad_counter[k] <= sad_counter[k] + counter_incr_a[k] + counter_incr_b[k] + counter_incr_c[k] + counter_incr_d[k];
+                if (`INTERVAL_MATCHING == 1) begin
+                    if (resetter3[k])
+                        sad_counter[k] <= ((counter_incr_a[k] <= interval_threshold)? 0 : 1) + 
+                                          ((counter_incr_b[k] <= interval_threshold)? 0 : 1) +
+                                          ((counter_incr_c[k] <= interval_threshold)? 0 : 1) +
+                                          ((counter_incr_d[k] <= interval_threshold)? 0 : 1);
+                    else if (~sad_counter[k][pACTUAL_SAD_COUNTER_WIDTH-1]) // MSB of counter is used to indicate saturation
+                        sad_counter[k] <= sad_counter[k] + 
+                                          ((counter_incr_a[k] <= interval_threshold)? 0 : 1) + 
+                                          ((counter_incr_b[k] <= interval_threshold)? 0 : 1) +
+                                          ((counter_incr_c[k] <= interval_threshold)? 0 : 1) +
+                                          ((counter_incr_d[k] <= interval_threshold)? 0 : 1);
+                end
+                else begin
+                    if (resetter3[k])
+                        sad_counter[k] <= counter_incr_a[k] + counter_incr_b[k] + counter_incr_c[k] + counter_incr_d[k];
+                    else if (~sad_counter[k][pACTUAL_SAD_COUNTER_WIDTH-1]) // MSB of counter is used to indicate saturation
+                        sad_counter[k] <= sad_counter[k] + counter_incr_a[k] + counter_incr_b[k] + counter_incr_c[k] + counter_incr_d[k];
+                end
+
 
                 // and the triggers:
                 if ((sad_counter[k] <= threshold) && resetter3[k] && ready2trigger3[k] && ~(triggered && ~multiple_triggers))
@@ -803,10 +858,25 @@ module sad_x4_slowclock #(
 
 
                 // finally we get to the actual SAD counters:
-                if (resetter4[l])
-                    sad_counter[l] <= counter_incr_a[l] + counter_incr_b[l] + counter_incr_c[l] + counter_incr_d[l];
-                else if (~sad_counter[l][pSAD_COUNTER_WIDTH-1]) // MSB of counter is used to indicate saturation
-                    sad_counter[l] <= sad_counter[l] + counter_incr_a[l] + counter_incr_b[l] + counter_incr_c[l] + counter_incr_d[l];
+                if (`INTERVAL_MATCHING == 1) begin
+                    if (resetter4[l])
+                        sad_counter[l] <= ((counter_incr_a[l] <= interval_threshold)? 0 : 1) + 
+                                          ((counter_incr_b[l] <= interval_threshold)? 0 : 1) +
+                                          ((counter_incr_c[l] <= interval_threshold)? 0 : 1) +
+                                          ((counter_incr_d[l] <= interval_threshold)? 0 : 1);
+                    else if (~sad_counter[l][pACTUAL_SAD_COUNTER_WIDTH-1]) // MSB of counter is used to indicate saturation
+                        sad_counter[l] <= sad_counter[l] + 
+                                          ((counter_incr_a[l] <= interval_threshold)? 0 : 1) + 
+                                          ((counter_incr_b[l] <= interval_threshold)? 0 : 1) +
+                                          ((counter_incr_c[l] <= interval_threshold)? 0 : 1) +
+                                          ((counter_incr_d[l] <= interval_threshold)? 0 : 1);
+                end
+                else begin
+                    if (resetter4[l])
+                        sad_counter[l] <= counter_incr_a[l] + counter_incr_b[l] + counter_incr_c[l] + counter_incr_d[l];
+                    else if (~sad_counter[l][pACTUAL_SAD_COUNTER_WIDTH-1]) // MSB of counter is used to indicate saturation
+                        sad_counter[l] <= sad_counter[l] + counter_incr_a[l] + counter_incr_b[l] + counter_incr_c[l] + counter_incr_d[l];
+                end
 
                 // and the triggers:
                 if ((sad_counter[l] <= threshold) && resetter4[l] && ready2trigger4[l] && ~(triggered && ~multiple_triggers))
@@ -873,82 +943,82 @@ module sad_x4_slowclock #(
     wire [pBITS_PER_SAMPLE-1:0] nextrefsample_d27 = nextrefsample_d[27];
 
 
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter0  = sad_counter[0 ];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter1  = sad_counter[1 ];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter2  = sad_counter[2 ];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter3  = sad_counter[3 ];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter4  = sad_counter[4 ];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter5  = sad_counter[5 ];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter6  = sad_counter[6 ];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter7  = sad_counter[7 ];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter8  = sad_counter[8 ];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter9  = sad_counter[9 ];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter10 = sad_counter[10];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter11 = sad_counter[11];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter12 = sad_counter[12];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter13 = sad_counter[13];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter14 = sad_counter[14];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter15 = sad_counter[15];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter16 = sad_counter[16];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter17 = sad_counter[17];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter18 = sad_counter[18];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter19 = sad_counter[19];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter20 = sad_counter[20];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter21 = sad_counter[21];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter22 = sad_counter[22];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter23 = sad_counter[23];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter24 = sad_counter[24];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter25 = sad_counter[25];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter26 = sad_counter[26];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter27 = sad_counter[27];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter28 = sad_counter[28];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter29 = sad_counter[29];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter30 = sad_counter[30];
-    wire [pSAD_COUNTER_WIDTH-1:0] sad_counter31 = sad_counter[31];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter0  = sad_counter[0 ];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter1  = sad_counter[1 ];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter2  = sad_counter[2 ];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter3  = sad_counter[3 ];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter4  = sad_counter[4 ];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter5  = sad_counter[5 ];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter6  = sad_counter[6 ];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter7  = sad_counter[7 ];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter8  = sad_counter[8 ];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter9  = sad_counter[9 ];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter10 = sad_counter[10];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter11 = sad_counter[11];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter12 = sad_counter[12];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter13 = sad_counter[13];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter14 = sad_counter[14];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter15 = sad_counter[15];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter16 = sad_counter[16];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter17 = sad_counter[17];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter18 = sad_counter[18];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter19 = sad_counter[19];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter20 = sad_counter[20];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter21 = sad_counter[21];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter22 = sad_counter[22];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter23 = sad_counter[23];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter24 = sad_counter[24];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter25 = sad_counter[25];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter26 = sad_counter[26];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter27 = sad_counter[27];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter28 = sad_counter[28];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter29 = sad_counter[29];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter30 = sad_counter[30];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter31 = sad_counter[31];
 
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_a0 = counter_incr_a[0];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_a1 = counter_incr_a[1];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_a2 = counter_incr_a[2];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_a3 = counter_incr_a[3];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_a4 = counter_incr_a[4];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_a5 = counter_incr_a[5];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_a6 = counter_incr_a[6];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_a7 = counter_incr_a[7];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_a26 = counter_incr_a[26];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_a27 = counter_incr_a[27];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_a0 = counter_incr_a[0];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_a1 = counter_incr_a[1];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_a2 = counter_incr_a[2];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_a3 = counter_incr_a[3];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_a4 = counter_incr_a[4];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_a5 = counter_incr_a[5];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_a6 = counter_incr_a[6];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_a7 = counter_incr_a[7];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_a26 = counter_incr_a[26];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_a27 = counter_incr_a[27];
 
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_b0 = counter_incr_b[0];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_b1 = counter_incr_b[1];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_b2 = counter_incr_b[2];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_b3 = counter_incr_b[3];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_b4 = counter_incr_b[4];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_b5 = counter_incr_b[5];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_b6 = counter_incr_b[6];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_b7 = counter_incr_b[7];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_b26 = counter_incr_b[26];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_b27 = counter_incr_b[27];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_b0 = counter_incr_b[0];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_b1 = counter_incr_b[1];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_b2 = counter_incr_b[2];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_b3 = counter_incr_b[3];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_b4 = counter_incr_b[4];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_b5 = counter_incr_b[5];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_b6 = counter_incr_b[6];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_b7 = counter_incr_b[7];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_b26 = counter_incr_b[26];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_b27 = counter_incr_b[27];
 
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_c0 = counter_incr_c[0];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_c1 = counter_incr_c[1];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_c2 = counter_incr_c[2];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_c3 = counter_incr_c[3];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_c4 = counter_incr_c[4];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_c5 = counter_incr_c[5];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_c6 = counter_incr_c[6];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_c7 = counter_incr_c[7];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_c26 = counter_incr_c[26];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_c27 = counter_incr_c[27];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_c0 = counter_incr_c[0];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_c1 = counter_incr_c[1];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_c2 = counter_incr_c[2];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_c3 = counter_incr_c[3];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_c4 = counter_incr_c[4];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_c5 = counter_incr_c[5];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_c6 = counter_incr_c[6];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_c7 = counter_incr_c[7];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_c26 = counter_incr_c[26];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_c27 = counter_incr_c[27];
 
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_d0 = counter_incr_d[0];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_d1 = counter_incr_d[1];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_d2 = counter_incr_d[2];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_d3 = counter_incr_d[3];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_d4 = counter_incr_d[4];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_d5 = counter_incr_d[5];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_d6 = counter_incr_d[6];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_d7 = counter_incr_d[7];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_d26 = counter_incr_d[26];
-    wire [pSAD_COUNTER_WIDTH-1:0] counter_incr_d27 = counter_incr_d[27];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_d0 = counter_incr_d[0];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_d1 = counter_incr_d[1];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_d2 = counter_incr_d[2];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_d3 = counter_incr_d[3];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_d4 = counter_incr_d[4];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_d5 = counter_incr_d[5];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_d6 = counter_incr_d[6];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_d7 = counter_incr_d[7];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_d26 = counter_incr_d[26];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr_d27 = counter_incr_d[27];
 
     wire resetter3_26 = resetter3[26];
     wire resetter4_27 = resetter4[27];

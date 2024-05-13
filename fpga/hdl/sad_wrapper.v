@@ -25,7 +25,8 @@ Author: Jean-Pierre Thibault <jpthibault@newae.com>
 module sad_wrapper #(  
     parameter pBYTECNT_SIZE = 7,
     parameter pREF_SAMPLES = 8, 
-    parameter pBITS_PER_SAMPLE = 12
+    parameter pBITS_PER_SAMPLE = 12,
+    parameter pSAD_COUNTER_WIDTH= 12
 )(
     input wire         clk_usb,
     input wire         clk_adc,
@@ -113,7 +114,8 @@ wire trigger_base;
 sad #(
     .pBYTECNT_SIZE      (7),
     .pREF_SAMPLES       (pREF_SAMPLES),
-    .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE)
+    .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE),
+    .pSAD_COUNTER_WIDTH (pSAD_COUNTER_WIDTH)
 ) U_base_dut (
     .reset              (reset),
     .xadc_error         (1'b0),
@@ -140,7 +142,8 @@ sad #(
     esad #(
         .pBYTECNT_SIZE      (7),
         .pREF_SAMPLES       (pREF_SAMPLES),
-        .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE)
+        .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE),
+        .pSAD_COUNTER_WIDTH (pSAD_COUNTER_WIDTH)
     ) U_edut (
         .reset              (reset),
         .xadc_error         (1'b0),
@@ -168,7 +171,8 @@ sad #(
     sad_single_counter #(
         .pBYTECNT_SIZE      (7),
         .pREF_SAMPLES       (pREF_SAMPLES),
-        .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE)
+        .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE),
+        .pSAD_COUNTER_WIDTH (pSAD_COUNTER_WIDTH)
     ) U_single_dut (
         .reset              (reset),
         .xadc_error         (1'b0),
@@ -195,7 +199,8 @@ sad #(
     sad_x2 #(
         .pBYTECNT_SIZE      (7),
         .pREF_SAMPLES       (pREF_SAMPLES),
-        .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE)
+        .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE),
+        .pSAD_COUNTER_WIDTH (pSAD_COUNTER_WIDTH)
     ) U_x2b_dut (
         .reset              (reset),
         .xadc_error         (1'b0),
@@ -232,7 +237,8 @@ always @(posedge clk_adc) ADC_slow_clk_odd  <= ~ADC_slow_clk_odd;
     sad_x2_slowclock #(
         .pBYTECNT_SIZE      (7),
         .pREF_SAMPLES       (pREF_SAMPLES),
-        .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE)
+        .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE),
+        .pSAD_COUNTER_WIDTH (pSAD_COUNTER_WIDTH)
     ) U_x2_dut (
         .reset              (reset),
         .xadc_error         (1'b0),
@@ -272,7 +278,8 @@ always @(posedge clk_adc) ADC_slow_clk_odd  <= ~ADC_slow_clk_odd;
     sad_x4_slowclock #(
         .pBYTECNT_SIZE      (7),
         .pREF_SAMPLES       (pREF_SAMPLES),
-        .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE)
+        .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE),
+        .pSAD_COUNTER_WIDTH (pSAD_COUNTER_WIDTH)
     ) U_x4_dut (
         .reset              (reset),
         .xadc_error         (1'b0),

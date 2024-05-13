@@ -55,6 +55,7 @@ VARIANT=REGULAR
 SAD=SAD
 EMODE=0
 INTERVAL_MATCHING=0
+SAD_COUNTER_WIDTH=12
 FIFO_TYPE=NOXILINXFIFO
 NUM_TRIGGERS=4
 COUNTER_WIDTH=16
@@ -227,8 +228,7 @@ compile_sad_coco:
 	-P sad_cocowrapper.pDUMP=$(DUMP) \
 	-P sad_cocowrapper.pBITS_PER_SAMPLE=$(BITS_PER_SAMPLE) \
 	-P sad_cocowrapper.pREF_SAMPLES=$(REF_SAMPLES) \
-	-P sad_cocowrapper.pCOUNTER_WIDTH=$(COUNTER_WIDTH) \
-	-P sad_cocowrapper.pEMODE=$(EMODE) \
+	-P sad_cocowrapper.pSAD_COUNTER_WIDTH=$(SAD_COUNTER_WIDTH) \
 	-o $(EXEFILE) \
 	../hdl/sad_top.v \
 	../hdl/sad_wrapper.v \
