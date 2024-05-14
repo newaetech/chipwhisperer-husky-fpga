@@ -162,7 +162,8 @@ class SADTest(object):
                  multiple_triggers,  
                  emode,
                  interval_matching,
-                 counter_width):
+                 counter_width,
+                 implementation):
 
         self.dut = dut
         self.harness = harness
@@ -197,11 +198,16 @@ class SADTest(object):
             else:
                 sample = (sample + 1) % 2**bits_per_sample
             self.pattern.append(sample)
-            if random.randint(0, 10): # enable SAD for 1 out of 10 samples:
+            if implementation == 'SAD_SINGLE':
+                # doesn't support disabled samples
                 self.refen.append(1)
                 self.samples_enabled += 1
             else:
-                self.refen.append(0)
+                if random.randint(0, 10): # enable SAD for 1 out of 10 samples:
+                    self.refen.append(1)
+                    self.samples_enabled += 1
+                else:
+                    self.refen.append(0)
 
         self.dut._log.info('pattern = %s' % self.pattern)
         self.dut._log.info('refen = %s' % self.refen)
@@ -536,7 +542,8 @@ async def sad_test(dut):
                       multiple_triggers = multiple_triggers,
                       emode = emode,
                       interval_matching = interval_matching,
-                      counter_width = counter_width
+                      counter_width = counter_width,
+                      implementation = implementation
                      )
     harness.register_test(sadtest)
 

@@ -239,7 +239,20 @@ tests.append(dict(name  = 'sad_base',
              MULTIPLE_TRIGGERS = [0,1],
              INTERVAL_MATCHING = [0,1],
              SAD = 'SAD_BASE',
-             #SAD = 'SAD_SINGLE', # fails
+             TOP = 'sad_cocowrapper.v',
+             description = 'SAD block-level test, base implementation.'))
+
+tests.append(dict(name  = 'sad_single',
+             frequency = 20,
+             BITS_PER_SAMPLE = 8,
+             REF_SAMPLES = 32,
+             TRIGGERS = 4,
+             LINEAR_RAMP = 0,
+             TIMEOUT_CYCLES = 5000,
+             MULTIPLE_TRIGGERS = 1, # other settings not supported
+             INTERVAL_MATCHING = 0, # other settings not supported
+             SAD = 'SAD_SINGLE',
+             SAD_COUNTER_WIDTH = 16, # no overflow protection so let's make it wide!
              TOP = 'sad_cocowrapper.v',
              description = 'SAD block-level test, base implementation.'))
 

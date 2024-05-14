@@ -78,7 +78,7 @@ module sad_single_counter #(
     // Format: 2 MSB = version code (00: sad.v, 01: sad_x2_slowclock.v)
     //         6 LSB = trigger latency
     //wire [7:0] version_bits = 8'hFF; // not valid, but ok since nobody should actually use this
-    wire [7:0] version_bits = {2'b00, 6'd08};
+    wire [7:0] version_bits = {2'b00, 6'd06};
 
     // register reads:
     always @(*) begin
@@ -136,7 +136,7 @@ module sad_single_counter #(
     always @(*) begin
         sad_counter = 0;
         for (j = 0; j < pREF_SAMPLES; j = j + 1)
-            sad_counter = sad_counter + abs(adc_datain_r[pREF_SAMPLES-j-1], refsample[j]);
+            sad_counter = sad_counter + abs(adc_datain_r[pREF_SAMPLES-j-1], refsample[j]); // note lack of overflow protection!
     end
 
     always @(posedge adc_sampleclk) begin
@@ -145,7 +145,7 @@ module sad_single_counter #(
         // leaving as-in since this is just proof-of-concept. To prevent false
         // triggers, would need something like the ready2trigger logic that
         // our other sad implementations use.
-        if (sad_counter_r <= threshold)
+        if (armed_and_ready && (sad_counter_r <= threshold))
             trigger <= 1'b1;
         else
             trigger <= 1'b0;
