@@ -85,6 +85,7 @@ module sad_x4_slowclock #(
 
     reg always_armed;
     reg multiple_triggers;
+    reg emode;
     reg [pREF_SAMPLES*pBITS_PER_SAMPLE-1:0] refsamples;
     reg [pREF_SAMPLES-1:0] refen = {pREF_SAMPLES{1'b1}}; // all samples enabled by default
     reg [pREF_SAMPLES-1:0] compare_en_a;
@@ -224,9 +225,8 @@ module sad_x4_slowclock #(
                 `SAD_BITS_PER_SAMPLE: reg_datao = pBITS_PER_SAMPLE;
                 `SAD_REF_SAMPLES: reg_datao = ref_samples[reg_bytecnt*8 +: 8];
                 `SAD_COUNTER_WIDTH: reg_datao = pACTUAL_SAD_COUNTER_WIDTH;
-                `SAD_MULTIPLE_TRIGGERS: reg_datao = {7'b0, multiple_triggers};
                 `SAD_VERSION: reg_datao = version_bits;
-                `SAD_ALWAYS_ARMED: reg_datao = {7'b0, always_armed};
+                `SAD_CONTROL: reg_datao = {5'b0, emode, multiple_triggers, always_armed};
                 default: reg_datao = 0;
             endcase
         end
@@ -255,11 +255,15 @@ module sad_x4_slowclock #(
                     `SAD_THRESHOLD: threshold[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_INTERVAL_THRESHOLD: interval_threshold <= reg_datai;
                     `SAD_INTERVAL_THRESHOLD: interval_threshold <= reg_datai;
-                `ifndef HIPERF
-                    `SAD_MULTIPLE_TRIGGERS: multiple_triggers <= reg_datai[0];
-                `endif
                     `SAD_REFERENCE_BASE: refbase <= reg_datai;
-                    `SAD_ALWAYS_ARMED: always_armed <= reg_datai[0];
+                    `SAD_CONTROL: begin
+                        emode <= reg_datai[2];
+                    `ifndef HIPERF
+                        multiple_triggers <= reg_datai[1];
+                    `endif
+                        always_armed <= reg_datai[0];
+                    end
+
                     default: ;
                 endcase
                 if (reg_address == `SAD_STATUS)

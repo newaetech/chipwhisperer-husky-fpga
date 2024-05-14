@@ -308,23 +308,6 @@ tests.append(dict(name  = 'sad_x2',
              TOP = 'sad_cocowrapper.v',
              description = 'SAD block-level test, sad_x2 implementation. Occasional failures.'))
 
-tests.append(dict(name  = 'sad_old_testbench',
-             frequency = 0,
-             BITS_PER_SAMPLE = 8,
-             REF_SAMPLES = 128, # caution: large values can lead to slow simulation
-             THRESHOLD = [20,100], # keep threshold low to avoid unintentional triggers - testbench isn't smart enough
-             TRIGGERS = 4,
-             FLUSH = [0,1],
-             LINEAR_RAMP = 1,
-             TIMEOUT_CYCLES = 5000,
-             SAD = 'SAD_BASE',
-             #SAD = 'ESAD',
-             #SAD = 'SAD_X2B',
-             #SAD = 'SAD_X2',
-             #SAD = 'SAD_X4',
-             TOP = 'sad_tb.v',
-             description = 'SAD block-level test, base implementation.'))
-
 tests.append(dict(name  = 'edge',
              frequency = 4,
              EDGES = [1, 32],
@@ -507,8 +490,6 @@ for test in tests:
          elif key == 'VARIANT':
              if test[key] != args.variant:
                  run_test = False
-         elif key == 'TOP' and test[key] == 'sad_tb.v':
-             makeargs[1] = 'all_sad'
              cocotb = False
          elif key == 'TOP' and test[key] == 'edge_tb.v':
              makeargs[1] = 'all_edge'

@@ -292,8 +292,7 @@ class SADTest(object):
         await self.registers.write(self.reg_addr['SAD_REFEN'], self.registers.to_bytes(dut_refen_bignum, size))
         # 4. Rest of setup:
         await self.registers.write(self.reg_addr['SAD_THRESHOLD'], self.registers.to_bytes(self.threshold, 4))
-        await self.registers.write(self.reg_addr['SAD_MULTIPLE_TRIGGERS'], [self.multiple_triggers])
-        await self.registers.write(self.reg_addr['SAD_EMODE'], [self.emode])
+        await self.registers.write(self.reg_addr['SAD_CONTROL'], [(self.emode << 2) + (self.multiple_triggers << 1)])
         await self.registers.write(self.reg_addr['SAD_INTERVAL_THRESHOLD'], [self.interval_threshold])
         # check selected DUT latency so we can adjust our expected triggers accordingly:
         latency = (await self.registers.read(self.reg_addr['SAD_VERSION'], 1))[0] & 0x1f

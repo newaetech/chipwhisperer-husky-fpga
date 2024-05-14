@@ -62,7 +62,6 @@ COUNTER_WIDTH=16
 COCOTB_LOG_LEVEL=INFO
 
 all: compile run
-all_sad: compile_sad run
 all_edge: compile_edge run
 all_trigger_sequencer: compile_trigger_sequencer run_trigger_sequencer
 all_sad_coco: compile_sad_coco run_sad_coco
@@ -96,45 +95,6 @@ else
     PRO=0
 endif
 
-compile_sad:
-	iverilog \
-	../hdl/esad.v \
-	../hdl/sad.v \
-	../hdl/sad_single_counter.v \
-	../hdl/sad_x2.v \
-	../hdl/sad_x2_fastclock.v \
-	../hdl/sad_x2_slowclock.v \
-	../hdl/sad_x4_slowclock.v \
-	../hdl/sad_wrapper.v \
-	../hdl/usb_reg_main.v \
-	../fpga-common/hdl/fifo_sync.v \
-	vivado/xpm_memory.sv \
-	../fpga-common/hdl/cdc_pulse.v \
-	../fpga-common/hdl/cdc_simple.v \
-	sad_tb.v \
-	vivado/sad_fifo_sim_netlist.v \
-	-y/$(VIVADO_PATH)/$(VIVADO_VERSION)/ids_lite/ISE/verilog/src/unisims/ \
-	-g2005-sv \
-	-gsupported-assertions \
-	-I../hdl \
-	-Wportbind \
-	-Wselect-range \
-	-D$(VARIANT) \
-	-D$(SAD) \
-	-DINTERVAL_MATCHING=$(INTERVAL_MATCHING) \
-	-P sad_tb.pLINEAR_RAMP=$(LINEAR_RAMP) \
-	-P sad_tb.pINPUTS_FROM_FILE=$(INPUTS_FROM_FILE) \
-	-P sad_tb.pREF_SAMPLES=$(REF_SAMPLES) \
-	-P sad_tb.pBITS_PER_SAMPLE=$(BITS_PER_SAMPLE) \
-	-P sad_tb.pTHRESHOLD=$(THRESHOLD) \
-	-P sad_tb.pTRIGGERS=$(TRIGGERS) \
-	-P sad_tb.pFLUSH=$(FLUSH) \
-	-P sad_tb.pDUMP=$(DUMP) \
-	-P sad_tb.pSEED=$(SEED) \
-	-P sad_tb.pVERBOSE=$(VERBOSE) \
-	-P sad_tb.pTIMEOUT_CYCLES=$(TIMEOUT_CYCLES) \
-	-o $(EXEFILE) \
-
 compile_sad_top:
 	iverilog \
 	../hdl/sad.v \
@@ -154,29 +114,6 @@ compile_sad_top:
 	-D$(VARIANT) \
 	-D$(SAD) \
 	-DINTERVAL_MATCHING=$(INTERVAL_MATCHING) \
-	-o $(EXEFILE) \
-
-sad_nofifo:
-	iverilog \
-	../hdl/sad.v \
-	../hdl/sad_x2_slowclock.v \
-	../hdl/sad_wrapper.v \
-	../hdl/usb_reg_main.v \
-	../fpga-common/hdl/cdc_pulse.v \
-	sad_tb.v \
-	-g2005-sv \
-	-DNOFIFO \
-	-D$(VARIANT) \
-	-D$(SAD) \
-	-DINTERVAL_MATCHING=$(INTERVAL_MATCHING) \
-	-I../hdl \
-	-Wportbind \
-	-Wselect-range \
-	-P sad_tb.pLINEAR_RAMP=$(LINEAR_RAMP) \
-	-P sad_tb.pREF_SAMPLES=$(REF_SAMPLES) \
-	-P sad_tb.pBITS_PER_SAMPLE=$(BITS_PER_SAMPLE) \
-	-P sad_tb.pDUMP=$(DUMP) \
-	-P sad_tb.pSEED=$(SEED) \
 	-o $(EXEFILE) \
 
 compile_edge:
@@ -236,7 +173,6 @@ compile_sad_coco:
 	../hdl/sad.v \
 	../hdl/sad_single_counter.v \
 	../hdl/sad_x2.v \
-	../hdl/sad_x2_fastclock.v \
 	../hdl/sad_x2_slowclock.v \
 	../hdl/sad_x4_slowclock.v \
 	../hdl/usb_reg_main.v \
