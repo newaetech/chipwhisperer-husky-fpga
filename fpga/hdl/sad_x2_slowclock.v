@@ -149,12 +149,13 @@ module sad_x2_slowclock #(
     wire [31:0] wide_threshold_reg = {{(32-pACTUAL_SAD_COUNTER_WIDTH){1'b0}}, threshold}; // having a variable-width register isn't very convenient for Python
     reg [7:0] refbase;
 
-    // These are a property of this module; used here to make sure Python
-    // knows what it's talking to, in case there may be different SAD modules
-    // used in different targets or builds.
-    // Format: 2 MSB = version code (00: sad.v, 01: sad_x2_slowclock.v)
-    //         6 LSB = trigger latency
-    wire [7:0] version_bits = {2'b01, 6'd13};
+    // See sad.v for definitions:
+    wire esad_support = 1'b0;
+    wire im_support = 1'b1;
+    wire [2:0] version = 3'b010;
+    wire [4:0] latency = 5'd13;
+    wire [9:0] version_bits = {esad_support, im_support, version, latency};
+
     wire [15:0] ref_samples = pREF_SAMPLES;
 
     // register reads:

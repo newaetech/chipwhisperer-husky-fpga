@@ -72,13 +72,13 @@ module sad_single_counter #(
     wire [15:0] ref_samples = pREF_SAMPLES;
     reg [7:0] refbase;
 
-    // These are a property of this module; used here to make sure Python
-    // knows what it's talking to, in case there may be different SAD modules
-    // used in different targets or builds.
-    // Format: 2 MSB = version code (00: sad.v, 01: sad_x2_slowclock.v)
-    //         6 LSB = trigger latency
-    //wire [7:0] version_bits = 8'hFF; // not valid, but ok since nobody should actually use this
-    wire [7:0] version_bits = {2'b00, 6'd06};
+    // See sad.v for definitions:
+    wire esad_support = 1'b0;
+    wire im_support = 1'b0;
+    wire [2:0] version = 3'b111;
+    wire [4:0] latency = 5'd06;
+    wire [9:0] version_bits = {esad_support, im_support, version, latency};
+
 
     // register reads:
     always @(*) begin

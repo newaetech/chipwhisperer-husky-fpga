@@ -43,7 +43,7 @@ module sad_cocowrapper #(
 
     // testbench things:
     input  wire [31:0]  errors,
-    input  wire [5:0]   latency,
+    input  wire [4:0]   latency,
     input  wire [15:0]  model_counter[0:pREF_SAMPLES-1],
     input  wire [pREF_SAMPLES/2-1:0]  model_extended_mode,
     input  wire [31:0]  model_ready2trigger,

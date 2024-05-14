@@ -146,12 +146,13 @@ module esad #(
 
     assign debug_emode = extended_mode | trigger_possible;
 
-    // These are a property of this module; used here to make sure Python
-    // knows what it's talking to, in case there may be different SAD modules
-    // used in different targets or builds.
-    // Format: 2 MSB = version code (00: sad.v, 01: sad_x2_slowclock.v, 10: sad_x4_slowclock.v, 11: esad.v)
-    //         6 LSB = trigger latency
-    wire [7:0] version_bits = {2'b11, 6'd09};
+    // See sad.v for definitions:
+    wire esad_support = 1'b1;
+    wire im_support = 1'b1;
+    wire [2:0] version = 3'b110;
+    wire [4:0] latency = 5'd9;
+    wire [9:0] version_bits = {esad_support, im_support, version, latency};
+
 
     // register reads:
     always @(*) begin

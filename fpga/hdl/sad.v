@@ -110,9 +110,23 @@ module sad #(
     // These are a property of this module; used here to make sure Python
     // knows what it's talking to, in case there may be different SAD modules
     // used in different targets or builds.
-    // Format: 2 MSB = version code (00: sad.v, 01: sad_x2_slowclock.v)
-    //         6 LSB = trigger latency
-    wire [7:0] version_bits = {2'b00, 6'd09};
+    // Format: 
+    //          9: eSAD mode support
+    //          8: interval mode support
+    //          7:5: version code
+    //                  000: sad.v
+    //                  001: (unused)
+    //                  010: sad_x2_slowclock.v
+    //                  100: sad_x4_slowclock.v
+    //                  110: esad.v
+    //                  101: sad_x2.v
+    //                  111: sad_single_counter.v
+    //          4:0: trigger latency
+    wire esad_support = 1'b0;
+    wire im_support = 1'b1;
+    wire [2:0] version = 3'b000;
+    wire [4:0] latency = 5'd9;
+    wire [9:0] version_bits = {esad_support, im_support, version, latency};
 
     // register reads:
     always @(*) begin
@@ -128,7 +142,7 @@ module sad #(
                 `SAD_COUNTER_WIDTH: reg_datao = pACTUAL_SAD_COUNTER_WIDTH;
                 `SAD_MULTIPLE_TRIGGERS: reg_datao = {7'b0, multiple_triggers};
                 `SAD_ALWAYS_ARMED: reg_datao <= {7'b0, always_armed};
-                `SAD_VERSION: reg_datao = version_bits;
+                `SAD_VERSION: reg_datao = version_bits[reg_bytecnt*8 +: 8];
                 default: reg_datao = 0;
             endcase
         end
