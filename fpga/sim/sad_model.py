@@ -101,8 +101,6 @@ class Counter(object):
             self.current_idx += 1
             return (match, covered)
 
-        #self.SAD += np.abs(sample - self.ref[self.current_idx])
-        # samples and references likely come in as np.uint8's so need to avoid inadvertent overflow!
         incr = 0
         if self.refen[self.current_idx]:
             if self.interval_matching:
@@ -117,9 +115,9 @@ class Counter(object):
             else:
                 if self.current_idx == 0 or self.SAD < 2**(self.counter_width-1): # don't overflow
                     if sample > self.ref[self.current_idx]:
-                        incr = sample - self.ref[self.current_idx]
+                        incr = int(sample) - int(self.ref[self.current_idx])
                     else:
-                        incr = self.ref[self.current_idx] - sample
+                        incr = int(self.ref[self.current_idx]) - int(sample)
 
         if self.current_idx == 0:
             self.SAD = incr
@@ -173,6 +171,7 @@ class SAD(object):
         self.interval_threshold = interval_threshold
         self.verbose = verbose
         self.reflen = len(ref)
+        self.index = 0
         if emode:
             if self.reflen % 2:
                 raise ValueError('Reference length must be even')
@@ -204,6 +203,7 @@ class SAD(object):
     def reset(self):
         self.match_times = []
         self.match_counters = []
+        self.index = 0
         for c in self.counters:
             c.reset()
 
@@ -213,7 +213,7 @@ class SAD(object):
         # demote those that aren't:
         self.covered = [1]*len(wave)
         for i in range(len(wave)): # go through the full powertrace
-            self.step(i, wave[i])
+            self.step(wave[i], True)
 
     def activate_next_counter(self):
         for c in self.counters:
@@ -244,16 +244,19 @@ class SAD(object):
             match, covered = c.update(sample, 0, armed_and_ready)
             if match:
                 matched = True
-                self.match_times.append(0)
+                self.match_times.append(self.index)
                 self.match_counters.append(c.idx)
                 self.triggered = True
-                print("counter %d matched with score: %d" % (c.idx, c.SAD))
-                #if self.verbose: print("counter %d matched at time %6d with score: %d" % (c.idx, i, c.SAD))
-            #if not covered:
-            #    # TODO: somehow the indices in covered are off by one? not sure why?
-            #    self.uncovered_samples.append(i+1)
-            #    self.covered[i+1] = 0 
-            #    if self.verbose: print("warning: sample %d is not covered" % i+1)
+                if self.verbose: print("counter %d matched at time %6d with score: %d" % (self.index, c.idx, c.SAD))
+            if not covered:
+                # TODO: somehow the indices in covered are off by one? not sure why?
+                self.uncovered_samples.append(self.index+1)
+                try:
+                    self.covered[self.index+1] = 0 
+                except:
+                    pass
+                if self.verbose: print("warning: sample %d is not covered" % (self.index+1))
+        self.index += 1
         return matched
 
 
@@ -264,26 +267,15 @@ class SAD(object):
         return self.__repr__()
 
 
-class eSAD(object):
-    def __init__(self, ref, refen, half_threshold, threshold, startup_latency, multiple_triggers, verbose=False):
-        self.ref = ref
-        self.refen = refen
-        self.startup_latency = startup_latency
-        self.multiple_triggers = multiple_triggers
-        self.half_threshold = half_threshold
-        self.threshold = threshold
-        self.verbose = verbose
-        self.reflen = len(ref)
-        if self.reflen % 2:
-            raise ValueError('Reference length must be even')
-        self.num_counters = self.reflen // 2
-        self.esad = SAD(ref, refen, half_threshold, startup_latency, multiple_triggers, threshold, True, verbose)
-        self.fsad = SAD(ref, refen, half_threshold, startup_latency, multiple_triggers, threshold, False, verbose)
+class eSAD_wrapper(object):
+    def __init__(self, counter_width, ref, refen, half_threshold, threshold, interval_threshold, startup_latency, multiple_triggers, interval_matching=False, verbose=False):
+        self.esad = SAD(counter_width, ref, refen, half_threshold, threshold, interval_threshold, startup_latency, multiple_triggers, True,  interval_matching, verbose)
+        self.fsad = SAD(counter_width, ref, refen, half_threshold, threshold, interval_threshold, startup_latency, multiple_triggers, False, interval_matching, verbose)
 
     def _dict_repr(self):
         rtn = {}
-        rtn['half_threshold'] = self.half_threshold
-        rtn['threshold'] = self.threshold
+        rtn['half_threshold'] = self.esad.half_threshold
+        rtn['threshold'] = self.esad.threshold
         rtn['match_times'] = self.match_times
         rtn['match_counters'] = self.match_counters
         rtn['uncovered_samples'] = self.uncovered_samples
@@ -314,7 +306,7 @@ class eSAD(object):
         self.esad.run(wave)
         self.fsad.run(wave)
 
-    def step(self, sample, armed_and_ready):
+    def step(self, sample, armed_and_ready=True):
         self.fsad.step(sample, armed_and_ready)
         return self.esad.step(sample, armed_and_ready)
 

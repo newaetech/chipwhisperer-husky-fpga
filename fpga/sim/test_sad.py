@@ -34,7 +34,7 @@ import io
 import re
 
 from husky_registers import Registers
-from sad_model import Counter, eSAD, SAD
+from sad_model import Counter, SAD
 
 
 # Note: this could also be place in individual test functions by replacing root_logger by dut._log.
