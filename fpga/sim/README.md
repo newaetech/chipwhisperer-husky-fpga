@@ -155,19 +155,20 @@ validate the development build that uses the CW310 platform.)
 ## Block-Level Testbenches
 
 ### SAD
-Basic but careful testing of SAD Verilog modules (there have been multiple
-in the development history of Husky), implemented by
-[sad\_tb.v](../sim/sad_tb.v):
+Exhaustive testing of SAD Verilog modules (there have been multiple
+in the development history of Husky), at the block level, implemented by
+[test\_sad.py](../sim/test_sad.py):
 - generates a random SAD reference;
-- verifies that an input sequence that is close to the reference, but just
-  over the threshold, does not generate a trigger;
-- verifies that an input sequence that is under the threshold does generate
-  a trigger at the correct time. 
+- randomly feeds input sequences that are over or under the reference, or
+  under the reference but too short
+- randomly arms and disarms the SAD module
+- generated data is fed to [sad\_model.py](../sim/sad_model.py), a Python
+  model of our SAD implementations, to know when triggers are expected
 
-Since advanced SAD implementations can be tricky to debug, this can be
-useful in simulating a "normal" SAD implementation alongside a more advanced
-implementation (i.e. driving both implementations identically, and seeing
-where their outputs diverge).
+Since advanced SAD implementations can be tricky to debug, the testbench
+drives the "normal" SAD implementation ([sad.v](../hdl/sad.v))
+alongside the chosen target implementation (i.e. driving both
+implementations identically, and seeing where their outputs diverge).
 
 ### Edge
 Implemented by [edge\_tb.v](edge_tb.v). Tests the
