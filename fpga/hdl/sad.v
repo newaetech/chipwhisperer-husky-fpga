@@ -112,6 +112,9 @@ module sad #(
     // knows what it's talking to, in case there may be different SAD modules
     // used in different targets or builds.
     // Format: 
+    //          10: max threshold type
+    //                  0: 2^(SAD_COUNTER_WIDTH-1)-1
+    //                  1: 2^SAD_COUNTER_WIDTH-1
     //          9: eSAD mode support
     //          8: interval mode support
     //          7:5: version code
@@ -123,11 +126,12 @@ module sad #(
     //                  101: sad_x2.v
     //                  111: sad_single_counter.v
     //          4:0: trigger latency
+    wire max_threshold = (`INTERVAL_MATCHING == 1)? 1'b1 : 1'b0;
     wire esad_support = 1'b0;
     wire im_support = 1'b1;
     wire [2:0] version = 3'b000;
     wire [4:0] latency = 5'd9;
-    wire [9:0] version_bits = {esad_support, im_support, version, latency};
+    wire [10:0] version_bits = {max_threshold, esad_support, im_support, version, latency};
 
     // register reads:
     always @(*) begin

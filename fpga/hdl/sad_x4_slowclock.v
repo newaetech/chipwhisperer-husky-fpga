@@ -205,11 +205,12 @@ module sad_x4_slowclock #(
     reg [7:0] refbase;
 
     // See sad.v for definitions:
+    wire max_threshold = 1'b0;
     wire esad_support = 1'b0;
     wire im_support = 1'b1;
     wire [2:0] version = 3'b100;
     wire [4:0] latency = 5'd21;
-    wire [9:0] version_bits = {esad_support, im_support, version, latency};
+    wire [10:0] version_bits = {max_threshold, esad_support, im_support, version, latency};
 
     wire [15:0] ref_samples = pREF_SAMPLES;
 
