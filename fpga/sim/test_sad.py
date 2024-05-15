@@ -45,6 +45,8 @@ fh = logging.FileHandler(logfile, 'w')
 fh.setFormatter(SimLogFormatter())
 root_logger.addHandler(fh)
 
+timeout_time = int(os.getenv('TIMEOUT_TIME', '300'))
+
 class Harness(object):
     def __init__(self, dut, registers, reps):
         self.dut = dut
@@ -436,11 +438,13 @@ class SADTest(object):
         while True:
             match = self.SAD_model.step(int(self.dut.adc_datain), int(self.dut.armed_and_ready))
             self.dut.expected_trigger.value = match
+            if match: 
+                self.dut._log.info('Expecting trigger!')
             if self.emode:
                 counters = self.ref_samples//2
             else:
                 counters = self.ref_samples
-            for j in range(counters):
+            for j in range(min(32, counters)):
                 self.dut.model_counter[j].value = self.SAD_model.counters[j].SAD
                 if self.emode:
                     self.dut.model_extended_mode[j].value = self.SAD_model.counters[j].extended_mode
@@ -520,7 +524,7 @@ class SADTest(object):
 
 
 
-@cocotb.test(timeout_time=300, timeout_unit="us")
+@cocotb.test(timeout_time=timeout_time, timeout_unit="us")
 async def sad_test(dut):
     reps  = int(os.getenv('REPS', '3'))
     bits_per_sample   = int(os.getenv('BITS_PER_SAMPLE', '8'))
