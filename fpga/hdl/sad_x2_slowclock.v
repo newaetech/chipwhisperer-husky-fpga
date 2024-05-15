@@ -6,7 +6,7 @@
 This file is part of the ChipWhisperer Project. See www.newae.com for more
 details, or the codebase at http://www.chipwhisperer.com
 
-Copyright (c) 2022-2023, NewAE Technology Inc. All rights reserved.
+Copyright (c) 2022-2024, NewAE Technology Inc. All rights reserved.
 Author: Jean-Pierre Thibault <jpthibault@newae.com>
 
   chipwhisperer is free software: you can redistribute it and/or modify
