@@ -12,5 +12,5 @@
 `define XADC_EN
 `define LOGIC_ANALYZER
 `define USERIO_DEBUG
-`define TRACE
+//`define TRACE
 //`define SAD_ONLY

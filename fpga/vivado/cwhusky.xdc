@@ -38,6 +38,8 @@ set_case_analysis 1 [get_pins U_trace_top/U_fe_clock_mux2/S]
 
 set_case_analysis 1 [get_pins U_fifo_clk_mux/S]
 
+set_case_analysis 1 [get_pins U_swd_hw_bb_trig/U_target_clk_mux/S]
+
 #set_clock_groups -logically_exclusive -group clk_usb -group TRACECLOCK -group target_hs1
 #set_clock_groups -logically_exclusive -group pll_fpga_clk -group glitchclk
 

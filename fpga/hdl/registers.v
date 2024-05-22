@@ -378,6 +378,13 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define REG_DDR_TRACE_START_ADDR 119
 `define REG_DDR_START_READ      125
 
+`define BB_TRIG_PATTERN_DATA    24
+`define BB_TRIG_PATTERN_EN      54
+`define BB_TRIG_PATTERN_HIZ     56
+`define BB_TRIG_CTRL_STAT       57
+`define BB_TRIG_BIT             58
+`define BB_NUM_BITS             70
+
 // list of holes in the register address space (to be used for new features):
 //`define UNUSED_ADDRESS 24
 //`define UNUSED_ADDRESS 54

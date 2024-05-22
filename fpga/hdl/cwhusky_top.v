@@ -167,10 +167,11 @@ module cwhusky_top(
    wire [7:0] read_data_cw;
    wire [7:0] read_data_adc;
    wire [7:0] read_data_glitch;
+   wire [7:0] read_data_swd;
    wire [7:0] read_data_xadc;
    wire [7:0] read_data_la;
    wire [7:0] read_data_trace;
-   always @(posedge clk_usb_buf) read_data_reg <= read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc | read_data_la | read_data_trace;
+   always @(posedge clk_usb_buf) read_data_reg <= read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc | read_data_la | read_data_trace | read_data_swd;
    //always @(*) read_data_reg = read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc | read_data_la;
    assign read_data = (reg_address == `ADCREAD_ADDR)? fifo_dout : read_data_reg;
 
@@ -543,7 +544,7 @@ module cwhusky_top(
         .trigger_advio_i        (1'b0),
         .trigger_decodedio_i    (trace_trig_out),
         .trigger_trace_i        (trace_trig_out),
-        .trigger_adc_i          (trigger_adc),
+        .trigger_adc_i          (trigger_swd), // TODO: temp!
         .trigger_sad_i          (trigger_sad),
         .trigger_edge_i         (trigger_edge_counter),
         .pll_fpga_clk           (pll_fpga_clk),
@@ -589,7 +590,7 @@ module cwhusky_top(
         .userio_target_debug    (userio_target_debug),
         .userio_target_debug_swd(userio_target_debug_swd),
         .userio_fpga_debug_select (userio_fpga_debug_select),
-        .userio_d               (USERIO_D),
+        .userio_d               (8'd0), // TODO-temp
         .userio_clk             (USERIO_CLK),
 
         .trace_exists           (trace_exists),
@@ -616,6 +617,7 @@ module cwhusky_top(
 
    assign USERIO_CLK = userio_target_debug? FPGA_BONUS1 : 1'bz;
 
+   /*
    userio #(
       .pWIDTH                   (pUSERIO_WIDTH)
    ) U_userio (
@@ -626,6 +628,32 @@ module cwhusky_top(
       .I_userio_fpga_debug      (userio_fpga_debug),
       .I_userio_drive_data      (userio_drive_data),
       .I_userio_debug_data      (userio_debug_data)
+   );
+   */
+
+   wire trigger_swd;
+   swd_hw_bb_trig #(
+      .pBYTECNT_SIZE            (pBYTECNT_SIZE),
+      .pPATTERN_DEPTH           (512)
+   ) U_swd_hw_bb_trig (
+      .reset                    (reg_rst       ),
+      .clk_usb                  (clk_usb_buf   ),
+      .reg_address              (reg_address   ),
+      .reg_bytecnt              (reg_bytecnt   ),
+      .reg_datai                (write_data    ),
+      .reg_datao                (read_data_swd ),
+      .reg_read                 (reg_read      ),
+      .reg_write                (reg_write     ),
+                                              
+      .pll_fpga_clk             (pll_fpga_clk  ),
+      .target_hs1               (target_hs1    ),
+      .swdio                    (USERIO_D[0]   ),
+      .swclk                    (USERIO_D[1]   ),
+      .trigger_pulse            (trigger_swd   ),
+                                              
+      .active_output            (USERIO_D[2]   ),
+      .matching                 (USERIO_D[3]   ),
+      .matched                  (USERIO_D[4]   )
    );
 
 
@@ -738,7 +766,7 @@ module cwhusky_top(
    assign target_poweron = ~target_npower;
 
    assign target_PDID = (target_highz) ? 1'bZ :
-                        (userio_target_debug & userio_target_debug_swd & ~USERIO_CLK) ? USERIO_D[6] :
+                        (userio_target_debug & userio_target_debug_swd & ~USERIO_CLK) ? 1'b0 : //TODO-temp
                         (enable_output_pdid) ? output_pdid : 1'bZ;
 
    assign target_PDIC = (target_highz) ? 1'bZ:
@@ -754,7 +782,7 @@ module cwhusky_top(
    assign target_SCK = (target_highz) ? 1'bZ :
                        (enable_avrprog) ? SAM_SPCK : 1'bZ;
 
-   assign SAM_MISO = (userio_target_debug)? USERIO_D[3] :
+   assign SAM_MISO = (userio_target_debug)? 1'b0 : // TODO-temp
                      (enable_avrprog) ? target_MISO : 1'bZ;
 
 
@@ -968,7 +996,7 @@ module cwhusky_top(
    `ifdef TRACE
 
        wire TRACECLOCK = USERIO_CLK;
-       wire [3:0] TRACEDATA  = USERIO_D[7:4];
+       wire [3:0] TRACEDATA  = 4'd0; // TODO-temp! USERIO_D[7:4];
 
        // here we choose trace_top's serial input: either SWO (USERIO_D[2]) or
        // the chosen UART trigger line; also, ensure that the line is held
@@ -980,9 +1008,9 @@ module cwhusky_top(
                serial_in = uart_trigger_line;
            else if (trace_en) begin
                if (trace_trigger_in_use)
-                   serial_in = (trace_active)? USERIO_D[2] : 1'b1;
+                   serial_in = (trace_active)? 1'b0 : 1'b1; // TODO-temp
                else
-                   serial_in = USERIO_D[2];
+                   serial_in = 1'b0; // TODO-temp
            end
            else
                serial_in = 1'b1;
