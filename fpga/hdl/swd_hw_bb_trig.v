@@ -67,6 +67,7 @@ module swd_hw_bb_trig #(
     reg [pPATTERN_DEPTH-1:0] pattern_data;
     reg [pPATTERN_DEPTH-1:0] pattern_en = {pPATTERN_DEPTH{1'b1}};
     reg [pPATTERN_DEPTH-1:0] pattern_hiz = {pPATTERN_DEPTH{1'b0}};
+    reg [pPATTERN_DEPTH-1:0] clk_en = {pPATTERN_DEPTH{1'b1}};
     reg go_usb;
     wire go_target;
     reg [pCOUNTER_WIDTH:0] bit_counter;
@@ -76,8 +77,8 @@ module swd_hw_bb_trig #(
     reg [3:0] clock_counter;
     reg drive_output = 1'b0;
     reg drive_data;
-    reg [7:0] trigger_bit = 0;
-    reg [7:0] num_bits = 0;
+    reg [pCOUNTER_WIDTH-1:0] trigger_bit = 0;
+    reg [pCOUNTER_WIDTH-1:0] num_bits = 0;
 
     assign swdio = (drive_output)? drive_data : 1'bz;
     assign active_output = drive_output;
@@ -103,6 +104,7 @@ module swd_hw_bb_trig #(
             `BB_TRIG_PATTERN_DATA:      reg_datao = pattern_data[reg_bytecnt*8 +: 8];
             `BB_TRIG_PATTERN_EN:        reg_datao = pattern_en[reg_bytecnt*8 +: 8];
             `BB_TRIG_PATTERN_HIZ:       reg_datao = pattern_hiz[reg_bytecnt*8 +: 8];
+            `BB_TRIG_CLK_EN:            reg_datao = clk_en[reg_bytecnt*8 +: 8];
             `BB_TRIG_CTRL_STAT:         reg_datao = {7'b0, matched};
             default: reg_datao = 0;
           endcase
@@ -118,8 +120,9 @@ module swd_hw_bb_trig #(
             `BB_TRIG_PATTERN_DATA:      pattern_data[reg_bytecnt*8 +: 8] <= reg_datai;
             `BB_TRIG_PATTERN_EN:        pattern_en[reg_bytecnt*8 +: 8] <= reg_datai;
             `BB_TRIG_PATTERN_HIZ:       pattern_hiz[reg_bytecnt*8 +: 8] <= reg_datai;
-            `BB_TRIG_BIT:               trigger_bit <= reg_datai;
-            `BB_NUM_BITS:               num_bits <= reg_datai;
+            `BB_TRIG_CLK_EN:            clk_en[reg_bytecnt*8 +: 8] <= reg_datai;
+            `BB_TRIG_BIT:               trigger_bit[reg_bytecnt*8 +: 8] <= reg_datai;
+            `BB_NUM_BITS:               num_bits[reg_bytecnt*8 +: 8] <= reg_datai;
             `BB_TRIG_CTRL_STAT: begin
                 trigger_en <= reg_datai[6];
                 clk_sel <= reg_datai[4];
@@ -147,7 +150,7 @@ module swd_hw_bb_trig #(
     reg matched_r;
 
     assign trigger_pulse = trigger_en && matched && ~matched_r;
-    assign swclk = running && swclk_pre;
+    assign swclk = running && swclk_pre && clk_en[bit_counter];
 
     // driving logic:
     always @(posedge target_clk) begin
