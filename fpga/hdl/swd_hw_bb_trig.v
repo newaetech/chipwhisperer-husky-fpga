@@ -71,10 +71,12 @@ module swd_hw_bb_trig #(
     reg go_usb;
     wire go_target;
     reg [pCOUNTER_WIDTH:0] bit_counter;
+    reg continuous_clk = 1'b0;
+    reg [1:0] swdio_inactive_state = 2'b01;
     reg clk_sel = 1'b0;
     reg trigger_en = 1'b0;
     reg [3:0] clk_div = 4'd4;
-    reg [3:0] clock_counter;
+    reg [3:0] clock_counter = 4'd0;
     reg drive_output = 1'b0;
     reg drive_data;
     reg [pCOUNTER_WIDTH-1:0] trigger_bit = 0;
@@ -123,10 +125,14 @@ module swd_hw_bb_trig #(
             `BB_TRIG_CLK_EN:            clk_en[reg_bytecnt*8 +: 8] <= reg_datai;
             `BB_TRIG_BIT:               trigger_bit[reg_bytecnt*8 +: 8] <= reg_datai;
             `BB_NUM_BITS:               num_bits[reg_bytecnt*8 +: 8] <= reg_datai;
-            `BB_TRIG_CTRL_STAT: begin
-                trigger_en <= reg_datai[6];
+            `BB_TRIG_CTRL2: begin
+                continuous_clk <= reg_datai[7];
+                swdio_inactive_state <= reg_datai[6:5];
                 clk_sel <= reg_datai[4];
                 clk_div <= reg_datai[3:0];
+            end
+            `BB_TRIG_CTRL_STAT: begin
+                trigger_en <= reg_datai[7];
             end
             default: ;
           endcase
@@ -146,22 +152,31 @@ module swd_hw_bb_trig #(
     );
 
     reg running = 1'b0;
-    reg swclk_pre, swclk_pre_r;
+    reg swclk_pre = 1'b0;
+    reg swclk_pre_r;
     reg matched_r;
 
     assign trigger_pulse = trigger_en && matched && ~matched_r;
-    assign swclk = running && swclk_pre && clk_en[bit_counter];
+    assign swclk = ((running && clk_en[bit_counter]) || continuous_clk) && swclk_pre;
+
+    // generate swclk:
+    always @(posedge target_clk) begin
+        swclk_pre_r <= swclk_pre;
+        if (clock_counter == clk_div) begin
+            clock_counter <= 0;
+            swclk_pre <= ~swclk_pre;
+        end
+        else
+            clock_counter <= clock_counter + 1;
+    end
 
     // driving logic:
     always @(posedge target_clk) begin
-        swclk_pre_r <= swclk_pre;
         matched_r <= matched;
         if (go_target) begin
             running <= 1'b1;
             matched <= 1'b0;
             bit_counter <= 0;
-            clock_counter <= 0;
-            swclk_pre <= 1'b0;
             drive_data <= pattern_data[0];
             drive_output <= ~pattern_hiz[0];
             matching <= 1'b1;
@@ -170,8 +185,6 @@ module swd_hw_bb_trig #(
 
         else if (running) begin
             if (clock_counter == clk_div) begin
-                clock_counter <= 0;
-                swclk_pre <= ~swclk_pre;
                 if (swclk_pre) begin// drive data on falling edge
                     drive_data <= pattern_data[bit_counter+1];
                     drive_output <= ~pattern_hiz[bit_counter+1];
@@ -184,8 +197,6 @@ module swd_hw_bb_trig #(
                     end
                 end
             end
-            else
-                clock_counter <= clock_counter + 1;
 
             // check pattern match; fire trigger
             if (~swclk_pre && ~swclk_pre_r) begin // TODO- specific to clk_div=4... advancing sampling edge...
@@ -199,6 +210,8 @@ module swd_hw_bb_trig #(
 
         else begin
             matching <= 1'b0;
+            drive_data <= swdio_inactive_state[1];
+            drive_output <= swdio_inactive_state[0];
         end
     end
 
