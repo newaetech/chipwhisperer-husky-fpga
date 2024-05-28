@@ -154,9 +154,10 @@ module swd_hw_bb_trig #(
     reg running = 1'b0;
     reg swclk_pre = 1'b0;
     reg swclk_pre_r;
-    reg matched_r;
+    reg trigger;
+    reg trigger_r;
 
-    assign trigger_pulse = trigger_en && matched && ~matched_r;
+    assign trigger_pulse = trigger_en && trigger && ~trigger_r;
     assign swclk = ((running && clk_en[bit_counter]) || continuous_clk) && swclk_pre;
 
     // generate swclk:
@@ -172,7 +173,7 @@ module swd_hw_bb_trig #(
 
     // driving logic:
     always @(posedge target_clk) begin
-        matched_r <= matched;
+        trigger_r <= trigger;
         if (go_target) begin
             running <= 1'b1;
             matched <= 1'b0;
@@ -180,20 +181,23 @@ module swd_hw_bb_trig #(
             drive_data <= pattern_data[0];
             drive_output <= ~pattern_hiz[0];
             matching <= 1'b1;
-            matched <= 1'b0;
+            trigger <= 1'b0;
         end
 
         else if (running) begin
             if (clock_counter == clk_div) begin
                 if (swclk_pre) begin// drive data on falling edge
-                    drive_data <= pattern_data[bit_counter+1];
-                    drive_output <= ~pattern_hiz[bit_counter+1];
-                    bit_counter <= bit_counter + 1;
-                end
-                else begin // rising edge
-                    if (bit_counter == ( (num_bits > 0)? num_bits : (pPATTERN_DEPTH-1)) ) begin
+                    if (bit_counter == ( (num_bits > 0)? num_bits-1 : (pPATTERN_DEPTH-1)) ) begin
                         running <= 1'b0;
-                        drive_output <= 1'b0;
+                        drive_data <= swdio_inactive_state[1];
+                        drive_output <= swdio_inactive_state[0];
+                        if (matching)
+                            matched <= 1'b1;
+                    end
+                    else begin
+                        drive_data <= pattern_data[bit_counter+1];
+                        drive_output <= ~pattern_hiz[bit_counter+1];
+                        bit_counter <= bit_counter + 1;
                     end
                 end
             end
@@ -204,7 +208,7 @@ module swd_hw_bb_trig #(
                 if ((swdio != pattern_data[bit_counter]) && pattern_en[bit_counter])
                     matching <= 1'b0;
                 else if (matching && (bit_counter == trigger_bit) && (trigger_bit > 0))
-                    matched <= 1'b1;
+                    trigger <= 1'b1;
             end
         end
 
