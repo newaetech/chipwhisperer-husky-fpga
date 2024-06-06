@@ -75,6 +75,7 @@ module swd_hw_bb_trig #(
     reg [1:0] swdio_inactive_state = 2'b01;
     reg clk_sel = 1'b0;
     reg trigger_en = 1'b0;
+    reg clear_matched;
     reg [3:0] clk_div = 4'd4;
     reg [3:0] clock_counter = 4'd0;
     reg drive_output = 1'b0;
@@ -133,6 +134,7 @@ module swd_hw_bb_trig #(
             end
             `BB_TRIG_CTRL_STAT: begin
                 trigger_en <= reg_datai[7];
+                clear_matched <= reg_datai[6];
             end
             default: ;
           endcase
@@ -176,7 +178,8 @@ module swd_hw_bb_trig #(
         trigger_r <= trigger;
         if (go_target) begin
             running <= 1'b1;
-            matched <= 1'b0;
+            if (clear_matched)
+                matched <= 1'b0;
             bit_counter <= 0;
             drive_data <= pattern_data[0];
             drive_output <= ~pattern_hiz[0];
@@ -193,6 +196,8 @@ module swd_hw_bb_trig #(
                         drive_output <= swdio_inactive_state[0];
                         if (matching)
                             matched <= 1'b1;
+                        else
+                            matched <= 1'b0;
                     end
                     else begin
                         drive_data <= pattern_data[bit_counter+1];
