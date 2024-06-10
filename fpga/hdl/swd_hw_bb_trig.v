@@ -82,6 +82,9 @@ module swd_hw_bb_trig #(
     reg drive_data;
     reg [pCOUNTER_WIDTH-1:0] trigger_bit = 0;
     reg [pCOUNTER_WIDTH-1:0] num_bits = 0;
+    reg [pCOUNTER_WIDTH-1:0] register_bit = 0;
+    reg [31:0] saved_payload;
+    reg [31:0] data_sr;
 
     assign swdio = (drive_output)? drive_data : 1'bz;
     assign active_output = drive_output;
@@ -109,6 +112,7 @@ module swd_hw_bb_trig #(
             `BB_TRIG_PATTERN_HIZ:       reg_datao = pattern_hiz[reg_bytecnt*8 +: 8];
             `BB_TRIG_CLK_EN:            reg_datao = clk_en[reg_bytecnt*8 +: 8];
             `BB_TRIG_CTRL_STAT:         reg_datao = {7'b0, matched};
+            `BB_REG_BIT:                reg_datao = saved_payload[reg_bytecnt*8 +: 8];
             default: reg_datao = 0;
           endcase
        end
@@ -126,6 +130,7 @@ module swd_hw_bb_trig #(
             `BB_TRIG_CLK_EN:            clk_en[reg_bytecnt*8 +: 8] <= reg_datai;
             `BB_TRIG_BIT:               trigger_bit[reg_bytecnt*8 +: 8] <= reg_datai;
             `BB_NUM_BITS:               num_bits[reg_bytecnt*8 +: 8] <= reg_datai;
+            `BB_REG_BIT:                register_bit[reg_bytecnt*8 +: 8] <= reg_datai;
             `BB_TRIG_CTRL2: begin
                 continuous_clk <= reg_datai[7];
                 swdio_inactive_state <= reg_datai[6:5];
@@ -205,15 +210,17 @@ module swd_hw_bb_trig #(
                         bit_counter <= bit_counter + 1;
                     end
                 end
-            end
 
-            // check pattern match; fire trigger
-            if (~swclk_pre && ~swclk_pre_r) begin // TODO- specific to clk_div=4... advancing sampling edge...
-                                          // do this more properly...
-                if ((swdio != pattern_data[bit_counter]) && pattern_en[bit_counter])
-                    matching <= 1'b0;
-                else if (matching && (bit_counter == trigger_bit) && (trigger_bit > 0))
-                    trigger <= 1'b1;
+                else begin // check pattern match and fire trigger on rising edge
+                    data_sr <= {swdio, data_sr[31:1]};
+                    if (bit_counter == register_bit)
+                        saved_payload <= {swdio, data_sr[31:1]};
+
+                    if ((swdio != pattern_data[bit_counter]) && pattern_en[bit_counter])
+                        matching <= 1'b0;
+                    else if (matching && (bit_counter == trigger_bit) && (trigger_bit > 0))
+                        trigger <= 1'b1;
+                end
             end
         end
 
