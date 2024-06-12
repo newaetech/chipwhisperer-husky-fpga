@@ -384,9 +384,10 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define BB_TRIG_CLK_EN          83
 `define BB_TRIG_CTRL_STAT       57
 `define BB_TRIG_CTRL2           84
-`define BB_TRIG_BIT             58
+//`define BB_TRIG_BIT             58
 `define BB_NUM_BITS             70
 `define BB_REG_BIT              126
+`define BB_TRIG_BITS            58
 
 // list of holes in the register address space (to be used for new features):
 //`define UNUSED_ADDRESS 24

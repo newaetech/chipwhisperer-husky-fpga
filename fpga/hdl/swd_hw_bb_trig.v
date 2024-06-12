@@ -68,6 +68,7 @@ module swd_hw_bb_trig #(
     reg [pPATTERN_DEPTH-1:0] pattern_en = {pPATTERN_DEPTH{1'b1}};
     reg [pPATTERN_DEPTH-1:0] pattern_hiz = {pPATTERN_DEPTH{1'b0}};
     reg [pPATTERN_DEPTH-1:0] clk_en = {pPATTERN_DEPTH{1'b1}};
+    reg [pPATTERN_DEPTH-1:0] trigger_bits = {pPATTERN_DEPTH{1'b0}};
     reg go_usb;
     wire go_target;
     reg [pCOUNTER_WIDTH:0] bit_counter;
@@ -80,7 +81,6 @@ module swd_hw_bb_trig #(
     reg [3:0] clock_counter = 4'd0;
     reg drive_output = 1'b0;
     reg drive_data;
-    reg [pCOUNTER_WIDTH-1:0] trigger_bit = 0;
     reg [pCOUNTER_WIDTH-1:0] num_bits = 0;
     reg [pCOUNTER_WIDTH-1:0] register_bit = 0;
     reg [31:0] saved_payload;
@@ -113,6 +113,7 @@ module swd_hw_bb_trig #(
             `BB_TRIG_CLK_EN:            reg_datao = clk_en[reg_bytecnt*8 +: 8];
             `BB_TRIG_CTRL_STAT:         reg_datao = {7'b0, matched};
             `BB_REG_BIT:                reg_datao = saved_payload[reg_bytecnt*8 +: 8];
+            `BB_TRIG_BITS:              reg_datao = trigger_bits[reg_bytecnt*8 +: 8];
             default: reg_datao = 0;
           endcase
        end
@@ -128,7 +129,7 @@ module swd_hw_bb_trig #(
             `BB_TRIG_PATTERN_EN:        pattern_en[reg_bytecnt*8 +: 8] <= reg_datai;
             `BB_TRIG_PATTERN_HIZ:       pattern_hiz[reg_bytecnt*8 +: 8] <= reg_datai;
             `BB_TRIG_CLK_EN:            clk_en[reg_bytecnt*8 +: 8] <= reg_datai;
-            `BB_TRIG_BIT:               trigger_bit[reg_bytecnt*8 +: 8] <= reg_datai;
+            `BB_TRIG_BITS:              trigger_bits[reg_bytecnt*8 +: 8] <= reg_datai;
             `BB_NUM_BITS:               num_bits[reg_bytecnt*8 +: 8] <= reg_datai;
             `BB_REG_BIT:                register_bit[reg_bytecnt*8 +: 8] <= reg_datai;
             `BB_TRIG_CTRL2: begin
@@ -218,14 +219,17 @@ module swd_hw_bb_trig #(
 
                     if ((swdio != pattern_data[bit_counter]) && pattern_en[bit_counter])
                         matching <= 1'b0;
-                    else if (matching && (bit_counter == trigger_bit) && (trigger_bit > 0))
+                    if (matching && trigger_bits[bit_counter])
                         trigger <= 1'b1;
+                    else
+                        trigger <= 1'b0;
                 end
             end
         end
 
         else begin
             matching <= 1'b0;
+            trigger <= 1'b0;
             drive_data <= swdio_inactive_state[1];
             drive_output <= swdio_inactive_state[0];
         end
