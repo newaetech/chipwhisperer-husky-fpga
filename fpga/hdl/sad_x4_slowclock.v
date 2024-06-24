@@ -57,6 +57,7 @@ module sad_x4_slowclock #(
     // verilator lint_off UNUSED
     input  wire         ext_trigger,  // debug only
     input  wire         io4,  // debug only
+    output reg          always_armed,  // debug only
     // verilator lint_on UNUSED
     output wire         trigger
 );
@@ -83,7 +84,6 @@ module sad_x4_slowclock #(
     reg clear_status_r;
     wire clear_status_adc;
 
-    reg always_armed;
     reg multiple_triggers;
     reg emode;
     reg [pREF_SAMPLES*pBITS_PER_SAMPLE-1:0] refsamples;

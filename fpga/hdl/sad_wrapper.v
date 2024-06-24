@@ -275,6 +275,7 @@ always @(posedge clk_adc) ADC_slow_clk_odd  <= ~ADC_slow_clk_odd;
     always @(posedge ADC_slow_clk_odd) ADC_slow_clk4 <= ~ADC_slow_clk4;
 
     wire trigger_x4;
+    wire always_armed_x4;
     sad_x4_slowclock #(
         .pBYTECNT_SIZE      (7),
         .pREF_SAMPLES       (pREF_SAMPLES),
@@ -300,6 +301,7 @@ always @(posedge clk_adc) ADC_slow_clk_odd  <= ~ADC_slow_clk_odd;
         .reg_write          (reg_write),
         .ext_trigger        (1'b0), // debug only
         .io4                (1'b0), // debug only
+        .always_armed       (always_armed_x4), // debug only
         .trigger            (trigger_x4)
     );
 
@@ -308,7 +310,7 @@ always @(posedge clk_adc) ADC_slow_clk_odd  <= ~ADC_slow_clk_odd;
     // NOTE: conditioning on armed_and_ready is cheating; it's the easy way to
     // deal with the fact that armed_and_ready is delayed in getting through
     // to the slow clock domains in sad_x4_slowclock:
-    wire trigger_x4_1cycle = trigger_x4_r[0] && ~trigger_x4_r[1] && armed_and_ready;
+    wire trigger_x4_1cycle = trigger_x4_r[0] && ~trigger_x4_r[1] && (armed_and_ready || always_armed_x4);
 
 `endif
 
