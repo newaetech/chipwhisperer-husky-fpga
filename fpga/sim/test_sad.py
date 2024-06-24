@@ -182,6 +182,7 @@ class SADTest(object):
                  ref_samples, 
                  triggers, 
                  multiple_triggers,  
+                 always_armed,
                  emode,
                  interval_matching,
                  counter_width,
@@ -202,6 +203,12 @@ class SADTest(object):
         self.counter_width = counter_width
 
         self.trigger_error = self.dut.trigger_error
+
+        if multiple_triggers and always_armed:
+            self.always_armed = 1
+        else:
+            self.always_armed = 0
+        self._always_armed_active = False
 
         self.errors = 0
 
@@ -436,7 +443,7 @@ class SADTest(object):
     async def _model_feeder_thread(self):
         # feed self.dut.adc_datain inputs to SAD_model and generate expected_trigger:
         while True:
-            match = self.SAD_model.step(int(self.dut.adc_datain), int(self.dut.armed_and_ready))
+            match = self.SAD_model.step(int(self.dut.adc_datain), (int(self.dut.armed_and_ready) or self._always_armed_active))
             self.dut.expected_trigger.value = match
             if match: 
                 self.dut._log.info('Expecting trigger!')
@@ -510,6 +517,15 @@ class SADTest(object):
             armed = not armed
             self.dut._log.info('armed_and_ready: blackout done, setting to %s' % armed)
             self.dut.armed_and_ready.value = armed
+            if self.always_armed:
+                self.dut._log.debug('Setting always_armed')
+                await self.registers.write(self.reg_addr['SAD_CONTROL'], [(self.emode << 2) + (self.multiple_triggers << 1) + 1])
+                self._always_armed_active = True
+                # wait for a trigger to occur, then bring down armed_and_ready:
+                await RisingEdge(self.dut.trigger_expected_delayed)
+                self.dut._log.debug('always_armed is set; bringing down armed_and_ready')
+                self.dut.armed_and_ready.value = 0
+                return # nothing more to do here!
             #break
 
 
@@ -534,6 +550,7 @@ async def sad_test(dut):
     triggers          = int(os.getenv('TRIGGERS', '4'))
     multiple_triggers = int(os.getenv('MULTIPLE_TRIGGERS', '0'))
     interval_matching = int(os.getenv('INTERVAL_MATCHING', '0'))
+    always_armed      = int(os.getenv('ALWAYS_ARMED', '0'))
     emode             = int(os.getenv('EMODE', '0'))
     implementation    = os.getenv('SAD', 'SAD_BASE')
 
@@ -549,6 +566,7 @@ async def sad_test(dut):
     dut._log.info("counter_width: %d" % counter_width)
     dut._log.info("triggers: %d" % triggers)
     dut._log.info("multiple_triggers: %d" % multiple_triggers)
+    dut._log.info("always_armed: %d" % always_armed)
     dut._log.info("interval_matching: %d" % interval_matching)
     dut._log.info("emode: %d" % emode)
     dut._log.info("implementation: %s" % implementation)
@@ -563,6 +581,7 @@ async def sad_test(dut):
                       ref_samples = ref_samples,
                       triggers = triggers,
                       multiple_triggers = multiple_triggers,
+                      always_armed = always_armed,
                       emode = emode,
                       interval_matching = interval_matching,
                       counter_width = counter_width,
