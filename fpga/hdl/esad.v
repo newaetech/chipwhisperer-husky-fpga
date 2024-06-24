@@ -345,7 +345,7 @@ module esad #(
                     counter_incr[i] <= adc_datain_rmr + nextrefsample_r[i];
 
 
-                if (~(armed_and_ready_adc && active && ~xadc_error)) begin
+                if (~((armed_and_ready_adc || always_armed) && active && ~xadc_error)) begin
                     // important to reset this! However, it's not necessary to reset sad_counter - they will take care of themselves
                     if (emode) begin
                         extended_mode[i] <= {pNUM_COUNTERS{1'b0}}; 
