@@ -78,9 +78,11 @@ module sad #(
     reg [pACTUAL_SAD_COUNTER_WIDTH-1:0] threshold;
     reg [pBITS_PER_SAMPLE-1:0] interval_threshold;      // NOTE: pBITS_PER_SAMPLE is assumed to be <= 8
     reg [pMASTER_COUNTER_WIDTH-1:0] master_counter;
+    reg [pMASTER_COUNTER_WIDTH-1:0] refsample_shift_count = 0;
     reg [pREF_SAMPLES-1:0] resetter;
 
     reg individual_trigger [0:pREF_SAMPLES-1];
+    reg individual_trigger_r [0:pREF_SAMPLES-1];
     reg [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter [0:pREF_SAMPLES-1];
     reg [pBITS_PER_SAMPLE-1:0] counter_incr [0:pREF_SAMPLES-1];
 
@@ -130,8 +132,16 @@ module sad #(
     wire esad_support = 1'b0;
     wire im_support = 1'b1;
     wire [2:0] version = 3'b000;
-    wire [4:0] latency = 5'd9;
+    wire [4:0] latency = 5'd10;
     wire [10:0] version_bits = {max_threshold, esad_support, im_support, version, latency};
+
+    reg [7:0] sad_reference_data;
+    reg [pBYTECNT_SIZE+7:0] sad_reference_index;
+    reg sad_reference_usb;
+    reg [7:0] sad_refen_data;
+    reg [pBYTECNT_SIZE-1:0] sad_refen_index;
+    reg sad_refen_usb;
+
 
     // register reads:
     always @(*) begin
@@ -164,14 +174,25 @@ module sad #(
             refbase <= 0;
             always_armed <= 0;
             interval_threshold <= 1;
-            refen <= {pREF_SAMPLES{1'b1}}; // all samples enabled by default
         end 
         else begin
             clear_status_r <= clear_status;
+            sad_reference_usb <= 1'b0;
+            sad_refen_usb <= 1'b0;
             if (reg_write) begin
                 case (reg_address)
-                    `SAD_REFERENCE: refsamples[{refbase, reg_bytecnt}*8 +: 8] <= reg_datai;
-                    `SAD_REFEN: refen[reg_bytecnt*8 +: 8] <= reg_datai;
+                    `SAD_REFERENCE: begin
+                        sad_reference_data <= reg_datai;
+                        sad_reference_index <= {refbase, reg_bytecnt};
+                        sad_reference_usb <= 1'b1;
+                    end
+
+                    `SAD_REFEN: begin
+                        sad_refen_data <= reg_datai;
+                        sad_refen_index <= reg_bytecnt;
+                        sad_refen_usb <= 1'b1;
+                    end
+
                     `SAD_THRESHOLD: threshold[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_INTERVAL_THRESHOLD: interval_threshold <= reg_datai;
                     `SAD_REFERENCE_BASE: refbase <= reg_datai;
@@ -247,7 +268,8 @@ module sad #(
         else begin
             trigger <= 1'b0;
             for (c = 0; c < pREF_SAMPLES; c = c + 1) begin
-                if (individual_trigger[c]) trigger <= 1'b1;
+                individual_trigger_r[c] <= individual_trigger[c];
+                if (individual_trigger_r[c]) trigger <= 1'b1;
             end
         end
     end
@@ -258,6 +280,50 @@ module sad #(
         adc_datain_rmr <= -adc_datain_r;
     end
 
+    wire sad_reference_adc;
+    cdc_pulse U_refsample_cdc (
+       .reset_i       (reset),
+       .src_clk       (clk_usb),
+       .src_pulse     (sad_reference_usb),
+       .dst_clk       (adc_sampleclk),
+       .dst_pulse     (sad_reference_adc)
+    );
+
+    wire sad_refen_adc;
+    cdc_pulse U_refen_cdc (
+       .reset_i       (reset),
+       .src_clk       (clk_usb),
+       .src_pulse     (sad_refen_usb),
+       .dst_clk       (adc_sampleclk),
+       .dst_pulse     (sad_refen_adc)
+    );
+
+    integer d;
+    always @(posedge adc_sampleclk) begin
+        // TODO: prioritize writing?
+        if (armed_and_ready_adc || always_armed || (refsample_shift_count != 0)) begin
+            refsample_shift_count <= refsample_shift_count + 1;
+            for (d = 0; d < pREF_SAMPLES; d = d + 1) begin
+                if (d == pREF_SAMPLES-1)
+                    refsamples[d*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE] <= refsamples[0 +: pBITS_PER_SAMPLE];
+                else
+                    refsamples[d*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE] <= refsamples[(d+1)*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
+
+            end
+            refen <= {refen[0], refen[pREF_SAMPLES-1:1]};
+        end
+        else begin
+          if (sad_reference_adc)
+              refsamples[sad_reference_index*8 +: 8] <= sad_reference_data;
+          if (sad_refen_adc)
+              refen[sad_refen_index*8 +: 8] <= sad_refen_data;
+        end
+    end
+
+    wire [pBITS_PER_SAMPLE-1:0] ref_sample0 = refsamples[0 +: pBITS_PER_SAMPLE];
+    wire refen_sample0 = refen[0];
+
+
     // instantiate counters and do most of the heavy lifting:
     genvar i;
     generate 
@@ -266,8 +332,8 @@ module sad #(
 
             always @(posedge adc_sampleclk) begin
                 if (i == 0) begin
-                    nextrefsample[i] <=  refsample[master_counter];
-                    compare_en[i] <= refen[master_counter];
+                    nextrefsample[i] <=  ref_sample0;
+                    compare_en[i] <= refen_sample0;
                 end
                 else begin
                     nextrefsample[i] <=  nextrefsample[i-1];

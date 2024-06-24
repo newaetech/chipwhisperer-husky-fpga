@@ -109,12 +109,14 @@ module esad #(
     reg [pMASTER_COUNTER_WIDTH-1:0] master_counter;
     wire [pMASTER_COUNTER_WIDTH-2:0] master_counter_short = master_counter[pMASTER_COUNTER_WIDTH-2:0];
     wire [pMASTER_COUNTER_WIDTH-1:0] master_counter_extended = {1'b1, master_counter_short};
+    reg  [pMASTER_COUNTER_WIDTH-2:0] refsample_shift_count = 0;
     reg [pNUM_COUNTERS-1:0] resetter;
     reg [pNUM_COUNTERS-1:0] halfpoint;
     reg [pNUM_COUNTERS-1:0] trigger_possible;
     reg [pNUM_COUNTERS-1:0] extended_mode = {pNUM_COUNTERS{1'b0}};
 
     reg individual_trigger [0:pREF_SAMPLES-1];
+    reg individual_trigger_r [0:pREF_SAMPLES-1];
     reg [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter [0:pNUM_COUNTERS-1];
     reg [pBITS_PER_SAMPLE-1:0] counter_incr [0:pNUM_COUNTERS-1];
 
@@ -151,9 +153,15 @@ module esad #(
     wire esad_support = 1'b1;
     wire im_support = 1'b1;
     wire [2:0] version = 3'b110;
-    wire [4:0] latency = 5'd9;
+    wire [4:0] latency = 5'd10;
     wire [10:0] version_bits = {max_threshold, esad_support, im_support, version, latency};
 
+    reg [7:0] sad_reference_data;
+    reg [pBYTECNT_SIZE+7:0] sad_reference_index;
+    reg sad_reference_usb;
+    reg [7:0] sad_refen_data;
+    reg [pBYTECNT_SIZE-1:0] sad_refen_index;
+    reg sad_refen_usb;
 
     // register reads:
     always @(*) begin
@@ -191,10 +199,25 @@ module esad #(
         end 
         else begin
             clear_status_r <= clear_status;
+            sad_reference_usb <= 1'b0;
+            sad_refen_usb <= 1'b0;
             if (reg_write) begin
                 case (reg_address)
-                    `SAD_REFERENCE: refsamples[{refbase, reg_bytecnt}*8 +: 8] <= reg_datai;
-                    `SAD_REFEN: refen[reg_bytecnt*8 +: 8] <= reg_datai;
+                    //`SAD_REFERENCE: refsamples[{refbase, reg_bytecnt}*8 +: 8] <= reg_datai;
+                    //`SAD_REFEN: refen[reg_bytecnt*8 +: 8] <= reg_datai;
+
+                    `SAD_REFERENCE: begin
+                        sad_reference_data <= reg_datai;
+                        sad_reference_index <= {refbase, reg_bytecnt};
+                        sad_reference_usb <= 1'b1;
+                    end
+
+                    `SAD_REFEN: begin
+                        sad_refen_data <= reg_datai;
+                        sad_refen_index <= reg_bytecnt;
+                        sad_refen_usb <= 1'b1;
+                    end
+
                     `SAD_THRESHOLD: threshold[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_INTERVAL_THRESHOLD: interval_threshold <= reg_datai;
                     `SAD_REFERENCE_BASE: refbase <= reg_datai;
@@ -274,7 +297,8 @@ module esad #(
         else begin
             trigger <= 1'b0;
             for (c = 0; c < pNUM_COUNTERS; c = c + 1) begin
-                if (individual_trigger[c] && ~(triggered && ~multiple_triggers)) trigger <= 1'b1;
+                individual_trigger_r[c] <= individual_trigger[c];
+                if (individual_trigger_r[c] && ~(triggered && ~multiple_triggers)) trigger <= 1'b1;
             end
         end
     end
@@ -292,6 +316,53 @@ module esad #(
         end
     endgenerate 
 
+   wire sad_reference_adc;
+   cdc_pulse U_refsample_cdc (
+      .reset_i       (reset),
+      .src_clk       (clk_usb),
+      .src_pulse     (sad_reference_usb),
+      .dst_clk       (adc_sampleclk),
+      .dst_pulse     (sad_reference_adc)
+   );
+
+   wire sad_refen_adc;
+   cdc_pulse U_refen_cdc (
+      .reset_i       (reset),
+      .src_clk       (clk_usb),
+      .src_pulse     (sad_refen_usb),
+      .dst_clk       (adc_sampleclk),
+      .dst_pulse     (sad_refen_adc)
+   );
+
+    integer d;
+    always @(posedge adc_sampleclk) begin
+        if (armed_and_ready_adc || always_armed || (refsample_shift_count != 0)) begin
+            refsample_shift_count <= refsample_shift_count + 1;
+            for (d = 0; d < pREF_SAMPLES; d = d + 1) begin
+                if (d == pREF_SAMPLES-1)
+                    refsamples[d*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE] <= refsamples[pREF_SAMPLES/2*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
+                else if (d == pREF_SAMPLES/2-1)
+                    refsamples[d*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE] <= refsamples[0 +: pBITS_PER_SAMPLE];
+                else /*if (d < pREF_SAMPLES/2-1)*/
+                    refsamples[d*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE] <= refsamples[(d+1)*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
+            end
+            refen <= {refen[pREF_SAMPLES/2], refen[pREF_SAMPLES-1:pREF_SAMPLES/2+1],
+                      refen[0],              refen[pREF_SAMPLES/2-1:1]};
+        end
+
+
+        else begin
+          if (sad_reference_adc)
+              refsamples[sad_reference_index*8 +: 8] <= sad_reference_data;
+          if (sad_refen_adc)
+              refen[sad_refen_index*8 +: 8] <= sad_refen_data;
+        end
+    end
+
+    wire [pBITS_PER_SAMPLE-1:0] ref_sample0_short = refsamples[0 +: pBITS_PER_SAMPLE];
+    wire [pBITS_PER_SAMPLE-1:0] ref_sample0_extended = refsamples[pREF_SAMPLES/2*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
+    wire refen_sample0_short = refen[0];
+    wire refen_sample0_extended = refen[pREF_SAMPLES/2];
 
     // instantiate counters and do most of the heavy lifting:
     genvar i;
@@ -300,17 +371,18 @@ module esad #(
 
             always @(posedge adc_sampleclk) begin
                 if (i == 0) begin
-                    nextrefsample_short[0] <= refsample[master_counter_short];
-                    nextrefsample_extended[0] <= refsample[master_counter_extended];
-                    compare_en_short[0] <= refen[master_counter_short];
-                    compare_en_extended[0] <= refen[master_counter_extended];
+                    nextrefsample_short[0]    <= ref_sample0_short;
+                    nextrefsample_extended[0] <= ref_sample0_extended;
+                    compare_en_short[0]       <= refen_sample0_short;
+                    compare_en_extended[0]    <= refen_sample0_extended;
+
                     if (extended_mode[0]) begin
-                        nextrefsample[0] <= refsample[master_counter_extended];
-                        compare_en[0] <= refen[master_counter_extended];
+                        nextrefsample[0] <= ref_sample0_extended;
+                        compare_en[0] <= refen_sample0_extended;
                     end
                     else begin
-                        nextrefsample[0] <= refsample[master_counter_short];
-                        compare_en[0] <= refen[master_counter_short];
+                        nextrefsample[0] <= ref_sample0_short;
+                        compare_en[0] <= refen_sample0_short;
                     end
                 end
 
@@ -425,13 +497,13 @@ module esad #(
 
     wire [pBITS_PER_SAMPLE-1:0] nextrefsample_short0 = nextrefsample_short[0];
     wire [pBITS_PER_SAMPLE-1:0] nextrefsample_short1 = nextrefsample_short[1];
-    wire [pBITS_PER_SAMPLE-1:0] nextrefsample_short12 = nextrefsample_short[12];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample_short14 = nextrefsample_short[14];
     wire [pBITS_PER_SAMPLE-1:0] nextrefsample_short27 = nextrefsample_short[27];
     wire [pBITS_PER_SAMPLE-1:0] nextrefsample_short28 = nextrefsample_short[28];
 
     wire [pBITS_PER_SAMPLE-1:0] nextrefsample_extended0  = nextrefsample_extended[0];
     wire [pBITS_PER_SAMPLE-1:0] nextrefsample_extended1  = nextrefsample_extended[1];
-    wire [pBITS_PER_SAMPLE-1:0] nextrefsample_extended12 = nextrefsample_extended[12];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample_extended14 = nextrefsample_extended[14];
     wire [pBITS_PER_SAMPLE-1:0] nextrefsample_extended27 = nextrefsample_extended[27];
     wire [pBITS_PER_SAMPLE-1:0] nextrefsample_extended28 = nextrefsample_extended[28];
 
@@ -475,6 +547,7 @@ module esad #(
     wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr8 = counter_incr[8];
     wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr9 = counter_incr[9];
     wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr10 = counter_incr[10];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr14 = counter_incr[14];
     wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr18 = counter_incr[18];
 
     wire [31:0] individual_trigger_debug =  {individual_trigger[31],

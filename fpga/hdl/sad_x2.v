@@ -81,6 +81,7 @@ module sad_x2 #(
     reg [pSAD_COUNTER_WIDTH-1:0] threshold;
     wire [pMASTER_COUNTER_WIDTH-1:0] master_counter;
     reg [pMASTER_COUNTER_WIDTH-1:0] master_counter_full;
+    reg [pMASTER_COUNTER_WIDTH-1:0] refsample_shift_count = 0;
     wire tick_tock;
     reg resetter [0:pREF_SAMPLES-1];
 
@@ -131,6 +132,13 @@ module sad_x2 #(
 
     wire [15:0] ref_samples = pREF_SAMPLES;
 
+    reg [7:0] sad_reference_data;
+    reg [pBYTECNT_SIZE+7:0] sad_reference_index;
+    reg sad_reference_usb;
+    reg [7:0] sad_refen_data;
+    reg [pBYTECNT_SIZE-1:0] sad_refen_index;
+    reg sad_refen_usb;
+
     // register reads:
     always @(*) begin
         if (reg_read) begin
@@ -164,10 +172,22 @@ module sad_x2 #(
         end 
         else begin
             clear_status_r <= clear_status;
+            sad_reference_usb <= 1'b0;
+            sad_refen_usb <= 1'b0;
             if (reg_write) begin
                 case (reg_address)
-                    `SAD_REFERENCE: refsamples[{refbase, reg_bytecnt}*8 +: 8] <= reg_datai;
-                    `SAD_REFEN: refen[reg_bytecnt*8 +: 8] <= reg_datai;
+                    `SAD_REFERENCE: begin
+                        sad_reference_data <= reg_datai;
+                        sad_reference_index <= {refbase, reg_bytecnt};
+                        sad_reference_usb <= 1'b1;
+                    end
+
+                    `SAD_REFEN: begin
+                        sad_refen_data <= reg_datai;
+                        sad_refen_index <= reg_bytecnt;
+                        sad_refen_usb <= 1'b1;
+                    end
+
                     `SAD_THRESHOLD: threshold[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_REFERENCE_BASE: refbase <= reg_datai;
                     `SAD_CONTROL: begin
@@ -313,6 +333,52 @@ module sad_x2 #(
     endgenerate
 
 
+    wire sad_reference_adc;
+    cdc_pulse U_refsample_cdc (
+       .reset_i       (reset),
+       .src_clk       (clk_usb),
+       .src_pulse     (sad_reference_usb),
+       .dst_clk       (adc_sampleclk),
+       .dst_pulse     (sad_reference_adc)
+    );
+
+    wire sad_refen_adc;
+    cdc_pulse U_refen_cdc (
+       .reset_i       (reset),
+       .src_clk       (clk_usb),
+       .src_pulse     (sad_refen_usb),
+       .dst_clk       (adc_sampleclk),
+       .dst_pulse     (sad_refen_adc)
+    );
+
+    integer d;
+    always @(posedge adc_sampleclk) begin
+        if (((armed_and_ready_adc || always_armed) && tick_tock) || (~(armed_and_ready_adc || always_armed) && (refsample_shift_count != 0))) begin
+            refsample_shift_count <= refsample_shift_count + 2;
+            for (d = 0; d < pREF_SAMPLES; d = d + 2) begin
+                if (d == pREF_SAMPLES-2)
+                    refsamples[d*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE*2] <= refsamples[0 +: pBITS_PER_SAMPLE*2];
+                else
+                    refsamples[d*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE*2] <= refsamples[(d+2)*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE*2];
+
+            end
+            refen <= {refen[1:0], refen[pREF_SAMPLES-1:2]};
+        end
+        else begin
+          if (sad_reference_adc)
+              refsamples[sad_reference_index*8 +: 8] <= sad_reference_data;
+          if (sad_refen_adc)
+              refen[sad_refen_index*8 +: 8] <= sad_refen_data;
+        end
+    end
+
+    wire [pBITS_PER_SAMPLE-1:0] ref_sample0 = refsamples[0 +: pBITS_PER_SAMPLE];
+    wire [pBITS_PER_SAMPLE-1:0] ref_sample1 = refsamples[pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
+    wire refen_sample0 = refen[0];
+    wire refen_sample1 = refen[1];
+
+
+
     // heavy lifting part 2: per-every-other-sample generated logic: (this is where we save logic c.f. sad.v)
     genvar i;
     generate 
@@ -321,10 +387,10 @@ module sad_x2 #(
 
 
                 if (i == 0) begin
-                    nextrefsample_a[i] <= refsample[master_counter];
-                    nextrefsample_b[i] <= refsample[master_counter+1];
-                    compare_en_a[i] <= refen[master_counter];
-                    compare_en_b[i] <= refen[master_counter+1];
+                    nextrefsample_a[i] <= ref_sample0;
+                    nextrefsample_b[i] <= ref_sample1;
+                    compare_en_a[i] <= refen_sample0;
+                    compare_en_b[i] <= refen_sample1;
                 end
                 else begin
                     if (~tick_tock) begin

@@ -309,7 +309,7 @@ class SADTest(object):
             blocks += 1
         for base in range(blocks):
             await self.registers.write(self.reg_addr['SAD_REFERENCE_BASE'], [base])
-            await self.registers.write(self.reg_addr['SAD_REFERENCE'], self.pattern[base*128:(base+1)*128])
+            await self.registers.write(self.reg_addr['SAD_REFERENCE'], self.pattern[base*128:(base+1)*128], wait=20)
         # 3. program SAD_REFEN: translate into format used by DUT (one bit per sample)
         dut_refen_bignum = 0
         for i in range(self.ref_samples):
@@ -318,7 +318,7 @@ class SADTest(object):
         size = self.ref_samples//8
         if self.ref_samples % 8:
             size += 1
-        await self.registers.write(self.reg_addr['SAD_REFEN'], self.registers.to_bytes(dut_refen_bignum, size))
+        await self.registers.write(self.reg_addr['SAD_REFEN'], self.registers.to_bytes(dut_refen_bignum, size), wait=20)
         # 4. Rest of setup:
         await self.registers.write(self.reg_addr['SAD_THRESHOLD'], self.registers.to_bytes(self.threshold, 4))
         await self.registers.write(self.reg_addr['SAD_CONTROL'], [(self.emode << 2) + (self.multiple_triggers << 1)])

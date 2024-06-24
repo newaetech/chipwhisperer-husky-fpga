@@ -40,7 +40,7 @@ class Registers(object):
         await ClockCycles(self.dut.clk_usb, 1)
 
 
-    async def write(self, address, data) -> None:
+    async def write(self, address, data, wait=None) -> None:
         await self.lock.acquire()
         try:
             await self.setup_rw_address(address)
@@ -53,6 +53,8 @@ class Registers(object):
                 await ClockCycles(self.dut.clk_usb, 1)
                 self.dut.USB_CEn.value = 1
                 await ClockCycles(self.dut.clk_usb, 1)
+                if wait:
+                    await ClockCycles(self.dut.clk_usb, wait)
         finally:
             self.lock.release()
 
