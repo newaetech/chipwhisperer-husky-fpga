@@ -80,6 +80,11 @@ module sad #(
     reg [pMASTER_COUNTER_WIDTH-1:0] master_counter;
     reg [pMASTER_COUNTER_WIDTH-1:0] refsample_shift_count = 0;
     reg [pREF_SAMPLES-1:0] resetter;
+    reg [pREF_SAMPLES-1:0] triggerer;
+
+    // default to normal triggering at end of full pattern;
+    // general formula: set triggerer_init to (pREF_SAMPLES - 3 + (cycles early)) % pREF_SAMPLES
+    reg [pMASTER_COUNTER_WIDTH-1:0] triggerer_init = pREF_SAMPLES-3; 
 
     reg individual_trigger [0:pREF_SAMPLES-1];
     reg individual_trigger_r [0:pREF_SAMPLES-1];
@@ -149,6 +154,7 @@ module sad #(
             case (reg_address)
                 `SAD_REFERENCE: reg_datao = refsamples[{refbase, reg_bytecnt}*8 +: 8];
                 `SAD_REFEN: reg_datao = refen[reg_bytecnt*8 +: 8];
+                `SAD_TRIGGER_TIME: reg_datao = triggerer_init[reg_bytecnt*8 +: 8];
                 `SAD_THRESHOLD: reg_datao = wide_threshold_reg[reg_bytecnt*8 +: 8];
                 `SAD_INTERVAL_THRESHOLD: reg_datao = interval_threshold;
                 `SAD_STATUS: reg_datao = status_reg[reg_bytecnt*8 +: 8];
@@ -193,6 +199,7 @@ module sad #(
                         sad_refen_usb <= 1'b1;
                     end
 
+                    `SAD_TRIGGER_TIME: triggerer_init[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_THRESHOLD: threshold[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_INTERVAL_THRESHOLD: interval_threshold <= reg_datai;
                     `SAD_REFERENCE_BASE: refbase <= reg_datai;
@@ -246,6 +253,7 @@ module sad #(
         if ((armed_and_ready_adc || always_armed) && active && ~xadc_error) begin
             ready2trigger_1andup <= {ready2trigger_1andup[pREF_SAMPLES-2:1], ready2trigger0};
             resetter <= {resetter[pREF_SAMPLES-2:0], resetter[pREF_SAMPLES-1]};
+            triggerer <= {triggerer[pREF_SAMPLES-2:0], triggerer[pREF_SAMPLES-1]};
             if (master_counter == master_counter_top) begin
                 ready2trigger0 <= 1;
                 master_counter <= 0;
@@ -258,8 +266,10 @@ module sad #(
             ready2trigger0 <= 0;
             ready2trigger_1andup <= 0;
             resetter <= {2'b0, 1'b1, {(pREF_SAMPLES-3){1'b0}}};
+            triggerer <= 1<<triggerer_init;
         end
     end
+
 
     integer c;
     always @(posedge adc_sampleclk) begin
@@ -371,7 +381,7 @@ module sad #(
             end
 
             always @ (posedge adc_sampleclk) begin
-                if ((sad_counter[i] <= threshold) && resetter[i] && ready2trigger_all[i] && ~(triggered && ~multiple_triggers))
+                if ((sad_counter[i] <= threshold) && triggerer[i] && ready2trigger_all[i] && ~(triggered && ~multiple_triggers))
                     individual_trigger[i] <= 1'b1;
                 else
                     individual_trigger[i] <= 1'b0;

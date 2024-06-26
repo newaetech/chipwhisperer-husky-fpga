@@ -217,10 +217,22 @@ class SADTest(object):
 
         self._coro = None
 
+        # determine trigger time: either full pattern or less
+        #self.triglen = ref_samples-20
+        #self.triglen = ref_samples
+        if random.randint(0,10):
+            if interval_matching:
+                minlen = int(ref_samples*0.75) # mismatchines between model and DUT are much more likely in interval mode if not using many samples
+            else:
+                minlen = min(16, ref_samples//4) # avoid making triglen *too* short as it increases the likelihood of model != DUT
+            self.triglen = random.randint(minlen, ref_samples-1)
+        else:
+            self.triglen = ref_samples
+        self.dut._log.info('SAD trigger time advanced by: %d cycles' % (ref_samples-self.triglen))
+
         # establish SAD reference (and which samples are enabled):
         self.pattern = []
         self.refen = []
-        self.samples_enabled = 0
         for i in range(ref_samples):
             if (not linear_ramp) or (i == 0):
                 sample = random.randint(0, 2**bits_per_sample-1)
@@ -230,19 +242,26 @@ class SADTest(object):
             if implementation == 'SAD_SINGLE':
                 # doesn't support disabled samples
                 self.refen.append(1)
-                self.samples_enabled += 1
             else:
                 if random.randint(0, 10): # enable SAD for 1 out of 10 samples:
                     self.refen.append(1)
-                    self.samples_enabled += 1
                 else:
                     self.refen.append(0)
 
+        # samples_enabled needs to consider triglen:
+        if implementation == 'SAD_SINGLE':
+            self.samples_enabled = self.triglen
+        else:
+            self.samples_enabled = 0
+            for i in range(self.triglen):
+                if self.refen[i]:
+                    self.samples_enabled += 1
+
         self.dut._log.info('pattern = %s' % self.pattern)
         self.dut._log.info('refen = %s' % self.refen)
+        self.dut._log.info('samples_enabled = %s' % self.samples_enabled)
 
         # determine thresholds, with counter_width in mind:
-
         if interval_matching:
             self.threshold = random.randint(1, ref_samples/4-2)
             self.interval_threshold = random.randint(1, 2**(bits_per_sample-2))
@@ -263,7 +282,7 @@ class SADTest(object):
         else:
             startup_latency = 3
 
-        self.SAD_model = SAD(counter_width, self.pattern, self.refen, self.threshold//2, self.threshold, self.interval_threshold, startup_latency, multiple_triggers, emode, interval_matching, True)
+        self.SAD_model = SAD(counter_width, self.pattern, self.refen, self.triglen, self.threshold//2, self.threshold, self.interval_threshold, startup_latency, multiple_triggers, emode, interval_matching, True)
 
     def start(self):
         """Start test thread"""
@@ -323,6 +342,14 @@ class SADTest(object):
         await self.registers.write(self.reg_addr['SAD_THRESHOLD'], self.registers.to_bytes(self.threshold, 4))
         await self.registers.write(self.reg_addr['SAD_CONTROL'], [(self.emode << 2) + (self.multiple_triggers << 1)])
         await self.registers.write(self.reg_addr['SAD_INTERVAL_THRESHOLD'], [self.interval_threshold])
+        # 5. translate triglen to Verilog triggerer_init value:
+        # register size:
+        sizebits = math.ceil(math.log2(self.ref_samples))
+        size = sizebits // 8
+        if sizebits % 8:
+            size += 1
+        triggerer_init = (-self.triglen-3) % self.ref_samples
+        await self.registers.write(self.reg_addr['SAD_TRIGGER_TIME'], self.registers.to_bytes(triggerer_init, size))
         # check selected DUT latency so we can adjust our expected triggers accordingly:
         latency = (await self.registers.read(self.reg_addr['SAD_VERSION'], 1))[0] & 0x1f
         assert latency < 23, "DUT's reported latency is too high! (%d)" % latency
@@ -396,9 +423,9 @@ class SADTest(object):
             self.dut.under_threshold.value = under_threshold
             self.dut.long_enough.value = long_enough
             if long_enough:
-                samples = self.ref_samples
+                samples = self.triglen
             else:
-                samples = random.randint(4, self.ref_samples-1)
+                samples = random.randint(4, self.triglen-1)
             self.dut._log.info('sample generator: under_threshold=%d, long_enough=%d, num samples=%d' % (under_threshold, long_enough, samples))
 
             if not self.interval_matching:

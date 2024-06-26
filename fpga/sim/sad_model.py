@@ -21,19 +21,26 @@
 
 from chipwhisperer.common.utils import util
 
-# NEXT: add a property to turn on "halfsies" or not (eSAD or regular-SAD);
-# have eSAD object instantiate both types of counters... almost done!
 
-# ALSO: offer a way to visualize which samples were NOT covered (due to eSAD)
+# NOTE: this is a fairly accurate model of the Verilog SAD implementations in Husky.
+# It is *almost* cycle accurate. The main difference is that when multiple triggers
+# are not enabled, it is in fact possible for some of the Verilog implementations to
+# issue more than one trigger, when multiple counters meet the triggering condition
+# 1 or 2 cycles apart. This is usually a degenerate case which shouldn't happen with
+# a properly tuned SAD module IRL. The main inconvenience is that SAD simulations
+# can sometimes fail, and this must be inspected manually.
+
+# TODO: offer a way to visualize which samples were NOT covered (due to eSAD)
 
 class Counter(object):
-    def __init__(self, idx, counter_width, ref, refen, half_threshold, threshold, interval_threshold, startup_latency, emode=False, interval_matching=False, verbose=False):
+    def __init__(self, idx, counter_width, ref, refen, triglen, half_threshold, threshold, interval_threshold, startup_latency, emode=False, interval_matching=False, verbose=False):
         self.verbose = verbose
         self.emode = emode # True: eSAD; False: regular SAD
         self.idx = idx
         self.counter_width = counter_width
         self.ref = ref
         self.refen = refen
+        self.triglen = triglen
         self.half_threshold = half_threshold
         self.threshold = threshold
         self.interval_threshold = interval_threshold
@@ -55,6 +62,7 @@ class Counter(object):
         rtn['idx'] = self.idx
         rtn['emode'] = self.emode
         rtn['reflen'] = self.reflen
+        rtn['triglen'] = self.triglen
         rtn['starting_sample'] = self.starting_sample
         rtn['current_idx'] = self.current_idx
         rtn['started'] = self.started
@@ -139,13 +147,15 @@ class Counter(object):
         elif self.current_idx == self.reflen//2 and self.emode and not self.extended_mode:
                 self.current_idx = 0
 
-        elif self.current_idx == self.reflen:
-            self.ready2trigger = True
-            self.current_idx = 0
-            if self.verbose: print("%4d: counter %d done, SAD=%d" % (time, self.idx, self.SAD))
-            if self.SAD <= self.threshold:
-                if self.verbose: print("%4d: counter %d MATCHED at time %6d with score: %d ===============================" % (time, self.idx, time, self.SAD))
-                match = True
+        else:
+            if self.current_idx == self.triglen and self.ready2trigger:
+                if self.verbose: print("%4d: counter %d done, SAD=%d" % (time, self.idx, self.SAD))
+                if self.SAD <= self.threshold:
+                    if self.verbose: print("%4d: counter %d MATCHED at time %6d with score: %d ===============================" % (time, self.idx, time, self.SAD))
+                    match = True
+            if self.current_idx == self.reflen:
+                self.ready2trigger = True
+                self.current_idx = 0
 
         return (match, covered)
 
@@ -159,10 +169,11 @@ class Counter(object):
 
 
 class SAD(object):
-    def __init__(self, counter_width, ref, refen, half_threshold, threshold, interval_threshold, startup_latency, multiple_triggers, emode=False, interval_matching=False, verbose=False):
+    def __init__(self, counter_width, ref, refen, triglen, half_threshold, threshold, interval_threshold, startup_latency, multiple_triggers, emode=False, interval_matching=False, verbose=False):
         self.emode = emode # True: eSAD; False: regular SAD
         self.ref = ref
         self.refen = refen
+        self.triglen = triglen
         self.startup_latency = startup_latency
         self.multiple_triggers = multiple_triggers
         self.half_threshold = half_threshold
@@ -185,7 +196,7 @@ class SAD(object):
         self.covered = []
         self.triggered = False
         for i in range(self.num_counters):
-            self.counters.append(Counter(i, counter_width, ref, refen, half_threshold, threshold, interval_threshold, startup_latency, emode, interval_matching, verbose))
+            self.counters.append(Counter(i, counter_width, ref, refen, self.triglen, half_threshold, threshold, interval_threshold, startup_latency, emode, interval_matching, verbose))
 
 
     def _dict_repr(self):
