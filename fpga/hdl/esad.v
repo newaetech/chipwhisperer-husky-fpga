@@ -111,6 +111,8 @@ module esad #(
     wire [pMASTER_COUNTER_WIDTH-1:0] master_counter_extended = {1'b1, master_counter_short};
     reg  [pMASTER_COUNTER_WIDTH-2:0] refsample_shift_count = 0;
     reg [pNUM_COUNTERS-1:0] resetter;
+    reg [pNUM_COUNTERS-1:0] triggerer;
+    reg [pMASTER_COUNTER_WIDTH-1:0] triggerer_init = pNUM_COUNTERS-3; 
     reg [pNUM_COUNTERS-1:0] halfpoint;
     reg [pNUM_COUNTERS-1:0] trigger_possible;
     reg [pNUM_COUNTERS-1:0] extended_mode = {pNUM_COUNTERS{1'b0}};
@@ -169,6 +171,7 @@ module esad #(
             case (reg_address)
                 `SAD_REFERENCE: reg_datao = refsamples[{refbase, reg_bytecnt}*8 +: 8];
                 `SAD_REFEN: reg_datao = refen[reg_bytecnt*8 +: 8];
+                `SAD_TRIGGER_TIME: reg_datao = triggerer_init[reg_bytecnt*8 +: 8];
                 `SAD_THRESHOLD: reg_datao = wide_threshold_reg[reg_bytecnt*8 +: 8];
                 `SAD_INTERVAL_THRESHOLD: reg_datao = interval_threshold;
                 `SAD_STATUS: reg_datao = status_reg[reg_bytecnt*8 +: 8];
@@ -218,6 +221,7 @@ module esad #(
                         sad_refen_usb <= 1'b1;
                     end
 
+                    `SAD_TRIGGER_TIME: triggerer_init[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_THRESHOLD: threshold[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_INTERVAL_THRESHOLD: interval_threshold <= reg_datai;
                     `SAD_REFERENCE_BASE: refbase <= reg_datai;
@@ -273,6 +277,7 @@ module esad #(
         if ((armed_and_ready_adc || always_armed) && active && ~xadc_error) begin
             ready2trigger_1andup <= {ready2trigger_1andup[pNUM_COUNTERS-2:1], ready2trigger0};
             resetter <= {resetter[pNUM_COUNTERS-2:0], resetter[pNUM_COUNTERS-1]};
+            triggerer <= {triggerer[pNUM_COUNTERS-2:0], triggerer[pNUM_COUNTERS-1]};
             halfpoint <= {halfpoint[pNUM_COUNTERS-2:0], halfpoint[pNUM_COUNTERS-1]};
             if (master_counter == (emode ? master_counter_top : master_counter_half)) begin
                 ready2trigger0 <= 1;
@@ -286,6 +291,7 @@ module esad #(
             ready2trigger0 <= 0;
             ready2trigger_1andup <= 0;
             resetter <= {2'b0, 1'b1, {(pNUM_COUNTERS-3){1'b0}}};
+            triggerer <= 1<<triggerer_init;
             halfpoint <= {{(pNUM_COUNTERS-2){1'b0}}, 1'b1, 1'b0};
         end
     end
@@ -459,7 +465,8 @@ module esad #(
             end
 
             always @ (posedge adc_sampleclk) begin
-                if ((sad_counter[i] <= threshold) && resetter[i] && trigger_possible[i] && ready2trigger_all[i])
+                //if ((sad_counter[i] <= threshold) && resetter[i] && trigger_possible[i] && ready2trigger_all[i])
+                if ((sad_counter[i] <= threshold) && triggerer[i] && trigger_possible[i] && ready2trigger_all[i])
                     individual_trigger[i] <= 1'b1;
                 else
                     individual_trigger[i] <= 1'b0;

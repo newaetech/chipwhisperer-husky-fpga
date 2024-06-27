@@ -147,6 +147,16 @@ class Counter(object):
         elif self.current_idx == self.reflen//2 and self.emode and not self.extended_mode:
                 self.current_idx = 0
 
+
+        elif self.emode:
+            if self.current_idx == self.reflen:
+                self.ready2trigger = True
+                self.current_idx = 0
+                if self.verbose: print("%4d: counter %d done, SAD=%d" % (time, self.idx, self.SAD))
+                if self.SAD <= self.threshold:
+                    if self.verbose: print("%4d: counter %d MATCHED at time %6d with score: %d ===============================" % (time, self.idx, time, self.SAD))
+                    match = True
+
         else:
             if self.current_idx == self.triglen and self.ready2trigger:
                 if self.verbose: print("%4d: counter %d done, SAD=%d" % (time, self.idx, self.SAD))

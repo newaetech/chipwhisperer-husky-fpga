@@ -184,6 +184,7 @@ class SADTest(object):
                  multiple_triggers,  
                  always_armed,
                  emode,
+                 early_trigger_en,
                  interval_matching,
                  counter_width,
                  implementation):
@@ -199,6 +200,7 @@ class SADTest(object):
         self.triggers = triggers
         self.multiple_triggers = multiple_triggers
         self.emode = emode
+        self.early_trigger_en = early_trigger_en
         self.interval_matching = interval_matching
         self.counter_width = counter_width
 
@@ -218,16 +220,19 @@ class SADTest(object):
         self._coro = None
 
         # determine trigger time: either full pattern or less
-        #self.triglen = ref_samples-20
-        #self.triglen = ref_samples
-        if random.randint(0,10):
-            if interval_matching:
-                minlen = int(ref_samples*0.75) # mismatchines between model and DUT are much more likely in interval mode if not using many samples
-            else:
-                minlen = min(16, ref_samples//4) # avoid making triglen *too* short as it increases the likelihood of model != DUT
-            self.triglen = random.randint(minlen, ref_samples-1)
+        #self.triglen = ref_samples-1
+        if emode or not early_trigger_en:
+            self.triglen = ref_samples # early triggering not supported in emode
         else:
-            self.triglen = ref_samples
+            if random.randint(0,10):
+                if interval_matching:
+                    minlen = int(ref_samples*0.75) # mismatchines between model and DUT are much more likely in interval mode if not using many samples
+                else:
+                    minlen = 8 # avoid making triglen *too* short as it increases the likelihood of model != DUT
+                    assert ref_samples >= 16, "not enough ref_samples for this"
+                self.triglen = random.randint(minlen, ref_samples-1)
+            else:
+                self.triglen = ref_samples
         self.dut._log.info('SAD trigger time advanced by: %d cycles' % (ref_samples-self.triglen))
 
         # establish SAD reference (and which samples are enabled):
@@ -348,7 +353,10 @@ class SADTest(object):
         size = sizebits // 8
         if sizebits % 8:
             size += 1
-        triggerer_init = (-self.triglen-3) % self.ref_samples
+        if self.emode:
+            triggerer_init = (-self.triglen//2-3) % self.ref_samples
+        else:
+            triggerer_init = (-self.triglen-3) % self.ref_samples
         await self.registers.write(self.reg_addr['SAD_TRIGGER_TIME'], self.registers.to_bytes(triggerer_init, size))
         # check selected DUT latency so we can adjust our expected triggers accordingly:
         latency = (await self.registers.read(self.reg_addr['SAD_VERSION'], 1))[0] & 0x1f
@@ -401,7 +409,7 @@ class SADTest(object):
                     if self.interval_matching:
                         delta = random.randint(self.interval_threshold, 2**(self.bits_per_sample-1))
                     else:
-                        delta = max(2, int(self.threshold / self.samples_enabled * 4))
+                        delta = random.randint(max(2, int(self.threshold / self.samples_enabled * 4)), 2**(self.bits_per_sample-1))
 
                     if self.pattern[i % self.ref_samples] > delta:
                         value = self.pattern[i % self.ref_samples] - delta
@@ -579,6 +587,7 @@ async def sad_test(dut):
     interval_matching = int(os.getenv('INTERVAL_MATCHING', '0'))
     always_armed      = int(os.getenv('ALWAYS_ARMED', '0'))
     emode             = int(os.getenv('EMODE', '0'))
+    early_trigger_en  = int(os.getenv('EARLY_TRIGGER_EN', '0'))
     implementation    = os.getenv('SAD', 'SAD_BASE')
 
     if implementation == 'ESAD' and not emode:
@@ -596,6 +605,7 @@ async def sad_test(dut):
     dut._log.info("always_armed: %d" % always_armed)
     dut._log.info("interval_matching: %d" % interval_matching)
     dut._log.info("emode: %d" % emode)
+    dut._log.info("early_trigger_en: %d" % early_trigger_en)
     dut._log.info("implementation: %s" % implementation)
     dut._log.info("reps: %d" % reps)
 
@@ -610,6 +620,7 @@ async def sad_test(dut):
                       multiple_triggers = multiple_triggers,
                       always_armed = always_armed,
                       emode = emode,
+                      early_trigger_en = early_trigger_en,
                       interval_matching = interval_matching,
                       counter_width = counter_width,
                       implementation = implementation
