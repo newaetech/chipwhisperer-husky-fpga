@@ -148,7 +148,7 @@ class Counter(object):
                 self.current_idx = 0
 
 
-        elif self.emode:
+        elif self.emode or self.triglen is None:
             if self.current_idx == self.reflen:
                 self.ready2trigger = True
                 self.current_idx = 0
@@ -290,8 +290,8 @@ class SAD(object):
 
 class eSAD_wrapper(object):
     def __init__(self, counter_width, ref, refen, half_threshold, threshold, interval_threshold, startup_latency, multiple_triggers, interval_matching=False, verbose=False):
-        self.esad = SAD(counter_width, ref, refen, half_threshold, threshold, interval_threshold, startup_latency, multiple_triggers, True,  interval_matching, verbose)
-        self.fsad = SAD(counter_width, ref, refen, half_threshold, threshold, interval_threshold, startup_latency, multiple_triggers, False, interval_matching, verbose)
+        self.esad = SAD(counter_width, ref, refen, None, half_threshold, threshold, interval_threshold, startup_latency, multiple_triggers, True,  interval_matching, verbose)
+        self.fsad = SAD(counter_width, ref, refen, None, half_threshold, threshold, interval_threshold, startup_latency, multiple_triggers, False, interval_matching, verbose)
 
     def _dict_repr(self):
         rtn = {}
