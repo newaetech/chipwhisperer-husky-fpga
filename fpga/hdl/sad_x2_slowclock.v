@@ -172,7 +172,7 @@ module sad_x2_slowclock #(
                 `SAD_BITS_PER_SAMPLE: reg_datao = pBITS_PER_SAMPLE;
                 `SAD_REF_SAMPLES: reg_datao = ref_samples[reg_bytecnt*8 +: 8];
                 `SAD_COUNTER_WIDTH: reg_datao = pACTUAL_SAD_COUNTER_WIDTH;
-                `SAD_VERSION: reg_datao = version_bits;
+                `SAD_VERSION: reg_datao = version_bits[reg_bytecnt*8 +: 8];
                 `SAD_CONTROL: reg_datao = {5'b0, emode, multiple_triggers, always_armed};
                 default: reg_datao = 0;
             endcase

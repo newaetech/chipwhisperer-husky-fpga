@@ -119,6 +119,7 @@ module sad #(
     // knows what it's talking to, in case there may be different SAD modules
     // used in different targets or builds.
     // Format: 
+    //          11: advanced trigger time support
     //          10: max threshold type
     //                  0: 2^(SAD_COUNTER_WIDTH-1)-1
     //                  1: 2^SAD_COUNTER_WIDTH-1
@@ -133,12 +134,13 @@ module sad #(
     //                  101: sad_x2.v
     //                  111: sad_single_counter.v
     //          4:0: trigger latency
+    wire advanced_trigger_time_support = 1'b1;
     wire max_threshold = (`INTERVAL_MATCHING == 1)? 1'b1 : 1'b0;
     wire esad_support = 1'b0;
     wire im_support = 1'b1;
     wire [2:0] version = 3'b000;
     wire [4:0] latency = 5'd10;
-    wire [10:0] version_bits = {max_threshold, esad_support, im_support, version, latency};
+    wire [11:0] version_bits = {advanced_trigger_time_support, max_threshold, esad_support, im_support, version, latency};
 
     reg [7:0] sad_reference_data;
     reg [pBYTECNT_SIZE+7:0] sad_reference_index;

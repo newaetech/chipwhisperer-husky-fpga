@@ -151,12 +151,13 @@ module esad #(
     assign debug_emode = extended_mode | trigger_possible;
 
     // See sad.v for definitions:
+    wire advanced_trigger_time_support = 1'b1;
     wire max_threshold = (`INTERVAL_MATCHING == 1)? 1'b1 : 1'b0;
     wire esad_support = 1'b1;
     wire im_support = 1'b1;
     wire [2:0] version = 3'b110;
     wire [4:0] latency = 5'd10;
-    wire [10:0] version_bits = {max_threshold, esad_support, im_support, version, latency};
+    wire [11:0] version_bits = {advanced_trigger_time_support, max_threshold, esad_support, im_support, version, latency};
 
     reg [7:0] sad_reference_data;
     reg [pBYTECNT_SIZE+7:0] sad_reference_index;
@@ -179,7 +180,7 @@ module esad #(
                 `SAD_REF_SAMPLES: reg_datao = ref_samples[reg_bytecnt*8 +: 8];
                 `SAD_COUNTER_WIDTH: reg_datao = pACTUAL_SAD_COUNTER_WIDTH;
                 `SAD_CONTROL: reg_datao = {5'b0, emode, multiple_triggers, always_armed};
-                `SAD_VERSION: reg_datao = version_bits;
+                `SAD_VERSION: reg_datao = version_bits[reg_bytecnt*8 +: 8];
                 default: reg_datao = 0;
             endcase
         end
