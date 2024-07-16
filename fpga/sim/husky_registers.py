@@ -43,6 +43,7 @@ class Registers(object):
     async def write(self, address, data, wait=None) -> None:
         await self.lock.acquire()
         try:
+            await RisingEdge(self.dut.clk_usb) # ensure all that follows is sync'd to clock
             await self.setup_rw_address(address)
             for i in range(len(data)):
                 self.dut.USB_Data.value = data[i]
