@@ -176,6 +176,7 @@ compile_sad_coco:
 	../hdl/sad_x2_slowclock.v \
 	../hdl/sad_x4_slowclock.v \
 	../hdl/usb_reg_main.v \
+	../fpga-common/hdl/fifo_async.v \
 	../fpga-common/hdl/cdc_pulse.v \
 	../fpga-common/hdl/cdc_simple.v \
 	sad_cocowrapper.v \
