@@ -105,10 +105,12 @@ module sad #(
     reg [pBITS_PER_SAMPLE-1:0] adc_datain_rpr, adc_datain_rmr; // sign extend
     reg [pBITS_PER_SAMPLE-1:0] adc_datain_r;
 
+    wire writing_allowed;
+
 `ifdef HIPERF
     wire [23:0] status_reg = 24'b0;
 `else
-    wire [23:0] status_reg = {num_triggers, 7'b0, triggered};
+    wire [23:0] status_reg = {num_triggers, 6'b0, writing_allowed, triggered};
 `endif
 
     wire [31:0] wide_threshold_reg = {{(32-pACTUAL_SAD_COUNTER_WIDTH){1'b0}}, threshold}; // having a variable-width register isn't very convenient for Python
@@ -142,19 +144,16 @@ module sad #(
     wire [4:0] latency = 5'd10;
     wire [11:0] version_bits = {advanced_trigger_time_support, max_threshold, esad_support, im_support, version, latency};
 
-    reg [7:0] sad_reference_data;
-    reg [pBYTECNT_SIZE+7:0] sad_reference_index;
     reg sad_reference_usb;
-    reg [7:0] sad_refen_data;
-    reg [pBYTECNT_SIZE-1:0] sad_refen_index;
     reg sad_refen_usb;
-
+    reg [15:0] refindex;
+    reg [15:0] refvalue;
 
     // register reads:
     always @(*) begin
         if (reg_read) begin
             case (reg_address)
-                `SAD_REFERENCE: reg_datao = refsamples[{refbase, reg_bytecnt}*8 +: 8];
+                `SAD_REFERENCE: reg_datao = refsamples_read;
                 `SAD_REFEN: reg_datao = refen[reg_bytecnt*8 +: 8];
                 `SAD_TRIGGER_TIME: reg_datao = triggerer_init[reg_bytecnt*8 +: 8];
                 `SAD_THRESHOLD: reg_datao = wide_threshold_reg[reg_bytecnt*8 +: 8];
@@ -172,10 +171,32 @@ module sad #(
             reg_datao = 0;
     end
 
+    reg [pBITS_PER_SAMPLE-1:0] refsamples_read;
+    always @(posedge clk_usb)
+        refsamples_read <= refsamples[refindex*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
+
+
+    always @(posedge clk_usb) begin
+        if (reg_write && (reg_bytecnt == 3)) begin
+            if ((reg_address == `SAD_REFERENCE) && ~sad_reference_usb)
+                sad_reference_usb <= 1'b1;
+            else
+                sad_reference_usb <= 1'b0;
+            if ((reg_address == `SAD_REFEN) && ~sad_refen_usb)
+                sad_refen_usb <= 1'b1;
+            else
+                sad_refen_usb <= 1'b0;
+        end
+        else begin
+            sad_reference_usb <= 1'b0;
+            sad_refen_usb <= 1'b0;
+        end
+    end
+
     // register writes:
     always @(posedge clk_usb) begin
         if (reset) begin
-            refsamples <= 0;
+            //refsamples <= 0;
             threshold <= 0;
             clear_status_r <= 0;
             multiple_triggers <= 0;
@@ -185,20 +206,24 @@ module sad #(
         end 
         else begin
             clear_status_r <= clear_status;
-            sad_reference_usb <= 1'b0;
-            sad_refen_usb <= 1'b0;
             if (reg_write) begin
                 case (reg_address)
                     `SAD_REFERENCE: begin
-                        sad_reference_data <= reg_datai;
-                        sad_reference_index <= {refbase, reg_bytecnt};
-                        sad_reference_usb <= 1'b1;
+                        case (reg_bytecnt)
+                            2'd0: refindex[7:0] <= reg_datai;
+                            2'd1: refindex[15:8] <= reg_datai;
+                            2'd2: refvalue[7:0] <= reg_datai;
+                            2'd3: refvalue[15:8] <= reg_datai;
+                        endcase
                     end
 
                     `SAD_REFEN: begin
-                        sad_refen_data <= reg_datai;
-                        sad_refen_index <= reg_bytecnt;
-                        sad_refen_usb <= 1'b1;
+                        case (reg_bytecnt)
+                            2'd0: refindex[7:0] <= reg_datai;
+                            2'd1: refindex[15:8] <= reg_datai;
+                            2'd2: refvalue[7:0] <= reg_datai;
+                            2'd3: refvalue[15:8] <= reg_datai;
+                        endcase
                     end
 
                     `SAD_TRIGGER_TIME: triggerer_init[reg_bytecnt*8 +: 8] <= reg_datai;
@@ -310,9 +335,10 @@ module sad #(
        .dst_pulse     (sad_refen_adc)
     );
 
+    assign writing_allowed = ~(armed_and_ready_adc || always_armed || (refsample_shift_count != 0));
+
     integer d;
     always @(posedge adc_sampleclk) begin
-        // TODO: prioritize writing?
         if (armed_and_ready_adc || always_armed || (refsample_shift_count != 0)) begin
             refsample_shift_count <= refsample_shift_count + 1;
             for (d = 0; d < pREF_SAMPLES; d = d + 1) begin
@@ -325,10 +351,10 @@ module sad #(
             refen <= {refen[0], refen[pREF_SAMPLES-1:1]};
         end
         else begin
-          if (sad_reference_adc)
-              refsamples[sad_reference_index*8 +: 8] <= sad_reference_data;
-          if (sad_refen_adc)
-              refen[sad_refen_index*8 +: 8] <= sad_refen_data;
+            if (sad_reference_adc)
+                refsamples[refindex*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE] <= refvalue[pBITS_PER_SAMPLE-1:0];
+            if (sad_refen_adc)
+                refen[refindex*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE] <= refvalue[pBITS_PER_SAMPLE-1:0];
         end
     end
 
@@ -508,7 +534,52 @@ module sad #(
           .probe9         (ext_trigger)           // input wire [0:0]  probe9
        );
    `endif
-   //
+
+   `ifdef ILA_SAD2
+       wire all_ready = &ready2trigger_all;
+       ila_sad2 U_ila_sad2 (
+          .clk            (adc_sampleclk),
+          .probe0         (triggered),
+          .probe1         (trigger),
+          .probe2         (clear_status_adc),
+          .probe3         (armed_and_ready_adc),
+          .probe4         (multiple_triggers),
+          .probe5         (always_armed),
+          .probe6         (num_triggers),               // 15:0
+          .probe7         (active),
+          .probe8         (refsample_shift_count),      // 7:0
+          .probe9         (sad_counter0),               // 5:0
+          .probe10        (counter_incr0),              // 5:0
+          .probe11        (adc_datain_rpr),             // 7:0
+          .probe12        (ref_sample0),                // 7:0
+          .probe13        (armed_and_ready),
+          .probe14        (individual_trigger[0]),
+
+          .probe15        (triggerer[0]),
+          .probe16        (resetter[0]),
+          .probe17        (all_ready),
+          .probe18        (threshold),                  // 5:0
+          .probe19        (interval_threshold),         // 7:0
+          .probe20        (io4)
+       );
+   `endif
+
+   `ifdef ILA_SAD_REG
+       ila_sad_reg U_ila_sad_reg (
+          .clk            (clk_usb),              // input wire clk
+          .probe0         (refindex),             // input wire [15:0]  probe0 
+          .probe1         (refvalue),             // input wire [15:0]  probe1 
+          .probe2         (refsample0),           // input wire [7:0]  probe2 
+          .probe3         (refsample1),           // input wire [7:0]  probe3 
+          .probe4         (refsample2),           // input wire [7:0]  probe4 
+          .probe5         (refsample3),           // input wire [7:0]  probe5 
+          .probe6         (sad_reference_usb),    // input wire [0:0]  probe6 
+          .probe7         (reg_bytecnt),          // input wire [6:0]  probe7 
+          .probe8         (reg_datai),            // input wire [7:0]  probe7 
+          .probe9         (reg_datao),            // input wire [7:0]  probe7 
+          .probe10        (sad_reference_adc)     // input wire [7:0]  probe7 
+       );
+   `endif
 
 
 endmodule

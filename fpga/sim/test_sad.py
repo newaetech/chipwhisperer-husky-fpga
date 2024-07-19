@@ -244,6 +244,7 @@ class SADTest(object):
             else:
                 sample = (sample + 1) % 2**bits_per_sample
             self.pattern.append(sample)
+            #self.refen.append(1)
             if implementation == 'SAD_SINGLE':
                 # doesn't support disabled samples
                 self.refen.append(1)
@@ -328,21 +329,20 @@ class SADTest(object):
         #        self.dut._log.error('Wrote 0x%x, read 0x%x!' % (wdata, rdata))
         #        self.harness.inc_error()
         # 2. program SAD reference (128 bytes at a time):
-        blocks = self.ref_samples//128
-        if self.ref_samples % 128:
-            blocks += 1
-        for base in range(blocks):
-            await self.registers.write(self.reg_addr['SAD_REFERENCE_BASE'], [base])
-            await self.registers.write(self.reg_addr['SAD_REFERENCE'], self.pattern[base*128:(base+1)*128], wait=20)
+        for i, ref in enumerate(self.pattern):
+            await self.registers.write(self.reg_addr['SAD_REFERENCE'], self.registers.to_bytes(i + (ref << 16), 4))
+            await ClockCycles(self.dut.clk_adc, 10) # allow for CDC delays
         # 3. program SAD_REFEN: translate into format used by DUT (one bit per sample)
-        dut_refen_bignum = 0
+        dut_refen_byte = 0
+        byte_index = 0
         for i in range(self.ref_samples):
             if self.refen[i]:
-                dut_refen_bignum += 2**i
-        size = self.ref_samples//8
-        if self.ref_samples % 8:
-            size += 1
-        await self.registers.write(self.reg_addr['SAD_REFEN'], self.registers.to_bytes(dut_refen_bignum, size), wait=20)
+                dut_refen_byte += 2**(i%8)
+            if i%8 == 7:
+                await self.registers.write(self.reg_addr['SAD_REFEN'], self.registers.to_bytes(byte_index + (dut_refen_byte << 16), 4))
+                byte_index += 1
+                dut_refen_byte = 0
+                await ClockCycles(self.dut.clk_adc, 10) # allow for CDC delays
         # 4. Rest of setup:
         await self.registers.write(self.reg_addr['SAD_THRESHOLD'], self.registers.to_bytes(self.threshold, 4))
         await self.registers.write(self.reg_addr['SAD_CONTROL'], [(self.emode << 2) + (self.multiple_triggers << 1)])
@@ -364,6 +364,17 @@ class SADTest(object):
         self.dut._log.info('Expected trigger latency: %d' % latency)
         self.dut.latency.value = latency
         self.dut.multiple_triggers.value = self.multiple_triggers
+
+        # TEMP: read reference back...
+        ref = []
+        for i in range(len(self.pattern)):
+            await self.registers.write(self.reg_addr['SAD_REFERENCE'], self.registers.to_bytes(i, 2))
+            rdata  = (await self.registers.read(self.reg_addr['SAD_REFERENCE'], 1))[0]
+            self.dut._log.info('XXX got %s' % rdata)
+            ref.append(rdata)
+        self.dut._log.info('Read ref: %s' % ref)
+        assert ref == self.pattern
+
 
 
 
