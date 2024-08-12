@@ -359,7 +359,10 @@ module sad #(
     always @(posedge adc_sampleclk) begin
         if (shifter_active || ~refsamples_empty || ~refen_empty) begin
             if (shifter_active)
-                refsample_shift_count <= refsample_shift_count + 1;
+                if (refsample_shift_count < pREF_SAMPLES-1)
+                    refsample_shift_count <= refsample_shift_count + 1;
+                else
+                    refsample_shift_count <= 0;
             for (d = 0; d < pREF_SAMPLES; d = d + 1) begin
                 if (shifter_active || ~refsamples_empty) begin
                     if (d == pREF_SAMPLES-1)

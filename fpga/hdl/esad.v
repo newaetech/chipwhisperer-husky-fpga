@@ -73,6 +73,8 @@ module esad #(
     input  wire         reg_read,     // Read flag
     input  wire         reg_write,    // Write flag
 
+    output wire [7:0]   sad_debug,
+
     // verilator lint_off UNUSED
     input  wire         ext_trigger,  // debug only
     input  wire         io4,  // debug only
@@ -384,12 +386,17 @@ module esad #(
 
     wire shifter_active = (armed_and_ready_adc || always_armed || (refsample_shift_count != 0));
 
+    assign sad_debug = {trigger, armed_and_ready_adc, always_armed, (refsample_shift_count == 0), refsample_shift_count[3:0]};
+
 
     integer d;
     always @(posedge adc_sampleclk) begin
         if (shifter_active || ~refsamples_empty || ~refen_empty) begin
             if (shifter_active)
-                refsample_shift_count <= refsample_shift_count + 1;
+                if (refsample_shift_count < pNUM_COUNTERS-1)
+                    refsample_shift_count <= refsample_shift_count + 1;
+                else
+                    refsample_shift_count <= 0;
             if (shifter_active || ~refsamples_empty) begin
                 for (d = 0; d < pREF_SAMPLES; d = d + 1) begin
                     if (refsamples_empty) begin
@@ -599,15 +606,39 @@ module esad #(
     wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter30 = sad_counter[30];
     wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter31 = sad_counter[31];
 
-    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr0 = counter_incr[0];
-    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr1 = counter_incr[1];
-    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr3 = counter_incr[3];
-    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr7 = counter_incr[7];
-    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr8 = counter_incr[8];
-    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr9 = counter_incr[9];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr0  = counter_incr[0 ];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr1  = counter_incr[1 ];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr2  = counter_incr[2 ];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr3  = counter_incr[3 ];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr4  = counter_incr[4 ];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr5  = counter_incr[5 ];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr6  = counter_incr[6 ];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr7  = counter_incr[7 ];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr8  = counter_incr[8 ];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr9  = counter_incr[9 ];
     wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr10 = counter_incr[10];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr11 = counter_incr[11];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr12 = counter_incr[12];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr13 = counter_incr[13];
     wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr14 = counter_incr[14];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr15 = counter_incr[15];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr16 = counter_incr[16];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr17 = counter_incr[17];
     wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr18 = counter_incr[18];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr19 = counter_incr[19];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr20 = counter_incr[20];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr21 = counter_incr[21];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr22 = counter_incr[22];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr23 = counter_incr[23];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr24 = counter_incr[24];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr25 = counter_incr[25];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr26 = counter_incr[26];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr27 = counter_incr[27];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr28 = counter_incr[28];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr29 = counter_incr[29];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr30 = counter_incr[30];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr31 = counter_incr[31];
+
 
     wire [31:0] individual_trigger_debug =  {individual_trigger[31],
                                              individual_trigger[30],
