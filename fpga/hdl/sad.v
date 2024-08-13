@@ -47,6 +47,8 @@ module sad #(
     input  wire         reg_read,     // Read flag
     input  wire         reg_write,    // Write flag
 
+    output wire [7:0]   sad_debug,
+
     // verilator lint_off UNUSED
     input  wire         ext_trigger,  // debug only
     input  wire         io4,  // debug only
@@ -88,7 +90,7 @@ module sad #(
     reg multiple_triggers;
     reg emode;
     reg [pREF_SAMPLES*pBITS_PER_SAMPLE-1:0] refsamples;
-    reg [pREF_SAMPLES-1:0] refen = {pREF_SAMPLES{1'b1}}; // all samples enabled by default
+    reg [pREF_SAMPLES-1:0] refen = {pREF_SAMPLES{1'b0}}; // all samples enabled by default
     reg [pREF_SAMPLES-1:0] compare_en, compare_en_r;
     reg [pACTUAL_SAD_COUNTER_WIDTH-1:0] threshold;
     reg [pBITS_PER_SAMPLE-1:0] interval_threshold;      // NOTE: pBITS_PER_SAMPLE is assumed to be <= 8
@@ -106,8 +108,10 @@ module sad #(
     reg [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter [0:pREF_SAMPLES-1];
     reg [pBITS_PER_SAMPLE-1:0] counter_incr [0:pREF_SAMPLES-1];
 
-    wire armed_and_ready_adc;
-    wire armed_and_ready_adc_r;
+    reg  armed_and_ready_r;
+    reg  armed_and_ready_sad;
+    reg  sad_control_write;
+    wire sad_control_write_adc;
 
     reg ready2trigger0;
     reg [pREF_SAMPLES-1:1] ready2trigger_1andup;
@@ -220,6 +224,11 @@ module sad #(
             else
                 refen_wr <= 1'b0;
 
+            if (reg_write && (reg_address == `SAD_CONTROL) && ~sad_control_write)
+                sad_control_write <= 1'b1;
+            else
+                sad_control_write <= 1'b0;
+
         end
     end
 
@@ -231,8 +240,32 @@ module sad #(
       .dst_pulse     (clear_status_adc)
    );
 
+   cdc_pulse U_sad_control_cdc (
+      .reset_i       (reset),
+      .src_clk       (clk_usb),
+      .src_pulse     (sad_control_write),
+      .dst_clk       (adc_sampleclk),
+      .dst_pulse     (sad_control_write_adc)
+   );
+
+
+    // armed_and_ready needs to be handled with care because it stays high if
+    // a capture fails (i.e. even after it times out). In the capture logic
+    // this is fine because it will get cleared when the next capture is
+    // initiated. With this SAD implementation, that's a problem because we
+    // can't write SAD_REFERENCE or SAD_REFEN when armed_and_ready is high. So
+    // we use an explicit write to SAD_CONTROL to clear it.
     always @(posedge adc_sampleclk) begin
-        if (clear_status_adc || (armed_and_ready_adc && ~armed_and_ready_adc_r)) begin
+        armed_and_ready_r <= armed_and_ready;
+        if (~armed_and_ready || sad_control_write_adc)
+            armed_and_ready_sad <= 1'b0;
+        else if (armed_and_ready && ~armed_and_ready_r)
+            armed_and_ready_sad <= 1'b1;
+    end
+
+
+    always @(posedge adc_sampleclk) begin
+        if (clear_status_adc || (armed_and_ready && ~armed_and_ready_r)) begin
             triggered <= 1'b0;
             num_triggers <= 0;
         end
@@ -242,18 +275,10 @@ module sad #(
         end
     end
 
-    cdc_simple U_armed_and_ready_cdc (
-        .reset          (reset),
-        .clk            (adc_sampleclk),
-        .data_in        (armed_and_ready),
-        .data_out       (armed_and_ready_adc),
-        .data_out_r     (armed_and_ready_adc_r)
-    );
-
     wire [pMASTER_COUNTER_WIDTH-1:0] master_counter_top = pREF_SAMPLES-1;
 
     always @(posedge adc_sampleclk) begin
-        if ((armed_and_ready_adc || always_armed) && active && ~xadc_error) begin
+        if ((armed_and_ready_sad || always_armed) && active && ~xadc_error) begin
             ready2trigger_1andup <= {ready2trigger_1andup[pREF_SAMPLES-2:1], ready2trigger0};
             resetter <= {resetter[pREF_SAMPLES-2:0], resetter[pREF_SAMPLES-1]};
             triggerer <= {triggerer[pREF_SAMPLES-2:0], triggerer[pREF_SAMPLES-1]};
@@ -276,7 +301,7 @@ module sad #(
 
     integer c;
     always @(posedge adc_sampleclk) begin
-        if (~active || (~armed_and_ready_adc && ~always_armed))
+        if (~active || (~armed_and_ready_sad && ~always_armed))
             trigger <= 1'b0;
         else begin
             trigger <= 1'b0;
@@ -353,7 +378,10 @@ module sad #(
     assign refsamples_rd = ~refsamples_empty;
     assign refen_rd = ~refen_empty;
 
-    wire shifter_active = (armed_and_ready_adc || always_armed || (refsample_shift_count != 0));
+    wire shifter_active = (armed_and_ready_sad || always_armed || (refsample_shift_count != 0));
+
+    assign sad_debug = {trigger, armed_and_ready_sad, always_armed, (refsample_shift_count == 0), armed_and_ready, armed_and_ready_r, sad_control_write_adc, shifter_active};
+
 
     integer d;
     always @(posedge adc_sampleclk) begin
@@ -498,14 +526,39 @@ module sad #(
     wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter30 = sad_counter[30];
     wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter31 = sad_counter[31];
 
-    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr0 = counter_incr[0];
-    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr1 = counter_incr[1];
-    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr3 = counter_incr[3];
-    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr7 = counter_incr[7];
-    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr8 = counter_incr[8];
-    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr9 = counter_incr[9];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr0  = counter_incr[0 ];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr1  = counter_incr[1 ];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr2  = counter_incr[2 ];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr3  = counter_incr[3 ];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr4  = counter_incr[4 ];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr5  = counter_incr[5 ];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr6  = counter_incr[6 ];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr7  = counter_incr[7 ];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr8  = counter_incr[8 ];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr9  = counter_incr[9 ];
     wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr10 = counter_incr[10];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr11 = counter_incr[11];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr12 = counter_incr[12];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr13 = counter_incr[13];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr14 = counter_incr[14];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr15 = counter_incr[15];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr16 = counter_incr[16];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr17 = counter_incr[17];
     wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr18 = counter_incr[18];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr19 = counter_incr[19];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr20 = counter_incr[20];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr21 = counter_incr[21];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr22 = counter_incr[22];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr23 = counter_incr[23];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr24 = counter_incr[24];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr25 = counter_incr[25];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr26 = counter_incr[26];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr27 = counter_incr[27];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr28 = counter_incr[28];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr29 = counter_incr[29];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr30 = counter_incr[30];
+    wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] counter_incr31 = counter_incr[31];
+
 
     wire [31:0] individual_trigger_debug =  {individual_trigger[31],
                                              individual_trigger[30],
