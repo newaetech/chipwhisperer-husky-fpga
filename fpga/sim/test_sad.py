@@ -349,8 +349,8 @@ class SADTest(object):
 
         if self.ref_samples % 8:
             size += 1
+        #self.dut._log.info('XXX size=%d, bignum=%x' % (size, dut_refen_bignum))
 
-        #for i in range(1 if self.emode or self.implementation != 'ESAD'  else 2):
         await self.registers.write(self.reg_addr['SAD_REFEN'], self.registers.to_bytes(dut_refen_bignum, size), wait=20)
         # 4. Rest of setup:
         await self.registers.write(self.reg_addr['SAD_THRESHOLD'], self.registers.to_bytes(self.threshold, 4))
@@ -598,6 +598,8 @@ async def sad_test(dut):
     emode             = int(os.getenv('EMODE', '0'))
     early_trigger_en  = int(os.getenv('EARLY_TRIGGER_EN', '0'))
     implementation    = os.getenv('SAD', 'SAD_BASE')
+
+    assert ref_samples % 8 == 0, 'hardware does not support this number of reference samples, it must be a multiple of 8'
 
     if implementation == 'ESAD' and not emode:
         ref_samples = ref_samples//2
