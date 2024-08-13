@@ -343,10 +343,15 @@ class SADTest(object):
             if self.refen[i]:
                 dut_refen_bignum += 2**i
         size = self.ref_samples//8
+        if self.implementation == 'ESAD'  and not self.emode:
+            size *= 2
+            dut_refen_bignum += (dut_refen_bignum << self.ref_samples)
+
         if self.ref_samples % 8:
             size += 1
-        for i in range(1 if self.emode or self.implementation != 'ESAD'  else 2):
-            await self.registers.write(self.reg_addr['SAD_REFEN'], self.registers.to_bytes(dut_refen_bignum, size), wait=20)
+
+        #for i in range(1 if self.emode or self.implementation != 'ESAD'  else 2):
+        await self.registers.write(self.reg_addr['SAD_REFEN'], self.registers.to_bytes(dut_refen_bignum, size), wait=20)
         # 4. Rest of setup:
         await self.registers.write(self.reg_addr['SAD_THRESHOLD'], self.registers.to_bytes(self.threshold, 4))
         await self.registers.write(self.reg_addr['SAD_CONTROL'], [(self.emode << 2) + (self.multiple_triggers << 1)])
