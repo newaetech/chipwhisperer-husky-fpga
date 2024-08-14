@@ -20,6 +20,7 @@
 #    limitations under the License.
 
 from chipwhisperer.common.utils import util
+from tqdm.notebook import tnrange
 
 
 # NOTE: this is a fairly accurate model of the Verilog SAD implementations in Husky.
@@ -201,6 +202,7 @@ class SAD(object):
             self.num_counters = self.reflen
         self.counters = []
         self.match_times = [] # for logging match times
+        self.match_scores = []
         self.match_counters = []
         self.uncovered_samples = []
         self.covered = []
@@ -215,6 +217,7 @@ class SAD(object):
         rtn['half_threshold'] = self.half_threshold
         rtn['threshold'] = self.threshold
         rtn['match_times'] = self.match_times
+        rtn['match_scores'] = self.match_scores
         rtn['match_counters'] = self.match_counters
         if self.emode: 
             rtn['uncovered_samples'] = self.uncovered_samples
@@ -233,7 +236,7 @@ class SAD(object):
         # is to first mark all samples as covered, then later (in step())
         # demote those that aren't:
         self.covered = [1]*len(wave)
-        for i in range(len(wave)): # go through the full powertrace
+        for i in tnrange(len(wave)): # go through the full powertrace
             self.step(wave[i], True)
 
     def activate_next_counter(self):
@@ -266,6 +269,7 @@ class SAD(object):
             if match:
                 matched = True
                 self.match_times.append(self.index)
+                self.match_scores.append(c.SAD)
                 self.match_counters.append(c.idx)
                 self.triggered = True
                 if self.verbose: print("counter %d matched at time %6d with score: %d" % (self.index, c.idx, c.SAD))
