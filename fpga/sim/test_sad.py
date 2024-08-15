@@ -34,7 +34,7 @@ import io
 import re
 
 from husky_registers import Registers
-from sad_model import SAD_model
+from chipwhisperer.common.utils.sad_model import SADModel
 
 
 # Note: this could also be place in individual test functions by replacing root_logger by dut._log.
@@ -288,7 +288,7 @@ class SADTest(object):
         else:
             startup_latency = 3
 
-        self.SAD_model = SAD_model(counter_width, self.pattern, self.refen, self.triglen, self.threshold//2, self.threshold, self.interval_threshold, startup_latency, multiple_triggers, emode, interval_matching, True)
+        self.SAD_model = SADModel(counter_width, self.pattern, self.refen, self.triglen, self.threshold//2, self.threshold, self.interval_threshold, startup_latency, multiple_triggers, emode, interval_matching, True)
 
     def start(self):
         """Start test thread"""
