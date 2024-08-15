@@ -23,17 +23,15 @@ from chipwhisperer.common.utils import util
 from tqdm.notebook import tnrange
 
 
-# NOTE: this is a fairly accurate model of the Verilog SAD implementations in Husky.
-# It is *almost* cycle accurate. The main difference is that when multiple triggers
-# are not enabled, it is in fact possible for some of the Verilog implementations to
-# issue more than one trigger, when multiple counters meet the triggering condition
-# 1 or 2 cycles apart. This is usually a degenerate case which shouldn't happen with
-# a properly tuned SAD module IRL. The main inconvenience is that SAD simulations
-# can sometimes fail, and this must be inspected manually.
-
 # TODO: offer a way to visualize which samples were NOT covered (due to eSAD)
 
-class Counter(object):
+class SAD_counter(object):
+    """Models the hardware logic for a single SAD counter.
+    Used by the other SAD classes here; not meant for end-users.
+    """
+    _name = 'SAD counter'
+
+
     def __init__(self, idx, counter_width, ref, refen, triglen, half_threshold, threshold, interval_threshold, startup_latency, emode=False, interval_matching=False, verbose=False):
         self.verbose = verbose
         self.emode = emode # True: eSAD; False: regular SAD
@@ -128,6 +126,9 @@ class Counter(object):
                     else:
                         incr = int(self.ref[self.current_idx]) - int(sample)
 
+        if self.idx == 0 and self.current_idx < 10 and self.verbose:
+            print(sample, self.ref[self.current_idx], self.interval_threshold, incr)
+
         if self.current_idx == 0:
             self.SAD = incr
         else:
@@ -179,7 +180,23 @@ class Counter(object):
 
 
 
-class SAD(object):
+class SAD_model(object):
+    """Python model of the Verilog SAD implementation, used for validation.
+    Almost 100% cycle-accurate; there can be small differences when
+    multiple_triggers is false because the model will only ever generate a
+    single trigger, whereas some implementations can let a extra one slip
+    through if it's very close to the first one, due to pipeline delays in the
+    implementation.  
+
+    This is usually a degenerate case which shouldn't happen with a properly
+    tuned SAD module IRL. The main inconvenience is that SAD simulations can
+    sometimes fail, and this must be inspected manually.
+
+    This class is not intended for end-users: see the SAD_model class instead,
+    which is much easier to configure and use.
+    """
+    _name = 'SAD model'
+
     def __init__(self, counter_width, ref, refen, triglen, half_threshold, threshold, interval_threshold, startup_latency, multiple_triggers, emode=False, interval_matching=False, verbose=False):
         self.emode = emode # True: eSAD; False: regular SAD
         self.ref = ref
@@ -208,13 +225,12 @@ class SAD(object):
         self.covered = []
         self.triggered = False
         for i in range(self.num_counters):
-            self.counters.append(Counter(i, counter_width, ref, refen, self.triglen, half_threshold, threshold, interval_threshold, startup_latency, emode, interval_matching, verbose))
+            self.counters.append(SAD_counter(i, counter_width, ref, refen, self.triglen, half_threshold, threshold, interval_threshold, startup_latency, emode, interval_matching, verbose))
 
 
     def _dict_repr(self):
         rtn = {}
         rtn['emode'] = self.emode
-        rtn['half_threshold'] = self.half_threshold
         rtn['threshold'] = self.threshold
         rtn['match_times'] = self.match_times
         rtn['match_scores'] = self.match_scores
@@ -292,48 +308,90 @@ class SAD(object):
         return self.__repr__()
 
 
-class eSAD_wrapper(object):
-    def __init__(self, counter_width, ref, refen, half_threshold, threshold, interval_threshold, startup_latency, multiple_triggers, interval_matching=False, verbose=False):
-        self.esad = SAD(counter_width, ref, refen, None, half_threshold, threshold, interval_threshold, startup_latency, multiple_triggers, True,  interval_matching, verbose)
-        self.fsad = SAD(counter_width, ref, refen, None, half_threshold, threshold, interval_threshold, startup_latency, multiple_triggers, False, interval_matching, verbose)
+class SAD_model_wrapper(object):
+    """Software model of the Husky SAD implementation(s). Wrapper which
+    allows providing SAD parameters from a scope.SAD object. Use this
+    to run software SAD on a trace.
+
+    Example::
+
+        sad_model = SAD_model(scope.SAD)
+        sad_model.run(trace.wave)
+        print(sad_model) # to get the results
+    """
+    _name = 'SAD model'
+
+
+    def __init__(self, actual_sad, catch_emisses=False, verbose=False):
+
+        counter_width = actual_sad._sad_counter_width
+        reflen = actual_sad.sad_reference_length
+        refen = [1]*reflen # TODO- temp
+        ref = actual_sad.reference
+        triglen = None # TODO- temp
+        threshold = actual_sad.threshold
+        half_threshold = threshold//2
+        interval_threshold = actual_sad.interval_threshold
+        startup_latency = 0 # doesn't matter here
+        multiple_triggers = actual_sad.multiple_triggers
+        emode = actual_sad.emode
+        interval_matching = actual_sad._im
+
+        self.sad = SAD(counter_width, ref, refen, triglen, half_threshold, threshold, interval_threshold, startup_latency, multiple_triggers, emode, interval_matching, verbose)
+        if emode and catch_emisses:
+            self.fsad = SAD(counter_width, ref, refen, triglen, half_threshold, threshold, interval_threshold, startup_latency, multiple_triggers, False, interval_matching, verbose)
+        else:
+            self.fsad = None
 
     def _dict_repr(self):
         rtn = {}
-        rtn['half_threshold'] = self.esad.half_threshold
-        rtn['threshold'] = self.esad.threshold
         rtn['match_times'] = self.match_times
-        rtn['match_counters'] = self.match_counters
         rtn['uncovered_samples'] = self.uncovered_samples
         rtn['missed_triggers'] = self.missed_triggers
         return rtn
 
     @property
     def match_times(self):
-        return self.esad.match_times
+        """Waveform indices where a SAD match occurred. Updated after run().
+        """
+        return self.sad.match_times
 
     @property
     def match_counters(self):
-        return self.esad.match_counters
+        return self.sad.match_counters
 
     @property
     def uncovered_samples(self):
-        return self.esad.uncovered_samples
+        """When using emode, starting samples for which no SAD counter was available
+        (where a SAD match could potentially be missed). By definition, there is one
+        uncovered sample for every successful SAD match (there may be more).
+        Updated after run().
+        """
+        return self.sad.uncovered_samples
 
     @property
     def missed_triggers(self):
-        return sorted(list(set(self.fsad.match_times) - set(self.esad.match_times)))
+        """Only available in emode and when the model is created with catch_emisses=True.
+        Shows which SAD matches are missed by emode. Updated after run().
+        """
+        if self.fsad:
+            return sorted(list(set(self.fsad.match_times) - set(self.sad.match_times)))
+        else:
+            return None
 
     def reset(self):
-        self.esad.reset()
-        self.fsad.reset()
+        self.sad.reset()
+        if self.fsad:
+            self.fsad.reset()
 
     def run(self, wave):
-        self.esad.run(wave)
-        self.fsad.run(wave)
-
-    def step(self, sample, armed_and_ready=True):
-        self.fsad.step(sample, armed_and_ready)
-        return self.esad.step(sample, armed_and_ready)
+        """Runs the SAD model.
+        Args:
+            wave (list): input waveform to the SAD model.
+        """
+        self.sad.run(wave)
+        if self.fsad:
+            self.fsad.run(wave)
 
     def __repr__(self):
         return util.dict_to_str(self._dict_repr())
