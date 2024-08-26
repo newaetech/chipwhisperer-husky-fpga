@@ -27,7 +27,8 @@ module sad #(
     parameter pBYTECNT_SIZE = 7,
     parameter pREF_SAMPLES = 32, 
     parameter pBITS_PER_SAMPLE = 8,
-    parameter pSAD_COUNTER_WIDTH = 16
+    parameter pSAD_COUNTER_WIDTH = 16,
+    parameter pNUM_GROUPS = 4
 )(
     input wire          reset,
     input wire          xadc_error,
@@ -165,7 +166,6 @@ module sad #(
     always @(*) begin
         if (reg_read) begin
             case (reg_address)
-                //`SAD_REFEN: reg_datao = refen_usb[reg_bytecnt*8 +: 8];
                 `SAD_TRIGGER_TIME: reg_datao = triggerer_init[reg_bytecnt*8 +: 8];
                 `SAD_THRESHOLD: reg_datao = wide_threshold_reg[reg_bytecnt*8 +: 8];
                 `SAD_INTERVAL_THRESHOLD: reg_datao = interval_threshold;
@@ -298,19 +298,53 @@ module sad #(
         end
     end
 
+    // NOTE: this is where we combine each counter's trigger into the single
+    // actual trigger. This used to be a single, simple block of logic with
+    // a generate statement; however for large pNUM_COUNTERS, timing could be
+    // difficult. We get better implementation results by processing subgroups
+    // of individual_triggers together, instead of all at once. Unfortunately
+    // Verilog makes this very hard to write! You would need nested generated
+    // loops (which isn't allowed). This is best solution I could find.  
+    //
+    // Another advantage of doing this is that pNUM_GROUPS is a parameter that
+    // we can adjust, without any changes in functionality, until we get an
+    // implementation that meets timing.
 
-    integer c;
+    wire [pREF_SAMPLES-1:0] it;
+    genvar k;
+    generate
+        for (k = 0; k < pREF_SAMPLES; k = k + 1)
+            assign it[k] = individual_trigger[k];
+    endgenerate
+
+    localparam pGROUP_SIZE = pREF_SAMPLES/pNUM_GROUPS;
+
+    wire [pNUM_GROUPS-1:0] group_trigger;
+    genvar group;
+
+    generate
+        for (group = 0; group < pREF_SAMPLES; group = group + pGROUP_SIZE) begin
+            sad_group_trigger #(
+                .pGROUP_SIZE    (pGROUP_SIZE)
+            ) U_group_trigger (
+                .clock          (adc_sampleclk),
+                .trigger_inputs (it[group+pGROUP_SIZE-1:group]),
+                .trigger_output (group_trigger[group/pGROUP_SIZE])
+            );
+        end
+    endgenerate
+
     always @(posedge adc_sampleclk) begin
         if (~active || (~armed_and_ready_sad && ~always_armed))
             trigger <= 1'b0;
         else begin
-            trigger <= 1'b0;
-            for (c = 0; c < pREF_SAMPLES; c = c + 1) begin
-                individual_trigger_r[c] <= individual_trigger[c];
-                if (individual_trigger_r[c]) trigger <= 1'b1;
-            end
+            if (~(triggered && ~multiple_triggers)) 
+                trigger <= |group_trigger;
+            else
+                trigger <= 1'b0;
         end
     end
+
 
     always @(posedge adc_sampleclk) begin
         adc_datain_r <= adc_datain;

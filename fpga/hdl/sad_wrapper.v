@@ -26,7 +26,8 @@ module sad_wrapper #(
     parameter pBYTECNT_SIZE = 7,
     parameter pREF_SAMPLES = 8, 
     parameter pBITS_PER_SAMPLE = 12,
-    parameter pSAD_COUNTER_WIDTH= 12
+    parameter pSAD_COUNTER_WIDTH = 12,
+    parameter pNUM_GROUPS = 4
 )(
     input wire         clk_usb,
     input wire         clk_adc,
@@ -115,7 +116,8 @@ sad #(
     .pBYTECNT_SIZE      (7),
     .pREF_SAMPLES       (pREF_SAMPLES),
     .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE),
-    .pSAD_COUNTER_WIDTH (pSAD_COUNTER_WIDTH)
+    .pSAD_COUNTER_WIDTH (pSAD_COUNTER_WIDTH),
+    .pNUM_GROUPS        (pNUM_GROUPS)
 ) U_base_dut (
     .reset              (reset),
     .xadc_error         (1'b0),
@@ -143,7 +145,8 @@ sad #(
         .pBYTECNT_SIZE      (7),
         .pREF_SAMPLES       (pREF_SAMPLES),
         .pBITS_PER_SAMPLE   (pBITS_PER_SAMPLE),
-        .pSAD_COUNTER_WIDTH (pSAD_COUNTER_WIDTH)
+        .pSAD_COUNTER_WIDTH (pSAD_COUNTER_WIDTH),
+        .pNUM_GROUPS        (pNUM_GROUPS)
     ) U_edut (
         .reset              (reset),
         .xadc_error         (1'b0),
@@ -301,7 +304,7 @@ always @(posedge clk_adc) ADC_slow_clk_odd  <= ~ADC_slow_clk_odd;
         .reg_write          (reg_write),
         .ext_trigger        (1'b0), // debug only
         .io4                (1'b0), // debug only
-        .always_armed       (always_armed_x4), // debug only
+        .always_armed       (always_armed_x4),
         .trigger            (trigger_x4)
     );
 

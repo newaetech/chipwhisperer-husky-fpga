@@ -53,7 +53,8 @@ module sad_top(
 );
 
    localparam pBYTECNT_SIZE = 7;
-   localparam pREF_SAMPLES  = 480;
+   //localparam pREF_SAMPLES  = 2048;
+   localparam pREF_SAMPLES  = 1536;
    localparam pSAD_COUNTER_WIDTH = 12;
 
    wire         reset;
@@ -485,8 +486,7 @@ module sad_top(
        .pBYTECNT_SIZE           (pBYTECNT_SIZE),
        .pREF_SAMPLES            (pREF_SAMPLES),
        .pSAD_COUNTER_WIDTH      (pSAD_COUNTER_WIDTH),
-       .pBITS_PER_SAMPLE        (8),
-       .pINTERVAL_MATCHING      (`INTERVAL_MATCHING)
+       .pBITS_PER_SAMPLE        (8)
    ) U_sad (
        .reset                   (reset        ),
        .xadc_error              (xadc_error   ),

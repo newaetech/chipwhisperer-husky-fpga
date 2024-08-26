@@ -202,6 +202,7 @@ module cwhusky_top(
 
    wire [8:0] tu_la_debug;
    wire [7:0] la_debug2;
+   wire [7:0] sad_debug;
    wire [7:0] fifo_debug;
    wire [7:0] sequencer_debug;
    wire [4:0] seq_trace_sad_debug;
@@ -476,6 +477,7 @@ module cwhusky_top(
         .slow_fifo_rd           (slow_fifo_rd),
         .la_debug2              (la_debug2),
         .la_debug               (tu_la_debug),
+        .sad_debug              (sad_debug),
         .edge_trigger_debug     (edge_trigger_debug),
         .fifo_debug             (fifo_debug)
 

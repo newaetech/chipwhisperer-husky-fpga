@@ -133,6 +133,7 @@ module openadc_interface #(
     output wire                         slow_fifo_rd,
     output wire [8:0]                   la_debug,
     output wire [7:0]                   la_debug2,
+    output wire [7:0]                   sad_debug,
     output wire [7:0]                   fifo_debug,
     output wire [7:0]                   edge_trigger_debug
 
@@ -507,14 +508,16 @@ module openadc_interface #(
    assign reg_datao = reg_datao_oadc | reg_datao_fifo | reg_datao_sad | reg_datao_edge;
 
 `ifdef PLUS
-    localparam pREF_SAMPLES = 384;
+    localparam pREF_SAMPLES = 1024;
     localparam pSAD_COUNTER_WIDTH = 14;
+    localparam pNUM_GROUPS = 8;
 `elsif PRO
     localparam pREF_SAMPLES = 736;
     localparam pSAD_COUNTER_WIDTH = 14;
 `else
-    localparam pREF_SAMPLES = 200;
+    localparam pREF_SAMPLES = 512;
     localparam pSAD_COUNTER_WIDTH = 12;
+    localparam pNUM_GROUPS = 16;
 `endif
 
 `ifdef SAD_X2
@@ -624,12 +627,40 @@ module openadc_interface #(
            .trigger                 (trigger_sad  )
        );
 
+`elsif ESAD
+       esad #(
+           .pBYTECNT_SIZE           (pBYTECNT_SIZE),
+           .pREF_SAMPLES            (pREF_SAMPLES),
+           .pSAD_COUNTER_WIDTH      (pSAD_COUNTER_WIDTH),
+           .pBITS_PER_SAMPLE        (8),
+           .pNUM_GROUPS             (pNUM_GROUPS)
+       ) U_sad (
+           .reset                   (reset        ),
+           .xadc_error              (xadc_error   ),
+           .adc_datain              (ADC_data_tofifo[11:4]),
+           .adc_sampleclk           (ADC_clk_sample),
+           .armed_and_ready         (armed_and_ready),
+           .active                  (sad_active   ),
+           .clk_usb                 (clk_usb      ),
+           .reg_address             (reg_address  ),
+           .reg_bytecnt             (reg_bytecnt  ),
+           .reg_datai               (reg_datai    ),
+           .reg_datao               (reg_datao_sad),
+           .reg_read                (reg_read     ),
+           .reg_write               (reg_write    ),
+           .ext_trigger             (DUT_trigger_i),
+           .io4                     (trigger_io4_i),
+           .sad_debug               (sad_debug    ),
+           .trigger                 (trigger_sad  )
+       );
+
 `else
        sad #(
            .pBYTECNT_SIZE           (pBYTECNT_SIZE),
            .pREF_SAMPLES            (pREF_SAMPLES),
            .pSAD_COUNTER_WIDTH      (pSAD_COUNTER_WIDTH),
-           .pBITS_PER_SAMPLE        (8)
+           .pBITS_PER_SAMPLE        (8),
+           .pNUM_GROUPS             (pNUM_GROUPS)
        ) U_sad (
            .reset                   (reset        ),
            .xadc_error              (xadc_error   ),

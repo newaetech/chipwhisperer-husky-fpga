@@ -169,6 +169,7 @@ compile_sad_coco:
 	-o $(EXEFILE) \
 	../hdl/sad_top.v \
 	../hdl/sad_wrapper.v \
+	../hdl/sad_group_trigger.v \
 	../hdl/esad.v \
 	../hdl/sad.v \
 	../hdl/sad_single_counter.v \

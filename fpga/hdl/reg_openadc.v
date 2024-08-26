@@ -376,7 +376,7 @@ module reg_openadc #(
         .full_threshold_value (0),
         .empty_threshold_value (0),
         .wen            (trigger_fifo_wr),
-        .wdata          (trigger_fifo_count),
+        .wdata          (trigger_fifo_count), // note that the count written will 2 less than it should be; this gets fixed in Python
         .full           (trigger_fifo_full),
         .overflow       (),
         .full_threshold (),
