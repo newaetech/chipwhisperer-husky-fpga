@@ -153,15 +153,19 @@ module trigger_sequencer #(
         endcase
     end
 
+    reg  [pNUM_TRIGGERS-1:0] active_trigger_pre;
 
     always @(*) begin
         if (I_bypass)
-            O_active_trigger = {pNUM_TRIGGERS{1'b1}}; // ensure no trigger gets blocked
+            active_trigger_pre = {pNUM_TRIGGERS{1'b1}}; // ensure no trigger gets blocked
         else begin
-            O_active_trigger = 0;
-            O_active_trigger[slot] = trigger_allowed;
+            active_trigger_pre = 0;
+            active_trigger_pre[slot] = trigger_allowed;
         end
     end
+
+    always @(posedge adc_clk) O_active_trigger <= active_trigger_pre;
+
 
     always @(posedge adc_clk) begin
         state <= next_state;
