@@ -513,7 +513,6 @@ for test in tests:
          elif key == 'VARIANT':
              if test[key] != args.variant:
                  run_test = False
-             cocotb = False
          elif key == 'TOP' and test[key] == 'edge_tb.v':
              makeargs[1] = 'all_edge'
              cocotb = False
