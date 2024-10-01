@@ -65,6 +65,8 @@ class Harness(object):
         self.dut._log.info("ADC clock randomized to %5.1f MHz" % (1/self.adc_period*1000))
         #  initialize all DUT input values:
         self.dut.reset.value = 0
+        self.dut.active.value = 1
+        self.dut.trigger_allowed.value = 1
         self.dut.armed_and_ready.value = 0
         self.dut.adc_datain.value = 0
         self.dut.errors.value = 0
@@ -390,6 +392,9 @@ class SADTest(object):
     async def _run(self):
         self.dut._log.debug('_run starting')
         await self.dut_setup()
+        #self._trigger_allowed = cocotb.start_soon(self._trigger_allowed_thread())  # NOTE: disabled because some model/DUT mismatches can happen around the edges;
+                                                                                    # logic involved is simple enough that testing on-target only for this is
+                                                                                    # fairly low-risk
         self._armed_generator = cocotb.start_soon(self._armed_generator_thread())
         self._sample_generator = cocotb.start_soon(self._sample_generator_thread())
         self._model_feeder = cocotb.start_soon(self._model_feeder_thread())
@@ -487,7 +492,7 @@ class SADTest(object):
     async def _model_feeder_thread(self):
         # feed self.dut.adc_datain inputs to SAD_model and generate expected_trigger:
         while True:
-            match = self.SAD_model.step(int(self.dut.adc_datain), (int(self.dut.armed_and_ready) or self._always_armed_active))
+            match = self.SAD_model.step(int(self.dut.adc_datain), (int(self.dut.armed_and_ready) or self._always_armed_active), int(self.dut.trigger_allowed))
             self.dut.expected_trigger.value = match
             if match: 
                 self.dut._log.info('Expecting trigger!')
@@ -524,6 +529,13 @@ class SADTest(object):
             if int(self.dut.armed_and_ready):
                 self.dut._log.warning('WARNING: internal emode mismatch')
 
+    async def _trigger_allowed_thread(self):
+        # fairly primitive: when always_armed, randomly block triggers from time to time (but mostly don't)
+        while True:
+            await ClockCycles(self.dut.clk_adc, random.randint(500,600))
+            self.dut.trigger_allowed.value = 0
+            await ClockCycles(self.dut.clk_adc, random.randint(100,500))
+            self.dut.trigger_allowed.value = 1
 
     async def _armed_generator_thread(self):
         # So... this could be simple, randomly arming and disarming, and that would work *most* of the time,

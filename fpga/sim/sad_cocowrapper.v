@@ -39,6 +39,8 @@ module sad_cocowrapper #(
 
     input wire [11:0]   adc_datain,
     input wire          armed_and_ready,
+    input wire          active,
+    input wire          trigger_allowed,
     output wire         trigger,
 
     // testbench things:
@@ -111,6 +113,8 @@ module sad_cocowrapper #(
         .clk_adc            (clk_adc),
         .adc_datain         (adc_datain),
         .armed_and_ready    (armed_and_ready),
+        .active             (active       ),
+        .trigger_allowed    (trigger_allowed),
         .USB_Data           (USB_Data     ),
         .USB_Addr           (USB_Addr     ),
         .USB_RDn            (USB_RDn      ),

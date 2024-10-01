@@ -40,6 +40,7 @@ module sad_x2 #(
     input wire          adc_sampleclk,
     input wire          armed_and_ready,
     input wire          active,
+    input wire          trigger_allowed,
 
     //USB register interface
     input wire          clk_usb,
@@ -233,7 +234,7 @@ module sad_x2 #(
         trigger <= 1'b0;
         trigger_r <= trigger;
         for (c = 0; c < pREF_SAMPLES; c = c + 1) begin
-            if (individual_trigger[c] && ~(triggered && ~multiple_triggers)) 
+            if (individual_trigger[c] && ~(triggered && ~multiple_triggers) && trigger_allowed) 
                 trigger <= 1'b1;
         end
     end

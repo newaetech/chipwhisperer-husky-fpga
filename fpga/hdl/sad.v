@@ -38,6 +38,7 @@ module sad #(
     input wire          adc_sampleclk,
     input wire          armed_and_ready,
     input wire          active,
+    input wire          trigger_allowed,
 
     //USB register interface
     input wire          clk_usb,
@@ -335,7 +336,7 @@ module sad #(
     endgenerate
 
     always @(posedge adc_sampleclk) begin
-        if (~active || (~armed_and_ready_sad && ~always_armed))
+        if (~active || (~armed_and_ready_sad && ~always_armed) || ~trigger_allowed)
             trigger <= 1'b0;
         else begin
             if (~(triggered && ~multiple_triggers)) 

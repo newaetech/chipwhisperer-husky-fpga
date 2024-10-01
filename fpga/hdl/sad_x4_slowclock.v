@@ -44,6 +44,7 @@ module sad_x4_slowclock #(
     input wire          slow_clk4,
     input wire          armed_and_ready,
     input wire          active,
+    input wire          trigger_allowed,
 
     //USB register interface
     input wire          clk_usb,
@@ -121,6 +122,11 @@ module sad_x4_slowclock #(
     wire active_adc2;
     wire active_adc3;
     wire active_adc4;
+
+    wire trigger_allowed_adc1;
+    wire trigger_allowed_adc2;
+    wire trigger_allowed_adc3;
+    wire trigger_allowed_adc4;
 
     reg ready2trigger1 [0:pREF_SAMPLES-1];
     reg ready2trigger2 [0:pREF_SAMPLES-1];
@@ -301,7 +307,7 @@ module sad_x4_slowclock #(
     always @(posedge slow_clk1) begin
         trigger1 <= 1'b0;
         for (c = 0; c < pREF_SAMPLES; c = c + pSADS_PER_CYCLE) begin
-            if (individual_trigger[c])
+            if (individual_trigger[c] && trigger_allowed_adc1)
                 trigger1 <= 1'b1;
         end
     end
@@ -309,7 +315,7 @@ module sad_x4_slowclock #(
     always @(posedge slow_clk2) begin
         trigger2 <= 1'b0;
         for (d = 1; d < pREF_SAMPLES; d = d + pSADS_PER_CYCLE) begin
-            if (individual_trigger[d])
+            if (individual_trigger[d] && trigger_allowed_adc2)
                 trigger2 <= 1'b1;
         end
     end
@@ -317,7 +323,7 @@ module sad_x4_slowclock #(
     always @(posedge slow_clk3) begin
         trigger3 <= 1'b0;
         for (e = 2; e < pREF_SAMPLES; e = e + pSADS_PER_CYCLE) begin
-            if (individual_trigger[e])
+            if (individual_trigger[e] && trigger_allowed_adc3)
                 trigger3 <= 1'b1;
         end
     end
@@ -325,7 +331,7 @@ module sad_x4_slowclock #(
     always @(posedge slow_clk4) begin
         trigger4 <= 1'b0;
         for (f = 3; f < pREF_SAMPLES; f = f + pSADS_PER_CYCLE) begin
-            if (individual_trigger[f])
+            if (individual_trigger[f] && trigger_allowed_adc4)
                 trigger4 <= 1'b1;
         end
     end
@@ -405,6 +411,38 @@ module sad_x4_slowclock #(
         .clk            (slow_clk4),
         .data_in        (active),
         .data_out       (active_adc4),
+        .data_out_r     ()
+    );
+
+    cdc_simple U_trigger_allowed_cdc1 (
+        .reset          (reset),
+        .clk            (slow_clk1),
+        .data_in        (trigger_allowed),
+        .data_out       (trigger_allowed_adc1),
+        .data_out_r     ()
+    );
+
+    cdc_simple U_trigger_allowed_cdc2 (
+        .reset          (reset),
+        .clk            (slow_clk1),
+        .data_in        (trigger_allowed),
+        .data_out       (trigger_allowed_adc2),
+        .data_out_r     ()
+    );
+
+    cdc_simple U_trigger_allowed_cdc3 (
+        .reset          (reset),
+        .clk            (slow_clk1),
+        .data_in        (trigger_allowed),
+        .data_out       (trigger_allowed_adc3),
+        .data_out_r     ()
+    );
+
+    cdc_simple U_trigger_allowed_cdc4 (
+        .reset          (reset),
+        .clk            (slow_clk1),
+        .data_in        (trigger_allowed),
+        .data_out       (trigger_allowed_adc4),
         .data_out_r     ()
     );
 

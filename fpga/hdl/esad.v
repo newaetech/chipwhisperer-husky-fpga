@@ -64,6 +64,7 @@ module esad #(
     input wire          adc_sampleclk,
     input wire          armed_and_ready,
     input wire          active,
+    input wire          trigger_allowed,
 
     //USB register interface
     input wire          clk_usb,
@@ -353,7 +354,7 @@ module esad #(
     endgenerate
 
     always @(posedge adc_sampleclk) begin
-        if (~active || (~armed_and_ready_sad && ~always_armed))
+        if (~active || (~armed_and_ready_sad && ~always_armed) || ~trigger_allowed)
             trigger <= 1'b0;
         else begin
             if (~(triggered && ~multiple_triggers)) 
@@ -439,10 +440,11 @@ module esad #(
     assign refsamples_rd = ~refsamples_empty;
     assign refen_rd = ~refen_empty;
 
-    wire shifter_active = (armed_and_ready_sad || always_armed || (refsample_shift_count != 0));
+    wire shifter_active = (((armed_and_ready_sad || always_armed) && active) || (refsample_shift_count != 0));
 
     //assign sad_debug = {trigger, armed_and_ready_sad, always_armed, (refsample_shift_count == 0), armed_and_ready, armed_and_ready_r, sad_control_write_adc, shifter_active};
-    assign sad_debug = {refen_empty, shifter_active, refen_wr, &refen, refen[pREF_SAMPLES-1:pREF_SAMPLES-2], refen_dout[7:6]};
+    //assign sad_debug = {refen_empty, shifter_active, refen_wr, &refen, refen[pREF_SAMPLES-1:pREF_SAMPLES-2], refen_dout[7:6]};
+    assign sad_debug = {trigger, armed_and_ready, armed_and_ready_sad, active, shifter_active, always_armed, (refsample_shift_count == 0), &ready2trigger_all};
 
 
     integer d;

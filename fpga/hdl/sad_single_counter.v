@@ -41,6 +41,7 @@ module sad_single_counter #(
     input wire          adc_sampleclk,
     input wire          armed_and_ready,
     input wire          active,
+    input wire          trigger_allowed,
 
     //USB register interface
     input wire          clk_usb,

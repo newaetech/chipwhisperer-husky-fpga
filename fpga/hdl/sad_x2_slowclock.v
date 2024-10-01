@@ -42,6 +42,7 @@ module sad_x2_slowclock #(
     input wire          slow_clk_odd,
     input wire          armed_and_ready,
     input wire          active,
+    input wire          trigger_allowed,
 
     //USB register interface
     input wire          clk_usb,
@@ -107,6 +108,9 @@ module sad_x2_slowclock #(
 
     wire active_adc_even;
     wire active_adc_odd;
+
+    wire trigger_allowed_adc_even;
+    wire trigger_allowed_adc_odd;
 
     reg ready2trigger_even [0:pREF_SAMPLES-1];
     reg ready2trigger_odd  [0:pREF_SAMPLES-1];
@@ -263,7 +267,7 @@ module sad_x2_slowclock #(
     always @(posedge slow_clk_even) begin
         trigger_even <= 1'b0;
         for (c = 0; c < pREF_SAMPLES; c = c + pSADS_PER_CYCLE) begin
-            if (individual_trigger[c])
+            if (individual_trigger[c] && trigger_allowed_adc_even)
                 trigger_even <= 1'b1;
         end
     end
@@ -271,7 +275,7 @@ module sad_x2_slowclock #(
     always @(posedge slow_clk_odd) begin
         trigger_odd <= 1'b0;
         for (d = 1; d < pREF_SAMPLES; d = d + pSADS_PER_CYCLE) begin
-            if (individual_trigger[d])
+            if (individual_trigger[d] && trigger_allowed_adc_odd)
                 trigger_odd <= 1'b1;
         end
     end
@@ -317,6 +321,24 @@ module sad_x2_slowclock #(
         .data_out       (active_adc_odd),
         .data_out_r     ()
     );
+
+    cdc_simple U_trigger_allowed_cdc_even (
+        .reset          (reset),
+        .clk            (slow_clk_even),
+        .data_in        (trigger_allowed),
+        .data_out       (trigger_allowed_adc_even),
+        .data_out_r     ()
+    );
+
+    cdc_simple U_trigger_allowed_cdc_odd (
+        .reset          (reset),
+        .clk            (slow_clk_odd),
+        .data_in        (trigger_allowed),
+        .data_out       (trigger_allowed_adc_odd),
+        .data_out_r     ()
+    );
+
+
 
 
     wire [pMASTER_COUNTER_WIDTH-1:0] master_counter_top = pREF_SAMPLES-pSADS_PER_CYCLE;

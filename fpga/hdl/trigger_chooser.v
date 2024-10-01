@@ -45,7 +45,10 @@ module trigger_chooser (
     output wire         O_sad_active,
     output wire         O_edge_trigger_active,
     output wire         O_adc_trigger_active,
+
     output wire         O_trace_trigger_in_use,
+    output wire         O_sad_trigger_in_use,
+
     output wire         O_trigger,
     output wire         trigger_ext,    // for edge/UART
     input wire          I_sad_always_active,
@@ -100,15 +103,18 @@ module trigger_chooser (
                        (I_trigmod[2:0] == 3'b101) ? trigger_adc_i :
                        (I_trigmod[2:0] == 3'b110) ? trigger_edge_i : 1'b0;
 
+   // these denote when a particular trigger is allowed to fire:
    assign O_decodeio_active       = I_active_trigger && (I_trigmod[2:0] == 3'b011);
    assign O_trace_active          = I_active_trigger && (I_trigmod[2:0] == 3'b100);
    assign O_sad_active            = (I_active_trigger || I_sad_always_active) && (I_trigmod[2:0] == 3'b010);
    assign O_edge_trigger_active   = I_active_trigger && (I_trigmod[2:0] == 3'b110);
    assign O_adc_trigger_active    = I_active_trigger && (I_trigmod[2:0] == 3'b101);
 
-   // trace is different because it can be used standalone (e.g. not for triggering), 
-   // so we need to know if any trigger is using trace:
+   // trace can be used standalone (e.g. not for triggering), so we need to know if any trigger is using trace:
    assign O_trace_trigger_in_use  = (I_trigmod[2:0] == 3'b100);
+
+   // SAD has a long startup time so we need this to keep it alive outside its active window:
+   assign O_sad_trigger_in_use    = (I_trigmod[2:0] == 3'b010);
 
 
 endmodule

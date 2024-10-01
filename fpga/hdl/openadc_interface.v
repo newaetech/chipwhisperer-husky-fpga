@@ -49,6 +49,7 @@ module openadc_interface #(
     input  wire                         DUT_trigger_i,
     input  wire                         trigger_io4_i, // debug only
     input  wire                         sad_active,
+    input  wire                         sad_trigger_in_use,
     input  wire                         edge_trigger_active,
     input  wire                         adc_trigger_active,
     output reg                          trigger_adc,
@@ -508,9 +509,9 @@ module openadc_interface #(
    assign reg_datao = reg_datao_oadc | reg_datao_fifo | reg_datao_sad | reg_datao_edge;
 
 `ifdef PLUS
-    localparam pREF_SAMPLES = 1024;
+    localparam pREF_SAMPLES = 512;
     localparam pSAD_COUNTER_WIDTH = 14;
-    localparam pNUM_GROUPS = 8;
+    localparam pNUM_GROUPS = 16;
 `elsif PRO
     localparam pREF_SAMPLES = 736;
     localparam pSAD_COUNTER_WIDTH = 14;
@@ -534,7 +535,8 @@ module openadc_interface #(
            .slow_clk_even           (ADC_slow_clk_even),
            .slow_clk_odd            (ADC_slow_clk_odd),
            .armed_and_ready         (armed_and_ready),
-           .active                  (sad_active   ),
+           .active                  (sad_trigger_in_use),
+           .trigger_allowed         (sad_active   ),
            .clk_usb                 (clk_usb      ),
            .reg_address             (reg_address  ),
            .reg_bytecnt             (reg_bytecnt  ),
@@ -563,7 +565,8 @@ module openadc_interface #(
            .slow_clk3               (ADC_slow_clk3),
            .slow_clk4               (ADC_slow_clk4),
            .armed_and_ready         (armed_and_ready),
-           .active                  (sad_active   ),
+           .active                  (sad_trigger_in_use),
+           .trigger_allowed         (sad_active   ),
            .clk_usb                 (clk_usb      ),
            .reg_address             (reg_address  ),
            .reg_bytecnt             (reg_bytecnt  ),
@@ -589,7 +592,8 @@ module openadc_interface #(
            .adc_datain              (ADC_data_tofifo[11:4]),
            .adc_sampleclk           (ADC_clk_sample),
            .armed_and_ready         (armed_and_ready),
-           .active                  (sad_active   ),
+           .active                  (sad_trigger_in_use),
+           .trigger_allowed         (sad_active   ),
            .clk_usb                 (clk_usb      ),
            .reg_address             (reg_address  ),
            .reg_bytecnt             (reg_bytecnt  ),
@@ -614,7 +618,8 @@ module openadc_interface #(
            .adc_datain              (ADC_data_tofifo[11:4]),
            .adc_sampleclk           (ADC_clk_sample),
            .armed_and_ready         (armed_and_ready),
-           .active                  (sad_active   ),
+           .active                  (sad_trigger_in_use),
+           .trigger_allowed         (sad_active   ),
            .clk_usb                 (clk_usb      ),
            .reg_address             (reg_address  ),
            .reg_bytecnt             (reg_bytecnt  ),
@@ -640,7 +645,8 @@ module openadc_interface #(
            .adc_datain              (ADC_data_tofifo[11:4]),
            .adc_sampleclk           (ADC_clk_sample),
            .armed_and_ready         (armed_and_ready),
-           .active                  (sad_active   ),
+           .active                  (sad_trigger_in_use),
+           .trigger_allowed         (sad_active   ),
            .clk_usb                 (clk_usb      ),
            .reg_address             (reg_address  ),
            .reg_bytecnt             (reg_bytecnt  ),
@@ -667,7 +673,8 @@ module openadc_interface #(
            .adc_datain              (ADC_data_tofifo[11:4]),
            .adc_sampleclk           (ADC_clk_sample),
            .armed_and_ready         (armed_and_ready),
-           .active                  (sad_active   ),
+           .active                  (sad_trigger_in_use),
+           .trigger_allowed         (sad_active   ),
            .clk_usb                 (clk_usb      ),
            .reg_address             (reg_address  ),
            .reg_bytecnt             (reg_bytecnt  ),

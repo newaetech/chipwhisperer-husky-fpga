@@ -228,6 +228,7 @@ module cwhusky_top(
    wire decodeio_active;
    wire trace_active;
    wire trace_trigger_in_use;
+   wire sad_trigger_in_use;
    wire sad_active;
    wire edge_trigger_active;
    wire adc_trigger_active;
@@ -359,6 +360,7 @@ module cwhusky_top(
                                                                          slow_fifo_wr_slow,
                                                                          stream_segment_available} :
                                  (userio_fpga_debug_select == 4'b0001)? tu_la_debug[7:0] :
+                                 //(userio_fpga_debug_select == 4'b0001)? sad_debug :
                                  (userio_fpga_debug_select == 4'b0010)? fifo_debug : 
                                  (userio_fpga_debug_select == 4'b0011)? {1'b0,
                                                                          xadc_error_flag,
@@ -446,6 +448,7 @@ module cwhusky_top(
         .trigger_sad            (trigger_sad),
         .trigger_edge_counter   (trigger_edge_counter),
         .sad_active             (sad_active),
+        .sad_trigger_in_use     (sad_trigger_in_use),
         .edge_trigger_active    (edge_trigger_active),
         .adc_trigger_active     (adc_trigger_active),
         .amp_gain               (VDBSPWM),
@@ -542,6 +545,7 @@ module cwhusky_top(
         .decodeio_active        (decodeio_active),
         .trace_active           (trace_active),
         .trace_trigger_in_use   (trace_trigger_in_use),
+        .sad_trigger_in_use     (sad_trigger_in_use),
         .sad_active             (sad_active),
         .edge_trigger_active    (edge_trigger_active),
         .adc_trigger_active     (adc_trigger_active),
