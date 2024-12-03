@@ -34,7 +34,7 @@
 ../tracewhisperer/hdl/trace_top.v
 ../tracewhisperer/hdl/reg_trace.v
 ../tracewhisperer/hdl/fe_capture_trace.v
-../tracewhisperer/hdl/uart_core.v
+../fpga-common/hdl/uart_rx.v
 ../tracewhisperer/hdl/simple_trigger.v
 ../tracewhisperer/phywhisperer-common/hardware/hdl/fifo.v
 ../tracewhisperer/phywhisperer-common/hardware/hdl/fe_capture_main.v
