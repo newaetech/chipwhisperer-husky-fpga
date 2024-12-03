@@ -44,14 +44,28 @@ to the latency in our SAD computations (i.e. if we wait until we have the
 halfway point SAD result, it's too late because we've already started using
 potentially wrong samples in our SAD pipeline).
 
+Notes on instantiation parameters:
+==================================
+pREF_SAMPLES is the length of the SAD pattern (in extended mode); it can be
+adjusted to control the size of the implementation. It must be a multiple of 2.
+
+pSAD_COUNTER_WIDTH has no effect unless `INTERVAL_MATCHING is not set.
+Otherwise, it controls the width of the SAD counters, and therefore limits the
+maximum SAD that can be computed; it has a significant effect on size.
+
+pNUM_GROUPS must divide pNUM_COUNTERS (which is pREF_SAMPLES/2) evenly. It has
+no bearing on functionality but it can affect implementation results.
+
+pBITS_PER_SAMPLE is the ADC sample size that is used for the SAD computation.
+In theory this could be anything; in practice values != 8 have not been tested.
+
+Other paramaters should not be touched.
+
 *************************************************************************/
 
 module esad #(
-    // Note: pREF_SAMPLES * pBITS_PER_SAMPLE / 8 must not exceed 2**pBYTECNT_SIZE
-    // FIFO allows up to 1024 pREF_SAMPLES and 12 pBITS_PER_SAMPLE; if either is
-    // exceeded, the FIFO must be updated in Vivado.
     parameter pBYTECNT_SIZE = 7,
-    parameter pREF_SAMPLES = 32,  // note this is the number of samples in extended-mode
+    parameter pREF_SAMPLES = 32,
     parameter pBITS_PER_SAMPLE = 8,
     parameter pSAD_COUNTER_WIDTH = 16,
     parameter pNUM_GROUPS = 4

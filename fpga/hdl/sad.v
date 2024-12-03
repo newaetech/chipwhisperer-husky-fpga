@@ -21,6 +21,25 @@ Author: Jean-Pierre Thibault <jpthibault@newae.com>
 
   You should have received a copy of the GNU General Public License
   along with chipwhisperer.  If not, see <http://www.gnu.org/licenses/>.
+
+
+Notes on instantiation parameters:
+==================================
+pREF_SAMPLES is the length of the SAD pattern; it can be adjusted to control
+the size of the implementation. It must be a multiple of 2.
+
+pSAD_COUNTER_WIDTH has no effect unless `INTERVAL_MATCHING is not set.
+Otherwise, it controls the width of the SAD counters, and therefore limits the
+maximum SAD that can be computed; it has a significant effect on size.
+
+pNUM_GROUPS must divide pREF_SAMPLES evenly. It has no bearing on
+functionality but it can affect implementation results.
+
+pBITS_PER_SAMPLE is the ADC sample size that is used for the SAD computation.
+In theory this could be anything; in practice values != 8 have not been tested.
+
+Other paramaters should not be touched.
+
 *************************************************************************/
 
 module sad #(

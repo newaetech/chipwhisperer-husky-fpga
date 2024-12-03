@@ -21,12 +21,25 @@ Author: Jean-Pierre Thibault <jpthibault@newae.com>
 
   You should have received a copy of the GNU General Public License
   along with chipwhisperer.  If not, see <http://www.gnu.org/licenses/>.
+
+
+Notes on instantiation parameters:
+==================================
+pREF_SAMPLES is the length of the SAD pattern; it can be adjusted to control
+the size of the implementation. It must be a multiple of 2.
+
+pSAD_COUNTER_WIDTH controls the width of the SAD counters, and therefore
+limits the maximum SAD that can be computed; it has a significant effect on
+size.
+
+pBITS_PER_SAMPLE is the ADC sample size that is used for the SAD computation.
+In theory this could be anything; in practice values != 8 have not been tested.
+
+Other paramaters should not be touched.
+
 *************************************************************************/
 
 module sad_x2 #(
-    // Note: pREF_SAMPLES * pBITS_PER_SAMPLE / 8 must not exceed 2**pBYTECNT_SIZE
-    // FIFO allows up to 1024 pREF_SAMPLES and 12 pBITS_PER_SAMPLE; if either is
-    // exceeded, the FIFO must be updated in Vivado.
     parameter pBYTECNT_SIZE = 7,
     parameter pREF_SAMPLES = 32, 
     parameter pBITS_PER_SAMPLE = 8,
