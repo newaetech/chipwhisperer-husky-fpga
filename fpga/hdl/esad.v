@@ -6,7 +6,7 @@
 This file is part of the ChipWhisperer Project. See www.newae.com for more
 details, or the codebase at http://www.chipwhisperer.com
 
-Copyright (c) 2022-2024, NewAE Technology Inc. All rights reserved.
+Copyright (c) 2024, NewAE Technology Inc. All rights reserved.
 Author: Jean-Pierre Thibault <jpthibault@newae.com>
 
   chipwhisperer is free software: you can redistribute it and/or modify
@@ -22,18 +22,39 @@ Author: Jean-Pierre Thibault <jpthibault@newae.com>
   You should have received a copy of the GNU General Public License
   along with chipwhisperer.  If not, see <http://www.gnu.org/licenses/>.
 
+Implementation notes:
+=====================
+Compared to sad.v, we add pNUM_COUNTERS and use that to size relevant
+components (instead of using pREF_SAMPLES as the number of reference samples
+*and* the number of counters).
+
+We add an "extended_mode" bit flag to each counter; when set, it means that
+the associated counter is working on the extended set (second half) of
+reference samples.
+
+Each counter starts with extended_mode clear; at the halfway point,
+a decision is made to either restart from ref sample 0 (if SAD is too high),
+or keep going with the second half of the ref samples (and set
+extended_mode to show that we're doing this).
+
+Then, we use extended_mode to manage nextrefsample indexing.
+
+Note extended_mode needs to be set a few cycles before the halfway point, due
+to the latency in our SAD computations (i.e. if we wait until we have the
+halfway point SAD result, it's too late because we've already started using
+potentially wrong samples in our SAD pipeline).
 
 Notes on instantiation parameters:
 ==================================
-pREF_SAMPLES is the length of the SAD pattern; it can be adjusted to control
-the size of the implementation. It must be a multiple of 2.
+pREF_SAMPLES is the length of the SAD pattern (in extended mode); it can be
+adjusted to control the size of the implementation. It must be a multiple of 2.
 
 pSAD_COUNTER_WIDTH has no effect unless `INTERVAL_MATCHING is not set.
 Otherwise, it controls the width of the SAD counters, and therefore limits the
 maximum SAD that can be computed; it has a significant effect on size.
 
-pNUM_GROUPS must divide pREF_SAMPLES evenly. It has no bearing on
-functionality but it can affect implementation results.
+pNUM_GROUPS must divide pNUM_COUNTERS (which is pREF_SAMPLES/2) evenly. It has
+no bearing on functionality but it can affect implementation results.
 
 pBITS_PER_SAMPLE is the ADC sample size that is used for the SAD computation.
 In theory this could be anything; in practice values != 8 have not been tested.
@@ -42,9 +63,9 @@ Other paramaters should not be touched.
 
 *************************************************************************/
 
-module sad #(
+module esad #(
     parameter pBYTECNT_SIZE = 7,
-    parameter pREF_SAMPLES = 32, 
+    parameter pREF_SAMPLES = 32,
     parameter pBITS_PER_SAMPLE = 8,
     parameter pSAD_COUNTER_WIDTH = 16,
     parameter pNUM_GROUPS = 4
@@ -73,10 +94,12 @@ module sad #(
     // verilator lint_off UNUSED
     input  wire         ext_trigger,  // debug only
     input  wire         io4,  // debug only
+    output wire [pREF_SAMPLES/2-1:0] debug_emode,
     // verilator lint_on UNUSED
     output reg          trigger
 );
 
+    localparam pNUM_COUNTERS = pREF_SAMPLES/2;
     localparam pMASTER_COUNTER_WIDTH = (pREF_SAMPLES <= 32)?  5 :
                                        (pREF_SAMPLES <= 64)?  6 :
                                        (pREF_SAMPLES <= 128)? 7 :
@@ -108,26 +131,29 @@ module sad #(
 
 
     reg always_armed;
-    reg multiple_triggers;
     reg emode;
+    reg multiple_triggers;
     reg [pREF_SAMPLES*pBITS_PER_SAMPLE-1:0] refsamples;
-    reg [pREF_SAMPLES-1:0] refen = {pREF_SAMPLES{1'b0}}; // all samples enabled by default
-    reg [pREF_SAMPLES-1:0] compare_en, compare_en_r;
+    reg [pREF_SAMPLES-1:0] refen = {pREF_SAMPLES{1'b1}}; // all samples enabled by default
+    reg [pNUM_COUNTERS-1:0] compare_en, compare_en_short, compare_en_extended, compare_en_r;
     reg [pACTUAL_SAD_COUNTER_WIDTH-1:0] threshold;
     reg [pBITS_PER_SAMPLE-1:0] interval_threshold;      // NOTE: pBITS_PER_SAMPLE is assumed to be <= 8
+    wire [pACTUAL_SAD_COUNTER_WIDTH-2:0] half_threshold = threshold[pACTUAL_SAD_COUNTER_WIDTH-1:1];
     reg [pMASTER_COUNTER_WIDTH-1:0] master_counter;
-    reg [pMASTER_COUNTER_WIDTH-1:0] refsample_shift_count = 0;
-    reg [pREF_SAMPLES-1:0] resetter;
-    reg [pREF_SAMPLES-1:0] triggerer;
-
-    // default to normal triggering at end of full pattern;
-    // general formula: set triggerer_init to (pREF_SAMPLES - 3 + (cycles early)) % pREF_SAMPLES
-    reg [pMASTER_COUNTER_WIDTH-1:0] triggerer_init = pREF_SAMPLES-3; 
+    wire [pMASTER_COUNTER_WIDTH-2:0] master_counter_short = master_counter[pMASTER_COUNTER_WIDTH-2:0];
+    wire [pMASTER_COUNTER_WIDTH-1:0] master_counter_extended = {1'b1, master_counter_short};
+    reg  [pMASTER_COUNTER_WIDTH-2:0] refsample_shift_count = 0;
+    reg [pNUM_COUNTERS-1:0] resetter;
+    reg [pNUM_COUNTERS-1:0] triggerer;
+    reg [pMASTER_COUNTER_WIDTH-1:0] triggerer_init = pNUM_COUNTERS-3; 
+    reg [pNUM_COUNTERS-1:0] halfpoint;
+    reg [pNUM_COUNTERS-1:0] trigger_possible;
+    reg [pNUM_COUNTERS-1:0] extended_mode = {pNUM_COUNTERS{1'b0}};
 
     reg individual_trigger [0:pREF_SAMPLES-1];
     reg individual_trigger_r [0:pREF_SAMPLES-1];
-    reg [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter [0:pREF_SAMPLES-1];
-    reg [pBITS_PER_SAMPLE-1:0] counter_incr [0:pREF_SAMPLES-1];
+    reg [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter [0:pNUM_COUNTERS-1];
+    reg [pBITS_PER_SAMPLE-1:0] counter_incr [0:pNUM_COUNTERS-1];
 
     reg  armed_and_ready_r;
     reg  armed_and_ready_sad;
@@ -135,12 +161,14 @@ module sad #(
     wire sad_control_write_adc;
 
     reg ready2trigger0;
-    reg [pREF_SAMPLES-1:1] ready2trigger_1andup;
-    wire [pREF_SAMPLES-1:0] ready2trigger_all = {ready2trigger_1andup, ready2trigger0};
+    reg [pNUM_COUNTERS-1:1] ready2trigger_1andup;
+    wire [pNUM_COUNTERS-1:0] ready2trigger_all = {ready2trigger_1andup, ready2trigger0};
 
-    reg  decision [0:pREF_SAMPLES-1];
-    reg [pBITS_PER_SAMPLE-1:0]  nextrefsample [0:pREF_SAMPLES-1];
-    reg [pBITS_PER_SAMPLE-1:0]  nextrefsample_r [0:pREF_SAMPLES-1];
+    reg  decision [0:pNUM_COUNTERS-1];
+    reg [pBITS_PER_SAMPLE-1:0]  nextrefsample [0:pNUM_COUNTERS-1];
+    reg [pBITS_PER_SAMPLE-1:0]  nextrefsample_short [0:pNUM_COUNTERS-1];
+    reg [pBITS_PER_SAMPLE-1:0]  nextrefsample_extended [0:pNUM_COUNTERS-1];
+    reg [pBITS_PER_SAMPLE-1:0]  nextrefsample_r [0:pNUM_COUNTERS-1];
     wire [pBITS_PER_SAMPLE-1:0]  refsample [0:pREF_SAMPLES-1];
     reg [pBITS_PER_SAMPLE-1:0] adc_datain_rpr, adc_datain_rmr; // sign extend
     reg [pBITS_PER_SAMPLE-1:0] adc_datain_r;
@@ -154,33 +182,16 @@ module sad #(
     wire [31:0] wide_threshold_reg = {{(32-pACTUAL_SAD_COUNTER_WIDTH){1'b0}}, threshold}; // having a variable-width register isn't very convenient for Python
     wire [15:0] ref_samples = pREF_SAMPLES;
 
-    // These are a property of this module; used here to make sure Python
-    // knows what it's talking to, in case there may be different SAD modules
-    // used in different targets or builds.
-    // Format: 
-    //          11: advanced trigger time support
-    //          10: max threshold type
-    //                  0: 2^(SAD_COUNTER_WIDTH-1)-1
-    //                  1: 2^SAD_COUNTER_WIDTH-1
-    //          9: eSAD mode support
-    //          8: interval mode support
-    //          7:5: version code
-    //                  000: sad.v
-    //                  001: (unused)
-    //                  010: sad_x2_slowclock.v
-    //                  100: sad_x4_slowclock.v
-    //                  110: esad.v
-    //                  101: sad_x2.v
-    //                  111: sad_single_counter.v
-    //          4:0: trigger latency
+    assign debug_emode = extended_mode | trigger_possible;
+
+    // See sad.v for definitions:
     wire advanced_trigger_time_support = 1'b1;
     wire max_threshold = (`INTERVAL_MATCHING == 1)? 1'b1 : 1'b0;
-    wire esad_support = 1'b0;
+    wire esad_support = 1'b1;
     wire im_support = 1'b1;
-    wire [2:0] version = 3'b000;
+    wire [2:0] version = 3'b110;
     wire [4:0] latency = 5'd10;
     wire [11:0] version_bits = {advanced_trigger_time_support, max_threshold, esad_support, im_support, version, latency};
-
 
     // register reads:
     always @(*) begin
@@ -209,13 +220,13 @@ module sad #(
             clear_status_r <= 0;
             multiple_triggers <= 0;
             always_armed <= 0;
+            emode <= 1'b0;
             interval_threshold <= 1;
         end 
         else begin
             clear_status_r <= clear_status;
             if (reg_write) begin
                 case (reg_address)
-                    //`SAD_REFEN: refen_usb[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_TRIGGER_TIME: triggerer_init[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_THRESHOLD: threshold[reg_bytecnt*8 +: 8] <= reg_datai;
                     `SAD_INTERVAL_THRESHOLD: interval_threshold <= reg_datai;
@@ -226,6 +237,7 @@ module sad #(
                     `endif
                         always_armed <= reg_datai[0];
                     end
+
                     default: ;
                 endcase
                 if (reg_address == `SAD_STATUS)
@@ -268,7 +280,6 @@ module sad #(
       .dst_pulse     (sad_control_write_adc)
    );
 
-
     // armed_and_ready needs to be handled with care because it stays high if
     // a capture fails (i.e. even after it times out). In the capture logic
     // this is fine because it will get cleared when the next capture is
@@ -296,13 +307,15 @@ module sad #(
     end
 
     wire [pMASTER_COUNTER_WIDTH-1:0] master_counter_top = pREF_SAMPLES-1;
+    wire [pMASTER_COUNTER_WIDTH-1:0] master_counter_half = pREF_SAMPLES/2-1;
 
     always @(posedge adc_sampleclk) begin
         if ((armed_and_ready_sad || always_armed) && active && ~xadc_error) begin
-            ready2trigger_1andup <= {ready2trigger_1andup[pREF_SAMPLES-2:1], ready2trigger0};
-            resetter <= {resetter[pREF_SAMPLES-2:0], resetter[pREF_SAMPLES-1]};
-            triggerer <= {triggerer[pREF_SAMPLES-2:0], triggerer[pREF_SAMPLES-1]};
-            if (master_counter == master_counter_top) begin
+            ready2trigger_1andup <= {ready2trigger_1andup[pNUM_COUNTERS-2:1], ready2trigger0};
+            resetter <= {resetter[pNUM_COUNTERS-2:0], resetter[pNUM_COUNTERS-1]};
+            triggerer <= {triggerer[pNUM_COUNTERS-2:0], triggerer[pNUM_COUNTERS-1]};
+            halfpoint <= {halfpoint[pNUM_COUNTERS-2:0], halfpoint[pNUM_COUNTERS-1]};
+            if (master_counter == (emode ? master_counter_top : master_counter_half)) begin
                 ready2trigger0 <= 1;
                 master_counter <= 0;
             end
@@ -313,8 +326,9 @@ module sad #(
             master_counter <= 0;
             ready2trigger0 <= 0;
             ready2trigger_1andup <= 0;
-            resetter <= {2'b0, 1'b1, {(pREF_SAMPLES-3){1'b0}}};
+            resetter <= {2'b0, 1'b1, {(pNUM_COUNTERS-3){1'b0}}};
             triggerer <= 1<<triggerer_init;
+            halfpoint <= {{(pNUM_COUNTERS-2){1'b0}}, 1'b1, 1'b0};
         end
     end
 
@@ -330,20 +344,19 @@ module sad #(
     // we can adjust, without any changes in functionality, until we get an
     // implementation that meets timing.
 
-    wire [pREF_SAMPLES-1:0] it;
+    wire [pNUM_COUNTERS-1:0] it;
     genvar k;
     generate
-        for (k = 0; k < pREF_SAMPLES; k = k + 1)
+        for (k = 0; k < pNUM_COUNTERS; k = k + 1)
             assign it[k] = individual_trigger[k];
     endgenerate
 
-    localparam pGROUP_SIZE = pREF_SAMPLES/pNUM_GROUPS;
+    localparam pGROUP_SIZE = pNUM_COUNTERS/pNUM_GROUPS; // NOTE: result must be an integer!
 
     wire [pNUM_GROUPS-1:0] group_trigger;
     genvar group;
-
     generate
-        for (group = 0; group < pREF_SAMPLES; group = group + pGROUP_SIZE) begin
+        for (group = 0; group < pNUM_COUNTERS; group = group + pGROUP_SIZE) begin
             sad_group_trigger #(
                 .pGROUP_SIZE    (pGROUP_SIZE)
             ) U_group_trigger (
@@ -366,11 +379,20 @@ module sad #(
     end
 
 
+
     always @(posedge adc_sampleclk) begin
         adc_datain_r <= adc_datain;
         adc_datain_rpr <= adc_datain_r;
         adc_datain_rmr <= -adc_datain_r;
     end
+
+    genvar j;
+    generate 
+        for (j = 0; j < pREF_SAMPLES; j = j + 1) begin: gen_refsamples
+            assign refsample[j] =  refsamples[j*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
+        end
+    endgenerate 
+
 
     fifo_async #(
         .pDATA_WIDTH    (pBITS_PER_SAMPLE),
@@ -432,58 +454,91 @@ module sad #(
     assign refsamples_rd = ~refsamples_empty;
     assign refen_rd = ~refen_empty;
 
-    wire shifter_active = (armed_and_ready_sad || always_armed || (refsample_shift_count != 0));
+    wire shifter_active = (((armed_and_ready_sad || always_armed) && active) || (refsample_shift_count != 0));
 
-    assign sad_debug = {trigger, armed_and_ready_sad, always_armed, (refsample_shift_count == 0), armed_and_ready, armed_and_ready_r, sad_control_write_adc, shifter_active};
+    //assign sad_debug = {trigger, armed_and_ready_sad, always_armed, (refsample_shift_count == 0), armed_and_ready, armed_and_ready_r, sad_control_write_adc, shifter_active};
+    //assign sad_debug = {refen_empty, shifter_active, refen_wr, &refen, refen[pREF_SAMPLES-1:pREF_SAMPLES-2], refen_dout[7:6]};
+    assign sad_debug = {trigger, armed_and_ready, armed_and_ready_sad, active, shifter_active, always_armed, (refsample_shift_count == 0), &ready2trigger_all};
 
 
     integer d;
     always @(posedge adc_sampleclk) begin
         if (shifter_active || ~refsamples_empty || ~refen_empty) begin
             if (shifter_active)
-                if (refsample_shift_count < pREF_SAMPLES-1)
+                if (refsample_shift_count < pNUM_COUNTERS-1)
                     refsample_shift_count <= refsample_shift_count + 1;
                 else
                     refsample_shift_count <= 0;
-            for (d = 0; d < pREF_SAMPLES; d = d + 1) begin
-                if (shifter_active || ~refsamples_empty) begin
-                    if (d == pREF_SAMPLES-1)
-                        if (refsamples_empty)
+            if (shifter_active || ~refsamples_empty) begin
+                for (d = 0; d < pREF_SAMPLES; d = d + 1) begin
+                    if (refsamples_empty) begin
+                        if (d == pREF_SAMPLES-1)
+                            refsamples[d*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE] <= refsamples[pREF_SAMPLES/2*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
+                        else if (d == pREF_SAMPLES/2-1)
                             refsamples[d*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE] <= refsamples[0 +: pBITS_PER_SAMPLE];
                         else
+                            refsamples[d*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE] <= refsamples[(d+1)*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
+                    end
+                    else begin
+                        if (d == pREF_SAMPLES-1)
                             refsamples[d*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE] <= refsamples_dout;
-                    else
-                        refsamples[d*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE] <= refsamples[(d+1)*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
+                        else
+                            refsamples[d*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE] <= refsamples[(d+1)*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
+                    end
                 end
-
             end
+
             if (shifter_active)
-                refen <= {refen[0], refen[pREF_SAMPLES-1:1]};
+                refen <= {refen[pREF_SAMPLES/2], refen[pREF_SAMPLES-1:pREF_SAMPLES/2+1],
+                          refen[0],              refen[pREF_SAMPLES/2-1:1]};
             else if (~refen_empty)
                 refen <= {refen_dout, refen[pREF_SAMPLES-1:8]};
         end
     end
 
-    wire [pBITS_PER_SAMPLE-1:0] ref_sample0 = refsamples[0 +: pBITS_PER_SAMPLE];
-    wire refen_sample0 = refen[0];
-
+    wire [pBITS_PER_SAMPLE-1:0] ref_sample0_short = refsamples[0 +: pBITS_PER_SAMPLE];
+    wire [pBITS_PER_SAMPLE-1:0] ref_sample0_extended = refsamples[pREF_SAMPLES/2*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
+    wire refen_sample0_short = refen[0];
+    wire refen_sample0_extended = refen[pREF_SAMPLES/2];
 
     // instantiate counters and do most of the heavy lifting:
     genvar i;
     generate 
-        for (i = 0; i < pREF_SAMPLES; i = i + 1) begin: gen_sad_counters
-            assign refsample[i] =  refsamples[i*pBITS_PER_SAMPLE +: pBITS_PER_SAMPLE];
+        for (i = 0; i < pNUM_COUNTERS; i = i + 1) begin: gen_sad_counters
 
             always @(posedge adc_sampleclk) begin
                 if (i == 0) begin
-                    nextrefsample[i] <=  ref_sample0;
-                    compare_en[i] <= refen_sample0;
+                    nextrefsample_short[0]    <= ref_sample0_short;
+                    nextrefsample_extended[0] <= ref_sample0_extended;
+                    compare_en_short[0]       <= refen_sample0_short;
+                    compare_en_extended[0]    <= refen_sample0_extended;
+
+                    if (extended_mode[0]) begin
+                        nextrefsample[0] <= ref_sample0_extended;
+                        compare_en[0] <= refen_sample0_extended;
+                    end
+                    else begin
+                        nextrefsample[0] <= ref_sample0_short;
+                        compare_en[0] <= refen_sample0_short;
+                    end
                 end
+
                 else begin
-                    nextrefsample[i] <=  nextrefsample[i-1];
-                    compare_en[i] <= compare_en[i-1];
+                    nextrefsample_short[i] <= nextrefsample_short[i-1];
+                    nextrefsample_extended[i] <= nextrefsample_extended[i-1];
+                    compare_en_short[i] <= compare_en_short[i-1];
+                    compare_en_extended[i] <= compare_en_extended[i-1];
+                    if (extended_mode[i]) begin
+                        nextrefsample[i] <= nextrefsample_extended[i-1];
+                        compare_en[i] <= compare_en_extended[i-1];
+                    end
+                    else begin
+                        nextrefsample[i] <= nextrefsample_short[i-1];
+                        compare_en[i] <= compare_en_short[i-1];
+                    end
                 end
-                nextrefsample_r[i] <=  nextrefsample[i];
+
+                nextrefsample_r[i] <= nextrefsample[i];
                 compare_en_r[i] <= compare_en[i];
 
                 if (adc_datain_r > nextrefsample[i])
@@ -499,14 +554,40 @@ module sad #(
                     counter_incr[i] <= adc_datain_rmr + nextrefsample_r[i];
 
 
+                if (~((armed_and_ready_sad || always_armed) && active && ~xadc_error)) begin
+                    // important to reset this! However, it's not necessary to reset sad_counter - they will take care of themselves
+                    if (emode) begin
+                        extended_mode[i] <= {pNUM_COUNTERS{1'b0}}; 
+                        trigger_possible[i] <= {pNUM_COUNTERS{1'b0}}; // this is the culprit which somehow makes Vivado eliminate adc_sampleclk!
+                    end
+                    else begin
+                        extended_mode[i] <= {pNUM_COUNTERS{1'b0}}; 
+                        trigger_possible[i] <= {pNUM_COUNTERS{1'b1}}; // this is the culprit which somehow makes Vivado eliminate adc_sampleclk!
+                    end
+                end
+                else if (halfpoint[i] && emode) begin
+                    if (extended_mode[i]) begin
+                        extended_mode[i] <= 1'b0;
+                        trigger_possible[i] <= 1'b1;
+                    end
+                    else if (sad_counter[i] < half_threshold) begin
+                        extended_mode[i] <= 1'b1;
+                        trigger_possible[i] <= 1'b0;
+                    end
+                    else begin
+                        extended_mode[i] <= 1'b0;
+                        trigger_possible[i] <= 1'b0;
+                    end
+                end
+
                 if (`INTERVAL_MATCHING == 1) begin
-                    if (resetter[i])
+                    if (resetter[i] && ~extended_mode[i])
                         sad_counter[i] <= ((counter_incr[i] <= interval_threshold)? 0 : 1);
                     else if (~(&(sad_counter[i]))) // don't overflow
                         sad_counter[i] <= sad_counter[i] + ((counter_incr[i] <= interval_threshold)? 0 : 1);
                 end
                 else begin
-                    if (resetter[i])
+                    if (resetter[i] && ~extended_mode[i])
                         sad_counter[i] <= counter_incr[i];
                     else if (~sad_counter[i][pACTUAL_SAD_COUNTER_WIDTH-1]) // MSB of counter is used to indicate saturation
                         sad_counter[i] <= sad_counter[i] + counter_incr[i];
@@ -515,7 +596,8 @@ module sad #(
             end
 
             always @ (posedge adc_sampleclk) begin
-                if ((sad_counter[i] <= threshold) && triggerer[i] && ready2trigger_all[i] && ~(triggered && ~multiple_triggers))
+                //if ((sad_counter[i] <= threshold) && resetter[i] && trigger_possible[i] && ready2trigger_all[i])
+                if ((sad_counter[i] <= threshold) && triggerer[i] && trigger_possible[i] && ready2trigger_all[i])
                     individual_trigger[i] <= 1'b1;
                 else
                     individual_trigger[i] <= 1'b0;
@@ -523,8 +605,6 @@ module sad #(
 
         end
     endgenerate
-
-
 
     // for debug only:
     // verilator lint_off UNUSED
@@ -546,6 +626,24 @@ module sad #(
     wire [pBITS_PER_SAMPLE-1:0] nextrefsample9 = nextrefsample[9];
     wire [pBITS_PER_SAMPLE-1:0] nextrefsample10 = nextrefsample[10];
     wire [pBITS_PER_SAMPLE-1:0] nextrefsample18 = nextrefsample[18];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample12 = nextrefsample[12];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample12r = nextrefsample_r[12];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample24 = nextrefsample[24];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample24r = nextrefsample_r[24];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample28 = nextrefsample[28];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample28r = nextrefsample_r[28];
+
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample_short0 = nextrefsample_short[0];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample_short1 = nextrefsample_short[1];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample_short14 = nextrefsample_short[14];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample_short27 = nextrefsample_short[27];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample_short28 = nextrefsample_short[28];
+
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample_extended0  = nextrefsample_extended[0];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample_extended1  = nextrefsample_extended[1];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample_extended14 = nextrefsample_extended[14];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample_extended27 = nextrefsample_extended[27];
+    wire [pBITS_PER_SAMPLE-1:0] nextrefsample_extended28 = nextrefsample_extended[28];
 
     wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter0  = sad_counter[0 ];
     wire [pACTUAL_SAD_COUNTER_WIDTH-1:0] sad_counter1  = sad_counter[1 ];

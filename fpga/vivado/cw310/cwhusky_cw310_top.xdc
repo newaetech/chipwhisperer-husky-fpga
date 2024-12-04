@@ -40,11 +40,18 @@ set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets ADC_clk_fb]
 create_generated_clock -name adc_slow_clk_even -source [get_pins BUFG_ADC_clk_fb/O] -divide_by 2 [get_pins U_slow_adc_even/O]
 create_generated_clock -name adc_slow_clk_odd  -source [get_pins BUFG_ADC_clk_fb/O] -divide_by 2 [get_pins U_slow_adc_odd/O]
 
+create_generated_clock -name adc_slow_clk1 -source [get_pins BUFG_ADC_clk_fb/O] -divide_by 4 [get_pins U_slow_adc1/O]
+create_generated_clock -name adc_slow_clk2 -source [get_pins BUFG_ADC_clk_fb/O] -divide_by 4 [get_pins U_slow_adc2/O]
+create_generated_clock -name adc_slow_clk3 -source [get_pins BUFG_ADC_clk_fb/O] -divide_by 4 [get_pins U_slow_adc3/O]
+create_generated_clock -name adc_slow_clk4 -source [get_pins BUFG_ADC_clk_fb/O] -divide_by 4 [get_pins U_slow_adc4/O]
+
 # required with SAD_ONLY:
 set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets U_trace_top/fe_clk]
 
 set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets U_trace_top/dst_clk]
 
+# required for sad_x4_slowclock:
+set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets oadc/U_ddr/u_mig_7series_nosysclock/u_mig_7series_nosysclock_mig/u_ddr3_infrastructure/clk_pll_i]
 
 set_case_analysis 1 [get_pins reg_clockglitch/sourceclk_mux1/S]
 set_case_analysis 0 [get_pins reg_clockglitch/sourceclk_mux2/S]
@@ -78,6 +85,10 @@ set_clock_groups -asynchronous \
 set_clock_groups -asynchronous \
                  -group [get_clocks clk_usb ] \
                  -group [get_clocks {adc_slow_clk_even adc_slow_clk_odd}]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks clk_usb ] \
+                 -group [get_clocks {adc_slow_clk1 adc_slow_clk2 adc_slow_clk3 adc_slow_clk4}]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks {clk_usb ADC_clk_fb pll_clk_x2} ] \
@@ -123,6 +134,14 @@ set_clock_groups -asynchronous \
 set_clock_groups -asynchronous \
                  -group [get_clocks observer_clk*] \
                  -group [get_clocks {ADC_clk_fb pll_clk_x2}]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks observer_clk*] \
+                 -group [get_clocks {adc_slow_clk_even adc_slow_clk_odd}]
+
+set_clock_groups -asynchronous \
+                 -group [get_clocks observer_clk*] \
+                 -group [get_clocks {adc_slow_clk1 adc_slow_clk2 adc_slow_clk3 adc_slow_clk4}]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks TRACECLOCK ] \

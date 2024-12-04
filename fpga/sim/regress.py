@@ -229,19 +229,107 @@ tests.append(dict(name  = 'everything',
              GLITCH_CAPTURE = 1,
              description = 'ADC+LA+glitch.'))
 
-tests.append(dict(name  = 'sad',
+tests.append(dict(name  = 'sad_base',
+             frequency = 1,
+             BITS_PER_SAMPLE = 8,
+             #REF_SAMPLES = 32,
+             REF_SAMPLES = [32, 32, 32, 40, 48, 64],
+             TRIGGERS = 4,
+             LINEAR_RAMP = 1,
+             MULTIPLE_TRIGGERS = [0,1],
+             ALWAYS_ARMED = [0,1],
+             INTERVAL_MATCHING = [0,1],
+             EARLY_TRIGGER_EN = 1,
+             SAD = 'SAD_BASE',
+             TOP = 'sad_cocowrapper.v',
+             description = 'SAD block-level test, base implementation.'))
+
+tests.append(dict(name  = 'sad_longref',
+             frequency = 1,
+             BITS_PER_SAMPLE = 8,
+             REF_SAMPLES = 128,
+             TRIGGERS = 3,
+             LINEAR_RAMP = 0,
+             TIMEOUT_TIME = 600,
+             MULTIPLE_TRIGGERS = 1,
+             ALWAYS_ARMED = [0,1],
+             INTERVAL_MATCHING = [0,1],
+             EARLY_TRIGGER_EN = 1,
+             SAD = 'SAD_BASE',
+             TOP = 'sad_cocowrapper.v',
+             description = 'SAD block-level test, base implementation, longer reference.'))
+
+tests.append(dict(name  = 'sad_single',
+             frequency = 20,
+             BITS_PER_SAMPLE = 8,
+             REF_SAMPLES = 32,
+             TRIGGERS = 4,
+             LINEAR_RAMP = 0,
+             MULTIPLE_TRIGGERS = 1, # other settings not supported
+             ALWAYS_ARMED = 0,  # other settings not supported
+             INTERVAL_MATCHING = 0, # other settings not supported
+             SAD = 'SAD_SINGLE',
+             SAD_COUNTER_WIDTH = 16, # no overflow protection so let's make it wide!
+             TOP = 'sad_cocowrapper.v',
+             description = 'SAD block-level test, base implementation.'))
+
+tests.append(dict(name  = 'esad',
+             frequency = 1,
+             BITS_PER_SAMPLE = 8,
+             #REF_SAMPLES = 32,
+             REF_SAMPLES = [32, 32, 32, 40, 48, 64],
+             TRIGGERS = 4,
+             #LINEAR_RAMP = 1,
+             MULTIPLE_TRIGGERS = [0,1],
+             ALWAYS_ARMED = [0,1],
+             INTERVAL_MATCHING = [0,1],
+             SAD = 'ESAD',
+             EMODE = [0,1],
+             #EMODE = 0,
+             EARLY_TRIGGER_EN = 1,
+             TOP = 'sad_cocowrapper.v',
+             description = 'SAD block-level test, eSAD implementation.'))
+
+tests.append(dict(name  = 'sad_x2_slow',
+             frequency = 1,
+             BITS_PER_SAMPLE = 8,
+             #REF_SAMPLES = 32,
+             REF_SAMPLES = [32, 32, 32, 40, 48, 64],
+             TRIGGERS = 4,
+             #LINEAR_RAMP = 1,
+             MULTIPLE_TRIGGERS = [0,1],
+             ALWAYS_ARMED = [0,1],
+             INTERVAL_MATCHING = [0,1],
+             SAD = 'SAD_X2',
+             TOP = 'sad_cocowrapper.v',
+             description = 'SAD block-level test, sad_x2_slow implementation.'))
+
+tests.append(dict(name  = 'sad_x4_slow',
              frequency = 4,
              BITS_PER_SAMPLE = 8,
-             REF_SAMPLES = 128, # caution: large values can lead to slow simulation
-             SHORT_SAD = [0,1],
-             THRESHOLD = [20,100], # keep threshold low to avoid unintentional triggers - testbench isn't smart enough
+             #REF_SAMPLES = 32,
+             REF_SAMPLES = [32, 32, 32, 40, 48, 64],
              TRIGGERS = 4,
-             FLUSH = [0,1],
-             LINEAR_RAMP = 0,
-             TIMEOUT_CYCLES = 5000,
-             SAD = 'SAD_X2',
-             TOP = 'sad_tb.v',
-             description = 'SAD block-level test.'))
+             #LINEAR_RAMP = 1,
+             MULTIPLE_TRIGGERS = [0,1],
+             ALWAYS_ARMED = [0,1],
+             INTERVAL_MATCHING = [0,1],
+             SAD = 'SAD_X4',
+             TOP = 'sad_cocowrapper.v',
+             description = 'SAD block-level test, sad_x4_slow implementation.'))
+
+tests.append(dict(name  = 'sad_x2',
+             frequency = 10,
+             BITS_PER_SAMPLE = 8,
+             #REF_SAMPLES = 32,
+             REF_SAMPLES = [32, 32, 32, 40, 48, 64],
+             TRIGGERS = 4,
+             #LINEAR_RAMP = 1,
+             MULTIPLE_TRIGGERS = [0,1],
+             ALWAYS_ARMED = [0,1],
+             SAD = 'SAD_X2B',
+             TOP = 'sad_cocowrapper.v',
+             description = 'SAD block-level test, sad_x2 implementation. Occasional failures.'))
 
 tests.append(dict(name  = 'edge',
              frequency = 4,
@@ -425,17 +513,19 @@ for test in tests:
          elif key == 'VARIANT':
              if test[key] != args.variant:
                  run_test = False
-         elif key == 'TOP' and test[key] == 'sad_tb.v':
-             makeargs[1] = 'all_sad'
-             cocotb = False
          elif key == 'TOP' and test[key] == 'edge_tb.v':
              makeargs[1] = 'all_edge'
              cocotb = False
          elif key == 'TOP' and test[key] == 'trigger_sequencer_cocowrapper.v':
              makeargs[1] = 'all_trigger_sequencer'
+         elif key == 'TOP' and test[key] == 'sad_cocowrapper.v':
+             makeargs[1] = 'all_sad_coco'
          else:
             if type(test[key]) == list:
-               value = random.randint(test[key][0], test[key][1])
+               if len(test[key]) == 2:
+                   value = random.randint(test[key][0], test[key][1])
+               else:
+                   value = random.choice(test[key])
             else:
                value = test[key]
             makeargs.append("%s=%s" % (key, value))

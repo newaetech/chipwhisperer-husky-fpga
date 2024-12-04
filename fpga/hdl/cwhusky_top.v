@@ -202,6 +202,7 @@ module cwhusky_top(
 
    wire [8:0] tu_la_debug;
    wire [7:0] la_debug2;
+   wire [7:0] sad_debug;
    wire [7:0] fifo_debug;
    wire [7:0] sequencer_debug;
    wire [4:0] seq_trace_sad_debug;
@@ -227,6 +228,7 @@ module cwhusky_top(
    wire decodeio_active;
    wire trace_active;
    wire trace_trigger_in_use;
+   wire sad_trigger_in_use;
    wire sad_active;
    wire edge_trigger_active;
    wire adc_trigger_active;
@@ -358,6 +360,7 @@ module cwhusky_top(
                                                                          slow_fifo_wr_slow,
                                                                          stream_segment_available} :
                                  (userio_fpga_debug_select == 4'b0001)? tu_la_debug[7:0] :
+                                 //(userio_fpga_debug_select == 4'b0001)? sad_debug :
                                  (userio_fpga_debug_select == 4'b0010)? fifo_debug : 
                                  (userio_fpga_debug_select == 4'b0011)? {1'b0,
                                                                          xadc_error_flag,
@@ -424,6 +427,10 @@ module cwhusky_top(
         .clk_usb                (clk_usb_buf),
         .ADC_slow_clk_even      (ADC_slow_clk_even),
         .ADC_slow_clk_odd       (ADC_slow_clk_odd),
+        .ADC_slow_clk1          (ADC_slow_clk1),
+        .ADC_slow_clk2          (ADC_slow_clk2),
+        .ADC_slow_clk3          (ADC_slow_clk3),
+        .ADC_slow_clk4          (ADC_slow_clk4),
         .reset_o                (reg_rst),
         .xadc_error             (xadc_error_flag),
 
@@ -441,6 +448,7 @@ module cwhusky_top(
         .trigger_sad            (trigger_sad),
         .trigger_edge_counter   (trigger_edge_counter),
         .sad_active             (sad_active),
+        .sad_trigger_in_use     (sad_trigger_in_use),
         .edge_trigger_active    (edge_trigger_active),
         .adc_trigger_active     (adc_trigger_active),
         .amp_gain               (VDBSPWM),
@@ -472,6 +480,7 @@ module cwhusky_top(
         .slow_fifo_rd           (slow_fifo_rd),
         .la_debug2              (la_debug2),
         .la_debug               (tu_la_debug),
+        .sad_debug              (sad_debug),
         .edge_trigger_debug     (edge_trigger_debug),
         .fifo_debug             (fifo_debug)
 
@@ -537,6 +546,7 @@ module cwhusky_top(
         .decodeio_active        (decodeio_active),
         .trace_active           (trace_active),
         .trace_trigger_in_use   (trace_trigger_in_use),
+        .sad_trigger_in_use     (sad_trigger_in_use),
         .sad_active             (sad_active),
         .edge_trigger_active    (edge_trigger_active),
         .adc_trigger_active     (adc_trigger_active),
@@ -800,6 +810,15 @@ module cwhusky_top(
       always @(posedge ADC_clk_fb) ADC_slow_clk_even <= ~ADC_slow_clk_even;
       always @(posedge ADC_clk_fb) ADC_slow_clk_odd  <= ~ADC_slow_clk_odd;
 
+      reg ADC_slow_clk1 = 0;
+      reg ADC_slow_clk2 = 0;
+      reg ADC_slow_clk3 = 1;
+      reg ADC_slow_clk4 = 1;
+      always @(posedge ADC_slow_clk_even) ADC_slow_clk1 <= ~ADC_slow_clk1;
+      always @(posedge ADC_slow_clk_even) ADC_slow_clk3 <= ~ADC_slow_clk3;
+      always @(posedge ADC_slow_clk_odd) ADC_slow_clk2 <= ~ADC_slow_clk2;
+      always @(posedge ADC_slow_clk_odd) ADC_slow_clk4 <= ~ADC_slow_clk4;
+
    `else
       wire ADC_clk_fb_prebuf;
       IBUFDS #(
@@ -841,6 +860,41 @@ module cwhusky_top(
       `else
           wire ADC_slow_clk_even = 1'b0;
           wire ADC_slow_clk_odd = 1'b0;
+      `endif
+
+      `ifdef SAD_X4
+          wire ADC_slow_clk1;
+          wire ADC_slow_clk2;
+          wire ADC_slow_clk3;
+          wire ADC_slow_clk4;
+          reg [1:0] bufgce_count2 = 2'b0;
+          always @(posedge ADC_clk_fb) bufgce_count2 <= bufgce_count2 + 1;
+          BUFGCE U_slow_adc1 (
+              .I    (ADC_clk_fb),
+              .CE   (~bufgce_count2[1]),
+              .O    (ADC_slow_clk1)
+          );
+          BUFGCE U_slow_adc2 (
+              .I    (ADC_clk_fb),
+              .CE   (bufgce_count2[0] ^ bufgce_count2[1]),
+              .O    (ADC_slow_clk2)
+          );
+          BUFGCE U_slow_adc3 (
+              .I    (ADC_clk_fb),
+              .CE   (bufgce_count2[1]),
+              .O    (ADC_slow_clk3)
+          );
+          BUFGCE U_slow_adc4 (
+              .I    (ADC_clk_fb),
+              .CE   (~(bufgce_count2[0] ^ bufgce_count2[1])),
+              .O    (ADC_slow_clk4)
+          );
+
+      `else
+          wire ADC_slow_clk1 = 1'b0;
+          wire ADC_slow_clk2 = 1'b0;
+          wire ADC_slow_clk3 = 1'b0;
+          wire ADC_slow_clk4 = 1'b0;
       `endif
 
    `endif

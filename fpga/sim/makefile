@@ -31,10 +31,9 @@ FAST_FIFO_SIM=NOFASTFIFO
 ERRORS_OK=0
 PRESAMP_ERROR=0
 DOWNSAMPLE=0
-LINEAR_RAMP=1
+LINEAR_RAMP=0
 INPUTS_FROM_FILE=0
 REF_SAMPLES=8
-SHORT_SAD=0
 BITS_PER_SAMPLE=12
 EDGES=0
 TRIGGERS=1
@@ -53,16 +52,19 @@ MAX_SIZE=100
 NO_DOWNSTREAM_TRIGGERS=0
 VIVADO_VERSION=2020.2
 VARIANT=REGULAR
-SAD=SAD_X2
+SAD=SAD
+EMODE=0
+INTERVAL_MATCHING=0
+SAD_COUNTER_WIDTH=12
 FIFO_TYPE=NOXILINXFIFO
 NUM_TRIGGERS=4
 COUNTER_WIDTH=16
 COCOTB_LOG_LEVEL=INFO
 
 all: compile run
-all_sad: compile_sad run
 all_edge: compile_edge run
 all_trigger_sequencer: compile_trigger_sequencer run_trigger_sequencer
+all_sad_coco: compile_sad_coco run_sad_coco
 coco: compile_coco run_coco
 
 ifeq ($(VIVADO_PATH),)
@@ -93,16 +95,17 @@ else
     PRO=0
 endif
 
-compile_sad:
+compile_sad_top:
 	iverilog \
 	../hdl/sad.v \
+	../hdl/sad_x2.v \
 	../hdl/sad_x2_slowclock.v \
-	../hdl/sad_wrapper.v \
+	../hdl/sad_x4_slowclock.v \
+	../hdl/sad_top.v \
+	../hdl/reg_sad_control.v \
 	../hdl/usb_reg_main.v \
 	../fpga-common/hdl/cdc_pulse.v \
 	../fpga-common/hdl/cdc_simple.v \
-	sad_tb.v \
-	vivado/sad_fifo_sim_netlist.v \
 	-y/$(VIVADO_PATH)/$(VIVADO_VERSION)/ids_lite/ISE/verilog/src/unisims/ \
 	-g2005-sv \
 	-I../hdl \
@@ -110,40 +113,7 @@ compile_sad:
 	-Wselect-range \
 	-D$(VARIANT) \
 	-D$(SAD) \
-	-P sad_tb.pLINEAR_RAMP=$(LINEAR_RAMP) \
-	-P sad_tb.pINPUTS_FROM_FILE=$(INPUTS_FROM_FILE) \
-	-P sad_tb.pREF_SAMPLES=$(REF_SAMPLES) \
-	-P sad_tb.pSHORT_SAD=$(SHORT_SAD) \
-	-P sad_tb.pBITS_PER_SAMPLE=$(BITS_PER_SAMPLE) \
-	-P sad_tb.pTHRESHOLD=$(THRESHOLD) \
-	-P sad_tb.pTRIGGERS=$(TRIGGERS) \
-	-P sad_tb.pFLUSH=$(FLUSH) \
-	-P sad_tb.pDUMP=$(DUMP) \
-	-P sad_tb.pSEED=$(SEED) \
-	-P sad_tb.pVERBOSE=$(VERBOSE) \
-	-P sad_tb.pTIMEOUT_CYCLES=$(TIMEOUT_CYCLES) \
-	-o $(EXEFILE) \
-
-sad_nofifo:
-	iverilog \
-	../hdl/sad.v \
-	../hdl/sad_x2_slowclock.v \
-	../hdl/sad_wrapper.v \
-	../hdl/usb_reg_main.v \
-	../fpga-common/hdl/cdc_pulse.v \
-	sad_tb.v \
-	-g2005-sv \
-	-DNOFIFO \
-	-D$(VARIANT) \
-	-D$(SAD) \
-	-I../hdl \
-	-Wportbind \
-	-Wselect-range \
-	-P sad_tb.pLINEAR_RAMP=$(LINEAR_RAMP) \
-	-P sad_tb.pREF_SAMPLES=$(REF_SAMPLES) \
-	-P sad_tb.pBITS_PER_SAMPLE=$(BITS_PER_SAMPLE) \
-	-P sad_tb.pDUMP=$(DUMP) \
-	-P sad_tb.pSEED=$(SEED) \
+	-DINTERVAL_MATCHING=$(INTERVAL_MATCHING) \
 	-o $(EXEFILE) \
 
 compile_edge:
@@ -182,6 +152,37 @@ compile_trigger_sequencer:
 	../hdl/trigger_sequencer.v \
 	trigger_sequencer_cocowrapper.v \
 
+compile_sad_coco:
+	iverilog -g2005-sv \
+	-gsupported-assertions \
+	-s sad_cocowrapper \
+	-Wportbind \
+	-Wselect-range \
+	-DCOCOTB_SIM=1 \
+	-D$(SAD) \
+	-DINTERVAL_MATCHING=$(INTERVAL_MATCHING) \
+	-I../hdl \
+	-P sad_cocowrapper.pDUMP=$(DUMP) \
+	-P sad_cocowrapper.pBITS_PER_SAMPLE=$(BITS_PER_SAMPLE) \
+	-P sad_cocowrapper.pREF_SAMPLES=$(REF_SAMPLES) \
+	-P sad_cocowrapper.pSAD_COUNTER_WIDTH=$(SAD_COUNTER_WIDTH) \
+	-o $(EXEFILE) \
+	../hdl/sad_top.v \
+	../hdl/sad_wrapper.v \
+	../hdl/sad_group_trigger.v \
+	../hdl/esad.v \
+	../hdl/sad.v \
+	../hdl/sad_single_counter.v \
+	../hdl/sad_x2.v \
+	../hdl/sad_x2_slowclock.v \
+	../hdl/sad_x4_slowclock.v \
+	../hdl/usb_reg_main.v \
+	../fpga-common/hdl/fifo_async.v \
+	../fpga-common/hdl/cdc_pulse.v \
+	../fpga-common/hdl/cdc_simple.v \
+	sad_cocowrapper.v \
+
+
 compile:
 	iverilog -ccmdfile \
 	-y/$(VIVADO_PATH)/$(VIVADO_VERSION)/ids_lite/ISE/verilog/src/unisims/ \
@@ -194,6 +195,7 @@ compile:
 	-D$(FIFOSIZE) \
 	-D$(FAST_FIFO_SIM) \
 	-D$(SAD) \
+	-DINTERVAL_MATCHING=$(INTERVAL_MATCHING) \
 	-DTRACE \
 	-D$(VARIANT) \
 	-D$(FIFO_TYPE) \
@@ -246,6 +248,8 @@ compile_coco:
 	-DNOXILINXFIFO \
 	-D$(VARIANT) \
 	-D$(FAST_FIFO_SIM) \
+	-D$(SAD) \
+	-DINTERVAL_MATCHING=$(INTERVAL_MATCHING) \
 	-DCOCOTB_SIM=1 \
 	-P $(TOP).pDUMP=$(DUMP) \
 	-o $(EXEFILE) \
@@ -382,6 +386,18 @@ run_trigger_sequencer:
 	vvp -M $(shell cocotb-config --lib-dir) \
 	-m $(shell cocotb-config --lib-name vpi icarus) \
 	-l$(LOGFILE) $(EXEFILE) -$(WAVEFORMAT) \
+
+run_sad_coco:
+	COCOTB_RESOLVE_X=RANDOM \
+	TOPLEVEL=sad_cocowrapper \
+	TOPLEVEL_LANG=verilog \
+	MODULE=test_sad \
+	COCOTB_LOG_LEVEL=$(COCOTB_LOG_LEVEL) \
+	LIBPYTHON_LOC=$(shell cocotb-config --libpython) \
+	vvp -M $(shell cocotb-config --lib-dir) \
+	-m $(shell cocotb-config --lib-name vpi icarus) \
+	-l$(LOGFILE) $(EXEFILE) -$(WAVEFORMAT) \
+
 
 clean:
 	rm -f a.out results/*.vvp

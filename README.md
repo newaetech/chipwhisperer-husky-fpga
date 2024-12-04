@@ -6,7 +6,8 @@ ChipWhisperer-Husky.
 Husky uses a Xilinx XC7A35 FPGA; Husky Plus uses an XC7A100.  Implementation is
 done with Vivado 2022.1.
 
-When opening the [project](fpga/vivado/cwhusky.xpr), Vivado will report some
+When opening the [Husky](fpga/vivado/cwhusky.xpr) or 
+[Husky Plus](fpga/vivado/cwhusky_plus.xpr) project, Vivado will report some
 "errors" about missing IP that are not actually errors and can be safely
 ignored (these relate to ILA modules used in development which are not
 included in the repository, because they're not used in the production
@@ -14,28 +15,45 @@ bitfile).
 
 Implementation should run cleanly (no setup or hold timing violations) but
 timing is tight and small timing failures can occur if you're unlucky. The
-usual culprits are:
-* `ADC_clk_fb` clock: in `fifo_top_husky.v` for logic around counting
-  samples and segments, or writing data from the fast FIFO to the slow FIFO,
-  or related to the SAD module. Since the SAD module is so large, timing
-  here can be eased by reducing its size (see below).
-* `oberver_clk` clock: logic in the TraceWhisperer UART receiver, or in
-  `reg_la.v`. These can be given a pass (or you can reduce the
-  `observer_clk` frequency).
-* `clk_usb` clock
-* setup and/or hold violations on the `ADC_DP` inputs.
+objective is to not have *any* timing violations. Sometimes this can be
+achieved by re-running with different synthesis and/or implementation
+strategies. If the changes to the source code were minor or inconsequential,
+this is usually sufficient to achieve clean timing.
 
-Violations on these clocks came and went during development. Since Vivado is
-deterministic (e.g. if you re-run implementation without any changes, you'll
-get the same violations), the best way to get rid of timing violations is to
-change the synthesis and/or implementation strategies and try again.
+If not, you'll have to dig a little deeper. The three main stressors for the
+implementation are:
+1. Almost all of the block RAM is used (for ADC, LA, and trace sample
+   storage).
+2. Overall resource utilization is very high (except for Husky Plus).
+3. The SAD module is particularly large, runs on a fast clock, and can have
+   long routing delays due to its large size and interconnected logic.
 
-There should be no violations on inter-clock paths. Husky's [implementation
-constraints](fpga/vivado/cwhusky.xdc) makes liberal use of `set_clock_groups
--asynchronous` exceptions, and so great care must be taken when dealing with
-logic which uses multiple clocks (of which there are *many!*).
+If you are customizing the design, you can reduce block RAM usage by
+reducing the size of the associated FIFOs (for an example, see what happens
+when `TINYFIFO` is defined). You can reduce overall utilization by removing
+modules that you do not need (e.g. SAD, glitch, trace, LA). By far the
+biggest bang for your buck here is the SAD module, which is huge. Its size
+can be controlled via the `pREF_SAMPLES` parameter in
+[`openadc_interface.v`](fpga/hdl/openadc_interface.v).
+Refer to the source code for more details about the SAD parameters that can
+be adjusted. (You'll also find several different SAD implementations;
+[`esad.v`](fpga/hdl/esad.v) was chosen for having the best results --
+smallest size for the most SAD samples -- but feel free to experiment.)
 
-Occasionally, a bitfile can be obtained where  FPGA register reads/writes
+Be aware that if you go the *other* way on SAD and *increase* its size (i.e.
+on Husky Plus where there are sufficient FPGA resources to do so), this can
+drive up power consumption to the point where the current draw might be too
+great at higher clock frequencies, and/or the FPGA overheats (yes, this can
+actually happen). The `scope.XADC` VCC and temperature alarms can be used to
+protect the FPGA, but this limits useability.
+
+There should be no violations at all on inter-clock paths. Husky's
+[implementation constraints](fpga/vivado/cwhusky.xdc) makes liberal use of
+`set_clock_groups -asynchronous` exceptions, and so great care must be taken
+when dealing with logic which uses multiple clocks (of which there are
+*many!*).
+
+Occasionally, a bitfile can be obtained where FPGA register reads/writes
 are unreliable (i.e. [`test_husky.py`'s](#on-target-testing) `test_reg_rw()`
 test will fail), which makes the bitfile useless. Again, the solution is to
 re-compile with a different synthesis or implementation strategy. If this
@@ -51,15 +69,8 @@ The only critical warnings in the implementation log file should relate to
 inconsequential missing IP modules (e.g. ILAs) and the the last three
 `dbg_hub` commands.
 
-The SAD module is by far the largest. If you are short on LUTs, or if timing
-closure is proving difficult, you can reduce its size by adjusting its
-`pREF_SAMPLES` and/or `pSAD_COUNTER_WIDTH` instantiation parameters. The
-only (known) limitation is that `pREF_SAMPLES` must be even. Conversely if
-you wish to increase these parameters, be aware that the resulting size
-increase will make timing closure more difficult; it can also drive up power
-consumption to the point where the current draw might be too great at higher
-clock frequencies (this would typically result in `scope.XADC` VCC alarms
-and/or Husky dying and requiring a hard power cycle).
+After any modifications to the Husky source, thorough testing should be
+done, both in simulation and on-target, as explained in the next section.
 
 # Testing
 

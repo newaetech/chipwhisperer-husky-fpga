@@ -28,6 +28,10 @@ module openadc_interface #(
     input  wire                         clk_usb, // 96 MHz
     input  wire                         ADC_slow_clk_even,      // used by sad_x2_slowclock only
     input  wire                         ADC_slow_clk_odd,       // used by sad_x2_slowclock only
+    input  wire                         ADC_slow_clk1,          // used by sad_x4_slowclock only
+    input  wire                         ADC_slow_clk2,          // used by sad_x4_slowclock only
+    input  wire                         ADC_slow_clk3,          // used by sad_x4_slowclock only
+    input  wire                         ADC_slow_clk4,          // used by sad_x4_slowclock only
     output wire                         reset_o,
     input  wire                         xadc_error,
 
@@ -45,6 +49,7 @@ module openadc_interface #(
     input  wire                         DUT_trigger_i,
     input  wire                         trigger_io4_i, // debug only
     input  wire                         sad_active,
+    input  wire                         sad_trigger_in_use,
     input  wire                         edge_trigger_active,
     input  wire                         adc_trigger_active,
     output reg                          trigger_adc,
@@ -129,6 +134,7 @@ module openadc_interface #(
     output wire                         slow_fifo_rd,
     output wire [8:0]                   la_debug,
     output wire [7:0]                   la_debug2,
+    output wire [7:0]                   sad_debug,
     output wire [7:0]                   fifo_debug,
     output wire [7:0]                   edge_trigger_debug
 
@@ -502,19 +508,24 @@ module openadc_interface #(
 
    assign reg_datao = reg_datao_oadc | reg_datao_fifo | reg_datao_sad | reg_datao_edge;
 
+`ifdef PLUS
+    localparam pREF_SAMPLES = 512;
+    localparam pSAD_COUNTER_WIDTH = 14;
+    localparam pNUM_GROUPS = 16;
+`elsif PRO
+    localparam pREF_SAMPLES = 736;
+    localparam pSAD_COUNTER_WIDTH = 14;
+`else
+    localparam pREF_SAMPLES = 512;
+    localparam pSAD_COUNTER_WIDTH = 12;
+    localparam pNUM_GROUPS = 16;
+`endif
+
 `ifdef SAD_X2
        sad_x2_slowclock #(
            .pBYTECNT_SIZE           (pBYTECNT_SIZE),
-    `ifdef PLUS
-           .pREF_SAMPLES            (384),
-           .pSAD_COUNTER_WIDTH      (14),
-    `elsif PRO
-           .pREF_SAMPLES            (512),
-           .pSAD_COUNTER_WIDTH      (15),
-    `else
-           .pREF_SAMPLES            (192),
-           .pSAD_COUNTER_WIDTH      (12),
-    `endif
+           .pREF_SAMPLES            (pREF_SAMPLES),
+           .pSAD_COUNTER_WIDTH      (pSAD_COUNTER_WIDTH),
            .pBITS_PER_SAMPLE        (8)
        ) U_sad (
            .reset                   (reset        ),
@@ -524,7 +535,8 @@ module openadc_interface #(
            .slow_clk_even           (ADC_slow_clk_even),
            .slow_clk_odd            (ADC_slow_clk_odd),
            .armed_and_ready         (armed_and_ready),
-           .active                  (sad_active   ),
+           .active                  (sad_trigger_in_use),
+           .trigger_allowed         (sad_active   ),
            .clk_usb                 (clk_usb      ),
            .reg_address             (reg_address  ),
            .reg_bytecnt             (reg_bytecnt  ),
@@ -537,16 +549,42 @@ module openadc_interface #(
            .trigger                 (trigger_sad  )
        );
 
-`else
-       sad #(
+`elsif  SAD_X4
+       sad_x4_slowclock #(
            .pBYTECNT_SIZE           (pBYTECNT_SIZE),
-    `ifdef PLUS
-           .pREF_SAMPLES            (256),
-           .pSAD_COUNTER_WIDTH      (13),
-    `else
-           .pREF_SAMPLES            (128),
-           .pSAD_COUNTER_WIDTH      (12),
-    `endif
+           .pREF_SAMPLES            (pREF_SAMPLES),
+           .pSAD_COUNTER_WIDTH      (pSAD_COUNTER_WIDTH),
+           .pBITS_PER_SAMPLE        (8)
+       ) U_sad (
+           .reset                   (reset        ),
+           .xadc_error              (xadc_error   ),
+           .adc_datain              (ADC_data_tofifo[11:4]),
+           .adc_sampleclk           (ADC_clk_sample),
+           .slow_clk1               (ADC_slow_clk1),
+           .slow_clk2               (ADC_slow_clk2),
+           .slow_clk3               (ADC_slow_clk3),
+           .slow_clk4               (ADC_slow_clk4),
+           .armed_and_ready         (armed_and_ready),
+           .active                  (sad_trigger_in_use),
+           .trigger_allowed         (sad_active   ),
+           .clk_usb                 (clk_usb      ),
+           .reg_address             (reg_address  ),
+           .reg_bytecnt             (reg_bytecnt  ),
+           .reg_datai               (reg_datai    ),
+           .reg_datao               (reg_datao_sad),
+           .reg_read                (reg_read     ),
+           .reg_write               (reg_write    ),
+           .ext_trigger             (DUT_trigger_i),
+           .io4                     (trigger_io4_i),
+           .trigger                 (trigger_sad  )
+       );
+
+
+`elsif  SAD_X2B
+       sad_x2 #(
+           .pBYTECNT_SIZE           (pBYTECNT_SIZE),
+           .pREF_SAMPLES            (pREF_SAMPLES),
+           .pSAD_COUNTER_WIDTH      (pSAD_COUNTER_WIDTH),
            .pBITS_PER_SAMPLE        (8)
        ) U_sad (
            .reset                   (reset        ),
@@ -554,7 +592,8 @@ module openadc_interface #(
            .adc_datain              (ADC_data_tofifo[11:4]),
            .adc_sampleclk           (ADC_clk_sample),
            .armed_and_ready         (armed_and_ready),
-           .active                  (sad_active   ),
+           .active                  (sad_trigger_in_use),
+           .trigger_allowed         (sad_active   ),
            .clk_usb                 (clk_usb      ),
            .reg_address             (reg_address  ),
            .reg_bytecnt             (reg_bytecnt  ),
@@ -567,7 +606,88 @@ module openadc_interface #(
            .trigger                 (trigger_sad  )
        );
 
+`elsif SAD_SINGLE
+       sad_single_counter #(
+           .pBYTECNT_SIZE           (pBYTECNT_SIZE),
+           .pREF_SAMPLES            (pREF_SAMPLES),
+           .pSAD_COUNTER_WIDTH      (pSAD_COUNTER_WIDTH),
+           .pBITS_PER_SAMPLE        (8)
+       ) U_sad (
+           .reset                   (reset        ),
+           .xadc_error              (xadc_error   ),
+           .adc_datain              (ADC_data_tofifo[11:4]),
+           .adc_sampleclk           (ADC_clk_sample),
+           .armed_and_ready         (armed_and_ready),
+           .active                  (sad_trigger_in_use),
+           .trigger_allowed         (sad_active   ),
+           .clk_usb                 (clk_usb      ),
+           .reg_address             (reg_address  ),
+           .reg_bytecnt             (reg_bytecnt  ),
+           .reg_datai               (reg_datai    ),
+           .reg_datao               (reg_datao_sad),
+           .reg_read                (reg_read     ),
+           .reg_write               (reg_write    ),
+           .ext_trigger             (DUT_trigger_i),
+           .io4                     (trigger_io4_i),
+           .trigger                 (trigger_sad  )
+       );
+
+`elsif ESAD
+       esad #(
+           .pBYTECNT_SIZE           (pBYTECNT_SIZE),
+           .pREF_SAMPLES            (pREF_SAMPLES),
+           .pSAD_COUNTER_WIDTH      (pSAD_COUNTER_WIDTH),
+           .pBITS_PER_SAMPLE        (8),
+           .pNUM_GROUPS             (pNUM_GROUPS)
+       ) U_sad (
+           .reset                   (reset        ),
+           .xadc_error              (xadc_error   ),
+           .adc_datain              (ADC_data_tofifo[11:4]),
+           .adc_sampleclk           (ADC_clk_sample),
+           .armed_and_ready         (armed_and_ready),
+           .active                  (sad_trigger_in_use),
+           .trigger_allowed         (sad_active   ),
+           .clk_usb                 (clk_usb      ),
+           .reg_address             (reg_address  ),
+           .reg_bytecnt             (reg_bytecnt  ),
+           .reg_datai               (reg_datai    ),
+           .reg_datao               (reg_datao_sad),
+           .reg_read                (reg_read     ),
+           .reg_write               (reg_write    ),
+           .ext_trigger             (DUT_trigger_i),
+           .io4                     (trigger_io4_i),
+           .sad_debug               (sad_debug    ),
+           .trigger                 (trigger_sad  )
+       );
+
+`else
+       sad #(
+           .pBYTECNT_SIZE           (pBYTECNT_SIZE),
+           .pREF_SAMPLES            (pREF_SAMPLES),
+           .pSAD_COUNTER_WIDTH      (pSAD_COUNTER_WIDTH),
+           .pBITS_PER_SAMPLE        (8),
+           .pNUM_GROUPS             (pNUM_GROUPS)
+       ) U_sad (
+           .reset                   (reset        ),
+           .xadc_error              (xadc_error   ),
+           .adc_datain              (ADC_data_tofifo[11:4]),
+           .adc_sampleclk           (ADC_clk_sample),
+           .armed_and_ready         (armed_and_ready),
+           .active                  (sad_trigger_in_use),
+           .trigger_allowed         (sad_active   ),
+           .clk_usb                 (clk_usb      ),
+           .reg_address             (reg_address  ),
+           .reg_bytecnt             (reg_bytecnt  ),
+           .reg_datai               (reg_datai    ),
+           .reg_datao               (reg_datao_sad),
+           .reg_read                (reg_read     ),
+           .reg_write               (reg_write    ),
+           .ext_trigger             (DUT_trigger_i),
+           .io4                     (trigger_io4_i),
+           .trigger                 (trigger_sad  )
+       );
 `endif
+
 
    edge_trigger #(
        .pBYTECNT_SIZE           (pBYTECNT_SIZE)
