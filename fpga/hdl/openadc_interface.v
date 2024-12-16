@@ -265,7 +265,7 @@ module openadc_interface #(
    wire freq_measure_ui;
    wire freq_measure_pll;
    wire freq_measure_ext;
-   wire freq_measure_back;
+
    cdc_pulse U_freq_measure_adc (
       .reset_i       (reset),
       .src_clk       (clk_usb),
@@ -290,15 +290,66 @@ module openadc_interface #(
       .dst_pulse     (freq_measure_ext)
    );
 
-   // by going back to USB clock we'll know if DUT_CLK_i is alive
+   // ...and CDC the above pulses back to USB so we know if they're alive!
+   wire freq_measure_adc_back;
+   wire freq_measure_ui_back;
+   wire freq_measure_pll_back;
+   wire freq_measure_ext_back;
+
+   cdc_pulse U_freq_measure_adc_back (
+      .reset_i       (reset),
+      .src_clk       (ADC_clk_sample),
+      .src_pulse     (freq_measure_adc),
+      .dst_clk       (clk_usb),
+      .dst_pulse     (freq_measure_adc_back)
+   );
+
+   cdc_pulse U_freq_measure_pll_back (
+      .reset_i       (reset),
+      .src_clk       (pll_fpga_clk),
+      .src_pulse     (freq_measure_pll),
+      .dst_clk       (clk_usb),
+      .dst_pulse     (freq_measure_pll_back)
+   );
+
+
    cdc_pulse U_freq_measure_ext_back (
       .reset_i       (reset),
       .src_clk       (DUT_CLK_i),
       .src_pulse     (freq_measure_ext),
       .dst_clk       (clk_usb),
-      .dst_pulse     (freq_measure_back)
+      .dst_pulse     (freq_measure_ext_back)
    );
 
+   reg adc_back;
+   reg pll_back;
+   reg ext_back;
+   reg adc_alive;
+   reg pll_alive;
+   reg ext_alive;
+
+   always @(posedge clk_usb) begin
+       if (freq_measure) begin
+           adc_back <= 1'b0;
+           pll_back <= 1'b0;
+           ext_back <= 1'b0;
+           if (adc_back) adc_alive <= 1'b1;
+           else          adc_alive <= 1'b0;
+           if (pll_back) pll_alive <= 1'b1;
+           else          pll_alive <= 1'b0;
+           if (ext_back) ext_alive <= 1'b1;
+           else          ext_alive <= 1'b0;
+
+       end
+       else begin
+           if (freq_measure_adc_back) 
+               adc_back <= 1'b1;
+           if (freq_measure_pll_back) 
+               pll_back <= 1'b1;
+           if (freq_measure_ext_back) 
+               ext_back <= 1'b1;
+       end
+   end
 
    reg [31:0] extclk_frequency_int;
    reg [31:0] adcclk_frequency_int;
@@ -329,7 +380,7 @@ module openadc_interface #(
    always @(posedge clk_usb) begin
        if (extclk_monitor_disabled)
            extclk_change_usb <= 1'b0;
-       else if (freq_measure_back)
+       else if (freq_measure_ext_back)
            extclk_change_usb <= extclk_change;
    end
 
@@ -343,9 +394,14 @@ module openadc_interface #(
       end
    end
 
+   wire [31:0] extclk_frequency_masked = (ext_alive)? extclk_frequency : 32'b0;
+   wire [31:0] adcclk_frequency_masked = (adc_alive)? adcclk_frequency : 32'b0;
+   wire [31:0] pllclk_frequency_masked = (pll_alive)? pllclk_frequency : 32'b0;
+
 `ifdef PRO
    reg [31:0] uiclk_frequency_int;
    reg [31:0] uiclk_frequency;
+
    always @(posedge ui_clk) begin
       if (freq_measure_ui) begin
          uiclk_frequency_int <= 32'd1;
@@ -355,6 +411,24 @@ module openadc_interface #(
          uiclk_frequency_int <= uiclk_frequency_int + 32'd1;
       end
    end
+
+   reg ui_back;
+   reg ui_alive;
+
+   always @(posedge clk_usb) begin
+       if (freq_measure) begin
+           ui_back <= 1'b0;
+           if (ui_back) ui_alive <= 1'b1;
+           else         ui_alive <= 1'b0;
+       end
+       else begin
+           if (freq_measure_ui_back) 
+               ui_back <= 1'b1;
+       end
+   end
+
+   wire [31:0] uiclk_frequency_masked = (ui_alive)? uiclk_frequency : 32'b0;
+
    cdc_pulse U_freq_measure_ui (
       .reset_i       (reset),
       .src_clk       (clk_usb),
@@ -362,8 +436,18 @@ module openadc_interface #(
       .dst_clk       (ui_clk),
       .dst_pulse     (freq_measure_ui)
    );
+
+   cdc_pulse U_freq_measure_ui_back (
+      .reset_i       (reset),
+      .src_clk       (ui_clk),
+      .src_pulse     (freq_measure_ui),
+      .dst_clk       (clk_usb),
+      .dst_pulse     (freq_measure_ui_back)
+   );
+
+
 `else
-   wire [31:0] uiclk_frequency = 32'b0;
+   wire [31:0] uiclk_frequency_masked = 32'b0;
 `endif // PRO
 
    always @(posedge pll_fpga_clk) begin
@@ -738,10 +822,10 @@ module openadc_interface #(
       .trigger_now                  (trigger_now),
       .trigger_offset               (trigger_offset),
       .trigger_length               (trigger_length),
-      .extclk_frequency             (extclk_frequency),
-      .adcclk_frequency             (adcclk_frequency),
-      .uiclk_frequency              (uiclk_frequency),
-      .pllclk_frequency             (pllclk_frequency),
+      .extclk_frequency             (extclk_frequency_masked),
+      .adcclk_frequency             (adcclk_frequency_masked),
+      .uiclk_frequency              (uiclk_frequency_masked),
+      .pllclk_frequency             (pllclk_frequency_masked),
       .presamples_o                 (presamples),
       .maxsamples_i                 (maxsamples_limit),
       .maxsamples_o                 (maxsamples),
