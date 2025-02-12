@@ -51,12 +51,13 @@ module usb_reg_main #(
 );
 
 
-   reg isoutreg, isoutregdly;
+   reg isoutreg = 1'b0;
+   reg isoutregdly = 1'b0;
    reg cwusb_wrn_rs, cwusb_wrn_rs_dly;
    reg cwusb_cen_r;
    reg cwusb_alen_r;
    reg reg_write_dly;
-   reg drive_data_out;
+   reg drive_data_out = 1'b0;
    reg fast_fifo_read_r;
 
    // note: could possibly be simplified, and delays reduced?

@@ -36,6 +36,7 @@ task write_1byte;
    input [pADDR_WIDTH-1:0] address;
    input [7:0] data;
    usb_cen = 1'b1;
+   usb_bytecount = 0;
    @(posedge usb_clk);
    usb_alen = 1'b0;
    usb_addr = address;
@@ -56,6 +57,7 @@ task read_1byte;
    input [pADDR_WIDTH-1:0] address;
    output [7:0] data;
    usb_cen = 1'b1;
+   usb_bytecount = 0;
    @(posedge usb_clk);
    usb_alen = 1'b0;
    usb_addr = address;
@@ -77,6 +79,7 @@ endtask
 task rw_lots_bytes;
    input [pADDR_WIDTH-1:0] address;
    usb_cen = 1'b1;
+   usb_bytecount = 0;
    @(posedge usb_clk);
    usb_alen = 1'b0;
    usb_addr = address;
@@ -107,6 +110,10 @@ task read_next_byte;
       if (pSLOW_READS)
          repeat($urandom_range(2, 20)) @(posedge usb_clk);
    end
+   usb_bytecount = usb_bytecount + 1;
+   `ifdef CW310 // extra cycles to accomodate CW310
+       repeat(4) @(posedge usb_clk);
+   `endif
 endtask
 
 task read_next_sample;
@@ -144,5 +151,9 @@ task write_next_byte;
    @(posedge usb_clk);
    usb_cen = 1;
    @(posedge usb_clk);
+   `ifdef CW310 // extra cycle to accomodate CW310
+       @(posedge usb_clk);
+   `endif
+   usb_bytecount = usb_bytecount + 1;
 endtask
 

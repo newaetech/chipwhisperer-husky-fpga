@@ -45,8 +45,6 @@ module reg_husky_adc #(
    output reg  [4:0]   VMAG_D
 ); 
 
-   `define CW_ADC_CTRL          60
-   `define CW_VMAG_CTRL         61
 
    // Bit-bang access to the ADC (ADS4128) registers.
    // Focus is on simplicity.

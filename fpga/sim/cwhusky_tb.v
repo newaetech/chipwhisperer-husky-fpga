@@ -75,6 +75,7 @@ module cwhusky_tb();
    wire [7:0]           usb_data;
    reg  [7:0]           usb_wdata;
    reg  [7:0]           usb_addr;
+   reg  [7:0]           usb_bytecount;
    reg                  usb_rdn;
    reg                  usb_wrn;
    reg                  usb_cen;
@@ -204,11 +205,12 @@ module cwhusky_tb();
 
       // manually reset with new register:
       write_1byte(`RESET, 8'h1);
+      #(pCLK_USB_PERIOD*20);
       write_1byte(`RESET, 8'h0);
 
       #(pCLK_USB_PERIOD*1000);
 
-      write_1byte(`DATA_SOURCE_SELECT, 8'h0);
+      write_1byte(`FIFO_CONFIG, 8'h0);
       if (pADC_LOW_RES)
          write_1byte(`ADC_LOW_RES, 3);
       else
@@ -238,6 +240,69 @@ module cwhusky_tb();
       rw_lots_bytes(`DECIMATE_ADDR);
       write_next_byte((pDOWNSAMPLE & 16'h00FF));
       write_next_byte((pDOWNSAMPLE & 16'hFF00)>>8);
+
+      /*
+      rw_lots_bytes(`SOFTPOWER_CONTROL);
+      write_next_byte(4);       // cycles1
+      write_next_byte(10);      // cycles2
+      write_next_byte(100);     // period
+      write_next_byte(0);       // period
+      write_next_byte(20);      // off time 1
+      write_next_byte(0);       // off time 1
+      write_next_byte(40);      // off time 2
+      write_next_byte(0);       // off time 2
+
+      // power off:
+      rw_lots_bytes(`CW_IOROUTE_ADDR);
+      write_next_byte(2);
+      write_next_byte(1);
+      write_next_byte(0);
+      write_next_byte(0);
+      write_next_byte(0);
+      write_next_byte(8'hc2);
+      write_next_byte(32);
+      write_next_byte(0);
+
+      #(pCLK_USB_PERIOD*50);
+
+      // power on:
+      rw_lots_bytes(`CW_IOROUTE_ADDR);
+      write_next_byte(2);
+      write_next_byte(1);
+      write_next_byte(0);
+      write_next_byte(0);
+      write_next_byte(0);
+      write_next_byte(8'hc0);
+      write_next_byte(32);
+      write_next_byte(0);
+
+      #(pCLK_USB_PERIOD*50);
+
+      // power off:
+      rw_lots_bytes(`CW_IOROUTE_ADDR);
+      write_next_byte(2);
+      write_next_byte(1);
+      write_next_byte(0);
+      write_next_byte(0);
+      write_next_byte(0);
+      write_next_byte(8'hc2);
+      write_next_byte(32);
+      write_next_byte(0);
+
+      #(pCLK_USB_PERIOD*50);
+
+      // power on:
+      rw_lots_bytes(`CW_IOROUTE_ADDR);
+      write_next_byte(2);
+      write_next_byte(1);
+      write_next_byte(0);
+      write_next_byte(0);
+      write_next_byte(0);
+      write_next_byte(8'hc0);
+      write_next_byte(32);
+      write_next_byte(0);
+      */
+
 
       // number of segments - 1 (0 = 1 segment, 1 = 2 segments,...)
       write_1byte(`NUM_SEGMENTS, pNUM_SEGMENTS);
@@ -629,6 +694,7 @@ module cwhusky_tb();
          $display("SIMULATION FAILED (%0d errors)", errors);
       else
          $display("Simulation passed (%0d warnings)", warnings);
+      #(pCLK_USB_PERIOD*4000);
       $finish;
    end
 

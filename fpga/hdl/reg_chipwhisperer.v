@@ -25,7 +25,10 @@ Author: Colin O'Flynn <coflynn@newae.com>
 
 module reg_chipwhisperer #(
    parameter pBYTECNT_SIZE = 7,
-   parameter pUSERIO_WIDTH = 8
+   parameter pUSERIO_WIDTH = 8,
+   parameter pSEQUENCER_NUM_TRIGGERS = 4,
+   parameter pSEQUENCER_COUNTER_WIDTH = 16
+
 )(
    input  wire         reset_i,
    input  wire         clk_usb,
@@ -51,10 +54,15 @@ module reg_chipwhisperer #(
    input  wire        trigger_nrst_i,
 
    /* Advanced IO Trigger Connections */
-   output wire        trigger_ext_o,
+   output wire        uart_trigger_line,
+   output wire        edge_trigger_line,
    output wire        decodeio_active,
+   output wire        trace_active,
+   output wire        trace_trigger_in_use,
+   output wire        sad_trigger_in_use,
    output wire        sad_active,
    output wire        edge_trigger_active,
+   output wire        adc_trigger_active,
    input  wire        trigger_advio_i, 
    input  wire        trigger_decodedio_i,
    input  wire        trigger_trace_i,
@@ -75,6 +83,14 @@ module reg_chipwhisperer #(
    inout  wire        targetio3_io,
    inout  wire        targetio4_io,
 
+   /* solely for the ability to read their state: */
+   input  wire        target_PDID,
+   input  wire        target_PDIC,
+   input  wire        target_nRST,
+   input  wire        target_MISO,
+   input  wire        target_MOSI,
+   input  wire        target_SCK,
+
    output wire        hsglitcha_o,
    output wire        hsglitchb_o,
 
@@ -82,6 +98,7 @@ module reg_chipwhisperer #(
 
    output wire        enable_output_nrst,
    output wire        output_nrst,
+   output wire        nrst_ignore_highz,
    output wire        enable_output_pdid,
    output wire        output_pdid,
    output wire        enable_output_pdic,
@@ -104,10 +121,17 @@ module reg_chipwhisperer #(
    input  wire                     userio_clk,
 
    /* Main trigger connections */
+   input  wire        armed_and_ready,
    output wire        trigger_capture,  // Trigger signal to capture system
    output wire        trigger_glitch,   // Trigger signal to glitch system
    output wire        trigger_trace,    // Trigger signal to trace
    output wire        trig_glitch_o_mcx,// trig/glitch MCX 
+
+   output reg         cw310_adc_clk_sel, // CW310 only
+
+   output wire [7:0]  sequencer_debug,
+   output wire [7:0]  sequencer_debug2,
+   output wire [4:0]  seq_trace_sad_debug,
 
    input  wire        trace_exists,
    input  wire        la_exists
@@ -225,14 +249,15 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
  */
 
-   reg [1:0] registers_cwauxio;
+   reg [2:0] registers_cwauxio;
    reg [7:0] registers_cwextclk;
-   reg [15:0] registers_cwtrigsrc; // note: for CW-Lite/Pro, this is an 8-bit register
-   reg [7:0] registers_cwtrigmod;
+   reg [pSEQUENCER_NUM_TRIGGERS*16-1:0] registers_cwtrigsrc; // note: for CW-Lite/Pro, this is an 8-bit register
+   reg [pSEQUENCER_NUM_TRIGGERS*8-1:0] registers_cwtrigmod;  // note: for CW-Lite/Pro, this is an 8-bit register
    reg [63:0] registers_iorouting;
-   reg [3:0] registers_ioread;
+   reg [9:0] registers_ioread;
    reg reg_external_clock;
    reg [pUSERIO_WIDTH-1:0] reg_userio_cwdriven;
+   reg [63:0] reg_softpower_control;
 
    wire targetio_highz;
 
@@ -310,172 +335,169 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
    assign enable_avrprog = registers_iorouting[40];
 
-   /* Target Power */
-   reg reg_targetpower_off;
-   always @(posedge clk_usb) begin
-      reg_targetpower_off <= registers_iorouting[41];
-   end
+   // Target Power: switched ON from OFF state using PWM for programmable soft-start.
+   // Soft-start is enabled by default via registers_iorouting[42].
+   // PWM parameters are from reg_softpower_control:
+   // - softpower_pwm_cycles1 + softpower_pwm_cycles2: number of PWM on/off cycles before power is fully on
+   // - softpower_pwm_period: number of cycles in PWM period
+   // - softpower_pwm_off_time1: number of cycles in PWM period where power is off, for the first softpower_pwm_cycles1
+   // - softpower_pwm_off_time2: number of cycles in PWM period where power is off, for the next softpower_pwm_cycles2
+   //
+   wire targetpower_slow = ~registers_iorouting[42];
+   wire reg_targetpower_off = registers_iorouting[41];
+   wire [7:0] softpower_pwm_cycles1 = reg_softpower_control[7:0];
+   wire [7:0] softpower_pwm_cycles2 = reg_softpower_control[15:8];
+   wire [15:0] softpower_pwm_period = reg_softpower_control[31:16];
+   wire [15:0] softpower_pwm_off_time1 = reg_softpower_control[47:32];
+   wire [15:0] softpower_pwm_off_time2 = reg_softpower_control[63:48];
+   reg  [15:0] softpower_pwm_off_time;
 
-   /* Target power switched ON from OFF state using PWM for programmable soft-start.
-       Only in CW1200 currently. */
-`ifdef SUPPORT_SOFTPOWER
    reg targetpower_soft_on;
    reg reg_targetpower_off_prev;
    always @(posedge clk_usb) begin
-          reg_targetpower_off_prev <= reg_targetpower_off;
-          if ((reg_targetpower_off == 1'b0) && (reg_targetpower_off_prev == 1'b1)) begin
-             targetpower_soft_on <= 1'b1;
-          end else if (reg_targetpower_off == 1'b1) begin
-             targetpower_soft_on <= 1'b0;
-          end
+       reg_targetpower_off_prev <= reg_targetpower_off;
+       if ((reg_targetpower_off == 1'b0) && (reg_targetpower_off_prev == 1'b1))
+           targetpower_soft_on <= 1'b1;
+       else if (reg_targetpower_off == 1'b1)
+           targetpower_soft_on <= 1'b0;
    end
 
-   reg [10:0] soft_start_pwm;
+   reg [15:0] soft_start_pwm = 0;
    always @(posedge clk_usb) begin
-          soft_start_pwm <= soft_start_pwm + 11'd1;
+       if ((soft_start_pwm == softpower_pwm_period) || ~targetpower_soft_on)
+           soft_start_pwm <= 0;
+       else
+           soft_start_pwm <= soft_start_pwm + 16'd1;
    end
 
    reg output_src_pwm;
-   reg [13:0] soft_start_cnt;
+   reg [15:0] soft_start_cnt;
    always @(posedge clk_usb) begin
-          if (targetpower_soft_on == 1'b0) begin
-             soft_start_cnt <= 0;
-             output_src_pwm <= 1'b0;
-          end else if (soft_start_cnt == 14'd16383) begin
-             output_src_pwm <= 1'b0;
-          end else if (soft_start_pwm == 0) begin
-             soft_start_cnt <= soft_start_cnt + 14'd1;
-             output_src_pwm <= 1'b1;
-          end
+       if (targetpower_soft_on == 1'b0) begin
+           soft_start_cnt <= 0;
+           output_src_pwm <= 1'b0;
+           softpower_pwm_off_time <= softpower_pwm_off_time1;
+       end
+       else begin
+           if (soft_start_cnt == softpower_pwm_cycles1) begin
+               softpower_pwm_off_time <= softpower_pwm_off_time2;
+               soft_start_cnt <= soft_start_cnt + 16'd1;
+           end
+           else if (soft_start_cnt == softpower_pwm_cycles1 + softpower_pwm_cycles2)
+               output_src_pwm <= 1'b0;
+           else begin
+               output_src_pwm <= 1'b1;
+               if (soft_start_pwm == 0)
+                   soft_start_cnt <= soft_start_cnt + 16'd1;
+           end
+       end
    end
 
-   wire targetpower_slow = ~registers_iorouting[42];
-   assign targetpower_off_pwm = (soft_start_pwm < 1400) ? 1'b1 : 1'b0; 
+   wire targetpower_off_pwm = (soft_start_pwm < softpower_pwm_off_time) ? 1'b1 : 1'b0; 
    assign targetpower_off = (output_src_pwm & targetpower_slow) ? targetpower_off_pwm : reg_targetpower_off;
-
-`else
-   assign targetpower_off = reg_targetpower_off;
-
-`endif
 
    assign targetio_highz = reg_targetpower_off;
 
-   wire trigger_advio_glitch;
-   wire trigger_sad_glitch;
-   wire trigger_decodedio_glitch;
-   wire trigger_trace_glitch;
-   wire trigger_adc_glitch;
-   wire trigger_edge_glitch;
-   wire trigger_advio_trace;
-   wire trigger_sad_trace;
-   wire trigger_decodedio_trace;
-   wire trigger_trace_trace;
-   wire trigger_adc_trace;
-   wire trigger_edge_trace;
+   wire [pSEQUENCER_NUM_TRIGGERS-1:0] tc_decodeio_active;
+   wire [pSEQUENCER_NUM_TRIGGERS-1:0] tc_trace_active;
+   wire [pSEQUENCER_NUM_TRIGGERS-1:0] tc_sad_active;
+   wire [pSEQUENCER_NUM_TRIGGERS-1:0] tc_edge_trigger_active;
+   wire [pSEQUENCER_NUM_TRIGGERS-1:0] tc_adc_trigger_active;
 
-   wire trigger_ext_glitch_pulse;
+   wire [pSEQUENCER_NUM_TRIGGERS-1:0] tc_trace_trigger_in_use;
+   wire [pSEQUENCER_NUM_TRIGGERS-1:0] tc_sad_trigger_in_use;
 
-   wire trigger_and;
-   wire trigger_or;
-   wire trigger_ext;
+   wire [pSEQUENCER_NUM_TRIGGERS-1:0] trigger_chooser;
+   wire [pSEQUENCER_NUM_TRIGGERS-1:0] trigger_active;
+   wire [pSEQUENCER_NUM_TRIGGERS-1:0] trigger_ext;
 
-   assign trigger_and = ((registers_cwtrigsrc[0]  & auxio)          | ~registers_cwtrigsrc[0]) &
-                        ((registers_cwtrigsrc[1]  & trigger_nrst_i) | ~registers_cwtrigsrc[1]) &
-                        ((registers_cwtrigsrc[2]  & trigger_io1_i)  | ~registers_cwtrigsrc[2]) &
-                        ((registers_cwtrigsrc[3]  & trigger_io2_i)  | ~registers_cwtrigsrc[3]) &
-                        ((registers_cwtrigsrc[4]  & trigger_io3_i)  | ~registers_cwtrigsrc[4]) &
-                        ((registers_cwtrigsrc[5]  & trigger_io4_i)  | ~registers_cwtrigsrc[5]) &
-                        ((registers_cwtrigsrc[8]  & userio_d[0])    | ~registers_cwtrigsrc[8]) &
-                        ((registers_cwtrigsrc[9]  & userio_d[1])    | ~registers_cwtrigsrc[9]) &
-                        ((registers_cwtrigsrc[10] & userio_d[2])    | ~registers_cwtrigsrc[10]) &
-                        ((registers_cwtrigsrc[11] & userio_d[3])    | ~registers_cwtrigsrc[11]) &
-                        ((registers_cwtrigsrc[12] & userio_d[4])    | ~registers_cwtrigsrc[12]) &
-                        ((registers_cwtrigsrc[13] & userio_d[5])    | ~registers_cwtrigsrc[13]) &
-                        ((registers_cwtrigsrc[14] & userio_d[6])    | ~registers_cwtrigsrc[14]) &
-                        ((registers_cwtrigsrc[15] & userio_d[7])    | ~registers_cwtrigsrc[15]);
+   genvar i;
+   generate 
+       for (i = 0; i < pSEQUENCER_NUM_TRIGGERS; i = i + 1) begin
+           trigger_chooser U_trigger_chooser (
+               .I_trigsrc               (registers_cwtrigsrc[i*16 +: 16]),
+               .I_trigmod               (registers_cwtrigmod[i*8 +: 8]),
+                                                              
+               .auxio                   (auxio                     ),
+               .trigger_nrst_i          (trigger_nrst_i            ),
+               .trigger_io1_i           (trigger_io1_i             ),
+               .trigger_io2_i           (trigger_io2_i             ),
+               .trigger_io3_i           (trigger_io3_i             ),
+               .trigger_io4_i           (trigger_io4_i             ),
+               .userio_d                (userio_d                  ),
+                                                              
+               .trigger_advio_i         (trigger_advio_i           ),
+               .trigger_sad_i           (trigger_sad_i             ),
+               .trigger_decodedio_i     (trigger_decodedio_i       ),
+               .trigger_trace_i         (trigger_trace_i           ),
+               .trigger_adc_i           (trigger_adc_i             ),
+               .trigger_edge_i          (trigger_edge_i            ),
+                                                              
+               .O_decodeio_active       (tc_decodeio_active[i]     ),
+               .O_trace_active          (tc_trace_active[i]        ),
+               .O_sad_active            (tc_sad_active[i]          ),
+               .O_edge_trigger_active   (tc_edge_trigger_active[i] ),
+               .O_adc_trigger_active    (tc_adc_trigger_active[i]  ),
 
-   assign trigger_or  = (registers_cwtrigsrc[0]  & auxio)          |
-                        (registers_cwtrigsrc[1]  & trigger_nrst_i) |
-                        (registers_cwtrigsrc[2]  & trigger_io1_i)  |
-                        (registers_cwtrigsrc[3]  & trigger_io2_i)  |
-                        (registers_cwtrigsrc[4]  & trigger_io3_i)  |
-                        (registers_cwtrigsrc[5]  & trigger_io4_i)  |
-                        (registers_cwtrigsrc[8]  & userio_d[0])    |
-                        (registers_cwtrigsrc[9]  & userio_d[1])    |
-                        (registers_cwtrigsrc[10] & userio_d[2])    |
-                        (registers_cwtrigsrc[11] & userio_d[3])    |
-                        (registers_cwtrigsrc[12] & userio_d[4])    |
-                        (registers_cwtrigsrc[13] & userio_d[5])    |
-                        (registers_cwtrigsrc[14] & userio_d[6])    |
-                        (registers_cwtrigsrc[15] & userio_d[7]);
+               .O_trace_trigger_in_use  (tc_trace_trigger_in_use[i]),
+               .O_sad_trigger_in_use    (tc_sad_trigger_in_use[i]  ),
 
-   assign trigger_ext =  (registers_cwtrigsrc[7:6] == 2'b00) ? trigger_or :
-                         (registers_cwtrigsrc[7:6] == 2'b01) ? trigger_and : 
-                         (registers_cwtrigsrc[7:6] == 2'b10) ? (~trigger_and) :
-                         1'b0;
+               .O_trigger               (trigger_chooser[i]        ),
 
-   assign trigger_capture = (registers_cwtrigmod[2:0] == 3'b000) ? trigger_ext :
-                            (registers_cwtrigmod[2:0] == 3'b001) ? trigger_advio_i : 
-                            (registers_cwtrigmod[2:0] == 3'b010) ? trigger_sad_i :
-                            (registers_cwtrigmod[2:0] == 3'b011) ? trigger_decodedio_i :
-                            (registers_cwtrigmod[2:0] == 3'b100) ? trigger_trace_i :
-                            (registers_cwtrigmod[2:0] == 3'b101) ? trigger_adc_i :
-                            (registers_cwtrigmod[2:0] == 3'b110) ? trigger_edge_i : 1'b0;
+               .I_active_trigger        (trigger_active[i]         ),
+               .I_sad_always_active     (trigger_sequencer_sad_always_active),
+               .trigger_ext             (trigger_ext[i]            )
+           );
+       end
+   endgenerate
 
-   assign trigger_glitch  = (registers_cwtrigmod[2:0] == 3'b000) ? trigger_ext_glitch_pulse :
-                            (registers_cwtrigmod[2:0] == 3'b001) ? trigger_advio_glitch : 
-                            (registers_cwtrigmod[2:0] == 3'b010) ? trigger_sad_glitch :
-                            (registers_cwtrigmod[2:0] == 3'b011) ? trigger_decodedio_glitch :
-                            (registers_cwtrigmod[2:0] == 3'b100) ? trigger_trace_glitch :
-                            (registers_cwtrigmod[2:0] == 3'b101) ? trigger_adc_glitch :
-                            (registers_cwtrigmod[2:0] == 3'b110) ? trigger_edge_glitch : 1'b0;
+   wire trigger_sequencer_out;
+   wire too_late;
+   trigger_sequencer #(
+       .pNUM_TRIGGERS                  (pSEQUENCER_NUM_TRIGGERS),
+       .pCOUNTER_WIDTH                 (pSEQUENCER_COUNTER_WIDTH)
+   ) U_trigger_sequencer (
+       .adc_clk                        (adc_sample_clk),
+       .armed_and_ready                (armed_and_ready),
+       .I_bypass                       (~trigger_sequencer_on),
+       .I_trigger                      (trigger_chooser),
+       .I_min_wait                     (reg_seq_triggers_minmax[(pSEQUENCER_NUM_TRIGGERS-1)*pSEQUENCER_COUNTER_WIDTH-1:0]),
+       .I_max_wait                     (reg_seq_triggers_minmax[(pSEQUENCER_NUM_TRIGGERS-1)*pSEQUENCER_COUNTER_WIDTH*2-1:(pSEQUENCER_NUM_TRIGGERS-1)*pSEQUENCER_COUNTER_WIDTH]),
+       .I_last_trigger                 (trigger_sequencer_num_triggers),
+       .O_trigger                      (trigger_sequencer_out),
+       .O_active_trigger               (trigger_active),
+       .debug                          (sequencer_debug),
+       .debug2                         (sequencer_debug2),
+       .debug3                         (seq_trace_sad_debug),
+       .sad_active                     (sad_active)
+   );
 
-   assign trigger_trace   = (registers_cwtrigmod[2:0] == 3'b000) ? trigger_ext :
-                            (registers_cwtrigmod[2:0] == 3'b001) ? trigger_advio_trace : 
-                            (registers_cwtrigmod[2:0] == 3'b010) ? trigger_sad_trace :
-                            (registers_cwtrigmod[2:0] == 3'b011) ? trigger_decodedio_trace :
-                            (registers_cwtrigmod[2:0] == 3'b100) ? trigger_trace_trace :
-                            (registers_cwtrigmod[2:0] == 3'b101) ? trigger_adc_trace :
-                            (registers_cwtrigmod[2:0] == 3'b110) ? trigger_edge_trace : 1'b0;
 
-   trigger_pulse_cdc #(
-       .pWIDTH (6)
-   ) U_trigger_pulse_glitch (
+   wire [3:0] uart_chooser = reg_uart_edge_chooser[7:4];
+   wire [3:0] edge_chooser = reg_uart_edge_chooser[3:0];
+   wire trigger_sequencer_on = reg_seq_triggers_config[7];
+   wire trigger_sequencer_sad_always_active = reg_seq_triggers_config[6];
+   wire [3:0] trigger_sequencer_num_triggers = reg_seq_triggers_config[3:0];
+
+   assign uart_trigger_line = (trigger_sequencer_on)? trigger_ext[uart_chooser] : trigger_ext[0];
+   assign edge_trigger_line = (trigger_sequencer_on)? trigger_ext[edge_chooser] : trigger_ext[0];
+
+   wire trigger_glitch_pulse;
+   wire trigger_trace_pulse;
+   cdc_pulse U_trigger_pulse_glitch (
        .reset_i       (reset),
        .src_clk       (adc_sample_clk),
        .dst_clk       (glitch_mmcm1_clk_out),
-       .trigger_src   ({trigger_advio_i,
-                        trigger_sad_i,
-                        trigger_decodedio_i,
-                        trigger_trace_i,
-                        trigger_adc_i,
-                        trigger_edge_i}),
-       .trigger_dst   ({trigger_advio_glitch,
-                        trigger_sad_glitch,
-                        trigger_decodedio_glitch,
-                        trigger_trace_glitch,
-                        trigger_adc_glitch,
-                        trigger_edge_glitch})
+       .src_pulse     ((trigger_sequencer_on)? trigger_sequencer_out : trigger_chooser[0] ),
+       .dst_pulse     (trigger_glitch_pulse)
    );
 
-   trigger_pulse_cdc #(
-       .pWIDTH (6)
-   ) U_trigger_pulse_trace (
+   cdc_pulse U_trigger_pulse_trace (
        .reset_i       (reset),
        .src_clk       (adc_sample_clk),
        .dst_clk       (trace_fe_clk),
-       .trigger_src   ({trigger_advio_i,
-                        trigger_sad_i,
-                        trigger_decodedio_i,
-                        trigger_trace_i,
-                        trigger_adc_i,
-                        trigger_edge_i}),
-       .trigger_dst   ({trigger_advio_trace,
-                        trigger_sad_trace,
-                        trigger_decodedio_trace,
-                        trigger_trace_trace,
-                        trigger_adc_trace,
-                        trigger_edge_trace})
+       .src_pulse     ((trigger_sequencer_on)? trigger_sequencer_out : trigger_chooser[0] ),
+       .dst_pulse     (trigger_trace_pulse)
    );
 
    // Here we get a bit creative to miminize glitch latency when triggering
@@ -483,19 +505,29 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    // asynchronously, but we want to avoid that here. Moreover we need to
    // glitch only on the rising edge of trigger_ext. So we do this to avoid
    // adding latency:
+   wire trigger_ext_glitch_pulse;
    (* ASYNC_REG = "TRUE" *) reg trigger_ext_pipe;
    reg trigger_ext_r;
    always @(negedge glitch_mmcm1_clk_out)
-       {trigger_ext_r, trigger_ext_pipe} <= {trigger_ext_pipe, trigger_ext};
-   assign trigger_ext_glitch_pulse = trigger_ext & ~trigger_ext_r;
+       {trigger_ext_r, trigger_ext_pipe} <= {trigger_ext_pipe, trigger_ext[0]};
+   assign trigger_ext_glitch_pulse = trigger_ext[0] & ~trigger_ext_r;
+
+   assign trigger_glitch = (~trigger_sequencer_on && (registers_cwtrigmod[2:0] == 3'b000))? trigger_ext_glitch_pulse : trigger_glitch_pulse;
+   assign trigger_trace  = (~trigger_sequencer_on && (registers_cwtrigmod[2:0] == 3'b000))? trigger_ext[0] : trigger_trace_pulse;
 
 
-   assign decodeio_active = (registers_cwtrigmod[2:0] == 3'b011);
-   assign sad_active = (registers_cwtrigmod[2:0] == 3'b010);
-   assign edge_trigger_active = (registers_cwtrigmod[2:0] == 3'b110);
-   assign trigger_ext_o = trigger_ext;
+   assign decodeio_active       = (trigger_sequencer_on)? |tc_decodeio_active : tc_decodeio_active[0];
+   assign trace_active          = (trigger_sequencer_on)? |tc_trace_active : tc_trace_active[0];
+   assign sad_active            = (trigger_sequencer_on)? |tc_sad_active : tc_sad_active[0];
+   assign edge_trigger_active   = (trigger_sequencer_on)? |tc_edge_trigger_active : tc_edge_trigger_active[0];
+   assign adc_trigger_active    = (trigger_sequencer_on)? |tc_adc_trigger_active : tc_adc_trigger_active[0];
 
-   assign trig_glitch_o_mcx = registers_cwauxio[1] ? glitchclk : trigger_capture;
+   assign trace_trigger_in_use  = |tc_trace_trigger_in_use;
+   assign sad_trigger_in_use    = |tc_sad_trigger_in_use;
+
+   wire trig_glitch_pre = registers_cwauxio[1] ? glitchclk : trigger_capture;
+   assign trig_glitch_o_mcx = registers_cwauxio[2] ? ~trig_glitch_pre : trig_glitch_pre;
+   assign trigger_capture = trigger_sequencer_out;
 
 
 /* IO Routing */
@@ -521,7 +553,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
                          registers_iorouting[24 + 0] ? uart_tx_i :
                          registers_iorouting[24 + 7] ? registers_iorouting[24 + 6] :
                          1'bZ;
- 
+
    assign uart_rx_o = registers_iorouting[0 + 1] ? targetio1_io :
                       registers_iorouting[8 + 1] ? targetio2_io :
                       registers_iorouting[16 + 1] ? targetio3_io :
@@ -531,6 +563,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
    assign enable_output_nrst = registers_iorouting[48];
    assign output_nrst = registers_iorouting[49];
+   assign nrst_ignore_highz = registers_iorouting[54];
    assign enable_output_pdid = registers_iorouting[50];
    assign output_pdid = registers_iorouting[51];
    assign enable_output_pdic = registers_iorouting[52];
@@ -540,10 +573,12 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
       if (reset) begin
          registers_ioread <= 4'b0000;
       end else begin
+         registers_ioread[9:8] <= {target_SCK, target_nRST};
+         registers_ioread[7:4] <= {target_PDID, target_PDIC, target_MISO, target_MOSI};
          registers_ioread[3:0] <= {targetio4_io, targetio3_io, targetio2_io, targetio1_io};
       end
    end
-  
+
 
    reg [7:0] reg_datao_reg;
    assign reg_datao = reg_datao_reg;
@@ -552,12 +587,12 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    always @(*) begin
       if (reg_read) begin
          case (reg_address)
-           `CW_AUX_IO:                  reg_datao_reg = {6'b0, registers_cwauxio};
+           `CW_AUX_IO:                  reg_datao_reg = {5'b0, registers_cwauxio};
            `CW_EXTCLK_ADDR:             reg_datao_reg = registers_cwextclk; 
            `CW_TRIGSRC_ADDR:            reg_datao_reg = registers_cwtrigsrc[reg_bytecnt*8 +: 8]; 
-           `CW_TRIGMOD_ADDR:            reg_datao_reg = registers_cwtrigmod; 
+           `CW_TRIGMOD_ADDR:            reg_datao_reg = registers_cwtrigmod[reg_bytecnt*8 +: 8];
            `CW_IOROUTE_ADDR:            reg_datao_reg = registers_iorouting[reg_bytecnt*8 +: 8];
-           `CW_IOREAD_ADDR:             reg_datao_reg = {4'b0000, registers_ioread};
+           `CW_IOREAD_ADDR:             reg_datao_reg = registers_ioread[reg_bytecnt*8 +: 8];
 
            `USERIO_CW_DRIVEN:           reg_datao_reg = userio_cwdriven[reg_bytecnt*8 +: 8];
            `USERIO_DEBUG_DRIVEN:        reg_datao_reg = {5'b0, userio_target_debug_swd, userio_target_debug, userio_fpga_debug};
@@ -566,6 +601,14 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
            `EXTERNAL_CLOCK:             reg_datao_reg = reg_external_clock;
            `COMPONENTS_EXIST:           reg_datao_reg = {6'b0, trace_exists, la_exists};
+
+           `REG_CW310_SPECIFIC:         reg_datao_reg = {7'b0, cw310_adc_clk_sel};
+           `SOFTPOWER_CONTROL:          reg_datao_reg = reg_softpower_control[reg_bytecnt*8 +: 8];
+
+           `SEQ_TRIGGERS_CONFIG:        reg_datao_reg = reg_seq_triggers_config_read[reg_bytecnt*8 +: 8];
+           `SEQ_TRIGGERS_MINMAX:        reg_datao_reg = reg_seq_triggers_minmax[reg_bytecnt*8 +: 8];
+           `SEQ_TRIGGERS_UART_EDGE_CHOOSER: reg_datao_reg = reg_uart_edge_chooser;
+
            default: reg_datao_reg = 0;
          endcase
       end
@@ -573,10 +616,17 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
          reg_datao_reg = 0;
    end
 
+   reg [7:0] reg_seq_triggers_config;
+   wire [15:0] reg_seq_triggers_config_read;
+   assign reg_seq_triggers_config_read[15:8] = pSEQUENCER_NUM_TRIGGERS;
+   assign reg_seq_triggers_config_read[7:0] = reg_seq_triggers_config;
+   reg [(pSEQUENCER_NUM_TRIGGERS-1)*pSEQUENCER_COUNTER_WIDTH*2 - 1:0]  reg_seq_triggers_minmax;
+   reg [7:0] reg_uart_edge_chooser;
+
    always @(posedge clk_usb) begin
       if (reset) begin
          registers_cwextclk <= 8'b00000011;
-         registers_cwtrigsrc <= 16'b00100000;
+         registers_cwtrigsrc <= {pSEQUENCER_NUM_TRIGGERS{16'b00100000}}; // default to GPIO4
          registers_cwtrigmod <= 0;
          registers_iorouting <= 64'b00000010_00000001;
          reg_userio_cwdriven <= 8'b0;
@@ -586,13 +636,16 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
          userio_drive_data <= 8'b0;
          userio_fpga_debug_select <= 4'b0;
          reg_external_clock <= 1'b0;
-         registers_cwauxio <= 2'b0;
+         cw310_adc_clk_sel <= 1'b0;
+         registers_cwauxio <= 3'b0;
+         reg_softpower_control <= {16'd0, 16'd1995, 16'd2000, 8'd0, 8'd35};
+         reg_seq_triggers_config <= 1; // default to two triggers, sequencer disabled
       end else if (reg_write) begin
          case (reg_address)
-           `CW_AUX_IO: registers_cwauxio <= reg_datai[1:0];
+           `CW_AUX_IO: registers_cwauxio <= reg_datai[2:0];
            `CW_EXTCLK_ADDR: registers_cwextclk <= reg_datai;
            `CW_TRIGSRC_ADDR: registers_cwtrigsrc[reg_bytecnt*8 +: 8] <= reg_datai;
-           `CW_TRIGMOD_ADDR: registers_cwtrigmod <= reg_datai;
+           `CW_TRIGMOD_ADDR: registers_cwtrigmod[reg_bytecnt*8 +: 8] <= reg_datai;
            `CW_IOROUTE_ADDR: registers_iorouting[reg_bytecnt*8 +: 8] <= reg_datai;
 
            `USERIO_CW_DRIVEN: reg_userio_cwdriven[reg_bytecnt*8 +: 8] <= reg_datai;
@@ -601,6 +654,14 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
            `USERIO_DRIVE_DATA: userio_drive_data[reg_bytecnt*8 +: 8] <= reg_datai;
 
            `EXTERNAL_CLOCK: reg_external_clock <= reg_datai[0];
+
+           `REG_CW310_SPECIFIC: cw310_adc_clk_sel <= reg_datai[0];
+           `SOFTPOWER_CONTROL: reg_softpower_control[reg_bytecnt*8 +: 8] <= reg_datai;
+
+           `SEQ_TRIGGERS_CONFIG: reg_seq_triggers_config <= reg_datai;
+           `SEQ_TRIGGERS_MINMAX: reg_seq_triggers_minmax[reg_bytecnt*8 +: 8] <= reg_datai;
+           `SEQ_TRIGGERS_UART_EDGE_CHOOSER: reg_uart_edge_chooser <= reg_datai;
+
            default: ;
          endcase
       end

@@ -60,6 +60,7 @@ reg [7:0] rdata;
 wire [7:0] usb_data;
 reg  [7:0] usb_wdata;
 reg  [7:0] usb_addr;
+reg  [7:0] usb_bytecount;
 reg        usb_rdn;
 reg        usb_wrn;
 reg        usb_cen;

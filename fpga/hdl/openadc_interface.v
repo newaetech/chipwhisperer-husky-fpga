@@ -26,11 +26,19 @@ module openadc_interface #(
    parameter pBYTECNT_SIZE = 7
 )(
     input  wire                         clk_usb, // 96 MHz
+    input  wire                         ADC_slow_clk_even,      // used by sad_x2_slowclock only
+    input  wire                         ADC_slow_clk_odd,       // used by sad_x2_slowclock only
+    input  wire                         ADC_slow_clk1,          // used by sad_x4_slowclock only
+    input  wire                         ADC_slow_clk2,          // used by sad_x4_slowclock only
+    input  wire                         ADC_slow_clk3,          // used by sad_x4_slowclock only
+    input  wire                         ADC_slow_clk4,          // used by sad_x4_slowclock only
     output wire                         reset_o,
+    input  wire                         xadc_error,
 
     output reg                          LED_armed, // Armed LED
     output reg                          LED_capture, // Capture in Progress LED (only illuminate during capture, very quick)
     output reg                          freq_measure,
+    output wire                         O_disable_adc_error,
 
     // OpenADC Interface Pins
     input  wire [11:0]                  ADC_data,
@@ -41,12 +49,17 @@ module openadc_interface #(
     input  wire                         DUT_trigger_i,
     input  wire                         trigger_io4_i, // debug only
     input  wire                         sad_active,
+    input  wire                         sad_trigger_in_use,
     input  wire                         edge_trigger_active,
+    input  wire                         adc_trigger_active,
     output reg                          trigger_adc,
     output wire                         trigger_sad,
     output wire                         trigger_edge_counter,
     output wire                         amp_gain,
     output wire [7:0]                   fifo_dout,
+    input  wire                         trace_flushing,
+    input  wire                         la_flushing,
+    input  wire                         shared_fifo_empty,
 
     // register interface
     input  wire [7:0]                   reg_address,
@@ -68,10 +81,60 @@ module openadc_interface #(
     // for UART triggering:
     output wire                         cmd_arm_usb,
 
+`ifdef PRO
+    // DDR3 (Pro) stuff:
+    output wire                         O_xo_en,
+    output wire                         O_vddr_enable,
+    input  wire                         I_vddr_pgood,
+
+    output wire [15:0]                  ddr3_addr,
+    output wire [2:0]                   ddr3_ba,
+    output wire                         ddr3_cas_n,
+    output wire                         ddr3_ck_n,
+    output wire                         ddr3_ck_p,
+    output wire                         ddr3_cke,
+    output wire                         ddr3_ras_n,
+    output wire                         ddr3_reset_n,
+    output wire                         ddr3_we_n,
+    inout  wire [7:0]                   ddr3_dq,
+    inout  wire                         ddr3_dqs_n,
+    inout  wire                         ddr3_dqs_p,
+    output wire                         ddr3_dm,
+    output wire                         ddr3_cs_n,
+    output wire                         ddr3_odt,
+    input  wire [11:0]                  temp_out,
+
+    // for LA and trace in Pro:
+    output wire                         ui_clk,
+    output wire                         preddr_trace_rd,
+    input  wire [63:0]                  preddr_trace_data,
+    input  wire                         preddr_trace_empty,
+    output wire                         preddr_la_rd,
+    input  wire [63:0]                  preddr_la_data,
+    input  wire                         preddr_la_empty,
+    input  wire                         capture_go_trace,
+    input  wire                         capture_go_la,
+    input  wire                         write_done_trace,
+    input  wire                         write_done_la,
+    output wire                         clear_fifo_errors,
+    input  wire [1:0]                   trace_fifo_errors,
+    input  wire [1:0]                   la_fifo_errors,
+    input  wire                         tb_ui_clk,
+    `ifdef CW310
+        input wire                      ADC_clk_fbp,
+        input wire                      ADC_clk_fbn,
+    `endif
+`endif
+
+    // for trigger sequencing:
+    output wire                         armed_and_ready,
+
     // for debug only:
     output wire                         slow_fifo_wr,
     output wire                         slow_fifo_rd,
     output wire [8:0]                   la_debug,
+    output wire [7:0]                   la_debug2,
+    output wire [7:0]                   sad_debug,
     output wire [7:0]                   fifo_debug,
     output wire [7:0]                   edge_trigger_debug
 
@@ -84,23 +147,45 @@ module openadc_interface #(
     wire       adc_capture_done;
     wire       reset;
 
+    wire       fast_fifo_empty;
     wire       fifo_stream;
     wire [15:0] num_segments;
     wire [19:0] segment_cycles;
     wire        segment_cycle_counter_en;
     wire [1:0]  led_select;
     wire       data_source_select;
-    wire [8:0] fifo_error_stat;
-    wire [8:0] fifo_first_error_stat;
+    wire [13:0] fifo_error_stat;
+    wire [13:0] fifo_first_error_stat;
     wire [2:0] fifo_first_error_state;
     wire       no_clip_errors;
     wire       no_gain_errors;
-    wire       clip_test;
-    wire       clear_fifo_errors;
     wire       capture_done;
-    wire       armed_and_ready;
     wire [2:0] fifo_state;
-    wire       fifo_rst;
+    wire [2:0] ddr_state;
+    wire       trigger_too_soon;
+    wire       adc_flushing;
+    wire       postddr_flush;
+
+    wire         single_write;
+    wire         single_read;
+    wire [29:0]  single_address;
+    wire [63:0]  single_write_data;
+    wire [63:0]  single_read_data;
+    wire         ddr_read_data_done;
+    wire [29:0]  ddr_la_start_address;
+    wire [29:0]  ddr_trace_start_address;
+    wire         ddr_start_la_read;
+    wire         ddr_start_trace_read;
+    wire         ddr_start_adc_read;
+    wire         ddr_single_done;
+    wire         ddr_write_data_done;
+
+    wire [6:0] ddr_stat;
+    wire       ddr_test_pass;
+    wire       ddr_test_fail;
+    wire       ddr_test_clear_fail;
+    wire       ddr_rwtest_en;
+    wire       use_ddr;
 
     assign reset_o = reset;
 
@@ -109,6 +194,11 @@ module openadc_interface #(
    wire extclk_monitor_disabled;
    wire [31:0] extclk_limit;
 
+`ifndef PRO
+    wire       clear_fifo_errors;
+    wire       preddr_trace_empty = 1'b1;
+    wire       preddr_la_empty = 1'b1;
+`endif
 
    //Divide clock by 2^24 for heartbeat LED
    //Divide clock by 2^23 for frequency measurement
@@ -172,14 +262,24 @@ module openadc_interface #(
    end
 
    wire freq_measure_adc;
+   wire freq_measure_ui;
+   wire freq_measure_pll;
    wire freq_measure_ext;
-   wire freq_measure_back;
+
    cdc_pulse U_freq_measure_adc (
       .reset_i       (reset),
       .src_clk       (clk_usb),
       .src_pulse     (freq_measure),
       .dst_clk       (ADC_clk_sample),
       .dst_pulse     (freq_measure_adc)
+   );
+
+   cdc_pulse U_freq_measure_pll (
+      .reset_i       (reset),
+      .src_clk       (clk_usb),
+      .src_pulse     (freq_measure),
+      .dst_clk       (pll_fpga_clk),
+      .dst_pulse     (freq_measure_pll)
    );
 
    cdc_pulse U_freq_measure_ext (
@@ -190,20 +290,73 @@ module openadc_interface #(
       .dst_pulse     (freq_measure_ext)
    );
 
-   // by going back to USB clock we'll know if DUT_CLK_i is alive
+   // ...and CDC the above pulses back to USB so we know if they're alive!
+   wire freq_measure_adc_back;
+   wire freq_measure_ui_back;
+   wire freq_measure_pll_back;
+   wire freq_measure_ext_back;
+
+   cdc_pulse U_freq_measure_adc_back (
+      .reset_i       (reset),
+      .src_clk       (ADC_clk_sample),
+      .src_pulse     (freq_measure_adc),
+      .dst_clk       (clk_usb),
+      .dst_pulse     (freq_measure_adc_back)
+   );
+
+   cdc_pulse U_freq_measure_pll_back (
+      .reset_i       (reset),
+      .src_clk       (pll_fpga_clk),
+      .src_pulse     (freq_measure_pll),
+      .dst_clk       (clk_usb),
+      .dst_pulse     (freq_measure_pll_back)
+   );
+
+
    cdc_pulse U_freq_measure_ext_back (
       .reset_i       (reset),
       .src_clk       (DUT_CLK_i),
       .src_pulse     (freq_measure_ext),
       .dst_clk       (clk_usb),
-      .dst_pulse     (freq_measure_back)
+      .dst_pulse     (freq_measure_ext_back)
    );
 
+   reg adc_back;
+   reg pll_back;
+   reg ext_back;
+   reg adc_alive;
+   reg pll_alive;
+   reg ext_alive;
+
+   always @(posedge clk_usb) begin
+       if (freq_measure) begin
+           adc_back <= 1'b0;
+           pll_back <= 1'b0;
+           ext_back <= 1'b0;
+           if (adc_back) adc_alive <= 1'b1;
+           else          adc_alive <= 1'b0;
+           if (pll_back) pll_alive <= 1'b1;
+           else          pll_alive <= 1'b0;
+           if (ext_back) ext_alive <= 1'b1;
+           else          ext_alive <= 1'b0;
+
+       end
+       else begin
+           if (freq_measure_adc_back) 
+               adc_back <= 1'b1;
+           if (freq_measure_pll_back) 
+               pll_back <= 1'b1;
+           if (freq_measure_ext_back) 
+               ext_back <= 1'b1;
+       end
+   end
 
    reg [31:0] extclk_frequency_int;
    reg [31:0] adcclk_frequency_int;
+   reg [31:0] pllclk_frequency_int;
    reg [31:0] extclk_frequency;
    reg [31:0] adcclk_frequency;
+   reg [31:0] pllclk_frequency;
 
    always @(posedge DUT_CLK_i) begin
       if (freq_measure_ext) begin
@@ -216,7 +369,7 @@ module openadc_interface #(
 
       if (extclk_monitor_disabled)
          extclk_change <= 1'b0;
-      else if (freq_measure_ext && extclk_frequency_int &&
+      else if (freq_measure_ext && (extclk_frequency_int > 0) &&
                ( (extclk_frequency > extclk_frequency_int)?  ((extclk_frequency - extclk_frequency_int) > extclk_limit) :
                                                              ((extclk_frequency_int - extclk_frequency) > extclk_limit) )
               )
@@ -227,7 +380,7 @@ module openadc_interface #(
    always @(posedge clk_usb) begin
        if (extclk_monitor_disabled)
            extclk_change_usb <= 1'b0;
-       else if (freq_measure_back)
+       else if (freq_measure_ext_back)
            extclk_change_usb <= extclk_change;
    end
 
@@ -238,6 +391,72 @@ module openadc_interface #(
       end 
       else begin
          adcclk_frequency_int <= adcclk_frequency_int + 32'd1;
+      end
+   end
+
+   wire [31:0] extclk_frequency_masked = (ext_alive)? extclk_frequency : 32'b0;
+   wire [31:0] adcclk_frequency_masked = (adc_alive)? adcclk_frequency : 32'b0;
+   wire [31:0] pllclk_frequency_masked = (pll_alive)? pllclk_frequency : 32'b0;
+
+`ifdef PRO
+   reg [31:0] uiclk_frequency_int;
+   reg [31:0] uiclk_frequency;
+
+   always @(posedge ui_clk) begin
+      if (freq_measure_ui) begin
+         uiclk_frequency_int <= 32'd1;
+         uiclk_frequency <= uiclk_frequency_int;
+      end 
+      else begin
+         uiclk_frequency_int <= uiclk_frequency_int + 32'd1;
+      end
+   end
+
+   reg ui_back;
+   reg ui_alive;
+
+   always @(posedge clk_usb) begin
+       if (freq_measure) begin
+           ui_back <= 1'b0;
+           if (ui_back) ui_alive <= 1'b1;
+           else         ui_alive <= 1'b0;
+       end
+       else begin
+           if (freq_measure_ui_back) 
+               ui_back <= 1'b1;
+       end
+   end
+
+   wire [31:0] uiclk_frequency_masked = (ui_alive)? uiclk_frequency : 32'b0;
+
+   cdc_pulse U_freq_measure_ui (
+      .reset_i       (reset),
+      .src_clk       (clk_usb),
+      .src_pulse     (freq_measure),
+      .dst_clk       (ui_clk),
+      .dst_pulse     (freq_measure_ui)
+   );
+
+   cdc_pulse U_freq_measure_ui_back (
+      .reset_i       (reset),
+      .src_clk       (ui_clk),
+      .src_pulse     (freq_measure_ui),
+      .dst_clk       (clk_usb),
+      .dst_pulse     (freq_measure_ui_back)
+   );
+
+
+`else
+   wire [31:0] uiclk_frequency_masked = 32'b0;
+`endif // PRO
+
+   always @(posedge pll_fpga_clk) begin
+      if (freq_measure_pll) begin
+         pllclk_frequency_int <= 32'd1;
+         pllclk_frequency <= pllclk_frequency_int;
+      end 
+      else begin
+         pllclk_frequency_int <= pllclk_frequency_int + 32'd1;
       end
    end
 
@@ -283,34 +502,36 @@ module openadc_interface #(
       .capture_go_o         (capture_go),
       .capture_done_i       (adc_capture_done),
       .armed_and_ready      (armed_and_ready),
+      .trigger_too_soon     (trigger_too_soon),
 
-      .fifo_rst             (fifo_rst),
       .cmd_arm_usb          (cmd_arm_usb),
+      .debug2               (la_debug2),
       .la_debug             (la_debug)
    );
    
-   reg trigger_adc_allowed;
+   reg triggered;
    reg armed_and_ready_r;
    // ADC trigger is simple except that we only want a single trigger generated:
    always @(posedge ADC_clk_sample) begin
        if (reset) begin
-           trigger_adc_allowed <= 1'b0;
+           triggered <= 1'b0;
            trigger_adc <= 1'b0;
            armed_and_ready_r <= 1'b0;
        end
        else begin
            armed_and_ready_r <= armed_and_ready;
 
-           if (trigger_adc_allowed)
+           if (~triggered && adc_trigger_active && armed_and_ready_r)
                trigger_adc <= trigger_adclevel[11]? ADC_data_tofifo > trigger_adclevel:
                                                     ADC_data_tofifo < trigger_adclevel;
            else
                trigger_adc <= 1'b0;
 
            if (trigger_adc)
-               trigger_adc_allowed <= 1'b0;
+               triggered <= 1'b1;
            else if (armed_and_ready && ~armed_and_ready_r)
-               trigger_adc_allowed <= 1'b1;
+               triggered <= 1'b0;
+
        end
    end
 
@@ -318,7 +539,7 @@ module openadc_interface #(
        ila_adc_trig U_ila_adc_trig (
           .clk            (clk_usb),              // input wire clk
           .probe0         (trigger_adc),          // input wire [0:0]  probe0 
-          .probe1         (trigger_adc_allowed),  // input wire [0:0]  probe1 
+          .probe1         (triggered),            // input wire [0:0]  probe1 
           .probe2         (trigger_adclevel),     // input wire [11:0]  probe2 
           .probe3         (ADC_data_tofifo),      // input wire [11:0]  probe3 
           .probe4         (armed_and_ready)       // input wire [0:0]  probe4 
@@ -360,29 +581,197 @@ module openadc_interface #(
    wire [7:0] underflow_count;
    wire no_underflow_errors;
 
+   wire [15:0]  ddr_test_iteration;
+   wire [7:0]   ddr_test_errors;
+   wire [31:0]  ddr_read_read;
+   wire [31:0]  ddr_read_idle;
+   wire [31:0]  ddr_write_write;
+   wire [31:0]  ddr_write_idle;
+   wire [15:0]  ddr_max_read_stall_count;
+   wire [15:0]  ddr_max_write_stall_count;
+
    assign reg_datao = reg_datao_oadc | reg_datao_fifo | reg_datao_sad | reg_datao_edge;
 
-   sad #(
-       .pBYTECNT_SIZE           (pBYTECNT_SIZE),
-       .pREF_SAMPLES            (32),
-       .pBITS_PER_SAMPLE        (8)
-   ) U_sad (
-       .reset                   (reset        ),
-       .adc_datain              (ADC_data_tofifo[11:4]),
-       .adc_sampleclk           (ADC_clk_sample),
-       .armed_and_ready         (armed_and_ready),
-       .active                  (sad_active   ),
-       .clk_usb                 (clk_usb      ),
-       .reg_address             (reg_address  ),
-       .reg_bytecnt             (reg_bytecnt  ),
-       .reg_datai               (reg_datai    ),
-       .reg_datao               (reg_datao_sad),
-       .reg_read                (reg_read     ),
-       .reg_write               (reg_write    ),
-       .ext_trigger             (DUT_trigger_i),
-       .io4                     (trigger_io4_i),
-       .trigger                 (trigger_sad  )
-   );
+`ifdef PLUS
+    localparam pREF_SAMPLES = 512;
+    localparam pSAD_COUNTER_WIDTH = 14;
+    localparam pNUM_GROUPS = 16;
+`elsif PRO
+    localparam pREF_SAMPLES = 736;
+    localparam pSAD_COUNTER_WIDTH = 14;
+`else
+    localparam pREF_SAMPLES = 512;
+    localparam pSAD_COUNTER_WIDTH = 12;
+    localparam pNUM_GROUPS = 16;
+`endif
+
+`ifdef SAD_X2
+       sad_x2_slowclock #(
+           .pBYTECNT_SIZE           (pBYTECNT_SIZE),
+           .pREF_SAMPLES            (pREF_SAMPLES),
+           .pSAD_COUNTER_WIDTH      (pSAD_COUNTER_WIDTH),
+           .pBITS_PER_SAMPLE        (8)
+       ) U_sad (
+           .reset                   (reset        ),
+           .xadc_error              (xadc_error   ),
+           .adc_datain              (ADC_data_tofifo[11:4]),
+           .adc_sampleclk           (ADC_clk_sample),
+           .slow_clk_even           (ADC_slow_clk_even),
+           .slow_clk_odd            (ADC_slow_clk_odd),
+           .armed_and_ready         (armed_and_ready),
+           .active                  (sad_trigger_in_use),
+           .trigger_allowed         (sad_active   ),
+           .clk_usb                 (clk_usb      ),
+           .reg_address             (reg_address  ),
+           .reg_bytecnt             (reg_bytecnt  ),
+           .reg_datai               (reg_datai    ),
+           .reg_datao               (reg_datao_sad),
+           .reg_read                (reg_read     ),
+           .reg_write               (reg_write    ),
+           .ext_trigger             (DUT_trigger_i),
+           .io4                     (trigger_io4_i),
+           .trigger                 (trigger_sad  )
+       );
+
+`elsif  SAD_X4
+       sad_x4_slowclock #(
+           .pBYTECNT_SIZE           (pBYTECNT_SIZE),
+           .pREF_SAMPLES            (pREF_SAMPLES),
+           .pSAD_COUNTER_WIDTH      (pSAD_COUNTER_WIDTH),
+           .pBITS_PER_SAMPLE        (8)
+       ) U_sad (
+           .reset                   (reset        ),
+           .xadc_error              (xadc_error   ),
+           .adc_datain              (ADC_data_tofifo[11:4]),
+           .adc_sampleclk           (ADC_clk_sample),
+           .slow_clk1               (ADC_slow_clk1),
+           .slow_clk2               (ADC_slow_clk2),
+           .slow_clk3               (ADC_slow_clk3),
+           .slow_clk4               (ADC_slow_clk4),
+           .armed_and_ready         (armed_and_ready),
+           .active                  (sad_trigger_in_use),
+           .trigger_allowed         (sad_active   ),
+           .clk_usb                 (clk_usb      ),
+           .reg_address             (reg_address  ),
+           .reg_bytecnt             (reg_bytecnt  ),
+           .reg_datai               (reg_datai    ),
+           .reg_datao               (reg_datao_sad),
+           .reg_read                (reg_read     ),
+           .reg_write               (reg_write    ),
+           .ext_trigger             (DUT_trigger_i),
+           .io4                     (trigger_io4_i),
+           .trigger                 (trigger_sad  )
+       );
+
+
+`elsif  SAD_X2B
+       sad_x2 #(
+           .pBYTECNT_SIZE           (pBYTECNT_SIZE),
+           .pREF_SAMPLES            (pREF_SAMPLES),
+           .pSAD_COUNTER_WIDTH      (pSAD_COUNTER_WIDTH),
+           .pBITS_PER_SAMPLE        (8)
+       ) U_sad (
+           .reset                   (reset        ),
+           .xadc_error              (xadc_error   ),
+           .adc_datain              (ADC_data_tofifo[11:4]),
+           .adc_sampleclk           (ADC_clk_sample),
+           .armed_and_ready         (armed_and_ready),
+           .active                  (sad_trigger_in_use),
+           .trigger_allowed         (sad_active   ),
+           .clk_usb                 (clk_usb      ),
+           .reg_address             (reg_address  ),
+           .reg_bytecnt             (reg_bytecnt  ),
+           .reg_datai               (reg_datai    ),
+           .reg_datao               (reg_datao_sad),
+           .reg_read                (reg_read     ),
+           .reg_write               (reg_write    ),
+           .ext_trigger             (DUT_trigger_i),
+           .io4                     (trigger_io4_i),
+           .trigger                 (trigger_sad  )
+       );
+
+`elsif SAD_SINGLE
+       sad_single_counter #(
+           .pBYTECNT_SIZE           (pBYTECNT_SIZE),
+           .pREF_SAMPLES            (pREF_SAMPLES),
+           .pSAD_COUNTER_WIDTH      (pSAD_COUNTER_WIDTH),
+           .pBITS_PER_SAMPLE        (8)
+       ) U_sad (
+           .reset                   (reset        ),
+           .xadc_error              (xadc_error   ),
+           .adc_datain              (ADC_data_tofifo[11:4]),
+           .adc_sampleclk           (ADC_clk_sample),
+           .armed_and_ready         (armed_and_ready),
+           .active                  (sad_trigger_in_use),
+           .trigger_allowed         (sad_active   ),
+           .clk_usb                 (clk_usb      ),
+           .reg_address             (reg_address  ),
+           .reg_bytecnt             (reg_bytecnt  ),
+           .reg_datai               (reg_datai    ),
+           .reg_datao               (reg_datao_sad),
+           .reg_read                (reg_read     ),
+           .reg_write               (reg_write    ),
+           .ext_trigger             (DUT_trigger_i),
+           .io4                     (trigger_io4_i),
+           .trigger                 (trigger_sad  )
+       );
+
+`elsif ESAD
+       esad #(
+           .pBYTECNT_SIZE           (pBYTECNT_SIZE),
+           .pREF_SAMPLES            (pREF_SAMPLES),
+           .pSAD_COUNTER_WIDTH      (pSAD_COUNTER_WIDTH),
+           .pBITS_PER_SAMPLE        (8),
+           .pNUM_GROUPS             (pNUM_GROUPS)
+       ) U_sad (
+           .reset                   (reset        ),
+           .xadc_error              (xadc_error   ),
+           .adc_datain              (ADC_data_tofifo[11:4]),
+           .adc_sampleclk           (ADC_clk_sample),
+           .armed_and_ready         (armed_and_ready),
+           .active                  (sad_trigger_in_use),
+           .trigger_allowed         (sad_active   ),
+           .clk_usb                 (clk_usb      ),
+           .reg_address             (reg_address  ),
+           .reg_bytecnt             (reg_bytecnt  ),
+           .reg_datai               (reg_datai    ),
+           .reg_datao               (reg_datao_sad),
+           .reg_read                (reg_read     ),
+           .reg_write               (reg_write    ),
+           .ext_trigger             (DUT_trigger_i),
+           .io4                     (trigger_io4_i),
+           .sad_debug               (sad_debug    ),
+           .trigger                 (trigger_sad  )
+       );
+
+`else
+       sad #(
+           .pBYTECNT_SIZE           (pBYTECNT_SIZE),
+           .pREF_SAMPLES            (pREF_SAMPLES),
+           .pSAD_COUNTER_WIDTH      (pSAD_COUNTER_WIDTH),
+           .pBITS_PER_SAMPLE        (8),
+           .pNUM_GROUPS             (pNUM_GROUPS)
+       ) U_sad (
+           .reset                   (reset        ),
+           .xadc_error              (xadc_error   ),
+           .adc_datain              (ADC_data_tofifo[11:4]),
+           .adc_sampleclk           (ADC_clk_sample),
+           .armed_and_ready         (armed_and_ready),
+           .active                  (sad_trigger_in_use),
+           .trigger_allowed         (sad_active   ),
+           .clk_usb                 (clk_usb      ),
+           .reg_address             (reg_address  ),
+           .reg_bytecnt             (reg_bytecnt  ),
+           .reg_datai               (reg_datai    ),
+           .reg_datao               (reg_datao_sad),
+           .reg_read                (reg_read     ),
+           .reg_write               (reg_write    ),
+           .ext_trigger             (DUT_trigger_i),
+           .io4                     (trigger_io4_i),
+           .trigger                 (trigger_sad  )
+       );
+`endif
+
 
    edge_trigger #(
        .pBYTECNT_SIZE           (pBYTECNT_SIZE)
@@ -404,7 +793,13 @@ module openadc_interface #(
    );
 
    reg_openadc #(
-      .pBYTECNT_SIZE    (pBYTECNT_SIZE)
+      .pBYTECNT_SIZE            (pBYTECNT_SIZE),
+      .pTRIGGER_FIFO_WIDTH      (32),
+`ifdef PLUS
+      .pTRIGGER_FIFO_DEPTH      (2048)  // TODO: TBD max size
+`else
+      .pTRIGGER_FIFO_DEPTH      (1024)
+`endif
    ) U_reg_openadc (
       .reset_i                      (1'b0),
       .reset_o                      (reset),
@@ -427,13 +822,14 @@ module openadc_interface #(
       .trigger_now                  (trigger_now),
       .trigger_offset               (trigger_offset),
       .trigger_length               (trigger_length),
-      .extclk_frequency             (extclk_frequency),
-      .adcclk_frequency             (adcclk_frequency),
+      .extclk_frequency             (extclk_frequency_masked),
+      .adcclk_frequency             (adcclk_frequency_masked),
+      .uiclk_frequency              (uiclk_frequency_masked),
+      .pllclk_frequency             (pllclk_frequency_masked),
       .presamples_o                 (presamples),
       .maxsamples_i                 (maxsamples_limit),
       .maxsamples_o                 (maxsamples),
       .downsample_o                 (downsample),
-      .data_source_select           (data_source_select),
       .clkblock_dcm_locked_i        (1'b0),
       .clkblock_gen_locked_i        (1'b0),
       .fifo_stream                  (fifo_stream),
@@ -443,40 +839,97 @@ module openadc_interface #(
       .led_select                   (led_select),
       .no_clip_errors               (no_clip_errors),
       .no_gain_errors               (no_gain_errors),
-      .clip_test                    (clip_test),
+      .trigger_event                (capture_go),
 
       .extclk_change                (extclk_change_usb),
       .extclk_monitor_disabled      (extclk_monitor_disabled),
-      .extclk_limit                 (extclk_limit)
+      .extclk_limit                 (extclk_limit),
+      .O_disable_adc_error          (O_disable_adc_error)
    );
+
+`ifndef PRO
+    wire ui_clk = 1'b0;
+    wire [1:0] trace_fifo_errors = 2'b0;
+    wire [1:0] la_fifo_errors = 2'b0;
+    wire O_xo_en;
+    wire O_vddr_enable;
+    wire I_vddr_pgood = 1'b0;
+`endif
 
    reg_openadc_adcfifo #(
       .pBYTECNT_SIZE    (pBYTECNT_SIZE)
    ) U_reg_openadc_adcfifo (
-      .reset_i              (reset),
-      .clk_usb              (clk_usb),
-      .reg_address          (reg_address), 
-      .reg_bytecnt          (reg_bytecnt), 
-      .reg_datao            (reg_datao_fifo), 
-      .reg_datai            (reg_datai), 
-      .reg_read             (reg_read), 
-      .reg_write            (reg_write), 
-      .fifo_state           (fifo_state),
-      .fifo_empty           (fifo_empty),
-      .fifo_rd_en           (fifo_rd_en),
-      .low_res              (low_res),
-      .low_res_lsb          (low_res_lsb),
-      .fast_fifo_read_mode  (fast_fifo_read),
-      .stream_segment_threshold (stream_segment_threshold),
-      .fifo_error_stat      (fifo_error_stat),
-      .fifo_first_error_stat(fifo_first_error_stat),
-      .fifo_first_error_state (fifo_first_error_state),
-      .fifo_read_count      (fifo_read_count),
-      .fifo_read_count_error_freeze (fifo_read_count_error_freeze),
-      .underflow_count      (underflow_count),
-      .no_underflow_errors  (no_underflow_errors),
-      .clear_fifo_errors    (clear_fifo_errors),
-      .capture_done         (capture_done)
+      .reset_i                          (reset),
+      .clk_usb                          (clk_usb),
+      .ui_clk                           (ui_clk),
+      .reg_address                      (reg_address), 
+      .reg_bytecnt                      (reg_bytecnt), 
+      .reg_datao                        (reg_datao_fifo), 
+      .reg_datai                        (reg_datai), 
+      .reg_read                         (reg_read), 
+      .reg_write                        (reg_write), 
+      .state                            ({ddr_state, 1'b0, fifo_state}),
+      .fifo_empty                       (fifo_empty),
+      .fifo_rd_en                       (fifo_rd_en),
+      .low_res                          (low_res),
+      .low_res_lsb                      (low_res_lsb),
+      .fast_fifo_read_mode              (fast_fifo_read),
+      .stream_segment_threshold         (stream_segment_threshold),
+      .fifo_error_stat                  (fifo_error_stat),
+      .fifo_first_error_stat            (fifo_first_error_stat),
+      .fifo_first_error_state           (fifo_first_error_state),
+      .fifo_read_count                  (fifo_read_count),
+      .fifo_read_count_error_freeze     (fifo_read_count_error_freeze),
+      .underflow_count                  (underflow_count),
+      .no_underflow_errors              (no_underflow_errors),
+      .clear_fifo_errors                (clear_fifo_errors),
+      .capture_done                     (capture_done),
+      .O_data_source_select             (data_source_select),
+      .trace_fifo_errors                (trace_fifo_errors),
+      .la_fifo_errors                   (la_fifo_errors),
+      .adc_flushing                     (adc_flushing),
+      .la_flushing                      (la_flushing),
+      .trace_flushing                   (trace_flushing),
+      .postddr_flush                    (postddr_flush),
+
+      .preddr_adc_fifo_empty            (preddr_adc_fifo_empty),
+      .preddr_la_empty                  (preddr_la_empty),
+      .preddr_trace_empty               (preddr_trace_empty),
+      .fast_fifo_empty                  (fast_fifo_empty),
+      .shared_fifo_empty                (shared_fifo_empty),
+
+      .ddr_single_write                 (single_write      ),
+      .ddr_single_read                  (single_read       ),
+      .ddr_single_address               (single_address    ),
+      .ddr_single_write_data            (single_write_data ),
+      .ddr_single_read_data             (single_read_data  ),
+      .ddr_read_data_done               (ddr_read_data_done),
+      .ddr_single_done                  (ddr_single_done   ),
+      .ddr_write_data_done              (ddr_write_data_done ),
+      .ddr_la_start_address             (ddr_la_start_address    ),
+      .ddr_trace_start_address          (ddr_trace_start_address ),
+      .ddr_start_la_read                (ddr_start_la_read    ),
+      .ddr_start_trace_read             (ddr_start_trace_read ),
+      .ddr_start_adc_read               (ddr_start_adc_read   ),
+
+      .O_use_ddr                        (use_ddr                    ),
+      .O_ddr3_rwtest_en                 (ddr_rwtest_en             ),
+      .O_xo_en                          (O_xo_en                    ),
+      .O_vddr_enable                    (O_vddr_enable              ),
+      .I_vddr_pgood                     (I_vddr_pgood               ),
+      .I_ddr3_pass                      (ddr_test_pass             ),
+      .I_ddr3_fail                      (ddr_test_fail             ),
+      .O_ddr3_clear_fail                (ddr_test_clear_fail       ),
+      .I_ddr3_stat                      (ddr_stat                  ),
+      .I_ddr3_iteration                 (ddr_test_iteration        ),
+      .I_ddr3_errors                    (ddr_test_errors           ),
+      .I_ddr3_read_read                 (ddr_read_read             ),
+      .I_ddr3_read_idle                 (ddr_read_idle             ),
+      .I_ddr3_write_write               (ddr_write_write           ),
+      .I_ddr3_write_idle                (ddr_write_idle            ),
+      .I_ddr3_max_read_stall_count      (ddr_max_read_stall_count  ),
+      .I_ddr3_max_write_stall_count     (ddr_max_write_stall_count )
+
    );
 
 
@@ -496,58 +949,280 @@ module openadc_interface #(
    assign amp_gain = PWM_accumulator[8];
 
 
-   fifo_top_husky U_fifo(
-      .reset                    (reset),
+`ifdef SAD_ONLY
+   assign armed_and_ready = 1'b1;
+   wire preddr_adc_fifo_empty = 1'b1;
+`else
 
-      .adc_datain               (ADC_data_tofifo),
-      .adc_sampleclk            (ADC_clk_sample),
-      .capture_active           (capture_active),
-      .capture_go               (capture_go),
-      .adc_capture_stop         (adc_capture_done),
-      .arm_i                    (armed),
-      .arm_usb                  (cmd_arm_usb),
-      .num_segments             (num_segments),
-      .segment_cycles           (segment_cycles),
-      .segment_cycle_counter_en (segment_cycle_counter_en),
+   `ifdef PRO
+       wire         capture_go_adc;
+       wire         write_done_adc;
+       wire         preddr_adc_fifo_rd;
+       wire [63:0]  preddr_adc_fifo_dout;
+       wire         preddr_adc_fifo_empty;
+       wire         preddr_adc_fifo_underflow;
+       wire         postddr_fifo_overflow;
+       wire         postddr_fifo_underflow_masked;
+       wire         error_flag; // TODO: nothing driving this?
+       wire         fifo_overflow_noddr;
+       wire         arm_pulse_usb;
+       wire         reading_too_soon_error;
+       wire         ddr_full_error;
+       wire         source_flushing = adc_flushing || la_flushing || trace_flushing;
 
-      .clk_usb                  (clk_usb),
-      .fifo_read_fifoen         (fifo_rd_en),
-      .fifo_read_fifoempty      (fifo_empty),
-      .fifo_read_data           (fifo_dout),
-      .low_res                  (low_res),
-      .low_res_lsb              (low_res_lsb),
-      .fast_fifo_read_mode      (fast_fifo_read),
-      .stream_segment_threshold (stream_segment_threshold),
+       fifo_top_husky_pro U_fifo (
+          .reset                    (reset),
 
-      .presample_i              (presamples),
-      .max_samples_i            (maxsamples),
-      .max_samples_o            (maxsamples_limit),
-      .downsample_i             (downsample),
+          .adc_datain               (ADC_data_tofifo),
+          .adc_sampleclk            (ADC_clk_sample),
+          .capture_active           (capture_active),
+          .capture_go               (capture_go),
+          .adc_capture_stop         (adc_capture_done),
+          .arm_i                    (armed),
+          .arm_usb                  (cmd_arm_usb),
+          .num_segments             (num_segments),
+          .segment_cycles           (segment_cycles),
+          .segment_cycle_counter_en (segment_cycle_counter_en),
 
-      .fifo_overflow            (fifo_overflow),
-      .stream_mode              (fifo_stream),
-      .error_flag               (fifo_error_flag),
-      .error_stat               (fifo_error_stat),
-      .first_error_stat         (fifo_first_error_stat),
-      .first_error_state        (fifo_first_error_state),
-      .clear_fifo_errors        (clear_fifo_errors),
-      .stream_segment_available (stream_segment_available),
-      .no_clip_errors           (no_clip_errors),
-      .no_gain_errors           (no_gain_errors),
-      .clip_test                (clip_test),
-      .underflow_count          (underflow_count),
-      .no_underflow_errors      (no_underflow_errors),
-      .capture_done             (capture_done),
-      .armed_and_ready          (armed_and_ready),
-      .state                    (fifo_state),
+          .clk_usb                  (clk_usb),
 
-      .slow_fifo_wr             (slow_fifo_wr),
-      .slow_fifo_rd             (slow_fifo_rd),
-      .fifo_read_count          (fifo_read_count),
-      .fifo_read_count_error_freeze (fifo_read_count_error_freeze),
-      .fifo_rst                 (fifo_rst),
-      .debug                    (fifo_debug)
-   );
+          .presample_i              (presamples),
+          .max_samples_i            (maxsamples),
+          .max_samples_o            (maxsamples_limit),
+          .downsample_i             (downsample),
+
+          .fifo_overflow            (fifo_overflow_noddr),
+          .reading_too_soon_error   (reading_too_soon_error),
+          .ddr_full_error           (ddr_full_error),
+          .error_flag               (fifo_error_flag),
+          .error_stat               (fifo_error_stat),
+          .first_error_stat         (fifo_first_error_stat),
+          .first_error_state        (fifo_first_error_state),
+          .clear_fifo_errors        (clear_fifo_errors),
+          .trigger_too_soon         (trigger_too_soon),
+          .no_clip_errors           (no_clip_errors),
+          .no_gain_errors           (no_gain_errors),
+          .underflow_count          (underflow_count),
+          .capture_done             (capture_done),
+          .armed_and_ready          (armed_and_ready),
+          .state                    (fifo_state),
+
+          .ui_clk                   (ui_clk),
+
+          .preddr_trace_empty       (preddr_trace_empty),
+          .preddr_la_empty          (preddr_la_empty),
+
+          // to DDR:
+          .capture_go_ui            (capture_go_adc         ),
+          .write_done_out           (write_done_adc         ),
+          .I_preddr_fifo_rd         (preddr_adc_fifo_rd     ),
+          .preddr_fifo_dout         (preddr_adc_fifo_dout   ),
+          .preddr_fifo_empty        (preddr_adc_fifo_empty  ),
+
+          .ddr_rwtest_en            (ddr_rwtest_en),
+
+          .postddr_fifo_empty       (fifo_empty),
+          .postddr_fifo_overflow    (postddr_fifo_overflow),
+          .postddr_fifo_underflow_masked (postddr_fifo_underflow_masked),
+          .flushing                 (adc_flushing),
+          .fast_fifo_empty          (fast_fifo_empty),
+
+          .preddr_fifo_wr           (slow_fifo_wr),
+          .preddr_fifo_underflow    (preddr_adc_fifo_underflow ),
+          .arm_pulse_usb            (arm_pulse_usb),
+          .debug                    (fifo_debug)
+       );
+
+       wire fifo_overflow_ddr;
+
+
+       ddr U_ddr (
+          .reset                    (reset),
+          .clk_usb                  (clk_usb),
+
+          .postddr_fifo_empty       (fifo_empty),
+          .stream_segment_available (stream_segment_available),
+
+          .fifo_read_fifoen         (fifo_rd_en),
+          .fifo_read_data           (fifo_dout),
+          .low_res                  (low_res),
+          .low_res_lsb              (low_res_lsb),
+          .fast_fifo_read_mode      (fast_fifo_read),
+          .stream_segment_threshold (stream_segment_threshold),
+          .stream_mode              (fifo_stream),
+          .no_underflow_errors      (no_underflow_errors),
+          .max_samples_i            (maxsamples),
+          .arm_pulse_usb            (arm_pulse_usb),
+
+          // ADC signals:
+          .capture_go_adc           (capture_go_adc         ),
+          .write_done_adc           (write_done_adc         ),
+          .preddr_adc_fifo_rd       (preddr_adc_fifo_rd     ),
+          .preddr_adc_fifo_dout     (preddr_adc_fifo_dout   ),
+          .preddr_adc_fifo_empty    (preddr_adc_fifo_empty  ),
+
+          .capture_go_la            (capture_go_la     ),
+          .write_done_la            (write_done_la     ),
+          .preddr_la_fifo_rd        (preddr_la_rd      ),
+          .preddr_la_fifo_dout      (preddr_la_data    ),
+          .preddr_la_fifo_empty     (preddr_la_empty   ),
+
+          .capture_go_trace         (capture_go_trace  ),
+          .write_done_trace         (write_done_trace  ),
+          .preddr_trace_fifo_rd     (preddr_trace_rd   ),
+          .preddr_trace_fifo_dout   (preddr_trace_data ),
+          .preddr_trace_fifo_empty  (preddr_trace_empty),
+
+          .ddr3_addr                (ddr3_addr    ),
+          .ddr3_ba                  (ddr3_ba      ),
+          .ddr3_cas_n               (ddr3_cas_n   ),
+          .ddr3_ck_n                (ddr3_ck_n    ),
+          .ddr3_ck_p                (ddr3_ck_p    ),
+          .ddr3_cke                 (ddr3_cke     ),
+          .ddr3_ras_n               (ddr3_ras_n   ),
+          .ddr3_reset_n             (ddr3_reset_n ),
+          .ddr3_we_n                (ddr3_we_n    ),
+          .ddr3_dq                  (ddr3_dq      ),
+          .ddr3_dqs_n               (ddr3_dqs_n   ),
+          .ddr3_dqs_p               (ddr3_dqs_p   ),
+          .ddr3_dm                  (ddr3_dm      ),
+          .ddr3_cs_n                (ddr3_cs_n    ),
+          .ddr3_odt                 (ddr3_odt     ),
+          .ddr3_stat                (ddr_stat    ),
+          .ddr_test_pass            (ddr_test_pass    ),
+          .ddr_test_fail            (ddr_test_fail    ),
+          .ddr_test_clear_fail      (ddr_test_clear_fail),
+          .ddr_rwtest_en            (ddr_rwtest_en),
+          .use_ddr                  (use_ddr),
+
+          .single_write             (single_write      ),
+          .single_read              (single_read       ),
+          .single_address           (single_address    ),
+          .single_write_data        (single_write_data ),
+          .single_read_data         (single_read_data  ),
+          .ddr_read_data_done       (ddr_read_data_done),
+          .ddr_single_done          (ddr_single_done   ),
+          .ddr_write_data_done      (ddr_write_data_done ),
+          .ddr_la_start_address     (ddr_la_start_address    ),
+          .ddr_trace_start_address  (ddr_trace_start_address ),
+
+          .ddr_start_la_read        (ddr_start_la_read    ),
+          .ddr_start_trace_read     (ddr_start_trace_read ),
+          .ddr_start_adc_read       (ddr_start_adc_read   ),
+
+          .ddr_test_iteration       (ddr_test_iteration        ),
+          .ddr_test_errors          (ddr_test_errors           ),
+          .ddr_read_read            (ddr_read_read             ),
+          .ddr_read_idle            (ddr_read_idle             ),
+          .ddr_write_write          (ddr_write_write           ),
+          .ddr_write_idle           (ddr_write_idle            ),
+          .ddr_max_read_stall_count (ddr_max_read_stall_count  ),
+          .ddr_max_write_stall_count(ddr_max_write_stall_count ),
+
+          .postddr_fifo_overflow    (postddr_fifo_overflow),
+          .fifo_overflow_ddr        (fifo_overflow_ddr),
+          .postddr_fifo_underflow_masked (postddr_fifo_underflow_masked),
+          .preddr_adc_fifo_underflow(preddr_adc_fifo_underflow ),
+          .reading_too_soon_error   (reading_too_soon_error),
+          .ddr_full_error           (ddr_full_error        ),
+          .error_flag               (error_flag            ),
+          .source_flushing          (source_flushing       ),
+          .postddr_flush            (postddr_flush         ),
+
+          .ddr_state                (ddr_state),
+
+          .fifo_read_count          (fifo_read_count),
+          .fifo_read_count_error_freeze (fifo_read_count_error_freeze),
+          .postddr_fifo_rd          (slow_fifo_rd),
+
+          .temp_out                 (temp_out),
+          .ADC_clk_fbp              (ADC_clk_fbp ),
+          .ADC_clk_fbn              (ADC_clk_fbn ),
+          .ui_clk                   (ui_clk),
+          .tb_ui_clk                (tb_ui_clk)
+       );
+       assign fifo_overflow = fifo_overflow_noddr || fifo_overflow_ddr;
+
+
+   `else
+       fifo_top_husky U_fifo(
+          .reset                    (reset),
+
+          .adc_datain               (ADC_data_tofifo),
+          .adc_sampleclk            (ADC_clk_sample),
+          .capture_active           (capture_active),
+          .capture_go               (capture_go),
+          .adc_capture_stop         (adc_capture_done),
+          .arm_i                    (armed),
+          .arm_usb                  (cmd_arm_usb),
+          .num_segments             (num_segments),
+          .segment_cycles           (segment_cycles),
+          .segment_cycle_counter_en (segment_cycle_counter_en),
+
+          .clk_usb                  (clk_usb),
+          .fifo_read_fifoen         (fifo_rd_en),
+          .fifo_read_fifoempty      (fifo_empty),
+          .fifo_read_data           (fifo_dout),
+          .low_res                  (low_res),
+          .low_res_lsb              (low_res_lsb),
+          .fast_fifo_read_mode      (fast_fifo_read),
+          .stream_segment_threshold (stream_segment_threshold),
+
+          .presample_i              (presamples),
+          .max_samples_i            (maxsamples),
+          .max_samples_o            (maxsamples_limit),
+          .downsample_i             (downsample),
+
+          .fifo_overflow            (fifo_overflow),
+          .stream_mode              (fifo_stream),
+          .error_flag               (fifo_error_flag),
+          .error_stat               (fifo_error_stat[9:0]),
+          .first_error_stat         (fifo_first_error_stat[9:0]),
+          .first_error_state        (fifo_first_error_state),
+          .clear_fifo_errors        (clear_fifo_errors),
+          .trigger_too_soon         (trigger_too_soon),
+          .stream_segment_available (stream_segment_available),
+          .no_clip_errors           (no_clip_errors),
+          .no_gain_errors           (no_gain_errors),
+          .underflow_count          (underflow_count),
+          .no_underflow_errors      (no_underflow_errors),
+          .capture_done             (capture_done),
+          .armed_and_ready          (armed_and_ready),
+          .state                    (fifo_state),
+          .flushing                 (adc_flushing),
+          .fast_fifo_empty          (fast_fifo_empty),
+
+          .slow_fifo_wr             (slow_fifo_wr),
+          .slow_fifo_rd             (slow_fifo_rd),
+          .fifo_read_count          (fifo_read_count),
+          .fifo_read_count_error_freeze (fifo_read_count_error_freeze),
+          .debug                    (fifo_debug)
+       );
+
+       assign ddr_test_pass = 0;
+       assign ddr_test_fail = 0;
+       assign ddr_stat = 0;
+       assign ddr_test_iteration = 0;
+       assign ddr_test_errors = 0;
+       assign ddr_read_read = 0;
+       assign ddr_read_idle = 0;
+       assign ddr_write_write = 0;
+       assign ddr_write_idle = 0;
+       assign ddr_max_read_stall_count = 0;
+       assign ddr_max_write_stall_count = 0;
+       assign fifo_error_stat[13:10] = 0;
+       assign fifo_first_error_stat[13:10] = 0;
+       assign ddr_state = 0;
+       assign single_read_data = 0;
+       assign ddr_read_data_done = 0;
+       assign ddr_single_done = 0;
+       assign ddr_write_data_done = 0;
+       assign postddr_flush = 0;
+       wire preddr_adc_fifo_empty = 1'b0;
+
+   `endif
+
+`endif // SAD_ONLY
 
 
 endmodule

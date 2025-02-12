@@ -26,6 +26,7 @@ SEED=1
 TIMEOUT_CYCLES=50000
 DUMP=0
 FIFOSIZE=REGULARFIFO
+DDRSIZE=REGULARDDR
 ERRORS_OK=0
 PRESAMP_ERROR=0
 DOWNSAMPLE=0
@@ -38,10 +39,13 @@ TRIGGERS=1
 FLUSH=0
 THRESHOLD=0
 VERBOSE=0
+DDR_TEST=0
+DDR_TEST_LOOPS=1
+BYPASS_DDR=0
 
-all: compile
+all: compile run
 
-compile:
+nofifo:
 	iverilog -ccmdfile \
 	-g2005-sv \
 	-I../../hdl \
@@ -50,21 +54,56 @@ compile:
 	-Wselect-range \
 	-DNOMIG \
 	-DCW310 \
+	-DPRO \
 	-DNOFIFO \
 	-DTRACE \
 
-
-compile_old:
-	iverilog -ccmdfile_old \
+compile:
+	iverilog -ccmdfile_fifo \
+	../../sim/cwhusky_pro_tb.v \
 	-g2005-sv \
 	-I../../hdl \
+	-I../../sim \
 	-I../../tracewhisperer/hdl/ \
 	-Wportbind \
 	-Wselect-range \
 	-DNOMIG \
 	-DCW310 \
-	-DNOFIFO \
+	-DPRO \
 	-DTRACE \
+	-D$(FIFOSIZE) \
+	-D$(DDRSIZE) \
+	-P cwhusky_tb.pADC_LOW_RES=$(ADC_LOW_RES) \
+	-P cwhusky_tb.pSLOW_ADC=$(SLOW_ADC) \
+	-P cwhusky_tb.pFAST_ADC=$(FAST_ADC) \
+	-P cwhusky_tb.pNOM_ADC=$(NOM_ADC) \
+	-P cwhusky_tb.pFIFO_SAMPLES=$(FIFO_SAMPLES) \
+	-P cwhusky_tb.pPRESAMPLES=$(PRESAMPLES) \
+	-P cwhusky_tb.pOFFSET_ENABLE=$(OFFSET_ENABLE) \
+	-P cwhusky_tb.pOFFSET_MIN=$(OFFSET_MIN) \
+	-P cwhusky_tb.pOFFSET_MAX=$(OFFSET_MAX) \
+	-P cwhusky_tb.pTRIGGER_DELAY=$(TRIGGER_DELAY) \
+	-P cwhusky_tb.pREAD_DELAY=$(READ_DELAY) \
+	-P cwhusky_tb.pNUM_SEGMENTS=$(NUM_SEGMENTS) \
+	-P cwhusky_tb.pNUM_GLITCHES=$(NUM_GLITCHES) \
+	-P cwhusky_tb.pMAX_GLITCH_OFFSET=$(MAX_GLITCH_OFFSET) \
+	-P cwhusky_tb.pMAX_GLITCH_REPEATS=$(MAX_GLITCH_REPEATS) \
+	-P cwhusky_tb.pSHORT_TRIGGER=$(SHORT_TRIGGER) \
+	-P cwhusky_tb.pSEGMENT_CYCLES=$(SEGMENT_CYCLES) \
+	-P cwhusky_tb.pSEGMENT_CYCLE_COUNTER_EN=$(SEGMENT_CYCLE_COUNTER_EN) \
+	-P cwhusky_tb.pTRIGGER_NOW=$(TRIGGER_NOW) \
+	-P cwhusky_tb.pSTREAM=$(STREAM) \
+	-P cwhusky_tb.pSTREAM_SEGMENT_THRESHOLD=$(STREAM_SEGMENT_THRESHOLD) \
+	-P cwhusky_tb.pTIMEOUT_CYCLES=$(TIMEOUT_CYCLES) \
+	-P cwhusky_tb.pERRORS_OK=$(ERRORS_OK) \
+	-P cwhusky_tb.pPRESAMP_ERROR=$(PRESAMP_ERROR) \
+	-P cwhusky_tb.pDOWNSAMPLE=$(DOWNSAMPLE) \
+	-P cwhusky_tb.pDUMP=$(DUMP) \
+	-P cwhusky_tb.pSEED=$(SEED) \
+	-P cwhusky_tb.pDDR_TEST=$(DDR_TEST) \
+	-P cwhusky_tb.pDDR_TEST_LOOPS=$(DDR_TEST_LOOPS) \
+	-P cwhusky_tb.pBYPASS_DDR=$(BYPASS_DDR) \
+	-o $(EXEFILE) \
 
 lint:
 	verilator --lint-only -Wall \
@@ -77,10 +116,19 @@ lint:
 	-D__ICARUS__ \
 	-DNOMIG \
 	-DCW310 \
-	-DNOFIFO \
+	-DPRO \
+	-DNOXILINXFIFO \
 	-DTRACE \
-	--top-module cw310_wrapper \
+	-DLINT \
+	--top-module cwhusky_cw310_top \
 	2>&1 | tee lint.out \
+
+run:
+	vvp -l$(LOGFILE) $(EXEFILE) -$(WAVEFORMAT)
 
 clean:
 	rm -f a.out results/*.vvp
+
+sad_nofifo: compile
+
+compile_edge: compile
