@@ -168,9 +168,10 @@ module cwhusky_top(
    wire [7:0] read_data_adc;
    wire [7:0] read_data_glitch;
    wire [7:0] read_data_xadc;
+   wire [7:0] read_data_userio;
    wire [7:0] read_data_la;
    wire [7:0] read_data_trace;
-   always @(posedge clk_usb_buf) read_data_reg <= read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc | read_data_la | read_data_trace;
+   always @(posedge clk_usb_buf) read_data_reg <= read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc | read_data_la | read_data_trace | read_data_userio;
    //always @(*) read_data_reg = read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc | read_data_la;
    assign read_data = (reg_address == `ADCREAD_ADDR)? fifo_dout : read_data_reg;
 
@@ -214,13 +215,9 @@ module cwhusky_top(
 
    wire flash_pattern;
 
-   wire userio_fpga_debug;
    wire userio_target_debug;
    wire userio_target_debug_swd;
    wire [3:0] userio_fpga_debug_select;
-   wire [pUSERIO_WIDTH-1:0] userio_cwdriven;
-   wire [pUSERIO_WIDTH-1:0] userio_drive_data;
-   wire [pUSERIO_WIDTH-1:0] userio_drive_data_reg;
    wire [pUSERIO_WIDTH-1:0] userio_debug_data;
 
    wire uart_trigger_line;
@@ -591,16 +588,7 @@ module cwhusky_top(
         .uart_rx_o              (FPGA_CDIN),
         .targetpower_off        (target_npower),
 
-        .trace_en               (trace_en),
-        .trace_userio_dir       (trace_userio_dir),
-        .userio_cwdriven        (userio_cwdriven),
-        .userio_drive_data      (userio_drive_data_reg),
-        .userio_fpga_debug      (userio_fpga_debug),
-        .userio_target_debug    (userio_target_debug),
-        .userio_target_debug_swd(userio_target_debug_swd),
-        .userio_fpga_debug_select (userio_fpga_debug_select),
         .userio_d               (USERIO_D),
-        .userio_clk             (USERIO_CLK),
 
         .trace_exists           (trace_exists),
         .la_exists              (la_exists),
@@ -618,23 +606,32 @@ module cwhusky_top(
         .trig_glitch_o_mcx      (TRIG_GLITCHOUT)
    );
 
-   assign userio_drive_data = userio_target_debug? {target_MOSI, // carries TDI on USERIO_D7
-                                                    target_PDID, // carries TMS/SWDIO on USERIO_D6
-                                                    target_SCK,  // carries TCLK/SWDCLK on USERIO_D5
-                                                    5'b0         // USERIO_D4:D0 undriven (TDO input on USERIO_D3)
-                                                   } : userio_drive_data_reg;
-
-   assign USERIO_CLK = userio_target_debug? FPGA_BONUS1 : 1'bz;
-
    userio #(
       .pWIDTH                   (pUSERIO_WIDTH)
    ) U_userio (
+      .reset                    (reg_rst),
       .usb_clk                  (clk_usb_buf),
+
+      .reg_address              (reg_address),
+      .reg_bytecnt              (reg_bytecnt), 
+      .reg_datao                (read_data_userio), 
+      .reg_datai                (write_data), 
+      .reg_read                 (reg_read), 
+      .reg_write                (reg_write), 
+
+      .trace_en                 (trace_en),
+      .trace_userio_dir         (trace_userio_dir),
+      .target_MOSI              (target_MOSI),
+      .target_PDID              (target_PDID),
+      .target_SCK               (target_SCK),
+      .FPGA_BONUS1              (FPGA_BONUS1),
+
+      .userio_fpga_debug_select (userio_fpga_debug_select),
+      .userio_target_debug      (userio_target_debug),
+      .userio_target_debug_swd  (userio_target_debug_swd),
+
       .userio_d                 (USERIO_D),
       .userio_clk               (USERIO_CLK),
-      .I_userio_cwdriven        (userio_cwdriven),
-      .I_userio_fpga_debug      (userio_fpga_debug),
-      .I_userio_drive_data      (userio_drive_data),
       .I_userio_debug_data      (userio_debug_data)
    );
 
