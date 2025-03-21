@@ -54,7 +54,7 @@ VIVADO_VERSION=2020.2
 VARIANT=REGULAR
 SAD=SAD
 EMODE=0
-INTERVAL_MATCHING=0
+INTERVAL_MATCHING=1
 SAD_COUNTER_WIDTH=12
 FIFO_TYPE=NOXILINXFIFO
 NUM_TRIGGERS=4
@@ -278,7 +278,7 @@ nofifo:
 	cwhusky_tb.v 
 
 lint:
-	verilator --lint-only -Wall \
+	verilator --lint-only -Wall --no-timing \
 	--error-limit 0 \
 	-Wno-PINCONNECTEMPTY \
 	-Wno-ASSIGNDLY \
@@ -294,6 +294,7 @@ lint:
 	-DTRACE \
 	-D$(VARIANT) \
 	-D$(SAD) \
+	-DINTERVAL_MATCHING=$(INTERVAL_MATCHING) \
 	--top-module cwhusky_top \
 	2>&1 | tee lint.out \
 
