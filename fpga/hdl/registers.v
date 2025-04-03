@@ -326,6 +326,14 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define USERIO_READ             97
 `define USERIO_DEBUG_SELECT     109
 
+// TODO: temp; combine these two with one of the existing registers (maybe merge a bunch? good opportunity)
+`define USERIO_CLOCK_OUT        57
+`define USERIO_CLKSEL           58
+
+`define USERIO_DRP_ADDR         107
+`define USERIO_DRP_DATA         126
+`define USERIO_DRP_RESET        127
+
 `define CAPTURE_DONE            89
 
 `define FIFO_FIRST_ERROR        90

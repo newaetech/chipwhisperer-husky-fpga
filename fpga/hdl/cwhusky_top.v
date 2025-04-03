@@ -611,6 +611,8 @@ module cwhusky_top(
    ) U_userio (
       .reset                    (reg_rst),
       .usb_clk                  (clk_usb_buf),
+      .target_clk               (target_clk),
+      .pll_shutdown             (xadc_error_flag),
 
       .reg_address              (reg_address),
       .reg_bytecnt              (reg_bytecnt), 
