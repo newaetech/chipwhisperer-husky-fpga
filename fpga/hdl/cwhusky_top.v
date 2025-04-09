@@ -170,7 +170,8 @@ module cwhusky_top(
    wire [7:0] read_data_xadc;
    wire [7:0] read_data_la;
    wire [7:0] read_data_trace;
-   always @(posedge clk_usb_buf) read_data_reg <= read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc | read_data_la | read_data_trace;
+   wire [7:0] read_data_swd;
+   always @(posedge clk_usb_buf) read_data_reg <= read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc | read_data_la | read_data_trace | read_data_swd;
    //always @(*) read_data_reg = read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc | read_data_la;
    assign read_data = (reg_address == `ADCREAD_ADDR)? fifo_dout : read_data_reg;
 
@@ -387,7 +388,8 @@ module cwhusky_top(
                                                                          cmd_arm_usb} : 
                                  (userio_fpga_debug_select == 4'b1100)?  la_debug2 : 
                                  (userio_fpga_debug_select == 4'b1101)?  sequencer_debug :
-                                 (userio_fpga_debug_select == 4'b1110)?  {seq_trace_sad_debug, 3'b0} : seq_trace_sad_debug2;
+                                 //(userio_fpga_debug_select == 4'b1110)?  {seq_trace_sad_debug, 3'b0} : seq_trace_sad_debug2;
+                                 (userio_fpga_debug_select == 4'b1110)?  {seq_trace_sad_debug, 3'b0} : swd_bb_debug;
                                  //(userio_fpga_debug_select == 4'b1010)?  clockglitch_debug3 : 8'b0;
 
    `else
@@ -553,7 +555,7 @@ module cwhusky_top(
         .trigger_advio_i        (1'b0),
         .trigger_decodedio_i    (trace_trig_out),
         .trigger_trace_i        (trace_trig_out),
-        .trigger_adc_i          (trigger_adc),
+        .trigger_adc_i          (trigger_swd),
         .trigger_sad_i          (trigger_sad),
         .trigger_edge_i         (trigger_edge_counter),
         .pll_fpga_clk           (pll_fpga_clk),
@@ -562,7 +564,7 @@ module cwhusky_top(
         .adc_sample_clk         (ADC_clk_fb),
         .trace_fe_clk           (fe_clk),
 
-        .targetio1_io           (target_io1),
+        .targetio1_io           (),
         .targetio2_io           (target_io2),
         .targetio3_io           (target_io3),
         .targetio4_io           (target_io4),
@@ -637,6 +639,56 @@ module cwhusky_top(
       .I_userio_drive_data      (userio_drive_data),
       .I_userio_debug_data      (userio_debug_data)
    );
+
+
+   wire trigger_swd;
+   wire swdio;
+   wire swclk;
+   wire active_output;
+   wire matching;
+   wire matched;
+   wire active;
+   wire compare_en;
+   wire bitrecord;
+
+   assign target_io1 = swdio;
+
+   swd_hw_bb_trig #(
+      .pBYTECNT_SIZE            (pBYTECNT_SIZE),
+      .pPATTERN_DEPTH           (512)
+   ) U_swd_hw_bb_trig (
+      .reset                    (reg_rst       ),
+      .clk_usb                  (clk_usb_buf   ),
+      .reg_address              (reg_address   ),
+      .reg_bytecnt              (reg_bytecnt   ),
+      .reg_datai                (write_data    ),
+      .reg_datao                (read_data_swd ),
+      .reg_read                 (reg_read      ),
+      .reg_write                (reg_write     ),
+                                              
+      .adc_clk                  (ADC_clk_fb    ),
+      .target_hs1               (1'b0          ),
+      .swdio                    (swdio         ),
+      .swclk                    (swclk         ),
+      .trigger_pulse            (trigger_swd   ),
+                                              
+      .active_output            (active_output ),
+      .matching                 (matching      ),
+      .matched                  (matched       ),
+      .active                   (active        ),
+      .compare_en               (compare_en    ),
+      .bitrecord                (bitrecord     )
+   );
+
+   wire [7:0] swd_bb_debug = {1'b0,
+                              bitrecord,
+                              compare_en,
+                              trigger_swd,
+                              active,
+                              active_output,
+                              matching,
+                              matched
+                             };
 
 
 `ifndef SAD_ONLY

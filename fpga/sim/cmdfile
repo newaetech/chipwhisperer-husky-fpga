@@ -23,6 +23,7 @@
 ../hdl/slow_debug.v
 ../hdl/reg_la.v
 ../hdl/userio.v
+../hdl/swd_hw_bb_trig.v
 ../hdl/sad_group_trigger.v
 ../hdl/esad.v
 ../hdl/sad.v
