@@ -78,6 +78,7 @@ module swd_hw_bb_trig #(
     reg [pCOUNTER_WIDTH:0] bit_counter;
     reg continuous_clk = 1'b0;
     reg record_mode = 1'b0;
+    reg trigger_when_matched = 1'b0;
     reg [1:0] swdio_inactive_state = 2'b01;
     reg clk_sel = 1'b0;
     reg trigger_en = 1'b0;
@@ -133,6 +134,7 @@ module swd_hw_bb_trig #(
                     continuous_clk <= reg_datai[7];
                     swdio_inactive_state <= reg_datai[6:5];
                     record_mode <= reg_datai[4];
+                    trigger_when_matched <= reg_datai[3];
                     //clk_sel <= reg_datai[4];
                 end
                 else if (reg_bytecnt == 1)
@@ -229,7 +231,7 @@ module swd_hw_bb_trig #(
 
                     if ((swdio != pattern_data[bit_counter]) && pattern_en[bit_counter])
                         matching <= 1'b0;
-                    if (matching && trigger_bits[bit_counter])
+                    if ((matching || ~trigger_when_matched) && trigger_bits[bit_counter])
                         trigger <= 1'b1;
                     else
                         trigger <= 1'b0;
