@@ -194,7 +194,8 @@ module cwhusky_top(
    wire fifo_error_flag;
    wire xadc_error_flag;
    wire trace_error_flag;
-   wire error_flag = fifo_error_flag | xadc_error_flag | trace_error_flag;
+   wire swd_err_flag;
+   wire error_flag = fifo_error_flag | xadc_error_flag | trace_error_flag | swd_err_flag;
    wire fast_fifo_read;
 
    wire slow_fifo_wr;
@@ -412,7 +413,7 @@ module cwhusky_top(
 
    // fast-flash red LEDs when some internal error has occurred:
    assign LED_ADC = (error_flag)? flash_pattern : ~PLL_STATUS_reg;
-   assign LED_GLITCH = error_flag? flash_pattern : led_glitch;
+   assign LED_GLITCH = (error_flag)? flash_pattern : led_glitch;
    assign LED_CAP = cw_led_cap;
    assign LED_ARMED = cw_led_armed;
 
@@ -671,6 +672,9 @@ module cwhusky_top(
       .swdio                    (swdio         ),
       .swclk                    (swclk         ),
       .trigger_pulse            (trigger_swd   ),
+
+      .glitch_in                (glitchclk     ),
+      .error_flag               (swd_err_flag  ),
                                               
       .active_output            (active_output ),
       .matching                 (matching      ),

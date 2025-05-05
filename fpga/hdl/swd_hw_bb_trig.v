@@ -52,6 +52,9 @@ module swd_hw_bb_trig #(
    output wire                          swclk,
    output wire                          trigger_pulse,
 
+   input  wire                          glitch_in,
+   output wire                          error_flag,
+
    // for debug:
    output wire                          active_output,
    output reg                           matched,
@@ -92,14 +95,22 @@ module swd_hw_bb_trig #(
     reg [pSAVE_DEPTH-1:0] saved_payload = 0;
     reg [pSAVE_DEPTH-1:0] data_sr;
 
-    assign swdio = (drive_output)? drive_data : 1'bz;
-    assign active_output = drive_output;
+    wire glitch_tio1 = glitch_in && enable_glitch_output;
+    assign swdio = (glitch_tio1)? 1'b0 :
+                   (drive_output)? drive_data : 1'bz;
+    assign active_output = drive_output || (glitch_tio1 && glitch_in);
 
     wire target_clk;
     assign target_clk = adc_clk;
     assign active = running;
     assign compare_en = pattern_en[bit_counter];
 
+    reg enable_glitch_output = 1'b0;
+    reg active_glitch_allowed = 1'b0;
+    reg clear_active_glitch_error = 1'b0;
+    reg active_glitch_error;
+
+    assign error_flag = active_glitch_error;
 
     always @(*) begin
        if (reg_read) begin
@@ -111,6 +122,7 @@ module swd_hw_bb_trig #(
             `BB_TRIG_CTRL_STAT:         reg_datao = {6'b0, active, matched};
             `BB_REG_BIT:                reg_datao = saved_payload[reg_bytecnt*8 +: 8];
             `BB_TRIG_BITS:              reg_datao = trigger_bits[reg_bytecnt*8 +: 8];
+            `BB_TRIG_CTRL2:             reg_datao = {5'b0, glitch_in, enable_glitch_output, active_glitch_error};
             default: reg_datao = 0;
           endcase
        end
@@ -135,6 +147,9 @@ module swd_hw_bb_trig #(
                     swdio_inactive_state <= reg_datai[6:5];
                     record_mode <= reg_datai[4];
                     trigger_when_matched <= reg_datai[3];
+                    enable_glitch_output <= reg_datai[2];
+                    active_glitch_allowed <= reg_datai[1];
+                    clear_active_glitch_error <= reg_datai[0];
                     //clk_sel <= reg_datai[4];
                 end
                 else if (reg_bytecnt == 1)
@@ -246,6 +261,16 @@ module swd_hw_bb_trig #(
             drive_output <= swdio_inactive_state[0];
         end
     end
+
+
+    // glitch stuff:
+    always @(posedge clk_usb) begin
+        if (clear_active_glitch_error)
+            active_glitch_error <= 1'b0;
+        else if (~active_glitch_allowed && drive_output && glitch_in)
+            active_glitch_error <= 1'b1;
+    end
+
 
 
 endmodule
