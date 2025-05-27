@@ -120,8 +120,10 @@ module cwhusky_top(
     parameter pTRACE_MATCH_RULES = 8;
 `ifdef PLUS
     parameter pSEQUENCER_NUM_TRIGGERS = 4;
+    parameter pPLL_CLOCKS = 6;
 `else
     parameter pSEQUENCER_NUM_TRIGGERS = 2;
+    parameter pPLL_CLOCKS = 1;
 `endif
     parameter pSEQUENCER_COUNTER_WIDTH = 16;
 
@@ -607,7 +609,8 @@ module cwhusky_top(
    );
 
    userio #(
-      .pWIDTH                   (pUSERIO_WIDTH)
+      .pWIDTH                   (pUSERIO_WIDTH),
+      .pPLL_CLOCKS              (pPLL_CLOCKS)
    ) U_userio (
       .reset                    (reg_rst),
       .usb_clk                  (clk_usb_buf),
