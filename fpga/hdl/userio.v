@@ -74,8 +74,9 @@ module userio #(
 
     wire [pWIDTH:0] reg_userio_clockout = {userio_clockout[pWIDTH-:pPLL_CLOCKS], {(9-pPLL_CLOCKS){1'b0}}};
 
-    reg  [pWIDTH-1:0] userio_drive_data_reg;
-    wire [pWIDTH-1:0] userio_drive_data;
+    reg  [pWIDTH:0] userio_drive_data_reg;
+    reg  [7:0] userio_drive_data_byte1;
+    wire [pWIDTH:0] userio_drive_data;
 
     reg userio_fpga_debug;
     reg [7:0] reg_datao_reg;
@@ -94,7 +95,7 @@ module userio #(
 
     assign userio_clk = (~userio_cwdriven[pWIDTH])?    1'bz :
                         (userio_target_debug)?         FPGA_BONUS1 : 
-                        (reg_userio_clockout[pWIDTH])? userio_clockgen[0] : 1'bz;
+                        (reg_userio_clockout[pWIDTH])? userio_clockgen[0] : userio_drive_data[8];
 
     `ifndef __ICARUS__
         PULLUP USERIO_D_PULLUP[pWIDTH-1:0] (.O(userio_d));
@@ -112,7 +113,8 @@ module userio #(
 
     wire [8:0] userio_read = {userio_clk, userio_d};
 
-    assign userio_drive_data = (userio_target_debug)? {target_MOSI, // carries TDI on USERIO_D7
+    assign userio_drive_data = (userio_target_debug)? {1'b0,        // USERIO_CK
+                                                       target_MOSI, // carries TDI on USERIO_D7
                                                        target_PDID, // carries TMS/SWDIO on USERIO_D6
                                                        target_SCK,  // carries TCLK/SWDCLK on USERIO_D5
                                                        5'b0         // USERIO_D4:D0 undriven (TDO input on USERIO_D3)
@@ -144,7 +146,7 @@ module userio #(
             userio_fpga_debug <= 1'b0;
             userio_target_debug <= 1'b0;
             userio_target_debug_swd <= 1'b0;
-            userio_drive_data_reg <= 8'b0;
+            userio_drive_data_reg <= 9'b0;
             userio_fpga_debug_select <= 4'b0;
             userio_clockout <= 9'b0;
             clksel <= 1'b0;
@@ -154,9 +156,16 @@ module userio #(
                 `USERIO_CW_DRIVEN: reg_userio_cwdriven[reg_bytecnt*8 +: 8] <= reg_datai;
                 `USERIO_DEBUG_DRIVEN: {userio_target_debug_swd, userio_target_debug, userio_fpga_debug} <= reg_datai[2:0];
                 `USERIO_DEBUG_SELECT: userio_fpga_debug_select <= reg_datai[3:0];
-                `USERIO_DRIVE_DATA: userio_drive_data_reg[reg_bytecnt*8 +: 8] <= reg_datai;
                 `USERIO_CLOCK_OUT: userio_clockout[reg_bytecnt*8 +: 8] <= reg_datai;
                 `USERIO_CLKSEL: clksel <= reg_datai[0];
+
+                `USERIO_DRIVE_DATA: begin
+                    // atomic update of all 9 bits:
+                    if (reg_bytecnt == 0)
+                        userio_drive_data_byte1 <= reg_datai;
+                    else
+                        userio_drive_data_reg <= {reg_datai[0], userio_drive_data_byte1};
+                end
                 default: ;
             endcase
         end
