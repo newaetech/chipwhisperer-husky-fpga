@@ -591,6 +591,7 @@ module cwhusky_top(
         .targetpower_off        (target_npower),
 
         .userio_d               (USERIO_D),
+        .userio_ck              (USERIO_CLK),
 
         .trace_exists           (trace_exists),
         .la_exists              (la_exists),

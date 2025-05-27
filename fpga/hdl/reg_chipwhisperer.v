@@ -110,6 +110,7 @@ module reg_chipwhisperer #(
    output wire        targetpower_off,
 
    input  wire [pUSERIO_WIDTH-1:0] userio_d,
+   input wire         userio_ck,
 
    /* Main trigger connections */
    input  wire        armed_and_ready,
@@ -240,7 +241,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
  */
 
-   reg [2:0] registers_cwauxio;
+   reg [3:0] registers_cwauxio;
    reg [7:0] registers_cwextclk;
    reg [pSEQUENCER_NUM_TRIGGERS*16-1:0] registers_cwtrigsrc; // note: for CW-Lite/Pro, this is an 8-bit register
    reg [pSEQUENCER_NUM_TRIGGERS*8-1:0] registers_cwtrigmod;  // note: for CW-Lite/Pro, this is an 8-bit register
@@ -282,7 +283,8 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    assign target_hs2 = (registers_cwextclk[6] & (~targetio_highz)) ? rearclk : 1'bZ;
 
 
-   assign auxio = (registers_cwauxio[0])? rearclk : 1'bZ;
+   assign auxio = (registers_cwauxio[0])? rearclk :
+                  (registers_cwauxio[3])? userio_ck : 1'bZ;
 
 
 `ifdef __ICARUS__
@@ -576,7 +578,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    always @(*) begin
       if (reg_read) begin
          case (reg_address)
-           `CW_AUX_IO:                  reg_datao_reg = {5'b0, registers_cwauxio};
+           `CW_AUX_IO:                  reg_datao_reg = {4'b0, registers_cwauxio};
            `CW_EXTCLK_ADDR:             reg_datao_reg = registers_cwextclk; 
            `CW_TRIGSRC_ADDR:            reg_datao_reg = registers_cwtrigsrc[reg_bytecnt*8 +: 8]; 
            `CW_TRIGMOD_ADDR:            reg_datao_reg = registers_cwtrigmod[reg_bytecnt*8 +: 8];
@@ -615,12 +617,12 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
          registers_iorouting <= 64'b00000010_00000001;
          reg_external_clock <= 1'b0;
          cw310_adc_clk_sel <= 1'b0;
-         registers_cwauxio <= 3'b0;
+         registers_cwauxio <= 4'b0;
          reg_softpower_control <= {16'd0, 16'd1995, 16'd2000, 8'd0, 8'd35};
          reg_seq_triggers_config <= 1; // default to two triggers, sequencer disabled
       end else if (reg_write) begin
          case (reg_address)
-           `CW_AUX_IO: registers_cwauxio <= reg_datai[2:0];
+           `CW_AUX_IO: registers_cwauxio <= reg_datai[3:0];
            `CW_EXTCLK_ADDR: registers_cwextclk <= reg_datai;
            `CW_TRIGSRC_ADDR: registers_cwtrigsrc[reg_bytecnt*8 +: 8] <= reg_datai;
            `CW_TRIGMOD_ADDR: registers_cwtrigmod[reg_bytecnt*8 +: 8] <= reg_datai;
