@@ -5,7 +5,8 @@
 This file is part of the ChipWhisperer Project. See www.newae.com for more details,
 or the codebase at https://github.com/newaetech/chipwhisperer .
 
-Copyright (c) 2021, Colin O'Flynn <coflynn@newae.com>. All rights reserved.
+Copyright (c) 2021-2025, Colin O'Flynn <coflynn@newae.com>. All rights reserved.
+Author: Jean-Pierre Thibault <jpthibault@newae.com>
 This project (and file) is released under the 2-Clause BSD License:
 
 Redistribution and use in source and binary forms, with or without 
@@ -33,7 +34,7 @@ POSSIBILITY OF SUCH DAMAGE.
 module userio #(
     parameter pWIDTH = 8,
     parameter pBYTECNT_SIZE = 7,
-    parameter pPLL_CLOCKS = 3
+    parameter pPLL_CLOCKS = 6
 )(
     input  wire                         reset,
     input  wire                         usb_clk,
@@ -69,9 +70,10 @@ module userio #(
     wire [pWIDTH:0] userio_cwdriven;
     reg  [pWIDTH:0] reg_userio_cwdriven;
     reg  [pWIDTH:0] userio_clockout;
-    //wire [pWIDTH:0] userio_clockgen = {pll_out[5:0], 3'b0};
-    wire [pWIDTH:0] userio_clockgen = {pll_out[pPLL_CLOCKS-1:0], {(9-pPLL_CLOCKS){1'b0}}};
+    wire [pWIDTH:0] userio_clockgen = {{(9-pPLL_CLOCKS){1'b0}}, pll_out[pPLL_CLOCKS-1:0]};
+
     wire [pWIDTH:0] reg_userio_clockout = {userio_clockout[pWIDTH-:pPLL_CLOCKS], {(9-pPLL_CLOCKS){1'b0}}};
+
     reg  [pWIDTH-1:0] userio_drive_data_reg;
     wire [pWIDTH-1:0] userio_drive_data;
 
@@ -84,15 +86,15 @@ module userio #(
 
     generate
         for (i = 0; i < pWIDTH; i = i + 1) begin
-            assign userio_d[i] = (~userio_cwdriven[i])? 1'bz : 
-                                 (userio_fpga_debug)?   I_userio_debug_data[i] : 
-                                 (userio_clockout[i])?  userio_clockgen[i] : userio_drive_data[i];
+            assign userio_d[i] = (~userio_cwdriven[i])?    1'bz : 
+                                 (userio_fpga_debug)?      I_userio_debug_data[i] : 
+                                 (reg_userio_clockout[i])? userio_clockgen[pWIDTH-i] : userio_drive_data[i];
         end
     endgenerate
 
-    assign userio_clk = (~userio_cwdriven[pWIDTH])? 1'bz :
-                        (userio_target_debug)?      FPGA_BONUS1 : 
-                        (userio_clockout[pWIDTH])?  userio_clockgen[pWIDTH] : 1'bz;
+    assign userio_clk = (~userio_cwdriven[pWIDTH])?    1'bz :
+                        (userio_target_debug)?         FPGA_BONUS1 : 
+                        (reg_userio_clockout[pWIDTH])? userio_clockgen[0] : 1'bz;
 
     `ifndef __ICARUS__
         PULLUP USERIO_D_PULLUP[pWIDTH-1:0] (.O(userio_d));
@@ -125,6 +127,7 @@ module userio #(
                 `USERIO_DEBUG_SELECT:        reg_datao_reg = {4'b0, userio_fpga_debug_select};
                 `USERIO_READ:                reg_datao_reg = userio_read[reg_bytecnt*8 +: 8];
                 `USERIO_CLOCK_OUT:           reg_datao_reg = reg_userio_clockout[reg_bytecnt*8 +: 8];
+                `USERIO_CLKSEL:              reg_datao_reg = {6'b0, locked, clksel};
                 default: reg_datao_reg = 0;
             endcase
         end
