@@ -320,16 +320,8 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 
 `define EXTCLK_MONITOR          82
 
-`define USERIO_CW_DRIVEN        86
-`define USERIO_DEBUG_DRIVEN     87
+`define USERIO_CONFIG           57
 `define USERIO_DRIVE_DATA       88
-`define USERIO_READ             97
-`define USERIO_DEBUG_SELECT     109
-
-// TODO: temp; combine these two with one of the existing registers (maybe merge a bunch? good opportunity)
-`define USERIO_CLOCK_OUT        57
-`define USERIO_CLKSEL           58
-
 `define USERIO_DRP_ADDR         107
 `define USERIO_DRP_DATA         126
 `define USERIO_DRP_RESET        127
@@ -398,6 +390,11 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 //`define UNUSED_ADDRESS 107
 //`define UNUSED_ADDRESS 126
 //`define UNUSED_ADDRESS 127
+//`define UNUSED_ADDRESS 97
+//`define UNUSED_ADDRESS 86
+//`define UNUSED_ADDRESS 87
+//`define UNUSED_ADDRESS 109
+//`define UNUSED_ADDRESS 58
 
 `define REGISTER_VERSION 2
 

@@ -67,6 +67,7 @@ module userio #(
     wire [5:0] pll_out;
     wire locked;
 
+    // most of these are pWIDTH+1 because of the CK pin
     wire [pWIDTH:0] userio_cwdriven;
     reg  [pWIDTH:0] reg_userio_cwdriven;
     reg  [pWIDTH:0] userio_clockout;
@@ -124,12 +125,18 @@ module userio #(
     always @(*) begin
         if (reg_read) begin
             case (reg_address)
-                `USERIO_CW_DRIVEN:           reg_datao_reg = userio_cwdriven[reg_bytecnt*8 +: 8];
-                `USERIO_DEBUG_DRIVEN:        reg_datao_reg = {5'b0, userio_target_debug_swd, userio_target_debug, userio_fpga_debug};
-                `USERIO_DEBUG_SELECT:        reg_datao_reg = {4'b0, userio_fpga_debug_select};
-                `USERIO_READ:                reg_datao_reg = userio_read[reg_bytecnt*8 +: 8];
-                `USERIO_CLOCK_OUT:           reg_datao_reg = reg_userio_clockout[reg_bytecnt*8 +: 8];
-                `USERIO_CLKSEL:              reg_datao_reg = {6'b0, locked, clksel};
+                `USERIO_CONFIG:
+                    case (reg_bytecnt)
+                        0: reg_datao_reg = {6'b0, locked, clksel};                                                      // old USERIO_CLKSEL register
+                        1: reg_datao_reg = {4'b0, userio_fpga_debug_select};                                            // old USERIO_DEBUG_SELECT register
+                        2: reg_datao_reg = {5'b0, userio_target_debug_swd, userio_target_debug, userio_fpga_debug};     // old USERIO_DEBUG_DRIVEN register
+                        3: reg_datao_reg = userio_cwdriven[7:0];                                                        // old USERIO_CW_DRIVEN register
+                        4: reg_datao_reg = {7'b0, userio_cwdriven[8]};                                                  // ''
+                        5: reg_datao_reg = reg_userio_clockout[7:0];                                                    // old USERIO_CLOCK_OUT register
+                        6: reg_datao_reg = {7'b0, reg_userio_clockout[8]};                                              // ''
+                    endcase
+
+                `USERIO_DRIVE_DATA:          reg_datao_reg = userio_read[reg_bytecnt*8 +: 8];
                 default: reg_datao_reg = 0;
             endcase
         end
@@ -153,11 +160,17 @@ module userio #(
         end 
         else if (reg_write) begin
             case (reg_address)
-                `USERIO_CW_DRIVEN: reg_userio_cwdriven[reg_bytecnt*8 +: 8] <= reg_datai;
-                `USERIO_DEBUG_DRIVEN: {userio_target_debug_swd, userio_target_debug, userio_fpga_debug} <= reg_datai[2:0];
-                `USERIO_DEBUG_SELECT: userio_fpga_debug_select <= reg_datai[3:0];
-                `USERIO_CLOCK_OUT: userio_clockout[reg_bytecnt*8 +: 8] <= reg_datai;
-                `USERIO_CLKSEL: clksel <= reg_datai[0];
+                `USERIO_CONFIG:
+                    case (reg_bytecnt)
+                        0: clksel <= reg_datai[0];                                                              // old USERIO_CLKSEL register
+                        1: userio_fpga_debug_select <= reg_datai[3:0];                                          // old USERIO_DEBUG_SELECT register
+                        2: {userio_target_debug_swd, userio_target_debug, userio_fpga_debug} <= reg_datai[2:0]; // old USERIO_DEBUG_DRIVEN register
+                        3: reg_userio_cwdriven[7:0] <= reg_datai;                                               // old USERIO_CW_DRIVEN register
+                        4: reg_userio_cwdriven[8] <= reg_datai[0];                                              // ''
+                        5: userio_clockout[7:0] <= reg_datai;                                                   // old USERIO_CLOCK_OUT register
+                        6: userio_clockout[8] <= reg_datai[0];                                                  // ''
+                    endcase
+
 
                 `USERIO_DRIVE_DATA: begin
                     // atomic update of all 9 bits:
