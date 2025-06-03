@@ -121,9 +121,11 @@ module cwhusky_top(
 `ifdef PLUS
     parameter pSEQUENCER_NUM_TRIGGERS = 4;
     parameter pPLL_CLOCKS = 6;
+    parameter pBB_TRIG_DEPTH = 512;
 `else
     parameter pSEQUENCER_NUM_TRIGGERS = 2;
     parameter pPLL_CLOCKS = 1;
+    parameter pBB_TRIG_DEPTH = 128;
 `endif
     parameter pSEQUENCER_COUNTER_WIDTH = 16;
 
@@ -173,13 +175,15 @@ module cwhusky_top(
    wire [7:0] read_data_userio;
    wire [7:0] read_data_la;
    wire [7:0] read_data_trace;
-   always @(posedge clk_usb_buf) read_data_reg <= read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc | read_data_la | read_data_trace | read_data_userio;
+   wire [7:0] read_data_bb_trig;
+   always @(posedge clk_usb_buf) read_data_reg <= read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc | read_data_la | read_data_trace | read_data_userio | read_data_bb_trig;
    //always @(*) read_data_reg = read_data_openadc | read_data_cw | read_data_adc | read_data_glitch | read_data_xadc | read_data_la;
    assign read_data = (reg_address == `ADCREAD_ADDR)? fifo_dout : read_data_reg;
 
    wire trigger_capture;
    wire trigger_glitch;
    wire trigger_trace;
+   wire trigger_bb;
    wire extclk_mux;
    wire target_clk;
    wire glitchclk;
@@ -204,6 +208,7 @@ module cwhusky_top(
    wire [7:0] fifo_dout;
 
    wire [8:0] tu_la_debug;
+   wire [7:0] bb_debug;
    wire [7:0] la_debug2;
    wire [7:0] sad_debug;
    wire [7:0] fifo_debug;
@@ -384,7 +389,8 @@ module cwhusky_top(
                                                                          trigger_adc,
                                                                          trigger_edge_counter,
                                                                          cmd_arm_usb} : 
-                                 (userio_fpga_debug_select == 4'b1100)?  la_debug2 : 
+                                 //(userio_fpga_debug_select == 4'b1100)?  la_debug2 : 
+                                 (userio_fpga_debug_select == 4'b1100)?  bb_debug : 
                                  (userio_fpga_debug_select == 4'b1101)?  sequencer_debug :
                                  (userio_fpga_debug_select == 4'b1110)?  {seq_trace_sad_debug, 3'b0} : seq_trace_sad_debug2;
                                  //(userio_fpga_debug_select == 4'b1010)?  clockglitch_debug3 : 8'b0;
@@ -514,7 +520,6 @@ module cwhusky_top(
         .VMAG_D         (VMAG_D)
    );
 
-
    reg_chipwhisperer  #(
         .pBYTECNT_SIZE                  (pBYTECNT_SIZE),
         .pUSERIO_WIDTH                  (pUSERIO_WIDTH),
@@ -552,7 +557,8 @@ module cwhusky_top(
         .trigger_advio_i        (1'b0),
         .trigger_decodedio_i    (trace_trig_out),
         .trigger_trace_i        (trace_trig_out),
-        .trigger_adc_i          (trigger_adc),
+        //.trigger_adc_i          (trigger_adc),
+        .trigger_adc_i          (trigger_bb), // TODO: temporary
         .trigger_sad_i          (trigger_sad),
         .trigger_edge_i         (trigger_edge_counter),
         .pll_fpga_clk           (pll_fpga_clk),
@@ -562,6 +568,7 @@ module cwhusky_top(
         .trace_fe_clk           (fe_clk),
 
         .targetio1_io           (target_io1),
+        //.targetio1_io           (          ), // TODO-temp!
         .targetio2_io           (target_io2),
         .targetio3_io           (target_io3),
         .targetio4_io           (target_io4),
@@ -592,6 +599,14 @@ module cwhusky_top(
 
         .userio_d               (USERIO_D),
         .userio_ck              (USERIO_CLK),
+
+        //.bb_data_io             (bb_data_io),
+        .bb_data_in             (bb_data_in),
+        .bb_data_out            (bb_data_out),
+        .bb_data_drive          (bb_data_drive),
+        .bb_clock_out           (bb_clock_out),
+        //.bb_data_io             (), // TODO-temp
+        //.bb_clock_out           (),
 
         .trace_exists           (trace_exists),
         .la_exists              (la_exists),
@@ -640,6 +655,40 @@ module cwhusky_top(
       .userio_clk               (USERIO_CLK),
       .I_userio_debug_data      (userio_debug_data)
    );
+
+   wire bb_data_in;
+   wire bb_data_out;
+   wire bb_data_drive;
+   wire bb_clock_out;
+
+   hw_bb_trig #(
+      .pBYTECNT_SIZE            (pBYTECNT_SIZE),
+      .pPATTERN_DEPTH           (pBB_TRIG_DEPTH)
+   ) U_hw_bb_trig (
+      .reset                    (reg_rst       ),
+      .clk_usb                  (clk_usb_buf   ),
+      .reg_address              (reg_address   ),
+      .reg_bytecnt              (reg_bytecnt   ),
+      .reg_datai                (write_data    ),
+      .reg_datao                (read_data_bb_trig ),
+      .reg_read                 (reg_read      ),
+      .reg_write                (reg_write     ),
+
+      //.clock                    (target_clk    ),
+      //.clock                    (target_hs2    ),   // careful: can carry glitch clock
+      .clock                    (ADC_clk_fb    ),
+      .data_in                  (bb_data_in    ),
+      .data_out                 (bb_data_out   ),
+      .data_drive               (bb_data_drive ),
+      .clock_out                (bb_clock_out  ),
+      .trigger_pulse            (trigger_bb    ),
+
+      .glitch_in                (glitchclk     ),
+      //.glitch_in                (1'b0          ),
+
+      .debug                    (bb_debug      )
+   );   
+
 
 
 `ifndef SAD_ONLY

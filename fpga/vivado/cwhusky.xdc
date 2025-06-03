@@ -75,8 +75,8 @@ set_clock_groups -asynchronous \
                  -group [get_clocks pll_fpga_clk]
 
 set_clock_groups -asynchronous \
-                 -group [get_clocks pll_fpga_clk] \
-                 -group [get_clocks glitch_mmcm1_clk_out*]
+                 -group [get_clocks {pll_fpga_clk target_hs1}] \
+                 -group [get_clocks {glitch_mmcm1_clk_out* glitch_mmcm2_clk_out*}]
 
 set_clock_groups -asynchronous \
                  -group [get_clocks {clk_usb target_hs1 AUXIO} ] \
