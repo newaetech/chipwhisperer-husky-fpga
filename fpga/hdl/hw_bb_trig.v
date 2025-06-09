@@ -82,7 +82,7 @@ module hw_bb_trig #(
     reg [1:0] data_io_inactive_state = 2'b01;
     reg trigger_en = 1'b0;
     reg clear_matched;
-    reg [7:0] clk_div = 8'b0;
+    reg [6:0] clk_div = 8'd1;
     reg [7:0] clock_counter = 8'd0;
     reg drive_output = 1'b0;
     reg clock_enabled = 1'b0;
@@ -162,7 +162,7 @@ module hw_bb_trig #(
                           drive_edge                    <= reg_datai[1];
                           check_edge                    <= reg_datai[0];
                       end
-                      2: clk_div                        <= reg_datai[7:0];
+                      2: clk_div                        <= reg_datai[7:1]; // yes, omit LSB to divide by 2
                       3: num_bits[0 +: 8]               <= reg_datai;
                       4: num_bits[8 +: 8]               <= reg_datai;
                       default: ;
@@ -190,6 +190,7 @@ module hw_bb_trig #(
     reg clock_out_pre = 1'b0;
     reg trigger;
     reg trigger_r;
+    reg driving = 1'b0;
 
     assign trigger_pulse = trigger_en && trigger && ~trigger_r;
     assign clock_out = ((running && clock_enabled) || continuous_clk) && clock_out_pre;
@@ -198,7 +199,7 @@ module hw_bb_trig #(
     always @(posedge clock) begin
         // note that clk_div is the number of input clock cycles per *half period* of
         // the generated clock; in other words, clk_div is twice the actual clock divisor:
-        if (clock_counter == clk_div) begin
+        if (clock_counter == (clk_div-1)) begin
             clock_counter <= 0;
             clock_out_pre <= ~clock_out_pre;
         end
@@ -217,6 +218,7 @@ module hw_bb_trig #(
             matching <= 1'b1;
             bit_counter_drive <= 0;
             bit_counter_check <= 0;
+            driving <= 1'b0;
             //bit_counter <= {(pCOUNTER_WIDTH+1){1'b1}};
             //drive_data <= pattern_data[0];
             //drive_output <= ~pattern_hiz[0];
@@ -232,8 +234,9 @@ module hw_bb_trig #(
         else if (running) begin
             bitrecord <= 1'b0;
             trigger <= 1'b0;
-            if (clock_counter == clk_div) begin
+            if (clock_counter == (clk_div-1)) begin
                 // drive data on falling or rising edge:
+                driving <= 1'b1;
                 if (clock_out_pre != drive_edge) begin 
                     if (bit_counter_drive == ( (num_bits > 0)? num_bits : pPATTERN_DEPTH) ) begin
                         running <= 1'b0;
@@ -253,7 +256,7 @@ module hw_bb_trig #(
                 end
 
                 // check pattern match and fire trigger on falling or rising edge:
-                if (clock_out_pre != check_edge) begin 
+                if ((clock_out_pre != check_edge) && (driving || (check_edge == drive_edge))) begin 
                     bit_counter_check <= bit_counter_check + 1;
                     if (record_en[bit_counter_check]) begin
                         saved_payload <= {saved_payload[pSAVE_DEPTH-2:0], data_in};
