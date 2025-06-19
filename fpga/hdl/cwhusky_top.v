@@ -120,7 +120,7 @@ module cwhusky_top(
     parameter pTRACE_MATCH_RULES = 8;
 `ifdef PLUS
     parameter pSEQUENCER_NUM_TRIGGERS = 4;
-    parameter pPLL_CLOCKS = 6;
+    parameter pPLL_CLOCKS = 4;
     parameter pBB_TRIG_DEPTH = 512;
 `else
     parameter pSEQUENCER_NUM_TRIGGERS = 2;
@@ -236,6 +236,7 @@ module cwhusky_top(
    wire sad_active;
    wire edge_trigger_active;
    wire adc_trigger_active;
+   wire bb_trigger_active;
    wire trace_trig_out;
    wire trigger_adc;
    wire trigger_sad;
@@ -389,7 +390,7 @@ module cwhusky_top(
                                                                          trigger_adc,
                                                                          trigger_edge_counter,
                                                                          cmd_arm_usb} : 
-                                 //(userio_fpga_debug_select == 4'b1100)?  la_debug2 : 
+                                 //(userio_fpga_debug_select == 4'b1100)?  la_debug2 :  TODO: temporary
                                  (userio_fpga_debug_select == 4'b1100)?  bb_debug : 
                                  (userio_fpga_debug_select == 4'b1101)?  sequencer_debug :
                                  (userio_fpga_debug_select == 4'b1110)?  {seq_trace_sad_debug, 3'b0} : seq_trace_sad_debug2;
@@ -554,11 +555,12 @@ module cwhusky_top(
         .sad_active             (sad_active),
         .edge_trigger_active    (edge_trigger_active),
         .adc_trigger_active     (adc_trigger_active),
+        .bb_trigger_active      (bb_trigger_active),
         .trigger_advio_i        (1'b0),
         .trigger_decodedio_i    (trace_trig_out),
         .trigger_trace_i        (trace_trig_out),
-        //.trigger_adc_i          (trigger_adc),
-        .trigger_adc_i          (trigger_bb), // TODO: temporary
+        .trigger_adc_i          (trigger_adc),
+        .trigger_bb_i           (trigger_bb),
         .trigger_sad_i          (trigger_sad),
         .trigger_edge_i         (trigger_edge_counter),
         .pll_fpga_clk           (pll_fpga_clk),
@@ -568,7 +570,6 @@ module cwhusky_top(
         .trace_fe_clk           (fe_clk),
 
         .targetio1_io           (target_io1),
-        //.targetio1_io           (          ), // TODO-temp!
         .targetio2_io           (target_io2),
         .targetio3_io           (target_io3),
         .targetio4_io           (target_io4),
@@ -600,13 +601,10 @@ module cwhusky_top(
         .userio_d               (USERIO_D),
         .userio_ck              (USERIO_CLK),
 
-        //.bb_data_io             (bb_data_io),
         .bb_data_in             (bb_data_in),
         .bb_data_out            (bb_data_out),
         .bb_data_drive          (bb_data_drive),
         .bb_clock_out           (bb_clock_out),
-        //.bb_data_io             (), // TODO-temp
-        //.bb_clock_out           (),
 
         .trace_exists           (trace_exists),
         .la_exists              (la_exists),
@@ -677,14 +675,15 @@ module cwhusky_top(
       //.clock                    (target_clk    ),
       //.clock                    (target_hs2    ),   // careful: can carry glitch clock
       .clock                    (ADC_clk_fb    ),
+      //.clock                    (USERIO_CLK    ),
       .data_in                  (bb_data_in    ),
       .data_out                 (bb_data_out   ),
       .data_drive               (bb_data_drive ),
       .clock_out                (bb_clock_out  ),
       .trigger_pulse            (trigger_bb    ),
 
+      .trigger_active           (bb_trigger_active),
       .glitch_in                (glitchclk     ),
-      //.glitch_in                (1'b0          ),
 
       .debug                    (bb_debug      )
    );   

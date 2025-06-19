@@ -63,10 +63,12 @@ module reg_chipwhisperer #(
    output wire        sad_active,
    output wire        edge_trigger_active,
    output wire        adc_trigger_active,
+   output wire        bb_trigger_active,
    input  wire        trigger_advio_i, 
    input  wire        trigger_decodedio_i,
    input  wire        trigger_trace_i,
    input  wire        trigger_adc_i,
+   input  wire        trigger_bb_i,
    input  wire        trigger_sad_i,
    input  wire        trigger_edge_i,
 
@@ -402,6 +404,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    wire [pSEQUENCER_NUM_TRIGGERS-1:0] tc_sad_active;
    wire [pSEQUENCER_NUM_TRIGGERS-1:0] tc_edge_trigger_active;
    wire [pSEQUENCER_NUM_TRIGGERS-1:0] tc_adc_trigger_active;
+   wire [pSEQUENCER_NUM_TRIGGERS-1:0] tc_bb_trigger_active;
 
    wire [pSEQUENCER_NUM_TRIGGERS-1:0] tc_trace_trigger_in_use;
    wire [pSEQUENCER_NUM_TRIGGERS-1:0] tc_sad_trigger_in_use;
@@ -430,6 +433,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
                .trigger_decodedio_i     (trigger_decodedio_i       ),
                .trigger_trace_i         (trigger_trace_i           ),
                .trigger_adc_i           (trigger_adc_i             ),
+               .trigger_bb_i            (trigger_bb_i              ),
                .trigger_edge_i          (trigger_edge_i            ),
                                                               
                .O_decodeio_active       (tc_decodeio_active[i]     ),
@@ -437,6 +441,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
                .O_sad_active            (tc_sad_active[i]          ),
                .O_edge_trigger_active   (tc_edge_trigger_active[i] ),
                .O_adc_trigger_active    (tc_adc_trigger_active[i]  ),
+               .O_bb_trigger_active     (tc_bb_trigger_active[i]   ),
 
                .O_trace_trigger_in_use  (tc_trace_trigger_in_use[i]),
                .O_sad_trigger_in_use    (tc_sad_trigger_in_use[i]  ),
@@ -520,6 +525,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    assign sad_active            = (trigger_sequencer_on)? |tc_sad_active : tc_sad_active[0];
    assign edge_trigger_active   = (trigger_sequencer_on)? |tc_edge_trigger_active : tc_edge_trigger_active[0];
    assign adc_trigger_active    = (trigger_sequencer_on)? |tc_adc_trigger_active : tc_adc_trigger_active[0];
+   assign bb_trigger_active     = (trigger_sequencer_on)? |tc_bb_trigger_active : tc_bb_trigger_active[0];
 
    assign trace_trigger_in_use  = |tc_trace_trigger_in_use;
    assign sad_trigger_in_use    = |tc_sad_trigger_in_use;

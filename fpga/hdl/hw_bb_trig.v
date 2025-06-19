@@ -53,6 +53,7 @@ module hw_bb_trig #(
    output wire                          clock_out,
    output wire                          trigger_pulse,
 
+   input  wire                          trigger_active,
    input  wire                          glitch_in,
 
    output wire [7:0]                    debug
@@ -192,7 +193,7 @@ module hw_bb_trig #(
     reg trigger_r;
     reg driving = 1'b0;
 
-    assign trigger_pulse = trigger_en && trigger && ~trigger_r;
+    assign trigger_pulse = trigger_en && trigger_active && trigger && ~trigger_r;
     assign clock_out = ((running && clock_enabled) || continuous_clk) && clock_out_pre;
 
     // generate clock_out:
@@ -300,8 +301,8 @@ module hw_bb_trig #(
                     pattern_en[bit_counter_check],
                     trigger,
                     bitrecord,
-                    matched,
-                    matching
+                    trigger_active,
+                    trigger_pulse
                    };
 
 
