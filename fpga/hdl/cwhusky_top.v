@@ -224,7 +224,7 @@ module cwhusky_top(
 
    wire userio_target_debug;
    wire userio_target_debug_swd;
-   wire [3:0] userio_fpga_debug_select;
+   wire [4:0] userio_fpga_debug_select;
    wire [pUSERIO_WIDTH-1:0] userio_debug_data;
 
    wire uart_trigger_line;
@@ -356,7 +356,7 @@ module cwhusky_top(
          .O_slow        (slow_fifo_rd_slow)
       );
 
-      assign userio_debug_data = (userio_fpga_debug_select == 4'b0000)? {glitch_enable,
+      assign userio_debug_data = (userio_fpga_debug_select == 5'b00000)? {glitch_enable,
                                                                          glitchclk,
                                                                          fifo_error_flag,
                                                                          fast_fifo_read,
@@ -364,10 +364,9 @@ module cwhusky_top(
                                                                          slow_fifo_rd_slow,
                                                                          slow_fifo_wr_slow,
                                                                          stream_segment_available} :
-                                 (userio_fpga_debug_select == 4'b0001)? tu_la_debug[7:0] :
-                                 //(userio_fpga_debug_select == 4'b0001)? sad_debug :
-                                 (userio_fpga_debug_select == 4'b0010)? fifo_debug : 
-                                 (userio_fpga_debug_select == 4'b0011)? {1'b0,
+                                 (userio_fpga_debug_select == 5'b00001)? tu_la_debug[7:0] :
+                                 (userio_fpga_debug_select == 5'b00010)? fifo_debug : 
+                                 (userio_fpga_debug_select == 5'b00011)? {1'b0,
                                                                          xadc_error_flag,
                                                                          glitch_mmcm1_clk_out,
                                                                          glitch_mmcm2_clk_out,
@@ -375,14 +374,14 @@ module cwhusky_top(
                                                                          glitch_enable,
                                                                          trigger_capture,
                                                                          cmd_arm_usb} :
-                                 (userio_fpga_debug_select == 4'b0100)?  clockglitch_debug1 : 
-                                 (userio_fpga_debug_select == 4'b0101)?  clockglitch_debug2 :
-                                 (userio_fpga_debug_select == 4'b0110)?  usb_debug1 :
-                                 (userio_fpga_debug_select == 4'b0111)?  usb_debug2 : 
-                                 (userio_fpga_debug_select == 4'b1000)?  usb_debug3 :
-                                 (userio_fpga_debug_select == 4'b1001)?  edge_trigger_debug :
-                                 (userio_fpga_debug_select == 4'b1010)?  {cmd_arm_usb, clockglitch_debug3[6:0]} :
-                                 (userio_fpga_debug_select == 4'b1011)?  {edge_trigger_line,
+                                 (userio_fpga_debug_select == 5'b00100)? clockglitch_debug1 : 
+                                 (userio_fpga_debug_select == 5'b00101)? clockglitch_debug2 :
+                                 (userio_fpga_debug_select == 5'b00110)? usb_debug1 :
+                                 (userio_fpga_debug_select == 5'b00111)? usb_debug2 : 
+                                 (userio_fpga_debug_select == 5'b01000)? usb_debug3 :
+                                 (userio_fpga_debug_select == 5'b01001)? edge_trigger_debug :
+                                 (userio_fpga_debug_select == 5'b01010)? {cmd_arm_usb, clockglitch_debug3[6:0]} :
+                                 (userio_fpga_debug_select == 5'b01011)? {edge_trigger_line,
                                                                          target_io4,
                                                                          uart_trigger_line,
                                                                          trigger_sad,
@@ -390,11 +389,12 @@ module cwhusky_top(
                                                                          trigger_adc,
                                                                          trigger_edge_counter,
                                                                          cmd_arm_usb} : 
-                                 //(userio_fpga_debug_select == 4'b1100)?  la_debug2 :  TODO: temporary
-                                 (userio_fpga_debug_select == 4'b1100)?  bb_debug : 
-                                 (userio_fpga_debug_select == 4'b1101)?  sequencer_debug :
-                                 (userio_fpga_debug_select == 4'b1110)?  {seq_trace_sad_debug, 3'b0} : seq_trace_sad_debug2;
-                                 //(userio_fpga_debug_select == 4'b1010)?  clockglitch_debug3 : 8'b0;
+                                 (userio_fpga_debug_select == 5'b01100)? la_debug2 :
+                                 (userio_fpga_debug_select == 5'b01101)? sequencer_debug :
+                                 (userio_fpga_debug_select == 5'b01110)? {seq_trace_sad_debug, 3'b0} :
+                                 (userio_fpga_debug_select == 5'b01111)? seq_trace_sad_debug2 :
+                                 (userio_fpga_debug_select == 5'b10000)? sad_debug :
+                                 (userio_fpga_debug_select == 5'b10001)? bb_debug : 8'b0;
 
    `else
       assign userio_debug_data[7:0] = 8'bz;
