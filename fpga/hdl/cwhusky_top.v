@@ -651,12 +651,13 @@ module cwhusky_top(
    wire active;
    wire compare_en;
    wire bitrecord;
+   wire [7:0] swd_bb_debug;
 
    assign target_io1 = swdio;
 
    swd_hw_bb_trig #(
       .pBYTECNT_SIZE            (pBYTECNT_SIZE),
-      .pPATTERN_DEPTH           (512)
+      .pPATTERN_DEPTH           (1024)
    ) U_swd_hw_bb_trig (
       .reset                    (reg_rst       ),
       .clk_usb                  (clk_usb_buf   ),
@@ -676,23 +677,8 @@ module cwhusky_top(
       .glitch_in                (glitchclk     ),
       .error_flag               (swd_err_flag  ),
                                               
-      .active_output            (active_output ),
-      .matching                 (matching      ),
-      .matched                  (matched       ),
-      .active                   (active        ),
-      .compare_en               (compare_en    ),
-      .bitrecord                (bitrecord     )
+      .debug                    (swd_bb_debug  )
    );
-
-   wire [7:0] swd_bb_debug = {1'b0,
-                              bitrecord,
-                              compare_en,
-                              trigger_swd,
-                              active,
-                              active_output,
-                              matching,
-                              matched
-                             };
 
 
 `ifndef SAD_ONLY

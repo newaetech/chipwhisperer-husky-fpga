@@ -56,12 +56,7 @@ module swd_hw_bb_trig #(
    output wire                          error_flag,
 
    // for debug:
-   output wire                          active_output,
-   output reg                           matched,
-   output reg                           matching,
-   output wire                          active,
-   output wire                          compare_en,
-   output reg                           bitrecord
+   output wire [7:0]                    debug
 
 );
 
@@ -83,7 +78,6 @@ module swd_hw_bb_trig #(
     reg record_mode = 1'b0;
     reg trigger_when_matched = 1'b0;
     reg [1:0] swdio_inactive_state = 2'b01;
-    reg clk_sel = 1'b0;
     reg trigger_en = 1'b0;
     reg clear_matched;
     reg [7:0] clk_div = 8'b0;
@@ -95,6 +89,20 @@ module swd_hw_bb_trig #(
     reg [pSAVE_DEPTH-1:0] saved_payload = 0;
     reg [pSAVE_DEPTH-1:0] data_sr;
 
+    wire active_output;
+    reg  matched;
+    reg  matching;
+    wire active;
+    wire compare_en;
+    reg  bitrecord;
+
+
+    reg [23:0] startup_reps = 24'd0;
+    reg [23:0] startup_reps_count;
+    reg [23:0] startup_delay1 = {24{1'b0}};
+    reg [23:0] startup_delay2 = {24{1'b0}};
+    reg [23:0] startup_count;
+
     wire glitch_tio1 = glitch_in && enable_glitch_output;
     assign swdio = (glitch_tio1)? 1'b0 :
                    (drive_output)? drive_data : 1'bz;
@@ -102,7 +110,7 @@ module swd_hw_bb_trig #(
 
     wire target_clk;
     assign target_clk = adc_clk;
-    assign active = running;
+    assign active = running || starting;
     assign compare_en = pattern_en[bit_counter];
 
     reg enable_glitch_output = 1'b0;
@@ -141,6 +149,14 @@ module swd_hw_bb_trig #(
             `BB_TRIG_BITS:              trigger_bits[reg_bytecnt*8 +: 8] <= reg_datai;
             `BB_NUM_BITS:               num_bits[reg_bytecnt*8 +: 8] <= reg_datai;
             `BB_REG_BIT:                register_bit[reg_bytecnt*8 +: 8] <= reg_datai;
+            `BB_TRIG_STARTUP: begin
+                if (reg_bytecnt < 3)
+                    startup_reps[reg_bytecnt*8 +: 8] <= reg_datai;
+                else if (reg_bytecnt < 6) 
+                    startup_delay1[(reg_bytecnt-3)*8 +: 8] <= reg_datai;
+                else
+                    startup_delay2[(reg_bytecnt-6)*8 +: 8] <= reg_datai;
+            end
             `BB_TRIG_CTRL2: begin
                 if (reg_bytecnt == 0) begin
                     continuous_clk <= reg_datai[7];
@@ -150,7 +166,6 @@ module swd_hw_bb_trig #(
                     enable_glitch_output <= reg_datai[2];
                     active_glitch_allowed <= reg_datai[1];
                     clear_active_glitch_error <= reg_datai[0];
-                    //clk_sel <= reg_datai[4];
                 end
                 else if (reg_bytecnt == 1)
                     clk_div <= reg_datai[7:0];
@@ -177,6 +192,8 @@ module swd_hw_bb_trig #(
     );
 
     reg running = 1'b0;
+    reg starting = 1'b0;
+    reg stage1done = 1'b0;
     reg swclk_pre = 1'b0;
     reg swclk_pre_r;
     reg trigger;
@@ -200,16 +217,65 @@ module swd_hw_bb_trig #(
     always @(posedge target_clk) begin
         trigger_r <= trigger;
         if (go_target) begin
-            running <= 1'b1;
-            if (clear_matched)
-                matched <= 1'b0;
-            bit_counter <= 0;
-            drive_data <= pattern_data[0];
-            drive_output <= ~pattern_hiz[0];
-            matching <= 1'b1;
-            trigger <= 1'b0;
-            saved_payload <= 0;
+            if ((startup_delay1 != 0) || (startup_delay2 != 0)) begin
+                starting <= 1'b1;
+                startup_count <= 0;
+                startup_reps_count <= 0;
+                if (startup_delay1 == 0) begin
+                    drive_data <= 1'b1;
+                    drive_output <= 1'b0;
+                    stage1done <= 1'b1;
+                end
+                else begin
+                    stage1done <= 1'b0;
+                    drive_data <= 1'b0;
+                    drive_output <= 1'b1;
+                end
+            end
+            else begin
+                running <= 1'b1;
+                if (clear_matched)
+                    matched <= 1'b0;
+                bit_counter <= 0;
+                drive_data <= pattern_data[0];
+                drive_output <= ~pattern_hiz[0];
+                matching <= 1'b1;
+                trigger <= 1'b0;
+                saved_payload <= 0;
+            end
         end
+
+        else if (starting) begin
+            startup_count <= startup_count + 1;
+            if (~stage1done && (startup_count == startup_delay1)) begin
+                startup_count <= 0;
+                stage1done <= 1'b1;
+                drive_data <= 1'b1;
+                drive_output <= 1'b0;
+            end
+            else if (stage1done && (startup_count == startup_delay2)) begin
+                startup_reps_count <= startup_reps_count + 1;
+                if (startup_reps_count == startup_reps) begin
+                    running <= 1'b1;
+                    starting <= 1'b0;
+                    if (clear_matched)
+                        matched <= 1'b0;
+                    bit_counter <= 0;
+                    drive_data <= pattern_data[0];
+                    drive_output <= ~pattern_hiz[0];
+                    matching <= 1'b1;
+                    trigger <= 1'b0;
+                    saved_payload <= 0;
+                end
+                else begin
+                    stage1done <= 1'b0;
+                    drive_data <= 1'b0;
+                    drive_output <= 1'b1;
+                    startup_count <= 0;
+                end
+            end
+        end
+
 
         else if (running) begin
             bitrecord <= 1'b0;
@@ -271,6 +337,16 @@ module swd_hw_bb_trig #(
             active_glitch_error <= 1'b1;
     end
 
+
+    assign debug = {running,
+                    starting,
+                    compare_en,
+                    trigger_pulse,
+                    active,
+                    active_output,
+                    drive_data,
+                    stage1done
+                   };
 
 
 endmodule
