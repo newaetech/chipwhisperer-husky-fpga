@@ -601,6 +601,7 @@ module cwhusky_top(
         .userio_d               (USERIO_D),
         .userio_ck              (USERIO_CLK),
 
+        .bb_trig_select         (bb_trig_select),
         .bb_data_in             (bb_data_in),
         .bb_data_out            (bb_data_out),
         .bb_data_drive          (bb_data_drive),
@@ -649,11 +650,17 @@ module cwhusky_top(
       .userio_target_debug      (userio_target_debug),
       .userio_target_debug_swd  (userio_target_debug_swd),
 
+      .bb_trig_select           (bb_trig_select),
+      .bb_data_out              (bb_data_out),
+      .bb_data_drive            (bb_data_drive),
+      .bb_clock_out             (bb_clock_out),
+
       .userio_d                 (USERIO_D),
       .userio_clk               (USERIO_CLK),
       .I_userio_debug_data      (userio_debug_data)
    );
 
+   wire [7:0] bb_trig_select;
    wire bb_data_in;
    wire bb_data_out;
    wire bb_data_drive;

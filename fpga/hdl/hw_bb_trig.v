@@ -96,8 +96,6 @@ module hw_bb_trig #(
     assign data_out = (glitch_it)? 1'b0 : drive_data;
     assign data_drive = (glitch_it)? 1'b1 : drive_output;
 
-    wire active_output = drive_output || (glitch_it && glitch_in);
-
     wire active = running;
 
     reg enable_glitch_output = 1'b0;
@@ -284,7 +282,7 @@ module hw_bb_trig #(
     end
 
     /*
-    assign debug = {active_output,
+    assign debug = {data_drive,
                     active,
                     data_drive,
                     data_out,
@@ -295,14 +293,14 @@ module hw_bb_trig #(
                    };
     */
 
-    assign debug = {active_output,
+    assign debug = {trigger_active,
                     active,
                     data_drive,
                     pattern_en[bit_counter_check],
                     trigger,
                     bitrecord,
-                    trigger_active,
-                    trigger_pulse
+                    matched,
+                    matching
                    };
 
 

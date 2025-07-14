@@ -113,9 +113,10 @@ module reg_chipwhisperer #(
 
    input  wire [pUSERIO_WIDTH-1:0] userio_d,
    input wire         userio_ck,
+   output reg [7:0]   bb_trig_select,
 
    //inout  wire        bb_data_io,
-   output wire        bb_data_in,
+   output reg         bb_data_in,
    input  wire        bb_data_out,
    input  wire        bb_data_drive,
    input  wire        bb_clock_out,
@@ -250,7 +251,6 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
  */
 
    reg [3:0] registers_cwauxio;
-   reg [7:0] bb_trig_select;
    reg [7:0] registers_cwextclk;
    reg [pSEQUENCER_NUM_TRIGGERS*16-1:0] registers_cwtrigsrc; // note: for CW-Lite/Pro, this is an 8-bit register
    reg [pSEQUENCER_NUM_TRIGGERS*8-1:0] registers_cwtrigmod;  // note: for CW-Lite/Pro, this is an 8-bit register
@@ -537,32 +537,44 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
 /* IO Routing */
 
-   assign bb_data_in = bb_trig_select[0] ? targetio1_io :
-                       bb_trig_select[2] ? targetio2_io :
-                       bb_trig_select[4] ? targetio3_io :
-                       bb_trig_select[6] ? targetio4_io : 1'bz;
+   always @(*) begin
+       case (bb_trig_select[3:0])
+           0:  bb_data_in = userio_d[0];
+           1:  bb_data_in = userio_d[1];
+           2:  bb_data_in = userio_d[2];
+           3:  bb_data_in = userio_d[3];
+           4:  bb_data_in = userio_d[4];
+           5:  bb_data_in = userio_d[5];
+           6:  bb_data_in = userio_d[6];
+           7:  bb_data_in = userio_d[7];
+           8:  bb_data_in = userio_ck;
+           9:  bb_data_in = targetio1_io;
+           10: bb_data_in = targetio2_io;
+           11: bb_data_in = targetio3_io;
+           12: bb_data_in = targetio4_io;
+           default: bb_data_in = 1'b0;
+       endcase
+   end
 
 
    assign targetio1_io = targetio_highz ? 1'bZ :
-                         bb_trig_select[0] ? bb_data_drive ? bb_data_out : 1'bz :
-                         bb_trig_select[1] ? bb_clock_out :
+                         (bb_trig_select[3:0] == 9) ? bb_data_drive ? bb_data_out : 1'bz :
+                         (bb_trig_select[7:4] == 9) ? bb_clock_out :
                          registers_iorouting[0 + 0] ? uart_tx_i :
                          registers_iorouting[0 + 7] ? registers_iorouting[0 + 6] :
                          1'bZ;
 
 
    assign targetio2_io = targetio_highz ? 1'bZ :
-                         //bb_trig_select[2] ? bb_data_io :
-                         bb_trig_select[2] ? bb_data_drive ? bb_data_out : 1'bz :
-                         bb_trig_select[3] ? bb_clock_out :
+                         (bb_trig_select[3:0] == 10) ? bb_data_drive ? bb_data_out : 1'bz :
+                         (bb_trig_select[7:4] == 10) ? bb_clock_out :
                          registers_iorouting[8 + 0] ? uart_tx_i :
                          registers_iorouting[8 + 7] ? registers_iorouting[8 + 6] :
                          1'bZ;
 
    assign targetio3_io = targetio_highz ? 1'bZ :
-                         //bb_trig_select[4] ? bb_data_io :
-                         bb_trig_select[4] ? bb_data_drive ? bb_data_out : 1'bz :
-                         bb_trig_select[5] ? bb_clock_out :
+                         (bb_trig_select[3:0] == 11) ? bb_data_drive ? bb_data_out : 1'bz :
+                         (bb_trig_select[7:4] == 11) ? bb_clock_out :
                          registers_iorouting[16 + 0] ? uart_tx_i :
                          registers_iorouting[16 + 4] ? 1'b0 :
                          registers_iorouting[16 + 5] ? (uart_tx_i ? 1'bZ : 1'b0) :
@@ -570,9 +582,8 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
                          1'bZ;
 
    assign targetio4_io = targetio_highz ? 1'bZ :
-                         //bb_trig_select[6] ? bb_data_io :
-                         bb_trig_select[6] ? bb_data_drive ? bb_data_out : 1'bz :
-                         bb_trig_select[7] ? bb_clock_out :
+                         (bb_trig_select[3:0] == 12) ? bb_data_drive ? bb_data_out : 1'bz :
+                         (bb_trig_select[7:4] == 12) ? bb_clock_out :
                          registers_iorouting[24 + 0] ? uart_tx_i :
                          registers_iorouting[24 + 7] ? registers_iorouting[24 + 6] :
                          1'bZ;
@@ -651,7 +662,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
          reg_external_clock <= 1'b0;
          cw310_adc_clk_sel <= 1'b0;
          registers_cwauxio <= 4'b0;
-         bb_trig_select <= 8'b0;
+         bb_trig_select <= 8'hFF; // default to disabled
          reg_softpower_control <= {16'd0, 16'd1995, 16'd2000, 8'd0, 8'd35};
          reg_seq_triggers_config <= 1; // default to two triggers, sequencer disabled
       end else if (reg_write) begin
@@ -671,7 +682,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
            `SEQ_TRIGGERS_MINMAX: reg_seq_triggers_minmax[reg_bytecnt*8 +: 8] <= reg_datai;
            `SEQ_TRIGGERS_UART_EDGE_CHOOSER: reg_uart_edge_chooser <= reg_datai;
 
-           `BB_TRIG_SELECT: bb_trig_select <= reg_datai;
+           `BB_TRIG_SELECT: bb_trig_select[reg_bytecnt*8 +: 8] <= reg_datai;
 
            default: ;
          endcase
