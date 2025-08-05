@@ -396,9 +396,6 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 // list of holes in the register address space (to be used for new features):
 //`define UNUSED_ADDRESS 85
 //`define UNUSED_ADDRESS 106
-//`define UNUSED_ADDRESS 107
-//`define UNUSED_ADDRESS 126
-//`define UNUSED_ADDRESS 127
 //`define UNUSED_ADDRESS 97
 //`define UNUSED_ADDRESS 86
 //`define UNUSED_ADDRESS 87
