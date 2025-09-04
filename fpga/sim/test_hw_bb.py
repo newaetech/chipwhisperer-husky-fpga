@@ -236,8 +236,7 @@ class HW_BB_Test(object):
         else:
             writes = 5
         raw = [0]*writes
-        raw[0] = (self.trigger_en << 7) + \
-                 (self.clear_matched << 6)
+        raw[0] = (self.trigger_en << 7)
         raw[1] = (self.continuous_clk << 7) + \
                  (self.inactive_data << 6) + \
                  (self.inactive_state << 5) + \
@@ -268,10 +267,6 @@ class HW_BB_Test(object):
         await self.registers.write(self.reg_addr['BB_TRIG_REG_SELECT'], [self.reg_addr['BB_TRIG_RECORD_EN']])
         await self.registers.write(self.reg_addr['BB_TRIG_DATA'], self.harness.bytes_from_bits(record_en))
 
-        clk_en = [1,1,1,0,0,0]*4
-        await self.registers.write(self.reg_addr['BB_TRIG_REG_SELECT'], [self.reg_addr['BB_TRIG_CLK_EN']])
-        await self.registers.write(self.reg_addr['BB_TRIG_DATA'], self.harness.bytes_from_bits(clk_en))
-
         trigger_en = [1,0,0,0,0,1]*4
         await self.registers.write(self.reg_addr['BB_TRIG_REG_SELECT'], [self.reg_addr['BB_TRIG_BITS']])
         await self.registers.write(self.reg_addr['BB_TRIG_DATA'], self.harness.bytes_from_bits(trigger_en))
@@ -279,18 +274,39 @@ class HW_BB_Test(object):
 
 
         self.trigger_en = 1
-        self.clear_matched = 0
         self.continuous_clk = 0
         self.inactive_data = 0
         self.inactive_state = 0
         self.trigger_when_matched = 0
         self.enable_glitch_output = 0
         self.drive_edge = 0
-        self.check_edge = 1
-        self.clk_div = 2
+        self.check_edge = 0
+        self.clk_div = 8
         self.num_bits = 24
 
-        await self.go(True)
+        for i in range(2):
+            await self.go(True)
+            await self.wait_done()
+            self.dut._log.info('job done!')
+
+
+    async def wait_done(self):
+        await ClockCycles(self.dut.clk_usb, 100) # allow for CDC delays, for it to actually start
+        while True:
+            if not await self.active():
+                break
+
+
+
+    async def active(self):
+        """ Whether the bitbanger module is still currently active (i.e. still bit-banging).
+        """
+        raw = (await self.registers.read(self.reg_addr["BB_TRIG_CTRL_STAT"]))[0]
+        if raw & 0x02:
+            return True
+        else:
+            return False
+
 
 
     # STRATEGY:
