@@ -71,7 +71,6 @@ module hw_bb_trig #(
     reg [pPATTERN_DEPTH-1:0] pattern_data;
     reg [pPATTERN_DEPTH-1:0] pattern_en = {pPATTERN_DEPTH{1'b1}};
     reg [pPATTERN_DEPTH-1:0] pattern_hiz = {pPATTERN_DEPTH{1'b0}};
-    reg [pPATTERN_DEPTH-1:0] clk_en = {pPATTERN_DEPTH{1'b1}};
     reg [pPATTERN_DEPTH-1:0] trigger_bits = {pPATTERN_DEPTH{1'b0}};
     reg [pPATTERN_DEPTH-1:0] record_en = {pPATTERN_DEPTH{1'b0}};
     reg go_usb = 1'b0;
@@ -86,7 +85,6 @@ module hw_bb_trig #(
     reg [6:0] clk_div = 8'd1;
     reg [7:0] clock_counter = 8'd0;
     reg drive_output = 1'b0;
-    reg clock_enabled = 1'b0;
     reg drive_data;
     reg [15:0] num_bits = 0; // max-sized because of where it sits in the register space
     reg [pSAVE_DEPTH-1:0] saved_payload = 0;
@@ -114,7 +112,6 @@ module hw_bb_trig #(
                       `BB_TRIG_PATTERN_HIZ:     reg_datao = pattern_hiz[reg_bytecnt*8 +: 8];
                       `BB_TRIG_RECORD_EN:       reg_datao = record_en[reg_bytecnt*8 +: 8];
                       `BB_TRIG_BITS:            reg_datao = trigger_bits[reg_bytecnt*8 +: 8];
-                      `BB_TRIG_CLK_EN:          reg_datao = clk_en[reg_bytecnt*8 +: 8];
                       `BB_TRIG_SAVED_DATA:      reg_datao = saved_payload[reg_bytecnt*8 +: 8];
                   endcase
               end
@@ -144,7 +141,6 @@ module hw_bb_trig #(
                       `BB_TRIG_PATTERN_HIZ:  pattern_hiz[reg_bytecnt*8 +: 8]    <= reg_datai;
                       `BB_TRIG_RECORD_EN:    record_en[reg_bytecnt*8 +: 8]      <= reg_datai;
                       `BB_TRIG_BITS:         trigger_bits[reg_bytecnt*8 +: 8]   <= reg_datai;
-                      `BB_TRIG_CLK_EN:       clk_en[reg_bytecnt*8 +: 8]         <= reg_datai;
                   endcase
               end
               `BB_TRIG_CTRL_STAT: begin
@@ -194,7 +190,7 @@ module hw_bb_trig #(
     reg driving = 1'b0;
 
     assign trigger_pulse = trigger_en && trigger_active && trigger && ~trigger_r;
-    assign clock_out = ((running_r && clock_enabled) || continuous_clk) && clock_out_pre_r;
+    assign clock_out = (running_r || continuous_clk) && clock_out_pre_r;
 
     // generate clock_out:
     always @(posedge clock) begin
@@ -221,7 +217,6 @@ module hw_bb_trig #(
             bit_counter_drive <= 0;
             bit_counter_check <= 0;
             driving <= 1'b0;
-            clock_enabled_pre <= clk_en[0];
         end
         else if (go_target_pulse) begin
             go_wait_sync <= 1'b1;
@@ -249,7 +244,6 @@ module hw_bb_trig #(
                     else begin
                         drive_data_pre <= pattern_data[bit_counter_drive];
                         drive_output_pre <= ~pattern_hiz[bit_counter_drive];
-                        clock_enabled_pre <= clk_en[bit_counter_drive];
                         bit_counter_drive <= bit_counter_drive + 1;
                     end
                 end
@@ -285,7 +279,6 @@ module hw_bb_trig #(
 
     reg drive_data_pre;
     reg drive_output_pre;
-    reg clock_enabled_pre;
 
     reg pattern_data_r;
     reg pattern_en_r;
@@ -296,7 +289,6 @@ module hw_bb_trig #(
         running_r               <= running;
         drive_data              <= drive_data_pre;
         drive_output            <= drive_output_pre;
-        clock_enabled           <= clock_enabled_pre;
 
         pattern_data_r          <= pattern_data[bit_counter_check];
         pattern_en_r            <= pattern_en[bit_counter_check];
@@ -307,7 +299,7 @@ module hw_bb_trig #(
     assign debug = {trigger_active,
                     active,
                     data_drive,
-                    pattern_en[bit_counter_check],
+                    pattern_en_r,
                     trigger,
                     bitrecord,
                     matched,

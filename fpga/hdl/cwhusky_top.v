@@ -121,11 +121,13 @@ module cwhusky_top(
 `ifdef PLUS
     parameter pSEQUENCER_NUM_TRIGGERS = 4;
     parameter pPLL_CLOCKS = 4;
-    parameter pBB_TRIG_DEPTH = 512;
+    parameter pBB_TRIG_DEPTH = 384;
+    parameter pBB_SAVE_DEPTH = 32;
 `else
     parameter pSEQUENCER_NUM_TRIGGERS = 2;
     parameter pPLL_CLOCKS = 1;
     parameter pBB_TRIG_DEPTH = 128;
+    parameter pBB_SAVE_DEPTH = 8;
 `endif
     parameter pSEQUENCER_COUNTER_WIDTH = 16;
 
@@ -668,7 +670,8 @@ module cwhusky_top(
 
    hw_bb_trig #(
       .pBYTECNT_SIZE            (pBYTECNT_SIZE),
-      .pPATTERN_DEPTH           (pBB_TRIG_DEPTH)
+      .pPATTERN_DEPTH           (pBB_TRIG_DEPTH),
+      .pSAVE_DEPTH              (pBB_SAVE_DEPTH)
    ) U_hw_bb_trig (
       .reset                    (reg_rst       ),
       .clk_usb                  (clk_usb_buf   ),
@@ -694,7 +697,6 @@ module cwhusky_top(
 
       .debug                    (bb_debug      )
    );   
-
 
 
 `ifndef SAD_ONLY

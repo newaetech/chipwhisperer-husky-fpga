@@ -93,7 +93,7 @@ module userio #(
 
     generate
         for (i = 0; i < pWIDTH; i = i + 1) begin
-            assign userio_d[i] = (bb_trig_select[3:0] == i) ? bb_data_drive ? bb_data_out : 1'bz :
+            assign userio_d[i] = (bb_trig_select[3:0] == i) ? (bb_data_drive ? bb_data_out : 1'bz) :
                                  (bb_trig_select[7:4] == i) ? bb_clock_out :
                                  (~userio_cwdriven[i])?    1'bz : 
                                  (userio_fpga_debug)?      I_userio_debug_data[i] : 
@@ -101,7 +101,7 @@ module userio #(
         end
     endgenerate
 
-    assign userio_clk = (bb_trig_select[3:0] == pWIDTH) ? bb_data_drive ? bb_data_out : 1'bz :
+    assign userio_clk = (bb_trig_select[3:0] == pWIDTH) ? (bb_data_drive ? bb_data_out : 1'bz) :
                         (bb_trig_select[7:4] == pWIDTH) ? bb_clock_out :
                         (~userio_cwdriven[pWIDTH])?    1'bz :
                         (userio_target_debug)?         FPGA_BONUS1 : 

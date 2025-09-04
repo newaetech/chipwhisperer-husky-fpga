@@ -682,7 +682,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
            `SEQ_TRIGGERS_MINMAX: reg_seq_triggers_minmax[reg_bytecnt*8 +: 8] <= reg_datai;
            `SEQ_TRIGGERS_UART_EDGE_CHOOSER: reg_uart_edge_chooser <= reg_datai;
 
-           `BB_TRIG_SELECT: bb_trig_select[reg_bytecnt*8 +: 8] <= reg_datai;
+           `BB_TRIG_SELECT: bb_trig_select <= reg_datai;
 
            default: ;
          endcase

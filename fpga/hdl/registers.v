@@ -335,7 +335,6 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
     `define BB_TRIG_PATTERN_HIZ  2
     `define BB_TRIG_RECORD_EN    3
     `define BB_TRIG_BITS         4
-    `define BB_TRIG_CLK_EN       5
     `define BB_TRIG_SAVED_DATA   6
 
 `define BB_TRIG_SELECT          84
