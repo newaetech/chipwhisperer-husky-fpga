@@ -297,7 +297,7 @@ module hw_bb_trig #(
                     active,
                     data_drive,
                     pattern_en_r,
-                    trigger,
+                    trigger_pulse,
                     bitrecord,
                     matched,
                     matching
