@@ -81,6 +81,7 @@ module hw_bb_trig #(
     reg trigger_when_matched = 1'b0;
     reg [1:0] data_io_inactive_state = 2'b01;
     reg trigger_en = 1'b0;
+    reg [1:0] glitch_mode = 2'b00;
     reg [6:0] clk_div = 8'd1;
     reg [7:0] clock_counter = 8'd0;
     reg drive_output = 1'b0;
@@ -90,7 +91,9 @@ module hw_bb_trig #(
     reg [pSAVE_DEPTH-1:0] data_sr;
 
     wire glitch_it = glitch_in && enable_glitch_output;
-    assign data_out = (glitch_it)? 1'b0 : drive_data;
+    wire glitch_value = (glitch_mode == 2'b00)? 1'b0 : 
+                        (glitch_mode == 2'b01)? 1'b1 : ~drive_data;
+    assign data_out = (glitch_it)? glitch_value : drive_data;
     assign data_drive = (glitch_it)? 1'b1 : drive_output;
 
     wire active = running;
@@ -146,6 +149,7 @@ module hw_bb_trig #(
                   case (reg_bytecnt)
                       0: begin
                           trigger_en                    <= reg_datai[7];
+                          glitch_mode                   <= reg_datai[1:0];
                       end
                       1: begin
                           continuous_clk                <= reg_datai[7];
