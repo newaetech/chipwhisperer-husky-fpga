@@ -207,7 +207,6 @@ module hw_bb_trig #(
             clock_counter <= clock_counter + 1;
     end
 
-    // driving logic:
     always @(posedge clock) begin
         trigger_r <= trigger;
         // synchronize "go" to our running clock output:
@@ -229,6 +228,8 @@ module hw_bb_trig #(
         else if (running) begin
             bitrecord <= 1'b0;
             trigger <= 1'b0;
+
+            // drive logic:
             if (clock_counter == (clk_div-1)) begin
                 // drive data on falling or rising edge:
                 if (clock_out_pre != drive_edge) begin 
@@ -250,6 +251,7 @@ module hw_bb_trig #(
                 end
             end
 
+            // check logic:
             if ((clock_counter == 0) && driving) begin
                 // check pattern match and fire trigger on falling or rising edge:
                 if ((clock_out_pre_r != check_edge) && (driving || (check_edge == drive_edge))) begin 
