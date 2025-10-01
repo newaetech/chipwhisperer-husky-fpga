@@ -82,13 +82,12 @@ module hw_bb_trig #(
     reg [1:0] data_io_inactive_state = 2'b01;
     reg trigger_en = 1'b0;
     reg [1:0] glitch_mode = 2'b00;
-    reg [6:0] clk_div = 8'd1;
+    reg [6:0] clk_div = 7'd1;
     reg [7:0] clock_counter = 8'd0;
     reg drive_output = 1'b0;
     reg drive_data;
     reg [15:0] num_bits = 0; // max-sized because of where it sits in the register space
     reg [pSAVE_DEPTH-1:0] saved_payload = 0;
-    reg [pSAVE_DEPTH-1:0] data_sr;
 
     wire glitch_it = glitch_in && enable_glitch_output;
     wire glitch_value = (glitch_mode == 2'b00)? 1'b0 : 
@@ -119,7 +118,7 @@ module hw_bb_trig #(
               end
               `BB_TRIG_CTRL_STAT: begin
                   case (reg_bytecnt)
-                      0: reg_datao = {6'b0, enable_glitch_output, active, matched};
+                      0: reg_datao = {5'b0, enable_glitch_output, active, matched};
                       1: reg_datao = pPATTERN_DEPTH & 8'hFF;
                       2: reg_datao = pPATTERN_DEPTH >> 8;
                   endcase
@@ -135,7 +134,7 @@ module hw_bb_trig #(
     always @(posedge clk_usb) begin
        if (reg_write) begin
           case (reg_address)
-              `BB_TRIG_REG_SELECT: data_reg_select      <= reg_datai;
+              `BB_TRIG_REG_SELECT: data_reg_select      <= reg_datai[3:0];
               `BB_TRIG_DATA: begin
                   case (data_reg_select)
                       `BB_TRIG_PATTERN_DATA: pattern_data[reg_bytecnt*8 +: 8]   <= reg_datai;
