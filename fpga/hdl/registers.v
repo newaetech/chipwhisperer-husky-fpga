@@ -327,16 +327,7 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define USERIO_DRP_RESET        127
 
 `define BB_TRIG_CTRL_STAT       58
-`define BB_TRIG_REG_SELECT      70
 `define BB_TRIG_DATA            83
-// these are "sub-registers", selected via BB_TRIG_DATA:
-    `define BB_TRIG_PATTERN_DATA 0
-    `define BB_TRIG_PATTERN_EN   1
-    `define BB_TRIG_PATTERN_HIZ  2
-    `define BB_TRIG_RECORD_EN    3
-    `define BB_TRIG_BITS         4
-    `define BB_TRIG_SAVED_DATA   6
-
 `define BB_TRIG_SELECT          84
 
 `define CAPTURE_DONE            89
@@ -393,6 +384,7 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define REG_DDR_START_READ      125
 
 // list of holes in the register address space (to be used for new features):
+//`define UNUSED_ADDRESS 70
 //`define UNUSED_ADDRESS 85
 //`define UNUSED_ADDRESS 106
 //`define UNUSED_ADDRESS 97

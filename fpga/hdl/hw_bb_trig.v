@@ -68,11 +68,6 @@ module hw_bb_trig #(
     reg matched;
     reg matching;
     reg bitrecord = 1'b0; // for debug only
-    reg [pPATTERN_DEPTH-1:0] pattern_data;
-    reg [pPATTERN_DEPTH-1:0] pattern_en = {pPATTERN_DEPTH{1'b1}};
-    reg [pPATTERN_DEPTH-1:0] pattern_hiz = {pPATTERN_DEPTH{1'b0}};
-    reg [pPATTERN_DEPTH-1:0] trigger_bits = {pPATTERN_DEPTH{1'b0}};
-    reg [pPATTERN_DEPTH-1:0] record_en = {pPATTERN_DEPTH{1'b0}};
     reg go_usb = 1'b0;
     wire go_target_pulse;
     reg [pCOUNTER_WIDTH:0] bit_counter_drive;
@@ -101,24 +96,12 @@ module hw_bb_trig #(
     reg drive_edge = 1'b1; // drive data on falling (0) / rising (1) edge of clock_out_pre
     reg check_edge = 1'b1; // check data and fire trigger on falling (0) / rising (1) edge of clock_out_pre
 
-    reg [3:0] data_reg_select;
-
     always @(*) begin
        if (reg_read) begin
           case (reg_address)
-              `BB_TRIG_DATA: begin
-                  case (data_reg_select)
-                      `BB_TRIG_PATTERN_DATA:    reg_datao = pattern_data[reg_bytecnt*8 +: 8];
-                      `BB_TRIG_PATTERN_EN:      reg_datao = pattern_en[reg_bytecnt*8 +: 8];
-                      `BB_TRIG_PATTERN_HIZ:     reg_datao = pattern_hiz[reg_bytecnt*8 +: 8];
-                      `BB_TRIG_RECORD_EN:       reg_datao = record_en[reg_bytecnt*8 +: 8];
-                      `BB_TRIG_BITS:            reg_datao = trigger_bits[reg_bytecnt*8 +: 8];
-                      `BB_TRIG_SAVED_DATA:      reg_datao = saved_payload[reg_bytecnt*8 +: 8];
-                  endcase
-              end
               `BB_TRIG_CTRL_STAT: begin
                   case (reg_bytecnt)
-                      0: reg_datao = {5'b0, enable_glitch_output, active, matched};
+                      0: reg_datao = {fifo_overflow_error, fifo_underflow_error, 3'b0, enable_glitch_output, active, matched};
                       1: reg_datao = pPATTERN_DEPTH & 8'hFF;
                       2: reg_datao = pPATTERN_DEPTH >> 8;
                   endcase
@@ -131,19 +114,10 @@ module hw_bb_trig #(
     end
 
 
+    reg fifo_wr = 1'b0;
     always @(posedge clk_usb) begin
        if (reg_write) begin
           case (reg_address)
-              `BB_TRIG_REG_SELECT: data_reg_select      <= reg_datai[3:0];
-              `BB_TRIG_DATA: begin
-                  case (data_reg_select)
-                      `BB_TRIG_PATTERN_DATA: pattern_data[reg_bytecnt*8 +: 8]   <= reg_datai;
-                      `BB_TRIG_PATTERN_EN:   pattern_en[reg_bytecnt*8 +: 8]     <= reg_datai;
-                      `BB_TRIG_PATTERN_HIZ:  pattern_hiz[reg_bytecnt*8 +: 8]    <= reg_datai;
-                      `BB_TRIG_RECORD_EN:    record_en[reg_bytecnt*8 +: 8]      <= reg_datai;
-                      `BB_TRIG_BITS:         trigger_bits[reg_bytecnt*8 +: 8]   <= reg_datai;
-                  endcase
-              end
               `BB_TRIG_CTRL_STAT: begin
                   case (reg_bytecnt)
                       0: begin
@@ -167,6 +141,13 @@ module hw_bb_trig #(
               default: ;
           endcase
        end
+
+       if (reg_write && (reg_address == `BB_TRIG_DATA) && ~fifo_wr)
+           fifo_wr <= 1'b1;
+       else
+           fifo_wr <= 1'b0;
+
+
        if (go_usb)
            go_usb <= 1'b0;
        else if (reg_write && (reg_address == `BB_TRIG_CTRL_STAT) && (reg_bytecnt == 5))
@@ -185,13 +166,73 @@ module hw_bb_trig #(
     reg running_r;
     reg go_wait_sync = 1'b0;
     reg clock_out_pre = 1'b0;
-    reg clock_out_pre_r;
     reg trigger;
     reg trigger_r;
     reg driving = 1'b0;
 
     assign trigger_pulse = trigger_en && trigger_active && trigger && ~trigger_r;
     assign clock_out = (running_r || continuous_clk) && clock_out_pre_r;
+
+    wire fifo_overflow_error;
+    wire fifo_underflow_error;
+    wire fifo_empty;
+    wire [4:0] fifo_dout;
+    reg  fifo_rd = 1'b0;
+
+    fifo_async #(
+        .pDATA_WIDTH    (5),
+        .pDEPTH         (pPATTERN_DEPTH),
+        .pFALLTHROUGH   (1),
+        .pFLOPS         (1),
+        .pDISTRIBUTED   (0),
+        .pBRAM          (0)
+    ) U_fifo (
+        .wclk                   (clk_usb),
+        .rclk                   (clock),
+        .wrst_n                 (~reset),
+        .rrst_n                 (~reset),
+        .wfull_threshold_value  (0),
+        .rempty_threshold_value (0),
+        .wen                    (fifo_wr),
+        .wdata                  (reg_datai[4:0]),
+        .wfull                  (),
+        .walmost_full           (),
+        .woverflow              (fifo_overflow_error),
+        .wfull_threshold        (),
+        .ren                    (fifo_rd),
+        .rdata                  (fifo_dout),
+        .rempty                 (fifo_empty),
+        .ralmost_empty          (),
+        .rempty_threshold       (),
+        .runderflow             (fifo_underflow_error)
+    );
+
+    wire pattern_data = fifo_dout[0];
+    wire pattern_hiz = fifo_dout[1];
+    wire pattern_en = fifo_dout[2];
+    wire trigger_bits = fifo_dout[3];
+    wire record_en = fifo_dout[4];
+
+    reg clock_out_pre_r;
+
+    reg record_en_r;
+    reg pattern_data_r;
+    reg pattern_en_r;
+    reg trigger_bits_r;
+
+    always @(posedge clock) begin
+        if (fifo_rd) begin
+            record_en_r     <= record_en;
+            pattern_data_r  <= pattern_data;
+            pattern_en_r    <= pattern_en;
+            trigger_bits_r  <= trigger_bits;
+        end
+    end
+
+    wire record_en_check    = (drive_edge == check_edge)? record_en    : record_en_r;
+    wire pattern_en_check   = (drive_edge == check_edge)? pattern_en   : pattern_en_r;
+    wire pattern_data_check = (drive_edge == check_edge)? pattern_data : pattern_data_r;
+    wire trigger_bits_check = (drive_edge == check_edge)? trigger_bits : trigger_bits_r;
 
     // generate clock_out:
     always @(posedge clock) begin
@@ -208,8 +249,9 @@ module hw_bb_trig #(
 
     always @(posedge clock) begin
         trigger_r <= trigger;
+        running_r <= running;
         // synchronize "go" to our running clock output:
-        if (go_wait_sync && (clock_counter == (clk_div-1)) && (clock_out_pre != drive_edge)) begin
+        if (go_wait_sync && (clock_counter == 0) && (clock_out_pre_r != drive_edge)) begin
             go_wait_sync <= 1'b0;
             running <= 1'b1;
             trigger <= 1'b0;
@@ -229,40 +271,45 @@ module hw_bb_trig #(
             trigger <= 1'b0;
 
             // drive logic:
-            if (clock_counter == (clk_div-1)) begin
+            if (clock_counter == 0) begin
                 // drive data on falling or rising edge:
-                if (clock_out_pre != drive_edge) begin 
+                if (clock_out_pre_r != drive_edge) begin 
                     driving <= 1'b1;
                     if (bit_counter_drive == ( (num_bits > 0)? num_bits : pPATTERN_DEPTH) ) begin
                         running <= 1'b0;
-                        drive_data_pre <= data_io_inactive_state[1];
-                        drive_output_pre <= data_io_inactive_state[0];
+                        drive_data <= data_io_inactive_state[1];
+                        drive_output <= data_io_inactive_state[0];
                         if (matching)
                             matched <= 1'b1;
                         else
                             matched <= 1'b0;
                     end
                     else begin
-                        drive_data_pre <= pattern_data[bit_counter_drive];
-                        drive_output_pre <= ~pattern_hiz[bit_counter_drive];
+                        if (~fifo_empty) fifo_rd <= 1'b1; // check on empty because FWFT: need to block last read
+                        drive_data <= pattern_data;
+                        drive_output <= ~pattern_hiz;
                         bit_counter_drive <= bit_counter_drive + 1;
                     end
                 end
+                else
+                    fifo_rd <= 1'b0;
             end
+            else
+                fifo_rd <= 1'b0;
 
             // check logic:
-            if ((clock_counter == 0) && driving) begin
+            if (clock_counter == 0) begin
                 // check pattern match and fire trigger on falling or rising edge:
                 if ((clock_out_pre_r != check_edge) && (driving || (check_edge == drive_edge))) begin 
                     bit_counter_check <= bit_counter_check + 1;
-                    if (record_en_r) begin
+                    if (record_en_check) begin
                         saved_payload <= {saved_payload[pSAVE_DEPTH-2:0], data_in};
                         bitrecord <= 1'b1;
                     end
 
-                    if ((data_in != pattern_data_r) && pattern_en_r)
+                    if ((data_in != pattern_data_check) && pattern_en_check)
                         matching <= 1'b0;
-                    if ((matching || ~trigger_when_matched) && trigger_bits_r)
+                    if ((matching || ~trigger_when_matched) && trigger_bits_check)
                         trigger <= 1'b1;
                     else
                         trigger <= 1'b0;
@@ -271,43 +318,24 @@ module hw_bb_trig #(
         end
 
         else begin
+            fifo_rd <= 1'b0;
             matching <= 1'b0;
             trigger <= 1'b0;
             bitrecord <= 1'b0;
-            drive_data_pre <= data_io_inactive_state[1];
-            drive_output_pre <= data_io_inactive_state[0];
+            drive_data <= data_io_inactive_state[1];
+            drive_output <= data_io_inactive_state[0];
         end
-    end
-
-    reg drive_data_pre;
-    reg drive_output_pre;
-
-    reg pattern_data_r;
-    reg pattern_en_r;
-    reg trigger_bits_r;
-    reg record_en_r;
-
-    always @(posedge clock) begin
-        running_r               <= running;
-        drive_data              <= drive_data_pre;
-        drive_output            <= drive_output_pre;
-
-        pattern_data_r          <= pattern_data[bit_counter_check];
-        pattern_en_r            <= pattern_en[bit_counter_check];
-        trigger_bits_r          <= trigger_bits[bit_counter_check];
-        record_en_r             <= record_en[bit_counter_check];
     end
 
     assign debug = {trigger_active,
                     active,
                     data_drive,
-                    pattern_en_r,
+                    pattern_en,
                     trigger_pulse,
                     bitrecord,
                     matched,
                     matching
                    };
-
 
 endmodule
 

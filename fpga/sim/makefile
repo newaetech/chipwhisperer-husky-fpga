@@ -198,6 +198,7 @@ compile_hw_bb_coco:
 	../hdl/hw_bb_trig.v \
 	../hdl/hw_bb_wrapper.v \
 	../hdl/usb_reg_main.v \
+	../fpga-common/hdl/fifo_async.v \
 	../fpga-common/hdl/cdc_pulse.v \
 	hw_bb_cocowrapper.v \
 

@@ -256,22 +256,15 @@ class HW_BB_Test(object):
         #self.dut._log.info('Expected trigger latency: %d' % latency)
 
         pattern_data = [1,0,0,0,0,1]*4
-        await self.registers.write(self.reg_addr['BB_TRIG_REG_SELECT'], [self.reg_addr['BB_TRIG_PATTERN_DATA']])
-        await self.registers.write(self.reg_addr['BB_TRIG_DATA'], self.harness.bytes_from_bits(pattern_data))
-
         pattern_en = [1]*len(pattern_data)
-        await self.registers.write(self.reg_addr['BB_TRIG_REG_SELECT'], [self.reg_addr['BB_TRIG_PATTERN_EN']])
-        await self.registers.write(self.reg_addr['BB_TRIG_DATA'], self.harness.bytes_from_bits(pattern_data))
+        record_en = [1,1,0,0,0,1]*4
+        trigger_en = [1,1,0,0,0,1]*4
+        hiz = [0]*len(pattern_data)
 
-        record_en = [1,0,0,0,0,1]*4
-        await self.registers.write(self.reg_addr['BB_TRIG_REG_SELECT'], [self.reg_addr['BB_TRIG_RECORD_EN']])
-        await self.registers.write(self.reg_addr['BB_TRIG_DATA'], self.harness.bytes_from_bits(record_en))
-
-        trigger_en = [1,0,0,0,0,1]*4
-        await self.registers.write(self.reg_addr['BB_TRIG_REG_SELECT'], [self.reg_addr['BB_TRIG_BITS']])
-        await self.registers.write(self.reg_addr['BB_TRIG_DATA'], self.harness.bytes_from_bits(trigger_en))
-
-
+        bb_data = []
+        for a,b,c,d,e in zip(pattern_data, hiz, pattern_en, trigger_en, record_en):
+            bb_data.append(a + (b<<1) + (c<<2) + (d<<3) + (e<<4))
+        await self.registers.write(self.reg_addr['BB_TRIG_DATA'], bb_data)
 
         self.trigger_en = 1
         self.continuous_clk = 0
@@ -279,12 +272,12 @@ class HW_BB_Test(object):
         self.inactive_state = 0
         self.trigger_when_matched = 0
         self.enable_glitch_output = 0
-        self.drive_edge = 0
-        self.check_edge = 0
+        self.drive_edge = 1
+        self.check_edge = 1
         self.clk_div = 8
         self.num_bits = 24
 
-        for i in range(2):
+        for i in range(1):
             await self.go(True)
             await self.wait_done()
             self.dut._log.info('job done!')
