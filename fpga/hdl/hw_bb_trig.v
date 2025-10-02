@@ -174,7 +174,7 @@ module hw_bb_trig #(
     reg driving = 1'b0;
 
     assign trigger_pulse = trigger_en && trigger_active && trigger && ~trigger_r;
-    assign clock_out = (running_r || continuous_clk) && clock_out_pre_r;
+    assign clock_out = (driving || continuous_clk) && clock_out_pre_r;
 
     wire fifo_overflow_error;
     wire fifo_underflow_error;
@@ -280,6 +280,7 @@ module hw_bb_trig #(
                     driving <= 1'b1;
                     if (bit_counter_drive == ( (num_bits > 0)? num_bits : pPATTERN_DEPTH) ) begin
                         running <= 1'b0;
+                        driving <= 1'b0;
                         drive_data <= data_io_inactive_state[1];
                         drive_output <= data_io_inactive_state[0];
                         if (matching)
