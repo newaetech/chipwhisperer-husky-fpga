@@ -67,7 +67,7 @@ module hw_bb_trig #(
 
     reg matched;
     reg matching;
-    reg bitrecord = 1'b0; // for debug only
+    reg bitrecord = 1'b0;
     reg go_usb = 1'b0;
     wire go_target_pulse;
     reg [pCOUNTER_WIDTH:0] bit_counter_drive;
@@ -99,11 +99,14 @@ module hw_bb_trig #(
     always @(*) begin
        if (reg_read) begin
           case (reg_address)
+              `BB_TRIG_DATA: reg_datao = saved_payload[reg_bytecnt*8 +: 8];
               `BB_TRIG_CTRL_STAT: begin
                   case (reg_bytecnt)
                       0: reg_datao = {fifo_overflow_error, fifo_underflow_error, 3'b0, enable_glitch_output, active, matched};
                       1: reg_datao = pPATTERN_DEPTH & 8'hFF;
                       2: reg_datao = pPATTERN_DEPTH >> 8;
+                      3: reg_datao = pSAVE_DEPTH & 8'hFF;
+                      4: reg_datao = pSAVE_DEPTH >> 8;
                   endcase
               end
               default: reg_datao = 0;
@@ -302,10 +305,8 @@ module hw_bb_trig #(
                 // check pattern match and fire trigger on falling or rising edge:
                 if ((clock_out_pre_r != check_edge) && (driving || (check_edge == drive_edge))) begin 
                     bit_counter_check <= bit_counter_check + 1;
-                    if (record_en_check) begin
-                        saved_payload <= {saved_payload[pSAVE_DEPTH-2:0], data_in};
+                    if (record_en_check) 
                         bitrecord <= 1'b1;
-                    end
 
                     if ((data_in != pattern_data_check) && pattern_en_check)
                         matching <= 1'b0;
@@ -315,6 +316,11 @@ module hw_bb_trig #(
                         trigger <= 1'b0;
                 end
             end
+
+            // record logic:
+            if (bitrecord)
+                saved_payload <= {saved_payload[pSAVE_DEPTH-2:0], data_in};
+
         end
 
         else begin
