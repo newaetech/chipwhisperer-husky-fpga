@@ -173,8 +173,9 @@ module hw_bb_trig #(
     reg trigger_r;
     reg driving = 1'b0;
 
-    assign trigger_pulse = trigger_en && trigger_active && trigger && ~trigger_r;
-    assign clock_out = (driving || continuous_clk) && clock_out_pre_r;
+    assign trigger_pulse = running && trigger_en && trigger_active && trigger && ~trigger_r;
+    wire clock_enable = continuous_clk || (drive_edge)? driving : running;
+    assign clock_out = clock_enable && clock_out_pre_r;
 
     wire fifo_overflow_error;
     wire fifo_underflow_error;
