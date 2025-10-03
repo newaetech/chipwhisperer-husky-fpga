@@ -58,6 +58,8 @@ INTERVAL_MATCHING=1
 SAD_COUNTER_WIDTH=12
 FIFO_TYPE=NOXILINXFIFO
 NUM_TRIGGERS=4
+BB_PATTERN_DEPTH=256
+BB_SAVE_DEPTH=32
 COUNTER_WIDTH=16
 COCOTB_LOG_LEVEL=INFO
 
@@ -194,6 +196,8 @@ compile_hw_bb_coco:
 	-DINTERVAL_MATCHING=$(INTERVAL_MATCHING) \
 	-I../hdl \
 	-P hw_bb_cocowrapper.pDUMP=$(DUMP) \
+	-P hw_bb_cocowrapper.pPATTERN_DEPTH=$(BB_PATTERN_DEPTH) \
+	-P hw_bb_cocowrapper.pSAVE_DEPTH=$(BB_SAVE_DEPTH) \
 	-o $(EXEFILE) \
 	../hdl/hw_bb_trig.v \
 	../hdl/hw_bb_wrapper.v \

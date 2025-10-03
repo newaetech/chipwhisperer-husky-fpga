@@ -88,7 +88,6 @@ module hw_bb_wrapper #(
        .reg_write        (reg_write) 
     );
 
-
     hw_bb_trig #(
       .pBYTECNT_SIZE            (pBYTECNT_SIZE),
       .pPATTERN_DEPTH           (pPATTERN_DEPTH),
@@ -110,6 +109,7 @@ module hw_bb_wrapper #(
       .clock_out                (bb_clock_out  ),
       .trigger_pulse            (trigger_bb    ),
 
+      .trigger_active           (1'b1          ),
       .glitch_in                (glitchclk     ),
       .debug                    (              )
     );   

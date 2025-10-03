@@ -44,8 +44,14 @@ module hw_bb_cocowrapper (
 
     // testbench things:
     input  wire [31:0]  errors,
+
+
     input  wire         expected_trigger,
-    output reg          trigger_error
+    input  wire         expected_data,
+    input  wire         expected_hiz,
+    output reg          trigger_error,
+    output reg          data_error,
+    output reg          hiz_error
 
 );
 
@@ -66,9 +72,21 @@ module hw_bb_cocowrapper (
             trigger_error <= 1'b1;
         else
             trigger_error <= 1'b0;
+
+        if (expected_data != bb_data_out)
+            data_error <= 1'b1;
+        else
+            data_error <= 1'b0;
+
+        if (expected_hiz != ~bb_data_drive)
+            hiz_error <= 1'b1;
+        else
+            hiz_error <= 1'b0;
     end
+    wire all_errors = trigger_error || data_error || hiz_error;
 
     wire bb_data_in = bb_data_out;
+
 
     hw_bb_wrapper #(
         .pBYTECNT_SIZE      (7),

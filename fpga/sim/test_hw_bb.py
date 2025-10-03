@@ -20,7 +20,7 @@
 #    limitations under the License.
 
 import cocotb
-from cocotb.triggers import RisingEdge, Edge, ClockCycles, Join, Lock, Event, with_timeout, First
+from cocotb.triggers import RisingEdge, FallingEdge, Edge, ClockCycles, Join, Lock, Event, with_timeout, First
 from cocotb.clock import Clock
 from cocotb.queue import Queue
 from cocotb.handle import Force, Release
@@ -44,7 +44,7 @@ fh = logging.FileHandler(logfile, 'w')
 fh.setFormatter(SimLogFormatter())
 root_logger.addHandler(fh)
 
-timeout_time = int(os.getenv('TIMEOUT_TIME', '300'))
+timeout_time = int(os.getenv('TIMEOUT_TIME', '800'))
 
 class Harness(object):
     def __init__(self, dut, registers, reps):
@@ -194,8 +194,11 @@ class HW_BB_Test(object):
         self.registers = registers
         self.reg_addr = self.harness.reg_addr
         self.name = name
+        self.reps = self.harness.reps
 
         self.trigger_error = self.dut.trigger_error
+        self.data_error = self.dut.data_error
+        self.hiz_error = self.dut.hiz_error
 
         self._coro = None
 
@@ -206,6 +209,7 @@ class HW_BB_Test(object):
             raise RuntimeError("Capture already started")
         self._coro = cocotb.start_soon(self._run())
 
+
     def stop(self):
         """Stop test thread"""
         if self._coro is None:
@@ -213,19 +217,22 @@ class HW_BB_Test(object):
         self._coro.kill()
         self._coro = None
 
+
     def running(self):
         if self._coro is None or self._coro.done():
             return False
         else:
             return True
 
+
     async def done(self):
         """ wait for _run() to complete """
         await Join(self._coro)
-        if self.errors:
-            self.dut._log.error("%6s test done, failed with %d errors" % (self.name, self.errors))
+        if self.harness.errors:
+            self.dut._log.error("%6s test done, failed with %d errors" % (self.name, self.harness.errors))
         else:
             self.dut._log.info("%6s test done: passed!" % self.name)
+
 
     async def go(self, go=True):
         # Most properties of this module are only written out to the hardware when this
@@ -252,35 +259,172 @@ class HW_BB_Test(object):
 
     async def dut_setup(self):
         await self.harness.reset()
-        #await self.registers.write(self.reg_addr['SAD_TRIGGER_TIME'], self.registers.to_bytes(triggerer_init, size))
-        #self.dut._log.info('Expected trigger latency: %d' % latency)
+        raw = (await self.registers.read(self.reg_addr["BB_TRIG_CTRL_STAT"], 5))
+        self.pattern_depth = raw[1] + (raw[2] << 8)
+        self.save_depth = raw[3] + (raw[4] << 8)
+        self.dut._log.info('pattern depth: %d' % self.pattern_depth)
+        self.dut._log.info('save depth: %d' % self.save_depth)
 
+        if (self.save_depth % 8 != 0):
+            self.dut._log.error('ERROR: pSAVE_DEPTH not a multiple of 8!')
+
+        self.trigger_en = 1
+        self.continuous_clk = 0
+        self.inactive_data = random.randint(0,1)
+        self.inactive_state = random.randint(0,1)
+        self.trigger_when_matched = 0 # TODO: randomize?
+        self.enable_glitch_output = 0 # TODO: randomize?
+        self.drive_edge = 1
+        self.check_edge = 1
+        self.clk_div = 8 # TODO: randomize?
+        self.num_bits = 24
+        await self.go(False)
+        self.set_expected_defaults()
+
+
+    async def _dispatch_thread(self):
+        # simple directed test -- modify as needed:
         pattern_data = [1,0,0,0,0,1]*4
         pattern_en = [1]*len(pattern_data)
         record_en = [1,1,0,0,0,1]*4
         trigger_en = [1,1,0,0,0,1]*4
         hiz = [0]*len(pattern_data)
+        await self.set_bb_data(pattern_data, hiz, pattern_en, trigger_en, record_en)
+        await self.go(True)
+        await self._generate_expected_outputs(pattern_data, hiz, pattern_en, trigger_en)
+        await self.wait_done()
 
+        # randomized tests:
+        for rep in range(self.reps):
+            num_bits = random.randint(self.save_depth, self.pattern_depth)
+            self.num_bits = num_bits
+            pattern_data = []
+            trigger_en = []
+            hiz = []
+            record_en = [0]*num_bits
+            pattern_en = [0]*num_bits # TODO - not testing (yet)
+            expected_rdata = 0
+            for i in range(num_bits):
+                pattern_data.append(random.randint(0,1))
+                trigger_en.append(random.randint(0,1))
+                hiz.append(random.randint(0,1))
+
+            # randomly choose which bits to record:
+            for i in range(self.save_depth):
+                j = random.randint(0, num_bits-1)
+                k = 0
+                while record_en[j]:
+                    j = random.randint(0, num_bits-1)
+                    k += 1
+                    if k == num_bits*10:
+                        self.dut._log.error('testbench bug: stuck! num_bits=%d, i=%d, record_en=%s' % (num_bits, i, record_en))
+                        break
+                record_en[j] = 1
+                val = pattern_data[j]
+            # now build up the recorded word (can't do that in previous loop since indices are chosen in random order)
+            j = 0
+            for i in range(num_bits):
+                if record_en[i]:
+                    expected_rdata += (pattern_data[i] << j)
+                    j += 1
+
+            self.dut._log.info('Randomized job data:')
+            self.dut._log.info('    num_bits=%d' % num_bits)
+            self.dut._log.info('    pattern_data=%s' % pattern_data)
+            self.dut._log.info('    trigger_en=%s' % trigger_en)
+            self.dut._log.info('    record_en=%s' % record_en)
+            self.dut._log.info('    hiz=%s' % hiz)
+
+            for drive_edge in [0,1]:
+                for check_edge in [0,1]:
+                    self.dut._log.info('...running with drive=%d, check=%d' % (drive_edge, check_edge))
+                    self.drive_edge = drive_edge
+                    self.check_edge = check_edge
+
+                    await self.set_bb_data(pattern_data, hiz, pattern_en, trigger_en, record_en)
+                    await self.go(True)
+                    await self._generate_expected_outputs(pattern_data, hiz, pattern_en, trigger_en)
+                    await self.wait_done()
+                    rdata = await self.saved_data()
+                    if rdata != expected_rdata:
+                        self.dut._log.error('Expected %x\nGot      %x\nXOR      %x' % (expected_rdata, rdata, expected_rdata ^ rdata))
+                        self.harness.inc_error()
+                    else:
+                        self.dut._log.info('Received expected data (%x)' % rdata)
+
+        self.dut._log.info('job done!')
+
+
+    async def _generate_expected_outputs(self, pattern_data, hiz, pattern_en, trigger_en):
+        for expected_data, expected_hiz, expected_en, expected_trigger in zip(pattern_data, hiz, pattern_en, trigger_en):
+            # check drive-edge driven outputs:
+            await self._next_drive_edge()
+            self.dut.expected_data.value = expected_data
+            self.dut.expected_hiz.value = expected_hiz
+
+            # check check-edge driven outputs:
+            if self.drive_edge != self.check_edge:
+                await self._next_check_edge()
+
+            self.dut.expected_trigger.value = expected_trigger
+            # trigger is a single fast clock cycle:
+            await ClockCycles(self.dut.clk_adc, 1)
+            self.dut.expected_trigger.value = 0
+
+        # count with fast clock here because target-driven clock won't be there
+        if self.drive_edge != self.check_edge:
+            #await self._next_drive_edge()
+            await ClockCycles(self.dut.clk_adc, self.clk_div//2 - 1)
+        else:
+            await ClockCycles(self.dut.clk_adc, self.clk_div - 1)
+
+        self.set_expected_defaults()
+
+
+    def set_expected_defaults(self):
+        self.dut.expected_data.value = self.inactive_data
+        self.dut.expected_hiz.value = not self.inactive_state
+
+
+    async def _next_drive_edge(self):
+        if self.drive_edge:
+            await RisingEdge(self.dut.bb_clock_out)
+        else:
+            await FallingEdge(self.dut.bb_clock_out)
+
+
+    async def _next_check_edge(self):
+        if self.check_edge:
+            await RisingEdge(self.dut.bb_clock_out)
+        else:
+            await FallingEdge(self.dut.bb_clock_out)
+
+
+    async def set_bb_data(self, pattern_data, hiz, pattern_en, trigger_en, record_en):
         bb_data = []
         for a,b,c,d,e in zip(pattern_data, hiz, pattern_en, trigger_en, record_en):
             bb_data.append(a + (b<<1) + (c<<2) + (d<<3) + (e<<4))
         await self.registers.write(self.reg_addr['BB_TRIG_DATA'], bb_data)
 
-        self.trigger_en = 1
-        self.continuous_clk = 0
-        self.inactive_data = 0
-        self.inactive_state = 0
-        self.trigger_when_matched = 0
-        self.enable_glitch_output = 0
-        self.drive_edge = 1
-        self.check_edge = 1
-        self.clk_div = 8
-        self.num_bits = 24
 
-        for i in range(1):
-            await self.go(True)
-            await self.wait_done()
-            self.dut._log.info('job done!')
+    async def saved_data(self, return_word=True):
+        size = self.save_depth // 8
+        raw = await self.registers.read(self.reg_addr['BB_TRIG_DATA'], size)
+        final = []
+        for b in raw:
+            # swap nibbles *and* bit order:
+            fixed = 0
+            for bit in range(8):
+                if b & 2**bit:
+                    fixed += 2**(7-bit)
+            lo = fixed & 0x0F
+            hi = fixed & 0xF0
+            bswap = (hi >> 4) + (lo << 4)
+            final.append(fixed)
+        if return_word:
+            return int.from_bytes(final, byteorder='big')
+        else:
+            return final[::-1]
 
 
     async def wait_done(self):
@@ -288,7 +432,6 @@ class HW_BB_Test(object):
         while True:
             if not await self.active():
                 break
-
 
 
     async def active(self):
@@ -301,20 +444,17 @@ class HW_BB_Test(object):
             return False
 
 
-
-    # STRATEGY:
-    # 1. TODO
-    # 2. ...
-    # 3. ...
-    # 4. ...
     async def _run(self):
         self.dut._log.debug('_run starting')
         await self.dut_setup()
 
         self._trigger_watch_coro = cocotb.start_soon(self._trigger_watch_thread())
-        await self.wait_for_triggers() # wait for expected number of triggers
-        await ClockCycles(self.dut.clk_adc, 1000) # TODO: decide how long to wait
+        self._data_watch_coro = cocotb.start_soon(self._data_watch_thread())
+        self._hiz_watch_coro = cocotb.start_soon(self._hiz_watch_thread())
 
+        #self._dispatch_coro = cocotb.start_soon(self._dispatch_thread())
+        await self._dispatch_thread()
+        await ClockCycles(self.dut.clk_adc, 100)
 
 
     async def _trigger_watch_thread(self) -> None:
@@ -325,31 +465,34 @@ class HW_BB_Test(object):
             self.harness.inc_error()
             self.dut._log.error('ERROR: unexpected trigger value!')
 
-
-    async def wait_for_triggers(self):
-        # blocks until the requested number of triggers have been observed
-        triggers_seen = 0
+    async def _data_watch_thread(self) -> None:
+        """ Checks for data errors
+        """
         while True:
-            await RisingEdge(self.dut.expected_trigger)
-            triggers_seen += 1
-            if triggers_seen == self.triggers:
-                break
+            await Edge(self.data_error)
+            self.harness.inc_error()
+            self.dut._log.error('ERROR: unexpected data value!')
+
+    async def _hiz_watch_thread(self) -> None:
+        """ Checks for hiz errors
+        """
+        while True:
+            await Edge(self.hiz_error)
+            self.harness.inc_error()
+            self.dut._log.error('ERROR: unexpected hiz value!')
 
 
 
 @cocotb.test(timeout_time=timeout_time, timeout_unit="us")
 async def hw_bb_test(dut):
-    reps              = int(os.getenv('REPS', '1'))
-    #bits_per_sample   = int(os.getenv('BITS_PER_SAMPLE', '8'))
+    reps = int(os.getenv('REPS', '4'))
 
     dut._log.info("reps: %d" % reps)
-    #dut._log.info("bits_per_sample: %d" % bits_per_sample)
 
     registers = Registers(dut)
     harness = Harness(dut, registers, reps)
 
-    hw_bbtest = HW_BB_Test(dut, harness, registers, "hw_bb_test"
-                          )
+    hw_bbtest = HW_BB_Test(dut, harness, registers, "hw_bb_test")
 
     harness.register_test(hw_bbtest)
 
