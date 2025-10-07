@@ -35,6 +35,26 @@ import re
 
 from husky_registers import Registers
 
+# What this test covers:
+# The following scope.bitbanger attributes are randomized (and verified) on each run:
+# - pattern_data
+# - pattern_en
+# - pattern_hiz
+# - record_en
+# - trigger_en
+# - recorded_data
+# - num_bits
+#
+# Every combination of drive_edge and check_edge is used on each run.
+#
+# The following attributes are NOT checked:
+# - clk_div
+# - continuous_clk = 1
+# - trigger_when_matched = 0
+# - enable_glitch_output (and anything with glitches)
+#
+# Additionally, since this is a block-level testbench, data_pin and clock_pin can't be covered.
+
 
 # Note: this could also be place in individual test functions by replacing root_logger by dut._log.
 root_logger = logging.getLogger()
@@ -259,6 +279,8 @@ class HW_BB_Test(object):
 
     async def dut_setup(self):
         await self.harness.reset()
+        self.dut.in_to_out.value = 1
+        self.dut.tb_data_in.value = 0
         raw = (await self.registers.read(self.reg_addr["BB_TRIG_CTRL_STAT"], 5))
         self.pattern_depth = raw[1] + (raw[2] << 8)
         self.save_depth = raw[3] + (raw[4] << 8)
@@ -272,11 +294,11 @@ class HW_BB_Test(object):
         self.continuous_clk = 0
         self.inactive_data = random.randint(0,1)
         self.inactive_state = random.randint(0,1)
-        self.trigger_when_matched = 0 # TODO: randomize?
-        self.enable_glitch_output = 0 # TODO: randomize?
-        self.drive_edge = 1
-        self.check_edge = 1
-        self.clk_div = 8 # TODO: randomize?
+        self.trigger_when_matched = 0 # note: not covered
+        self.enable_glitch_output = 0 # note: not covered
+        self.drive_edge = 0
+        self.check_edge = 0
+        self.clk_div = 8 # note: not covered
         self.num_bits = 24
         await self.go(False)
         self.set_expected_defaults()
@@ -289,12 +311,30 @@ class HW_BB_Test(object):
         record_en = [1,1,0,0,0,1]*4
         trigger_en = [1,1,0,0,0,1]*4
         hiz = [0]*len(pattern_data)
+
+        in_to_out = 0
+        self.dut.in_to_out.value = in_to_out
+        data_in = pattern_data.copy()
+        data_in[2] = not data_in[2]
+        pattern_en[2] = 0
+
         await self.set_bb_data(pattern_data, hiz, pattern_en, trigger_en, record_en)
         await self.go(True)
-        await self._generate_expected_outputs(pattern_data, hiz, pattern_en, trigger_en)
+        await self._generate_expected_outputs(pattern_data, hiz, pattern_en, trigger_en, data_in)
         await self.wait_done()
+        matched = await self.matched()
+        if not matched:
+            self.dut._log.error('Matched status bit is not set.')
+            self.harness.inc_error()
 
-        # randomized tests:
+        # Randomized tests:
+        # Randomize the number of bits, the pattern data, the triggers, and hiz.
+        # Run with these settings for each of the 4 drive/check edge combinations.
+        # And for each of these, pattern_en is tested by checking for the "matched" status when:
+        # a) expected data is sent correctly with pattern_en set to all ones
+        # b) pattern_en is randomized and one of the enabled bits is inverted ("matched" is false)
+        # c) pattern_en is randomized and all disabled bits are inverted ("matched" is True)
+        # So in total, 12 patterns are issued.
         for rep in range(self.reps):
             num_bits = random.randint(self.save_depth, self.pattern_depth)
             self.num_bits = num_bits
@@ -302,8 +342,6 @@ class HW_BB_Test(object):
             trigger_en = []
             hiz = []
             record_en = [0]*num_bits
-            pattern_en = [0]*num_bits # TODO - not testing (yet)
-            expected_rdata = 0
             for i in range(num_bits):
                 pattern_data.append(random.randint(0,1))
                 trigger_en.append(random.randint(0,1))
@@ -321,12 +359,6 @@ class HW_BB_Test(object):
                         break
                 record_en[j] = 1
                 val = pattern_data[j]
-            # now build up the recorded word (can't do that in previous loop since indices are chosen in random order)
-            j = 0
-            for i in range(num_bits):
-                if record_en[i]:
-                    expected_rdata += (pattern_data[i] << j)
-                    j += 1
 
             self.dut._log.info('Randomized job data:')
             self.dut._log.info('    num_bits=%d' % num_bits)
@@ -337,35 +369,84 @@ class HW_BB_Test(object):
 
             for drive_edge in [0,1]:
                 for check_edge in [0,1]:
-                    self.dut._log.info('...running with drive=%d, check=%d' % (drive_edge, check_edge))
-                    self.drive_edge = drive_edge
-                    self.check_edge = check_edge
+                    for pattern_en_case in range(3):
+                        self.dut._log.info('...running with drive=%d, check=%d, pattern_en case: %d' % (drive_edge, check_edge, pattern_en_case))
+                        self.drive_edge = drive_edge
+                        self.check_edge = check_edge
 
-                    await self.set_bb_data(pattern_data, hiz, pattern_en, trigger_en, record_en)
-                    await self.go(True)
-                    await self._generate_expected_outputs(pattern_data, hiz, pattern_en, trigger_en)
-                    await self.wait_done()
-                    rdata = await self.saved_data()
-                    if rdata != expected_rdata:
-                        self.dut._log.error('Expected %x\nGot      %x\nXOR      %x' % (expected_rdata, rdata, expected_rdata ^ rdata))
-                        self.harness.inc_error()
-                    else:
-                        self.dut._log.info('Received expected data (%x)' % rdata)
+                        if pattern_en_case == 0:
+                            # loop back, no errors:
+                            expect_match = True
+                            self.dut.in_to_out.value = 1
+                            data_in = pattern_data.copy()
+                            pattern_en = [1]*num_bits
+                            expected_rdata = self.get_expected_rdata(record_en, pattern_data)
+
+                        elif pattern_en_case == 1:
+                            # feed in a single error that will get caught:
+                            expect_match = False
+                            self.dut.in_to_out.value = 0
+                            pattern_en = []
+                            for i in range(num_bits):
+                                pattern_en.append(random.randint(0,1))
+                                pattern_en.append(1)
+                            bitflip = random.randint(0, num_bits-1)
+                            data_in[bitflip] = not data_in[bitflip]
+                            pattern_en[bitflip] = 1
+                            expected_rdata = self.get_expected_rdata(record_en, data_in)
+
+                        elif pattern_en_case == 2:
+                            # feed in errors everytime pattern_en is False:
+                            expect_match = True
+                            self.dut.in_to_out.value = 0
+                            data_in = pattern_data.copy()
+                            pattern_en = []
+                            for i in range(num_bits):
+                                pattern_en_bit = random.randint(0,1)
+                                pattern_en.append(pattern_en_bit)
+                                if not pattern_en_bit:
+                                    data_in[i] = not data_in[i]
+                            expected_rdata = self.get_expected_rdata(record_en, data_in)
+
+                        await self.set_bb_data(pattern_data, hiz, pattern_en, trigger_en, record_en)
+                        await self.go(True)
+                        await self._generate_expected_outputs(pattern_data, hiz, pattern_en, trigger_en, data_in)
+                        await self.wait_done()
+                        matched = await self.matched()
+                        if matched != expect_match:
+                            self.dut._log.error('Expected matched status %d, got %d' % (expect_match, matched))
+                            self.harness.inc_error()
+
+                        rdata = await self.saved_data()
+                        if rdata != expected_rdata:
+                            self.dut._log.error('Expected %x\nGot      %x\nXOR      %x' % (expected_rdata, rdata, expected_rdata ^ rdata))
+                            self.harness.inc_error()
+                        else:
+                            self.dut._log.info('Received expected data (%x)' % rdata)
 
         self.dut._log.info('job done!')
 
+    def get_expected_rdata(self, record_en, pattern_data):
+        j = 0
+        expected_rdata = 0
+        for i in range(self.num_bits):
+            if record_en[i]:
+                expected_rdata += (pattern_data[i] << j)
+                j += 1
+        return expected_rdata
 
-    async def _generate_expected_outputs(self, pattern_data, hiz, pattern_en, trigger_en):
-        for expected_data, expected_hiz, expected_en, expected_trigger in zip(pattern_data, hiz, pattern_en, trigger_en):
-            # check drive-edge driven outputs:
+
+    async def _generate_expected_outputs(self, pattern_data, hiz, pattern_en, trigger_en, data_in):
+        for expected_data, expected_hiz, expected_en, expected_trigger, tb_data_in in zip(pattern_data, hiz, pattern_en, trigger_en, data_in):
+            # drive-edge driven I/O's:
             await self._next_drive_edge()
             self.dut.expected_data.value = expected_data
             self.dut.expected_hiz.value = expected_hiz
 
-            # check check-edge driven outputs:
+            # check-edge driven I/O's:
             if self.drive_edge != self.check_edge:
                 await self._next_check_edge()
-
+            self.dut.tb_data_in.value = tb_data_in
             self.dut.expected_trigger.value = expected_trigger
             # trigger is a single fast clock cycle:
             await ClockCycles(self.dut.clk_adc, 1)
@@ -432,6 +513,10 @@ class HW_BB_Test(object):
         while True:
             if not await self.active():
                 break
+        errors = await self.fifo_errors()
+        if errors:
+            self.dut._log.error('internal FIFO errors! %s' % errors)
+            self.harness.inc_error()
 
 
     async def active(self):
@@ -442,6 +527,25 @@ class HW_BB_Test(object):
             return True
         else:
             return False
+
+
+    async def matched(self):
+        raw = (await self.registers.read(self.reg_addr["BB_TRIG_CTRL_STAT"]))[0]
+        if raw & 0x01:
+            return True
+        else:
+            return False
+
+    async def fifo_errors(self):
+        errors = False
+        raw = (await self.registers.read(self.reg_addr["BB_TRIG_CTRL_STAT"]))[0]
+        if raw >> 6 == 3:
+            errors = 'overflow, underflow'
+        elif raw >> 6 == 1:
+            errors = 'underflow'
+        elif raw >> 7 == 1:
+            errors = 'overflow'
+        return errors
 
 
     async def _run(self):
@@ -485,7 +589,7 @@ class HW_BB_Test(object):
 
 @cocotb.test(timeout_time=timeout_time, timeout_unit="us")
 async def hw_bb_test(dut):
-    reps = int(os.getenv('REPS', '4'))
+    reps = int(os.getenv('REPS', '1'))
 
     dut._log.info("reps: %d" % reps)
 

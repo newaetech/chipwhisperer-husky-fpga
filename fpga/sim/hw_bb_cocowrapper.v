@@ -35,7 +35,6 @@ module hw_bb_cocowrapper (
     input wire          USB_CEn,
     input wire          USB_ALEn,
 
-    //input  wire         bb_data_in,
     output wire         bb_data_out,
     output wire         bb_data_drive,
     output wire         bb_clock_out,
@@ -45,7 +44,8 @@ module hw_bb_cocowrapper (
     // testbench things:
     input  wire [31:0]  errors,
 
-
+    input  wire         in_to_out,
+    input  wire         tb_data_in,
     input  wire         expected_trigger,
     input  wire         expected_data,
     input  wire         expected_hiz,
@@ -85,7 +85,7 @@ module hw_bb_cocowrapper (
     end
     wire all_errors = trigger_error || data_error || hiz_error;
 
-    wire bb_data_in = bb_data_out;
+    wire bb_data_in = (in_to_out)? bb_data_out : tb_data_in;
 
 
     hw_bb_wrapper #(

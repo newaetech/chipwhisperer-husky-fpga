@@ -361,7 +361,7 @@ tests.append(dict(name  = 'trigger_sequencer_rand',
              description = 'trigger sequencer block-level test.'))
 
 tests.append(dict(name  = 'hw_bb',
-             frequency = 1,
+             frequency = 2,
              TOP = 'hw_bb_cocowrapper.v',
              BB_PATTERN_DEPTH = 256,
              BB_SAVE_DEPTH = 32,
