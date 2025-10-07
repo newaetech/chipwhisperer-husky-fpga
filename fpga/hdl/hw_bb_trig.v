@@ -68,6 +68,7 @@ module hw_bb_trig #(
     reg matched;
     reg matching;
     reg bitrecord = 1'b0;
+    reg match_check = 1'b0;
     reg go_usb = 1'b0;
     wire go_target_pulse;
     reg [pCOUNTER_WIDTH:0] bit_counter_drive;
@@ -272,6 +273,7 @@ module hw_bb_trig #(
 
         else if (running) begin
             bitrecord <= 1'b0;
+            match_check <= 1'b0;
             trigger <= 1'b0;
 
             // drive logic:
@@ -307,11 +309,10 @@ module hw_bb_trig #(
                 // check pattern match and fire trigger on falling or rising edge:
                 if ((clock_out_pre_r != check_edge) && (driving || (check_edge == drive_edge))) begin 
                     bit_counter_check <= bit_counter_check + 1;
+                    match_check <= 1'b1;
                     if (record_en_check) 
                         bitrecord <= 1'b1;
 
-                    if ((data_in != pattern_data_check) && pattern_en_check)
-                        matching <= 1'b0;
                     if ((matching || ~trigger_when_matched) && trigger_bits_check)
                         trigger <= 1'b1;
                     else
@@ -322,6 +323,8 @@ module hw_bb_trig #(
             // record logic:
             if (bitrecord)
                 saved_payload <= {saved_payload[pSAVE_DEPTH-2:0], data_in};
+            if ((data_in != pattern_data_check) && pattern_en_check && match_check)
+                matching <= 1'b0;
 
         end
 
@@ -330,6 +333,7 @@ module hw_bb_trig #(
             matching <= 1'b0;
             trigger <= 1'b0;
             bitrecord <= 1'b0;
+            match_check <= 1'b0;
             drive_data <= data_io_inactive_state[1];
             drive_output <= data_io_inactive_state[0];
         end
