@@ -35,7 +35,8 @@ POSSIBILITY OF SUCH DAMAGE.
 module hw_bb_trig #(
    parameter pBYTECNT_SIZE = 7,
    parameter pPATTERN_DEPTH = 256,
-   parameter pSAVE_DEPTH = 64
+   parameter pSAVE_DEPTH = 64,
+   parameter pBITRECORD_SUPPORTED = 1
 )(
    input  wire                          reset,
    input  wire                          clk_usb,
@@ -96,6 +97,8 @@ module hw_bb_trig #(
     reg enable_glitch_output = 1'b0;
     reg drive_edge = 1'b1; // drive data on falling (0) / rising (1) edge of clock_out_pre
     reg check_edge = 1'b1; // check data and fire trigger on falling (0) / rising (1) edge of clock_out_pre
+
+    wire bitrecord_supported = (pBITRECORD_SUPPORTED)? 1'b1 : 1'b0;
 
     always @(*) begin
        if (reg_read) begin
@@ -321,7 +324,7 @@ module hw_bb_trig #(
             end
 
             // record logic:
-            if (bitrecord)
+            if (bitrecord && bitrecord_supported)
                 saved_payload <= {saved_payload[pSAVE_DEPTH-2:0], data_in};
             if ((data_in != pattern_data_check) && pattern_en_check && match_check)
                 matching <= 1'b0;
