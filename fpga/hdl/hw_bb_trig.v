@@ -79,8 +79,8 @@ module hw_bb_trig #(
     reg [1:0] data_io_inactive_state = 2'b01;
     reg trigger_en = 1'b0;
     reg [1:0] glitch_mode = 2'b00;
-    reg [6:0] clk_div = 7'd1;
-    reg [7:0] clock_counter = 8'd0;
+    reg [15:0] clk_div = {15'd1, 1'b0};
+    reg [15:0] clock_counter = 16'd0;
     reg drive_output = 1'b0;
     reg drive_data;
     reg [15:0] num_bits = 0; // max-sized because of where it sits in the register space
@@ -121,6 +121,8 @@ module hw_bb_trig #(
     end
 
 
+    wire [14:0] clk_div_fix = clk_div[15:1]; // omit LSB to divide by 2, so that clk_div works as intended
+
     reg fifo_wr = 1'b0;
     always @(posedge clk_usb) begin
        if (reg_write) begin
@@ -139,9 +141,10 @@ module hw_bb_trig #(
                           drive_edge                    <= reg_datai[1];
                           check_edge                    <= reg_datai[0];
                       end
-                      2: clk_div                        <= reg_datai[7:1]; // yes, omit LSB to divide by 2
-                      3: num_bits[0 +: 8]               <= reg_datai;
-                      4: num_bits[8 +: 8]               <= reg_datai;
+                      2: clk_div[0 +: 8]                <= reg_datai;
+                      3: clk_div[8 +: 8]                <= reg_datai;
+                      4: num_bits[0 +: 8]               <= reg_datai;
+                      5: num_bits[8 +: 8]               <= reg_datai;
                       default: ;
                   endcase
               end
@@ -157,7 +160,7 @@ module hw_bb_trig #(
 
        if (go_usb)
            go_usb <= 1'b0;
-       else if (reg_write && (reg_address == `BB_TRIG_CTRL_STAT) && (reg_bytecnt == 5))
+       else if (reg_write && (reg_address == `BB_TRIG_CTRL_STAT) && (reg_bytecnt == 6))
            go_usb <= 1'b1;
     end
 
@@ -244,10 +247,10 @@ module hw_bb_trig #(
 
     // generate clock_out:
     always @(posedge clock) begin
-        // note that clk_div is the number of input clock cycles per *half period* of
-        // the generated clock; in other words, clk_div is twice the actual clock divisor:
+        // note that clk_div_fix is the number of input clock cycles per *half period* of
+        // the generated clock; in other words, clk_div_fix is twice the actual clock divisor:
         clock_out_pre_r <= clock_out_pre;
-        if (clock_counter == (clk_div-1)) begin
+        if (clock_counter == (clk_div_fix-1)) begin
             clock_counter <= 0;
             clock_out_pre <= ~clock_out_pre;
         end
@@ -351,6 +354,18 @@ module hw_bb_trig #(
                     matched,
                     matching
                    };
+    /*
+    assign debug = {fifo_wr,
+                    fifo_rd,
+                    fifo_underflow_error,
+                    fifo_overflow_error,
+                    fifo_empty,
+                    reg_write,
+                    reg_datai[0],
+                    1'b0
+                   };
+    */
+
 
 endmodule
 

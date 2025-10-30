@@ -259,9 +259,9 @@ class HW_BB_Test(object):
         # method is called; by setting the "go" argument to False, the properties get
         # pushed out without making it "go".
         if go:
-            writes = 6
+            writes = 7
         else:
-            writes = 5
+            writes = 6
         raw = [0]*writes
         raw[0] = (self.trigger_en << 7)
         raw[1] = (self.continuous_clk << 7) + \
@@ -271,9 +271,10 @@ class HW_BB_Test(object):
                  (self.enable_glitch_output << 2) + \
                  (self.drive_edge << 1) + \
                  (self.check_edge << 0)
-        raw[2] = self.clk_div
-        raw[3] = self.num_bits & 0xFF
-        raw[4] = self.num_bits >> 8
+        raw[2] = self.clk_div & 0xFF
+        raw[3] = self.clk_div >> 8
+        raw[4] = self.num_bits & 0xFF
+        raw[5] = self.num_bits >> 8
         await self.registers.write(self.reg_addr['BB_TRIG_CTRL_STAT'], raw)
 
 
