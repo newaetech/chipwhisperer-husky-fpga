@@ -514,10 +514,7 @@ class HW_BB_Test(object):
         while True:
             if not await self.active():
                 break
-        errors = await self.fifo_errors()
-        if errors:
-            self.dut._log.error('internal FIFO errors! %s' % errors)
-            self.harness.inc_error()
+        await self.fifo_errors()
 
 
     async def active(self):
@@ -540,13 +537,15 @@ class HW_BB_Test(object):
     async def fifo_errors(self):
         errors = False
         raw = (await self.registers.read(self.reg_addr["BB_TRIG_CTRL_STAT"]))[0]
-        if raw >> 6 == 3:
-            errors = 'overflow, underflow'
-        elif raw >> 6 == 1:
-            errors = 'underflow'
-        elif raw >> 7 == 1:
-            errors = 'overflow'
-        return errors
+        if raw & 2**5:
+            self.dut._log.error('Internal FIFO error (likely underflow)')
+            self.harness.inc_error()
+        if raw & 2**6:
+            self.dut._log.error('FIFO underflow error')
+            self.harness.inc_error()
+        if raw & 2**7:
+            self.dut._log.error('FIFO overflow error')
+            self.harness.inc_error()
 
 
     async def _run(self):

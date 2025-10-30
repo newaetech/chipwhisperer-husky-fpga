@@ -100,13 +100,15 @@ module hw_bb_trig #(
 
     wire bitrecord_supported = (pBITRECORD_SUPPORTED)? 1'b1 : 1'b0;
 
+    reg internal_error = 1'b0;
+
     always @(*) begin
        if (reg_read) begin
           case (reg_address)
               `BB_TRIG_DATA: reg_datao = saved_payload[reg_bytecnt*8 +: 8];
               `BB_TRIG_CTRL_STAT: begin
                   case (reg_bytecnt)
-                      0: reg_datao = {fifo_overflow_error, fifo_underflow_error, 3'b0, enable_glitch_output, active, matched};
+                      0: reg_datao = {fifo_overflow_error, fifo_underflow_error, internal_error, 2'b0, enable_glitch_output, active, matched};
                       1: reg_datao = pPATTERN_DEPTH & 8'hFF;
                       2: reg_datao = pPATTERN_DEPTH >> 8;
                       3: reg_datao = pSAVE_DEPTH & 8'hFF;
@@ -245,6 +247,8 @@ module hw_bb_trig #(
     wire pattern_data_check = (drive_edge == check_edge)? pattern_data : pattern_data_r;
     wire trigger_bits_check = (drive_edge == check_edge)? trigger_bits : trigger_bits_r;
 
+    wire [pCOUNTER_WIDTH:0] actual_bits = (num_bits > 0)? num_bits : pPATTERN_DEPTH;
+
     // generate clock_out:
     always @(posedge clock) begin
         // note that clk_div_fix is the number of input clock cycles per *half period* of
@@ -270,6 +274,7 @@ module hw_bb_trig #(
             bit_counter_drive <= 0;
             bit_counter_check <= 0;
             driving <= 1'b0;
+            internal_error <= 1'b0;
         end
         else if (go_target_pulse) begin
             go_wait_sync <= 1'b1;
@@ -281,13 +286,15 @@ module hw_bb_trig #(
             bitrecord <= 1'b0;
             match_check <= 1'b0;
             trigger <= 1'b0;
+            if (fifo_empty && (bit_counter_drive < actual_bits))
+                internal_error <= 1'b1;
 
             // drive logic:
             if (clock_counter == 0) begin
                 // drive data on falling or rising edge:
                 if (clock_out_pre_r != drive_edge) begin 
                     driving <= 1'b1;
-                    if (bit_counter_drive == ( (num_bits > 0)? num_bits : pPATTERN_DEPTH) ) begin
+                    if (bit_counter_drive == actual_bits) begin
                         running <= 1'b0;
                         driving <= 1'b0;
                         drive_data <= data_io_inactive_state[1];
