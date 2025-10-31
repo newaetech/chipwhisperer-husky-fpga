@@ -395,7 +395,8 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    end
 
    wire targetpower_off_pwm = (soft_start_pwm < softpower_pwm_off_time) ? 1'b1 : 1'b0; 
-   assign targetpower_off = (output_src_pwm & targetpower_slow) ? targetpower_off_pwm : reg_targetpower_off;
+   wire invert_poweroff = (bb_trig_select[3:0] == 13)? bb_data_out : 1'b0;
+   assign targetpower_off = (output_src_pwm & targetpower_slow) ? targetpower_off_pwm : reg_targetpower_off ^ invert_poweroff;
 
    assign targetio_highz = reg_targetpower_off;
 
@@ -596,7 +597,8 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
 
    assign enable_output_nrst = registers_iorouting[48];
-   assign output_nrst = registers_iorouting[49];
+   wire invert_nrst = (bb_trig_select[3:0] == 14)? bb_data_out : 1'b0;
+   assign output_nrst = registers_iorouting[49] ^ invert_nrst;
    assign nrst_ignore_highz = registers_iorouting[54];
    assign enable_output_pdid = registers_iorouting[50];
    assign output_pdid = registers_iorouting[51];
