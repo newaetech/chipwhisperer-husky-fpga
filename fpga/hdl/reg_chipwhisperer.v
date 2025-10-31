@@ -353,7 +353,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    wire [15:0] softpower_pwm_off_time2 = reg_softpower_control[63:48];
    reg  [15:0] softpower_pwm_off_time;
 
-   reg targetpower_soft_on;
+   reg targetpower_soft_on = 1'b0;
    reg reg_targetpower_off_prev;
    always @(posedge clk_usb) begin
        reg_targetpower_off_prev <= reg_targetpower_off;
@@ -365,7 +365,9 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
    reg [15:0] soft_start_pwm = 0;
    always @(posedge clk_usb) begin
-       if ((soft_start_pwm == softpower_pwm_period) || ~targetpower_soft_on)
+       if (~targetpower_soft_on || ~output_src_pwm)
+           soft_start_pwm <= 1;
+       else if (soft_start_pwm == softpower_pwm_period)
            soft_start_pwm <= 0;
        else
            soft_start_pwm <= soft_start_pwm + 16'd1;
@@ -380,7 +382,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
            softpower_pwm_off_time <= softpower_pwm_off_time1;
        end
        else begin
-           if (soft_start_cnt == softpower_pwm_cycles1) begin
+           if ((soft_start_cnt == softpower_pwm_cycles1) && (softpower_pwm_off_time2 > 0)) begin
                softpower_pwm_off_time <= softpower_pwm_off_time2;
                soft_start_cnt <= soft_start_cnt + 16'd1;
            end
