@@ -254,7 +254,6 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define CLOCKGLITCH_OFFSET      25
 `define OFFSET_ADDR             26
 `define FIFO_CONFIG             27
-`define RESET                   28
 `define ADC_LOW_RES             29
 
 `define DRP_ADDR                30
@@ -384,6 +383,7 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define REG_DDR_START_READ      125
 
 // list of holes in the register address space (to be used for new features):
+//`define UNUSED_ADDRESS 28
 //`define UNUSED_ADDRESS 70
 //`define UNUSED_ADDRESS 85
 //`define UNUSED_ADDRESS 106

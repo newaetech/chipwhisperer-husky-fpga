@@ -96,7 +96,7 @@ module reg_openadc #(
        .data_out_r     (cmd_arm_adc)
    );
 
-   wire reset_fromreg;
+   reg reset_fromreg = 1'b0;
    assign reset = reset_i | reset_fromreg;
    assign reset_o = reset;
 
@@ -118,7 +118,6 @@ module reg_openadc #(
    wire [47:0] version_data;
    wire [31:0] system_frequency = 32'd`SYSTEM_CLK;
    wire [31:0] buildtime;
-   reg new_reset = 1'b0;
 
    reg  trigger_fifo_rd_usb;
    reg  trigger_fifo_clear_usb;
@@ -132,8 +131,6 @@ module reg_openadc #(
 
    assign trigger_offset = registers_offset;
 
-   assign reset_fromreg = registers_settings[0] || new_reset;
-   //assign reset_fromreg = new_reset;
    assign trigger_mode = registers_settings[2];
    assign cmd_arm_usb = registers_settings[3];
    assign fifo_stream = registers_settings[4];
@@ -263,8 +260,8 @@ module reg_openadc #(
 
    // it's handy to have a reset-only register, which doesn't get reset when you reset...
    always @(posedge clk_usb) begin
-      if (reg_write && (reg_address == `RESET))
-         new_reset <= reg_datai[0];
+      if (reg_write && (reg_address == `SETTINGS_ADDR))
+         reset_fromreg <= reg_datai[0];
    end
 
 
@@ -401,6 +398,16 @@ module reg_openadc #(
         .underflow      (trigger_fifo_underflow)
     );
 `endif
+
+`ifdef ILA_RESET
+   ila_reset_reset U_ila_reset_reset (
+      .clk            (clk_usb),
+      .probe0         (registers_settings),     // 8
+      .probe1         (reset_fromreg),
+      .probe2         (reset_o)
+);
+`endif
+
 
 endmodule
 `default_nettype wire
