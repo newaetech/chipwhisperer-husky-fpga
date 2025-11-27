@@ -23,6 +23,11 @@ Author: Jean-Pierre Thibault <jpthibault@newae.com>
 *************************************************************************/
 
 module sad_cocowrapper #(
+    parameter pDUMP = 0,
+    parameter pBYTECNT_SIZE = 7,
+    parameter pBITS_PER_SAMPLE = 12,
+    parameter pSAD_COUNTER_WIDTH = 12,
+    parameter pNUM_GROUPS = 4,
     parameter pREF_SAMPLES = 8
 )(
     // DUT things:
@@ -57,12 +62,6 @@ module sad_cocowrapper #(
     output reg          debug_emode_mismatch
 
 );
-
-    parameter pDUMP = 0;
-    parameter pBYTECNT_SIZE = 7;
-    parameter pBITS_PER_SAMPLE = 12;
-    parameter pSAD_COUNTER_WIDTH = 12;
-    parameter pNUM_GROUPS = 4;
 
 
     initial begin

@@ -271,7 +271,7 @@ class SADTest(object):
 
         # determine thresholds, with counter_width in mind:
         if interval_matching:
-            self.threshold = random.randint(1, ref_samples/4-2)
+            self.threshold = random.randint(1, int(ref_samples/4-2))
             self.interval_threshold = random.randint(1, 2**(bits_per_sample-2))
             self.dut._log.info('SAD interval threshold randomized to: %d' % self.interval_threshold)
         else:
