@@ -238,7 +238,7 @@ class GenericTest(object):
 
             # see comments around queue definition in Harness for how this queue and lock mechanism works:
             self.dut._log.info("%12s trying to trigger job (waiting for read_lock to be freed)..." % job_name)
-            while self.harness.read_lock.locked:
+            while self.harness.read_lock.locked():
                 await ClockCycles(self.clk_usb, 10)
 
             self.dut._log.info("%12s trying to trigger job: read_lock freed" % job_name)
@@ -260,7 +260,7 @@ class GenericTest(object):
             # What we're trying to prevent is that arming and triggering a job entails flushing the post-DDR FIFO and this can mess up a read thread on
             # a different job. And add a trigger_lock, which the capture _run() thread will check, to be 100% sure that no jobs will be triggered
             # while the capture thread sets up and executes its read.
-            if not self.harness.trigger_lock.locked:
+            if not self.harness.trigger_lock.locked():
                 await self.harness.trigger_lock.acquire()
             if self.stream:
                 self.dut._log.info("%12s acquiring read_lock prior to triggering (because streaming)..." % job_name)
@@ -268,7 +268,7 @@ class GenericTest(object):
                 self.dut._log.info("%12s read_lock acquired" % job_name)
             else:
                 self.dut._log.info("%12s waiting for read_lock to be freed: second check" % job_name)
-                while self.harness.read_lock.locked:
+                while self.harness.read_lock.locked():
                     await ClockCycles(self.clk_usb, 10)
 
             # now we can trigger *this* job:
@@ -295,7 +295,7 @@ class GenericTest(object):
                     untrigger_wait = random.randint(1,2)
                 self.untriggering = cocotb.start_soon(self._untrigger_thread(job, untrigger_wait))
 
-            if self.harness.trigger_lock.locked:
+            if self.harness.trigger_lock.locked():
                 self.harness.trigger_lock.release()
             self.trigger_event.set()
             if externally_triggered:
