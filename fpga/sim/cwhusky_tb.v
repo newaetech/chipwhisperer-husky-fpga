@@ -203,10 +203,11 @@ module cwhusky_tb();
 
       #(pCLK_USB_PERIOD*100);
 
-      // manually reset with new register:
-      write_1byte(`RESET, 8'h1);
+      // reset:
+      read_1byte(`SETTINGS_ADDR, rdata);
+      write_1byte(`SETTINGS_ADDR, rdata || 8'h01);
       #(pCLK_USB_PERIOD*20);
-      write_1byte(`RESET, 8'h0);
+      write_1byte(`SETTINGS_ADDR, rdata);
 
       #(pCLK_USB_PERIOD*1000);
 
