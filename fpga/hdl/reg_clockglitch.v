@@ -162,6 +162,10 @@ module reg_clockglitch #(
    reg  easy_done_exit;
    wire [1:0] trigger_resync_state;
    wire [pNUM_GLITCH_WIDTH:0] glitch_done_count;
+   reg  [15:0] user_glitch_count;
+   reg  reset_user_glitch_count;
+   reg  reset_user_glitch_count_r;
+   wire reset_user_glitch_count_pulse;
    wire trigger_resync_idle;
    wire sourceclk;
 
@@ -262,11 +266,26 @@ module reg_clockglitch #(
    always @(negedge glitch_mmcm1_clk_out) begin
       if (reset)
          oneshot <= 1'b0;
-      else if (manual_rs2 & manual_dly)
+      else if (manual_pulse_mmcm1clock)
          oneshot <= 1'b1;
       else if (exttrigger_done)
          oneshot <= 1'b0;
    end
+
+   // Count glitch_go's, to know when we're done. There is a similar counter
+   // in trigger_resync.v but this one has a different purpose -- this one is
+   // to allow the user to check whether the expected number of glitches have
+   // been fired. The user resets the counter, so that they don't need to
+   // check after each and every glitch.
+   reg glitch_go_r;
+   always @(negedge glitch_mmcm1_clk_out) begin
+       glitch_go_r <= glitch_go;
+       if (reset_user_glitch_count_pulse)
+           user_glitch_count <= 0;
+       else if (glitch_go_r  & ~glitch_go & (user_glitch_count < 16'hFFFF))
+           user_glitch_count <= user_glitch_count + 1;
+   end
+
 
    assign clockglitch_settings_read[17:0] = clockglitch_settings_reg[17:0];
    assign clockglitch_settings_read[36:18] = 0;
@@ -295,7 +314,7 @@ module reg_clockglitch #(
             `CLOCKGLITCH_SETTINGS: reg_datao_reg = clockglitch_settings_read[reg_bytecnt*8 +: 8];
             `CLOCKGLITCH_OFFSET: reg_datao_reg = clockglitch_offset_reg[reg_bytecnt*8 +: 8];
             `CLOCKGLITCH_POWERDOWN: reg_datao_reg = {7'b0, clockglitch_powerdown};
-            `CLOCKGLITCH_NUM_GLITCHES: reg_datao_reg = {2'b0, glitch_done_count};
+            `CLOCKGLITCH_NUM_GLITCHES: reg_datao_reg = user_glitch_count[reg_bytecnt*8 +: 8];
             `CLOCKGLITCH_MULTIPLE_STATE: reg_datao_reg = trigger_resync_state;
             `CLOCKGLITCH_REPEATS: reg_datao_reg = max_glitches1toN_reg[reg_bytecnt*8 +: 8];
             `CLOCKGLITCH_POWERED_DOWN: reg_datao_reg = powered_down;
@@ -342,7 +361,24 @@ module reg_clockglitch #(
          default: ;
          endcase
       end
+
    end
+
+   always @(posedge clk_usb) begin
+       reset_user_glitch_count_r <= reset_user_glitch_count;
+       if (reg_write && (reg_address == `CLOCKGLITCH_NUM_GLITCHES))
+           reset_user_glitch_count <= 1'b1;
+       else
+           reset_user_glitch_count <= 1'b0;
+   end
+
+   cdc_pulse U_reset_user_glitch_count (
+      .reset_i       (reset),
+      .src_clk       (clk_usb),
+      .src_pulse     (reset_user_glitch_count && ~reset_user_glitch_count_r),
+      .dst_clk       (~glitch_mmcm1_clk_out),
+      .dst_pulse     (reset_user_glitch_count_pulse)
+   );
 
    // delay in USB clock domain otherwise the clock won't be able to come back on!
    // USB = 96 MHz; MMCM glitch clock >= 5 MHz, so this will give at least
