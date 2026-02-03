@@ -397,7 +397,11 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    end
 
    wire targetpower_off_pwm = (soft_start_pwm < softpower_pwm_off_time) ? 1'b1 : 1'b0; 
-   wire invert_poweroff = (bb_trig_select[3:0] == 13)? bb_data_out : 1'b0;
+   `ifdef BB_LIMIT
+       wire invert_poweroff = 1'b0;
+   `else
+       wire invert_poweroff = (bb_trig_select[3:0] == 13)? bb_data_out : 1'b0;
+   `endif
    assign targetpower_off = (output_src_pwm & targetpower_slow) ? targetpower_off_pwm : reg_targetpower_off ^ invert_poweroff;
 
    assign targetio_highz = reg_targetpower_off;
@@ -551,33 +555,41 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
            6:  bb_data_in = userio_d[6];
            7:  bb_data_in = userio_d[7];
            8:  bb_data_in = userio_ck;
+       `ifndef BB_LIMIT
            9:  bb_data_in = targetio1_io;
            10: bb_data_in = targetio2_io;
            11: bb_data_in = targetio3_io;
            12: bb_data_in = targetio4_io;
+       `endif
            default: bb_data_in = 1'b0;
        endcase
    end
 
 
    assign targetio1_io = targetio_highz ? 1'bZ :
+                     `ifndef BB_LIMIT
                          (bb_trig_select[3:0] == 9) ? bb_data_drive ? bb_data_out : 1'bz :
                          (bb_trig_select[7:4] == 9) ? bb_clock_out :
+                     `endif
                          registers_iorouting[0 + 0] ? uart_tx_i :
                          registers_iorouting[0 + 7] ? registers_iorouting[0 + 6] :
                          1'bZ;
 
 
    assign targetio2_io = targetio_highz ? 1'bZ :
+                     `ifndef BB_LIMIT
                          (bb_trig_select[3:0] == 10) ? bb_data_drive ? bb_data_out : 1'bz :
                          (bb_trig_select[7:4] == 10) ? bb_clock_out :
+                     `endif
                          registers_iorouting[8 + 0] ? uart_tx_i :
                          registers_iorouting[8 + 7] ? registers_iorouting[8 + 6] :
                          1'bZ;
 
    assign targetio3_io = targetio_highz ? 1'bZ :
+                     `ifndef BB_LIMIT
                          (bb_trig_select[3:0] == 11) ? bb_data_drive ? bb_data_out : 1'bz :
                          (bb_trig_select[7:4] == 11) ? bb_clock_out :
+                     `endif
                          registers_iorouting[16 + 0] ? uart_tx_i :
                          registers_iorouting[16 + 4] ? 1'b0 :
                          registers_iorouting[16 + 5] ? (uart_tx_i ? 1'bZ : 1'b0) :
@@ -585,8 +597,10 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
                          1'bZ;
 
    assign targetio4_io = targetio_highz ? 1'bZ :
+                     `ifndef BB_LIMIT
                          (bb_trig_select[3:0] == 12) ? bb_data_drive ? bb_data_out : 1'bz :
                          (bb_trig_select[7:4] == 12) ? bb_clock_out :
+                     `endif
                          registers_iorouting[24 + 0] ? uart_tx_i :
                          registers_iorouting[24 + 7] ? registers_iorouting[24 + 6] :
                          1'bZ;
@@ -599,7 +613,11 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
 
    assign enable_output_nrst = registers_iorouting[48];
-   wire invert_nrst = (bb_trig_select[3:0] == 14)? bb_data_out : 1'b0;
+   `ifdef BB_LIMIT
+       wire invert_nrst = 1'b0;
+   `else
+       wire invert_nrst = (bb_trig_select[3:0] == 14)? bb_data_out : 1'b0;
+   `endif
    assign output_nrst = registers_iorouting[49] ^ invert_nrst;
    assign nrst_ignore_highz = registers_iorouting[54];
    assign enable_output_pdid = registers_iorouting[50];
