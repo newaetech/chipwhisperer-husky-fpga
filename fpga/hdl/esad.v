@@ -109,7 +109,7 @@ module esad #(
 
     localparam pACTUAL_SAD_COUNTER_WIDTH = (`INTERVAL_MATCHING == 1)? (pMASTER_COUNTER_WIDTH-2) : pSAD_COUNTER_WIDTH;
 
-    reg  triggered;
+    reg  triggered = 1'b0;
     reg [15:0] num_triggers;
     reg clear_status;
     reg clear_status_r;
