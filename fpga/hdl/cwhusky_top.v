@@ -117,17 +117,20 @@ module cwhusky_top(
     parameter pBYTECNT_SIZE = 7;
     parameter pUSERIO_WIDTH = 8;
     parameter pTRACE_BUFFER_SIZE = 64;
-    parameter pTRACE_MATCH_RULES = 8;
 `ifdef PLUS
+    parameter pTRACE_MATCH_RULES = 8;
     parameter pSEQUENCER_NUM_TRIGGERS = 4;
     parameter pPLL_CLOCKS = 4;
-    parameter pBB_TRIG_DEPTH = 384;
-    parameter pBB_SAVE_DEPTH = 32;
+    parameter pBB_TRIG_DEPTH = 1024;
+    parameter pBB_SAVE_DEPTH = 64;
+    parameter pBB_BITRECORD_SUPPORTED = 1;
 `else
+    parameter pTRACE_MATCH_RULES = 2;
     parameter pSEQUENCER_NUM_TRIGGERS = 2;
     parameter pPLL_CLOCKS = 1;
-    parameter pBB_TRIG_DEPTH = 128;
-    parameter pBB_SAVE_DEPTH = 8;
+    parameter pBB_TRIG_DEPTH = 512;
+    parameter pBB_SAVE_DEPTH = 32;
+    parameter pBB_BITRECORD_SUPPORTED = 1;
 `endif
     parameter pSEQUENCER_COUNTER_WIDTH = 16;
 
@@ -371,7 +374,8 @@ module cwhusky_top(
                                  (userio_fpga_debug_select == 5'b00011)? {1'b0,
                                                                          xadc_error_flag,
                                                                          glitch_mmcm1_clk_out,
-                                                                         glitch_mmcm2_clk_out,
+                                                                         //glitch_mmcm2_clk_out, // can cause Vivado errors in implementation/bitfile generation, so commenting out;
+                                                                         1'b0,                   // note that both MMCM1 and MMCM2 clocks are still captured by scope.LA
                                                                          glitchclk,
                                                                          glitch_enable,
                                                                          trigger_capture,
@@ -671,7 +675,8 @@ module cwhusky_top(
    hw_bb_trig #(
       .pBYTECNT_SIZE            (pBYTECNT_SIZE),
       .pPATTERN_DEPTH           (pBB_TRIG_DEPTH),
-      .pSAVE_DEPTH              (pBB_SAVE_DEPTH)
+      .pSAVE_DEPTH              (pBB_SAVE_DEPTH),
+      .pBITRECORD_SUPPORTED     (pBB_BITRECORD_SUPPORTED)
    ) U_hw_bb_trig (
       .reset                    (reg_rst       ),
       .clk_usb                  (clk_usb_buf   ),
@@ -682,10 +687,7 @@ module cwhusky_top(
       .reg_read                 (reg_read      ),
       .reg_write                (reg_write     ),
 
-      //.clock                    (target_clk    ),
-      //.clock                    (target_hs2    ),   // careful: can carry glitch clock
       .clock                    (ADC_clk_fb    ),
-      //.clock                    (USERIO_CLK    ),
       .data_in                  (bb_data_in    ),
       .data_out                 (bb_data_out   ),
       .data_drive               (bb_data_drive ),
