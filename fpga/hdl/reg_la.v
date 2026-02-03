@@ -222,8 +222,8 @@ module reg_la #(
       wire observer_clk_prebuf;
       MMCME2_ADV #(
          .BANDWIDTH                    ("OPTIMIZED"), // Jitter programming (OPTIMIZED, HIGH, LOW)
-         .CLKFBOUT_MULT_F              (5.0), // Multiply value for all CLKOUT (2.000-64.000)
-         .CLKOUT0_DIVIDE_F             (4.0),
+         .CLKFBOUT_MULT_F              (6.0), // Multiply value for all CLKOUT (2.000-64.000)
+         .CLKOUT0_DIVIDE_F             (5.0),
          .CLKFBOUT_PHASE               (0.0), // Phase offset in degrees of CLKFB (-360.000-360.000).
          .CLKIN1_PERIOD                (5.0),
          .CLKOUT0_DUTY_CYCLE           (0.5),
