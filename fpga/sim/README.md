@@ -37,9 +37,9 @@ new cocotb testbench is a big step up and brings the following improvements:
   properly would likely require a different job <-> trigger interface.
 - Not all possible triggering mechanisms are covered -- there are simply too
   many to do this efficiently. Additional coverage is obtained from
-  [on-target testing](https://github.com/newaetech/chipwhisperer/blob/develop/tests/test_husky.py).
+  [on-target testing](https://github.com/newaetech/chipwhisperer/blob/develop/tests/test_husky_dev.py).
 - Multiple glitches (`scope.glitch.num_glitches > 1`), because:
-    - it's well covered by [on-target testing](https://github.com/newaetech/chipwhisperer/blob/develop/tests/test_husky.py);
+    - it's well covered by [on-target testing](https://github.com/newaetech/chipwhisperer/blob/develop/tests/test_husky_dev.py);
     - it's isolated logic (not affected by changes to other parts of the
       code base);
     - it's stable code that is not expected to be touched.
@@ -121,7 +121,7 @@ covered. The supported triggers for each source are as follows:
   so they are only covered manually or downstreamed from the ADC (IO4).  The
   cost/complexity of improving this is high, and other triggering mechanisms
   are tested on-target by
-  [test\_husky.py](https://github.com/newaetech/chipwhisperer/blob/develop/tests/test_husky.py),
+  [test\_husky.py](https://github.com/newaetech/chipwhisperer/blob/develop/tests/test_husky_dev.py),
   and so this is considered an acceptable coverage hole.
 
 Once a job is triggered, it's sent over to the corresponding checker (the
@@ -170,7 +170,7 @@ drives the "normal" SAD implementation ([sad.v](../hdl/sad.v))
 alongside the chosen target implementation (i.e. driving both
 implementations identically, and seeing where their outputs diverge).
 
-### Edge
+### Edge Trigger
 Implemented by [edge\_tb.v](edge_tb.v). Tests the
 [edge\_trigger.v](../hdl/edge_trigger.v) trigger module
 (`scope.trigger.module = 'edge_counter'`), which triggers when a specified
@@ -181,6 +181,13 @@ Implemented by [test\_trigger\_sequencer.py](test_trigger_sequencer.py).
 Exhaustive cocotb-driven verification of
 [trigger\_sequencer.v](../hdl/trigger_sequencer.v), with a parameterizable
 number of input triggers, with randomized sequences and time windows.
+
+### Hardware Bit-Banger
+Implemented by [test\_hw\_bb.py](test_hw_bb.py).
+Exhaustive cocotb-driven verification of
+[hw\_bb\_trig.v](../hdl/hw_bb_trig.v), with a parameterizable
+pattern depth. Look to the testbench's source for details on its operation.
+
 
 ### TraceWhisperer
 See the [TraceWhisperer repository](https://github.com/newaetech/tracewhisperer/tree/master/sim).

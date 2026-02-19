@@ -213,9 +213,10 @@ class Harness(object):
         # rules are followed, and the empty/full status flags may remain at X. Sometimes just changing the time when the
         # reset begins, and how long it is held for, can return correct behaviour.
         await ClockCycles(self.dut.clk_usb, 30)
-        await self.registers.write(self.reg_addr['RESET'], [1])
+        raw = (await self.registers.read(self.reg_addr['SETTINGS_ADDR']))[0]
+        await self.registers.write(self.reg_addr['SETTINGS_ADDR'], [raw | 0x01])
         await ClockCycles(self.dut.clk_usb, 20)
-        await self.registers.write(self.reg_addr['RESET'], [0])
+        await self.registers.write(self.reg_addr['SETTINGS_ADDR'], [raw])
 
     async def ddr_done_writing(self) -> bool:
         raw = await self.registers.read(self.reg_addr['REG_DDR_START_READ'])

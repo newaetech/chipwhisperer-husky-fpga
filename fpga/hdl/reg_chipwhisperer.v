@@ -63,10 +63,12 @@ module reg_chipwhisperer #(
    output wire        sad_active,
    output wire        edge_trigger_active,
    output wire        adc_trigger_active,
+   output wire        bb_trigger_active,
    input  wire        trigger_advio_i, 
    input  wire        trigger_decodedio_i,
    input  wire        trigger_trace_i,
    input  wire        trigger_adc_i,
+   input  wire        trigger_bb_i,
    input  wire        trigger_sad_i,
    input  wire        trigger_edge_i,
 
@@ -109,16 +111,15 @@ module reg_chipwhisperer #(
 
    output wire        targetpower_off,
 
-   input  wire        trace_en,
-   input  wire [7:0]  trace_userio_dir,
-   output wire [pUSERIO_WIDTH-1:0] userio_cwdriven,
-   output reg  [pUSERIO_WIDTH-1:0] userio_drive_data,
-   output reg                      userio_fpga_debug,
-   output reg                      userio_target_debug,
-   output reg                      userio_target_debug_swd,
-   output reg [3:0]                userio_fpga_debug_select,
    input  wire [pUSERIO_WIDTH-1:0] userio_d,
-   input  wire                     userio_clk,
+   input wire         userio_ck,
+   output reg [7:0]   bb_trig_select,
+
+   //inout  wire        bb_data_io,
+   output reg         bb_data_in,
+   input  wire        bb_data_out,
+   input  wire        bb_data_drive,
+   input  wire        bb_clock_out,
 
    /* Main trigger connections */
    input  wire        armed_and_ready,
@@ -249,14 +250,13 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
  */
 
-   reg [2:0] registers_cwauxio;
+   reg [3:0] registers_cwauxio;
    reg [7:0] registers_cwextclk;
    reg [pSEQUENCER_NUM_TRIGGERS*16-1:0] registers_cwtrigsrc; // note: for CW-Lite/Pro, this is an 8-bit register
    reg [pSEQUENCER_NUM_TRIGGERS*8-1:0] registers_cwtrigmod;  // note: for CW-Lite/Pro, this is an 8-bit register
    reg [63:0] registers_iorouting;
    reg [9:0] registers_ioread;
    reg reg_external_clock;
-   reg [pUSERIO_WIDTH-1:0] reg_userio_cwdriven;
    reg [63:0] reg_softpower_control;
 
    wire targetio_highz;
@@ -292,7 +292,8 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    assign target_hs2 = (registers_cwextclk[6] & (~targetio_highz)) ? rearclk : 1'bZ;
 
 
-   assign auxio = (registers_cwauxio[0])? rearclk : 1'bZ;
+   assign auxio = (registers_cwauxio[0])? rearclk :
+                  (registers_cwauxio[3])? userio_ck : 1'bZ;
 
 
 `ifdef __ICARUS__
@@ -352,7 +353,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    wire [15:0] softpower_pwm_off_time2 = reg_softpower_control[63:48];
    reg  [15:0] softpower_pwm_off_time;
 
-   reg targetpower_soft_on;
+   reg targetpower_soft_on = 1'b0;
    reg reg_targetpower_off_prev;
    always @(posedge clk_usb) begin
        reg_targetpower_off_prev <= reg_targetpower_off;
@@ -364,7 +365,9 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
    reg [15:0] soft_start_pwm = 0;
    always @(posedge clk_usb) begin
-       if ((soft_start_pwm == softpower_pwm_period) || ~targetpower_soft_on)
+       if (~targetpower_soft_on || ~output_src_pwm)
+           soft_start_pwm <= 1;
+       else if (soft_start_pwm == softpower_pwm_period)
            soft_start_pwm <= 0;
        else
            soft_start_pwm <= soft_start_pwm + 16'd1;
@@ -379,7 +382,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
            softpower_pwm_off_time <= softpower_pwm_off_time1;
        end
        else begin
-           if (soft_start_cnt == softpower_pwm_cycles1) begin
+           if ((soft_start_cnt == softpower_pwm_cycles1) && (softpower_pwm_off_time2 > 0)) begin
                softpower_pwm_off_time <= softpower_pwm_off_time2;
                soft_start_cnt <= soft_start_cnt + 16'd1;
            end
@@ -394,7 +397,12 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    end
 
    wire targetpower_off_pwm = (soft_start_pwm < softpower_pwm_off_time) ? 1'b1 : 1'b0; 
-   assign targetpower_off = (output_src_pwm & targetpower_slow) ? targetpower_off_pwm : reg_targetpower_off;
+   `ifdef BB_LIMIT
+       wire invert_poweroff = 1'b0;
+   `else
+       wire invert_poweroff = (bb_trig_select[3:0] == 13)? bb_data_out : 1'b0;
+   `endif
+   assign targetpower_off = (output_src_pwm & targetpower_slow) ? targetpower_off_pwm : reg_targetpower_off ^ invert_poweroff;
 
    assign targetio_highz = reg_targetpower_off;
 
@@ -403,6 +411,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    wire [pSEQUENCER_NUM_TRIGGERS-1:0] tc_sad_active;
    wire [pSEQUENCER_NUM_TRIGGERS-1:0] tc_edge_trigger_active;
    wire [pSEQUENCER_NUM_TRIGGERS-1:0] tc_adc_trigger_active;
+   wire [pSEQUENCER_NUM_TRIGGERS-1:0] tc_bb_trigger_active;
 
    wire [pSEQUENCER_NUM_TRIGGERS-1:0] tc_trace_trigger_in_use;
    wire [pSEQUENCER_NUM_TRIGGERS-1:0] tc_sad_trigger_in_use;
@@ -431,6 +440,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
                .trigger_decodedio_i     (trigger_decodedio_i       ),
                .trigger_trace_i         (trigger_trace_i           ),
                .trigger_adc_i           (trigger_adc_i             ),
+               .trigger_bb_i            (trigger_bb_i              ),
                .trigger_edge_i          (trigger_edge_i            ),
                                                               
                .O_decodeio_active       (tc_decodeio_active[i]     ),
@@ -438,6 +448,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
                .O_sad_active            (tc_sad_active[i]          ),
                .O_edge_trigger_active   (tc_edge_trigger_active[i] ),
                .O_adc_trigger_active    (tc_adc_trigger_active[i]  ),
+               .O_bb_trigger_active     (tc_bb_trigger_active[i]   ),
 
                .O_trace_trigger_in_use  (tc_trace_trigger_in_use[i]),
                .O_sad_trigger_in_use    (tc_sad_trigger_in_use[i]  ),
@@ -521,6 +532,7 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
    assign sad_active            = (trigger_sequencer_on)? |tc_sad_active : tc_sad_active[0];
    assign edge_trigger_active   = (trigger_sequencer_on)? |tc_edge_trigger_active : tc_edge_trigger_active[0];
    assign adc_trigger_active    = (trigger_sequencer_on)? |tc_adc_trigger_active : tc_adc_trigger_active[0];
+   assign bb_trigger_active     = (trigger_sequencer_on)? |tc_bb_trigger_active : tc_bb_trigger_active[0];
 
    assign trace_trigger_in_use  = |tc_trace_trigger_in_use;
    assign sad_trigger_in_use    = |tc_sad_trigger_in_use;
@@ -532,17 +544,52 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
 /* IO Routing */
 
+   always @(*) begin
+       case (bb_trig_select[3:0])
+           0:  bb_data_in = userio_d[0];
+           1:  bb_data_in = userio_d[1];
+           2:  bb_data_in = userio_d[2];
+           3:  bb_data_in = userio_d[3];
+           4:  bb_data_in = userio_d[4];
+           5:  bb_data_in = userio_d[5];
+           6:  bb_data_in = userio_d[6];
+           7:  bb_data_in = userio_d[7];
+           8:  bb_data_in = userio_ck;
+       `ifndef BB_LIMIT
+           9:  bb_data_in = targetio1_io;
+           10: bb_data_in = targetio2_io;
+           11: bb_data_in = targetio3_io;
+           12: bb_data_in = targetio4_io;
+       `endif
+           default: bb_data_in = 1'b0;
+       endcase
+   end
+
+
    assign targetio1_io = targetio_highz ? 1'bZ :
+                     `ifndef BB_LIMIT
+                         (bb_trig_select[3:0] == 9) ? bb_data_drive ? bb_data_out : 1'bz :
+                         (bb_trig_select[7:4] == 9) ? bb_clock_out :
+                     `endif
                          registers_iorouting[0 + 0] ? uart_tx_i :
                          registers_iorouting[0 + 7] ? registers_iorouting[0 + 6] :
                          1'bZ;
 
+
    assign targetio2_io = targetio_highz ? 1'bZ :
+                     `ifndef BB_LIMIT
+                         (bb_trig_select[3:0] == 10) ? bb_data_drive ? bb_data_out : 1'bz :
+                         (bb_trig_select[7:4] == 10) ? bb_clock_out :
+                     `endif
                          registers_iorouting[8 + 0] ? uart_tx_i :
                          registers_iorouting[8 + 7] ? registers_iorouting[8 + 6] :
                          1'bZ;
 
    assign targetio3_io = targetio_highz ? 1'bZ :
+                     `ifndef BB_LIMIT
+                         (bb_trig_select[3:0] == 11) ? bb_data_drive ? bb_data_out : 1'bz :
+                         (bb_trig_select[7:4] == 11) ? bb_clock_out :
+                     `endif
                          registers_iorouting[16 + 0] ? uart_tx_i :
                          registers_iorouting[16 + 4] ? 1'b0 :
                          registers_iorouting[16 + 5] ? (uart_tx_i ? 1'bZ : 1'b0) :
@@ -550,6 +597,10 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
                          1'bZ;
 
    assign targetio4_io = targetio_highz ? 1'bZ :
+                     `ifndef BB_LIMIT
+                         (bb_trig_select[3:0] == 12) ? bb_data_drive ? bb_data_out : 1'bz :
+                         (bb_trig_select[7:4] == 12) ? bb_clock_out :
+                     `endif
                          registers_iorouting[24 + 0] ? uart_tx_i :
                          registers_iorouting[24 + 7] ? registers_iorouting[24 + 6] :
                          1'bZ;
@@ -562,7 +613,12 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
 
    assign enable_output_nrst = registers_iorouting[48];
-   assign output_nrst = registers_iorouting[49];
+   `ifdef BB_LIMIT
+       wire invert_nrst = 1'b0;
+   `else
+       wire invert_nrst = (bb_trig_select[3:0] == 14)? bb_data_out : 1'b0;
+   `endif
+   assign output_nrst = registers_iorouting[49] ^ invert_nrst;
    assign nrst_ignore_highz = registers_iorouting[54];
    assign enable_output_pdid = registers_iorouting[50];
    assign output_pdid = registers_iorouting[51];
@@ -582,22 +638,16 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
    reg [7:0] reg_datao_reg;
    assign reg_datao = reg_datao_reg;
-   wire [8:0] userio_read = {userio_clk, userio_d};
 
    always @(*) begin
       if (reg_read) begin
          case (reg_address)
-           `CW_AUX_IO:                  reg_datao_reg = {5'b0, registers_cwauxio};
+           `CW_AUX_IO:                  reg_datao_reg = {4'b0, registers_cwauxio};
            `CW_EXTCLK_ADDR:             reg_datao_reg = registers_cwextclk; 
            `CW_TRIGSRC_ADDR:            reg_datao_reg = registers_cwtrigsrc[reg_bytecnt*8 +: 8]; 
            `CW_TRIGMOD_ADDR:            reg_datao_reg = registers_cwtrigmod[reg_bytecnt*8 +: 8];
            `CW_IOROUTE_ADDR:            reg_datao_reg = registers_iorouting[reg_bytecnt*8 +: 8];
            `CW_IOREAD_ADDR:             reg_datao_reg = registers_ioread[reg_bytecnt*8 +: 8];
-
-           `USERIO_CW_DRIVEN:           reg_datao_reg = userio_cwdriven[reg_bytecnt*8 +: 8];
-           `USERIO_DEBUG_DRIVEN:        reg_datao_reg = {5'b0, userio_target_debug_swd, userio_target_debug, userio_fpga_debug};
-           `USERIO_DEBUG_SELECT:        reg_datao_reg = {4'b0, userio_fpga_debug_select};
-           `USERIO_READ:                reg_datao_reg = userio_read[reg_bytecnt*8 +: 8];
 
            `EXTERNAL_CLOCK:             reg_datao_reg = reg_external_clock;
            `COMPONENTS_EXIST:           reg_datao_reg = {6'b0, trace_exists, la_exists};
@@ -608,6 +658,8 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
            `SEQ_TRIGGERS_CONFIG:        reg_datao_reg = reg_seq_triggers_config_read[reg_bytecnt*8 +: 8];
            `SEQ_TRIGGERS_MINMAX:        reg_datao_reg = reg_seq_triggers_minmax[reg_bytecnt*8 +: 8];
            `SEQ_TRIGGERS_UART_EDGE_CHOOSER: reg_datao_reg = reg_uart_edge_chooser;
+
+           `BB_TRIG_SELECT:             reg_datao_reg = bb_trig_select;
 
            default: reg_datao_reg = 0;
          endcase
@@ -629,29 +681,19 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
          registers_cwtrigsrc <= {pSEQUENCER_NUM_TRIGGERS{16'b00100000}}; // default to GPIO4
          registers_cwtrigmod <= 0;
          registers_iorouting <= 64'b00000010_00000001;
-         reg_userio_cwdriven <= 8'b0;
-         userio_fpga_debug <= 1'b0;
-         userio_target_debug <= 1'b0;
-         userio_target_debug_swd <= 1'b0;
-         userio_drive_data <= 8'b0;
-         userio_fpga_debug_select <= 4'b0;
          reg_external_clock <= 1'b0;
          cw310_adc_clk_sel <= 1'b0;
-         registers_cwauxio <= 3'b0;
+         registers_cwauxio <= 4'b0;
+         bb_trig_select <= 8'hFF; // default to disabled
          reg_softpower_control <= {16'd0, 16'd1995, 16'd2000, 8'd0, 8'd35};
          reg_seq_triggers_config <= 1; // default to two triggers, sequencer disabled
       end else if (reg_write) begin
          case (reg_address)
-           `CW_AUX_IO: registers_cwauxio <= reg_datai[2:0];
+           `CW_AUX_IO: registers_cwauxio <= reg_datai[3:0];
            `CW_EXTCLK_ADDR: registers_cwextclk <= reg_datai;
            `CW_TRIGSRC_ADDR: registers_cwtrigsrc[reg_bytecnt*8 +: 8] <= reg_datai;
            `CW_TRIGMOD_ADDR: registers_cwtrigmod[reg_bytecnt*8 +: 8] <= reg_datai;
            `CW_IOROUTE_ADDR: registers_iorouting[reg_bytecnt*8 +: 8] <= reg_datai;
-
-           `USERIO_CW_DRIVEN: reg_userio_cwdriven[reg_bytecnt*8 +: 8] <= reg_datai;
-           `USERIO_DEBUG_DRIVEN: {userio_target_debug_swd, userio_target_debug, userio_fpga_debug} <= reg_datai[2:0];
-           `USERIO_DEBUG_SELECT: userio_fpga_debug_select <= reg_datai[3:0];
-           `USERIO_DRIVE_DATA: userio_drive_data[reg_bytecnt*8 +: 8] <= reg_datai;
 
            `EXTERNAL_CLOCK: reg_external_clock <= reg_datai[0];
 
@@ -662,19 +704,12 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
            `SEQ_TRIGGERS_MINMAX: reg_seq_triggers_minmax[reg_bytecnt*8 +: 8] <= reg_datai;
            `SEQ_TRIGGERS_UART_EDGE_CHOOSER: reg_uart_edge_chooser <= reg_datai;
 
+           `BB_TRIG_SELECT: bb_trig_select <= reg_datai;
+
            default: ;
          endcase
       end
    end
-
-   // USERIO drive direction can be set via USERIO_CW_DRIVEN, but this gets
-   // overwritten by userio_fpga_debug, userio_target_debug,
-   // userio_target_debug_swd  and trace_en:
-   assign userio_cwdriven = trace_en? trace_userio_dir : 
-                            userio_fpga_debug? {pUSERIO_WIDTH{1'b1}} :
-                            (userio_target_debug && userio_target_debug_swd)? (~userio_clk? 8'b0010_0000 : 8'b0110_0000 ) :
-                            (userio_target_debug && ~userio_target_debug_swd)?  8'b1110_0000  :
-                            reg_userio_cwdriven;
 
 endmodule
 `default_nettype wire

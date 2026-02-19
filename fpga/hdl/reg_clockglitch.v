@@ -497,9 +497,11 @@ assign debug2= {glitch_done_count[1:0], // 7:6
                 glitch_enable,          // 5
                 glitchclk,              // 4
                 glitch_trigger,         // 3
-                glitch_mmcm1_clk_out,   // 2
+                //glitch_mmcm1_clk_out,   // 2
+                1'b0,
                 sourceclk,              // 1
-                exttrigger              // 0
+                //exttrigger              // 0  // can cause implementation/bitfile generation problems in Vivado, so commenting out;
+                1'b0                            // note that this only affects scope.userio, not scope.LA
                };
 
 endmodule

@@ -23,7 +23,7 @@ Author: Jean-Pierre Thibault <jpthibault@newae.com>
 
 module trigger_chooser (
     input  wire [15:0]  I_trigsrc,
-    input  wire [7:0]   I_trigmod, // only 2:0 is used, but 7:0 makes for easier indexing/setting from Python
+    input  wire [7:0]   I_trigmod, // only 3:0 is used, but 7:0 makes for easier indexing/setting from Python
 
     input  wire         auxio,
     input  wire         trigger_nrst_i,
@@ -38,6 +38,7 @@ module trigger_chooser (
     input  wire         trigger_decodedio_i,
     input  wire         trigger_trace_i,
     input  wire         trigger_adc_i,
+    input  wire         trigger_bb_i,
     input  wire         trigger_edge_i,
 
     output wire         O_decodeio_active,
@@ -45,6 +46,7 @@ module trigger_chooser (
     output wire         O_sad_active,
     output wire         O_edge_trigger_active,
     output wire         O_adc_trigger_active,
+    output wire         O_bb_trigger_active,
 
     output wire         O_trace_trigger_in_use,
     output wire         O_sad_trigger_in_use,
@@ -95,26 +97,28 @@ module trigger_chooser (
                           (I_trigsrc[7:6] == 2'b10) ? (~trigger_and) :
                           1'b0;
 
-    assign O_trigger = (I_trigmod[2:0] == 3'b000) ? trigger_ext :
-                       (I_trigmod[2:0] == 3'b001) ? trigger_advio_i : 
-                       (I_trigmod[2:0] == 3'b010) ? trigger_sad_i :
-                       (I_trigmod[2:0] == 3'b011) ? trigger_decodedio_i :
-                       (I_trigmod[2:0] == 3'b100) ? trigger_trace_i :
-                       (I_trigmod[2:0] == 3'b101) ? trigger_adc_i :
-                       (I_trigmod[2:0] == 3'b110) ? trigger_edge_i : 1'b0;
+    assign O_trigger = (I_trigmod[3:0] == 4'b0000) ? trigger_ext :
+                       (I_trigmod[3:0] == 4'b0001) ? trigger_advio_i : 
+                       (I_trigmod[3:0] == 4'b0010) ? trigger_sad_i :
+                       (I_trigmod[3:0] == 4'b0011) ? trigger_decodedio_i :
+                       (I_trigmod[3:0] == 4'b0100) ? trigger_trace_i :
+                       (I_trigmod[3:0] == 4'b0101) ? trigger_adc_i :
+                       (I_trigmod[3:0] == 4'b0110) ? trigger_edge_i :
+                       (I_trigmod[3:0] == 4'b0111) ? trigger_bb_i : 1'b0;
 
    // these denote when a particular trigger is allowed to fire:
-   assign O_decodeio_active       = I_active_trigger && (I_trigmod[2:0] == 3'b011);
-   assign O_trace_active          = I_active_trigger && (I_trigmod[2:0] == 3'b100);
-   assign O_sad_active            = (I_active_trigger || I_sad_always_active) && (I_trigmod[2:0] == 3'b010);
-   assign O_edge_trigger_active   = I_active_trigger && (I_trigmod[2:0] == 3'b110);
-   assign O_adc_trigger_active    = I_active_trigger && (I_trigmod[2:0] == 3'b101);
+   assign O_decodeio_active       = I_active_trigger && (I_trigmod[3:0] == 4'b0011);
+   assign O_trace_active          = I_active_trigger && (I_trigmod[3:0] == 4'b0100);
+   assign O_sad_active            = (I_active_trigger || I_sad_always_active) && (I_trigmod[3:0] == 4'b0010);
+   assign O_edge_trigger_active   = I_active_trigger && (I_trigmod[3:0] == 4'b0110);
+   assign O_adc_trigger_active    = I_active_trigger && (I_trigmod[3:0] == 4'b0101);
+   assign O_bb_trigger_active     = I_active_trigger && (I_trigmod[3:0] == 4'b0111);
 
    // trace can be used standalone (e.g. not for triggering), so we need to know if any trigger is using trace:
-   assign O_trace_trigger_in_use  = (I_trigmod[2:0] == 3'b100);
+   assign O_trace_trigger_in_use  = (I_trigmod[3:0] == 4'b0100);
 
    // SAD has a long startup time so we need this to keep it alive outside its active window:
-   assign O_sad_trigger_in_use    = (I_trigmod[2:0] == 3'b010);
+   assign O_sad_trigger_in_use    = (I_trigmod[3:0] == 4'b0010);
 
 
 endmodule

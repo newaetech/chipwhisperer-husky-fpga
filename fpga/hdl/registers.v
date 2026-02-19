@@ -254,7 +254,6 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define CLOCKGLITCH_OFFSET      25
 `define OFFSET_ADDR             26
 `define FIFO_CONFIG             27
-`define RESET                   28
 `define ADC_LOW_RES             29
 
 `define DRP_ADDR                30
@@ -320,11 +319,15 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 
 `define EXTCLK_MONITOR          82
 
-`define USERIO_CW_DRIVEN        86
-`define USERIO_DEBUG_DRIVEN     87
+`define USERIO_CONFIG           57
 `define USERIO_DRIVE_DATA       88
-`define USERIO_READ             97
-`define USERIO_DEBUG_SELECT     109
+`define USERIO_DRP_ADDR         107
+`define USERIO_DRP_DATA         126
+`define USERIO_DRP_RESET        127
+
+`define BB_TRIG_CTRL_STAT       58
+`define BB_TRIG_DATA            83
+`define BB_TRIG_SELECT          84
 
 `define CAPTURE_DONE            89
 
@@ -380,16 +383,14 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define REG_DDR_START_READ      125
 
 // list of holes in the register address space (to be used for new features):
-//`define UNUSED_ADDRESS 57
-//`define UNUSED_ADDRESS 58
+//`define UNUSED_ADDRESS 28
 //`define UNUSED_ADDRESS 70
-//`define UNUSED_ADDRESS 83
-//`define UNUSED_ADDRESS 84
 //`define UNUSED_ADDRESS 85
 //`define UNUSED_ADDRESS 106
-//`define UNUSED_ADDRESS 107
-//`define UNUSED_ADDRESS 126
-//`define UNUSED_ADDRESS 127
+//`define UNUSED_ADDRESS 97
+//`define UNUSED_ADDRESS 86
+//`define UNUSED_ADDRESS 87
+//`define UNUSED_ADDRESS 109
 
 `define REGISTER_VERSION 2
 

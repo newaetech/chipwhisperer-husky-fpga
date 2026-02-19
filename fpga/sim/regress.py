@@ -360,6 +360,13 @@ tests.append(dict(name  = 'trigger_sequencer_rand',
              TOP = 'trigger_sequencer_cocowrapper.v',
              description = 'trigger sequencer block-level test.'))
 
+tests.append(dict(name  = 'hw_bb',
+             frequency = 2,
+             TOP = 'hw_bb_cocowrapper.v',
+             BB_PATTERN_DEPTH = 256,
+             BB_SAVE_DEPTH = 32,
+             description = 'hw_bb block-level test.'))
+
 
 def print_tests():
     print("Available tests:")
@@ -520,6 +527,8 @@ for test in tests:
              makeargs[1] = 'all_trigger_sequencer'
          elif key == 'TOP' and test[key] == 'sad_cocowrapper.v':
              makeargs[1] = 'all_sad_coco'
+         elif key == 'TOP' and test[key] == 'hw_bb_cocowrapper.v':
+             makeargs[1] = 'all_hw_bb_coco'
          else:
             if type(test[key]) == list:
                if len(test[key]) == 2:

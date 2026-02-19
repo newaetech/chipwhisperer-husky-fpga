@@ -23,6 +23,7 @@ Author: Jean-Pierre Thibault <jpthibault@newae.com>
 *************************************************************************/
 
 module trigger_sequencer_cocowrapper #(
+    parameter pDUMP = 0,
     parameter pNUM_TRIGGERS = 4,
     parameter pCOUNTER_WIDTH = 16
 )(
@@ -45,10 +46,6 @@ module trigger_sequencer_cocowrapper #(
     output reg                                          trigger_error
 );
 
-
-   parameter pDUMP = 0;
-   //parameter pNUM_TRIGGERS = 4;
-   //parameter pCOUNTER_WIDTH = 16;
 
    initial begin
       if (pDUMP) begin
@@ -82,6 +79,7 @@ module trigger_sequencer_cocowrapper #(
         .I_min_wait                     (I_min_wait      ),
         .I_max_wait                     (I_max_wait      ),
         .I_last_trigger                 (I_last_trigger  ),
+        .sad_active                     (1'b0            ),
         .O_trigger                      (O_trigger       )
     );
 

@@ -121,7 +121,7 @@ class GenericCapture(object):
             # note: used to have a  self._pre_read_wait(job) here but no longer needed since _wait_capture_done does the equivalent
             # see comments around queue definition in Harness for how this queue and lock mechanism works:
             self.dut._log.info("%12s awaiting freed trigger lock" % job_name)
-            while self.harness.trigger_lock.locked:
+            while self.harness.trigger_lock.locked():
                 await ClockCycles(self.clk_usb, 10)
             if not self.stream:
                 await self.harness.read_lock_acquire(job_name)

@@ -85,7 +85,7 @@ module sad_x2_slowclock #(
     // note that in INTERVAL_MATCHING mode, usable width is pMASTER_COUNTER_WIDTH-2; extra bit is saturation indicator
     localparam pACTUAL_SAD_COUNTER_WIDTH = (`INTERVAL_MATCHING == 1)? (pMASTER_COUNTER_WIDTH-1) : pSAD_COUNTER_WIDTH;
 
-    reg  triggered;
+    reg  triggered = 1'b0;
     reg  trigger_r;
     reg [15:0] num_triggers;
     reg clear_status;

@@ -54,7 +54,7 @@ when dealing with logic which uses multiple clocks (of which there are
 *many!*).
 
 Occasionally, a bitfile can be obtained where FPGA register reads/writes
-are unreliable (i.e. [`test_husky.py`'s](#on-target-testing) `test_reg_rw()`
+are unreliable (i.e. [`test_husky_dev.py`'s](#on-target-testing) `test_reg_rw()`
 test will fail), which makes the bitfile useless. Again, the solution is to
 re-compile with a different synthesis or implementation strategy. If this
 occurs, connecting to the scope object usually returns this error message:
@@ -88,7 +88,14 @@ CW-Husky is tested in two ways:
 
 Note that the Vivado simulator is not supported. In theory [any simulator
 supported by cocotb](https://docs.cocotb.org/en/stable/simulator_support.html)
-should work; in practice, iverilog is what we use.
+should work; in practice, iverilog is what we use and support.
+
+#### Why Not Verilator?
+True, Verilator is lightning-fast when using compiled C++ testbenches. It's
+possible to interface a cocotb testbech with Verilator, but some of
+Verilator's speed-up over iverilog would be lost. In practice, we find
+iverilog to be plenty fast, partly thanks to `regress.py`'s ability to
+dispatch multiple simulations in parallel.
 
 
 ### Running Simulations
@@ -106,8 +113,9 @@ the same randomizations, specify a `--seed <integer>`.
 Add `--dump` to generate a simulation waveform.
 
 To run the full test suite: `regress.py --runs <number of runs>`. This
-launches all simulations in parallel, so start with a smaller number to
-avoid making your computer totally unresponsive for a few minutes.
+launches simulations in parallel using all your CPU's cores; to avoid
+potentially making your computer unresponsive for a few minutes, use `--proc`
+to limit the number of processor cores that are used.
 
 Use `--tests` to regress a subset of the regression suite. For example,
 `regress.py --tests glitches --runs 10` will run only the testcases which
@@ -152,22 +160,24 @@ below).
 ## On-Target Testing
 Some things can't be verified in simulation; they must be verified on the
 FPGA itself.
-[`test_husky.py`](https://github.com/newaetech/chipwhisperer/blob/develop/tests/test_husky.py)
+[`test_husky_dev.py`](https://github.com/newaetech/chipwhisperer/blob/develop/tests/test_husky_dev.py)
 runs a comprehensive series of tests automatically. Invoke it like this:
-`pytest test_husky.py`.
+`pytest test_husky_dev.py`.
 
 Many of the tests can run without a target attached; others require a target
 running simpleserial firmware. In particular, the trace tests require a
 specific firmware to succeed; the target should be programmed with the
 firmware included in `hardware/victims/firmware/simpleserial-trace/`.
 
-Among the things covered by `test_husky.py`:
+Among the things covered by `test_husky_dev.py`:
 * whether reading/writing the FPGA works reliably;
 * whether data from the ADC is sampled correctly by the FPGA;
 * whether the advertised streaming rates can be achieved;
 * whether the generated glitches have the expected shape;
 * whether triggering from trace works correctly;
-* whether different clock rates works correctly.
+* whether different clock rates works correctly;
+* whether temperature and voltage rails remain within recommended operating
+  conditions when pushed to the limit.
 
 # Debugging
 
@@ -195,4 +205,37 @@ streaming requires deep storage to function properly (the SAM3U reads in
 bursts of 64K samples when streaming). You'll have to get creative. One
 option is to build without the trace and logic analyzer, by removing the
 corresponding defines in `setup.v`.
+
+
+# Husky vs Husky Plus
+
+The same codebase supports both Husky and Husky Plus. The differences
+between the two are summarized [here](https://chipwhisperer.readthedocs.io/en/latest/Capture/overview.html).
+
+These differences are implemented via top-level defines which are declared in
+the Vivado project files. These in turn lead to different FIFO depths and
+configuration parameters.
+
+Both Husky and Husky Plus have limitations that can make expanding their
+feature set challenging.
+
+For Husky, utilization and routing congestion are the main potential issues.
+For example, supporting more USERIO clocks, or supporting more pins in
+`scope.bitbanger`, should be essentially free, but the difficulty of routing
+these signals leads to significant timing failures. Similarly, increasing
+`pTRACE_MATCH_RULES` should only cost a relatively small number of LUTs, and
+should not, from a pure logic point of view, make timing more difficult.
+However in practice, it increases congestion which in turn leads to timing
+failures.
+
+For Husky Plus, utilization is significantly lower. We take advantage of this
+to add more USERIO clocks and `scope.bitbanger` pin options. Power consumption
+is what we have to watch for here. This is what keeps us, for example, from
+increasing the SAD depth. In theory there are enough LUTs available to double
+the SAD depth; in practice, if we do this, turning on the SAD module when it is
+clocked at 250 MHz creates a large enough power draw that the voltage rails
+(which are monitored by the FPGA's XADC module) exceed their recommended
+operating limits. This is one of the reasons why it is important to do thorough
+[on-target testing](#on-target-testing).
+
 

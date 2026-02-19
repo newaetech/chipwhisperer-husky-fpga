@@ -79,7 +79,7 @@ module sad_x2 #(
                                        (pREF_SAMPLES <= 512)? 9 :
                                        (pREF_SAMPLES <= 1024)? 10 : 11;
 
-    reg  triggered;
+    reg  triggered = 1'b0;
     reg [15:0] num_triggers;
     reg clear_status;
     reg clear_status_r;

@@ -1104,7 +1104,8 @@ module fifo_top_husky(
               .probe13        (state_triggered),      // input wire [0:0]  probe13
               .probe14        (state_done),           // input wire [0:0]  probe14
               .probe15        (error_stat),           // input wire [7:0]  probe15
-              .probe16        (error_flag)            // input wire [0:0]  probe16
+              .probe16        (error_flag),           // input wire [0:0]  probe16
+              .probe17        (adc_datain)            // input wire [11:0]  probe17
            );
        `endif
 
@@ -1121,7 +1122,7 @@ module fifo_top_husky(
           .probe7         (slow_fifo_overflow),   // input wire [0:0]  probe7 
           .probe8         (slow_fifo_underflow),  // input wire [0:0]  probe8 
           .probe9         (arm_pulse_usb),        // input wire [0:0]  probe9
-          .probe10        (),                     // input wire [0:0]  probe10
+          .probe10        (flushing),             // input wire [0:0]  probe10
           .probe11        (slow_fifo_rd_fast),    // input wire [0:0]  probe11
           .probe12        (fifo_read_fifoen),     // input wire [0:0]  probe12
           .probe13        (slow_read_count),      // input wire [3:0]  probe13
@@ -1129,6 +1130,21 @@ module fifo_top_husky(
           .probe15        (fast_fifo_read_mode)   // input wire [0:0]  probe15
        );
 
+       ila_slow_fifo_wr U_ila_slow_fifo_wr (
+          .clk            (adc_sampleclk),        // input wire clk
+          .probe0         (reset),
+          .probe1         (slow_fifo_din),      // 36
+          .probe2         (fast_fifo_dout),     // 12
+          .probe3         (fast_fifo_rd),
+          .probe4         (slow_fifo_prewr),
+          .probe5         (slow_fifo_wr),
+          .probe6         (slow_fifo_full),
+          .probe7         (slow_fifo_overflow),
+          .probe8         (flushing)
+       );
+
+
+       /*
        ila_long_fifo U_ila_long_fifo (
           .clk            (clk_usb),              // input wire clk
           .probe0         (slow_fifo_wr),         // input wire [0:0]  probe0 
@@ -1148,6 +1164,7 @@ module fifo_top_husky(
           .probe14        (reg_address),          // input wire [0:0]  probe8 
           .probe15        (state)                 // input wire [0:0]  probe8 
        );
+       */
 
    `endif
 
@@ -1237,6 +1254,39 @@ module fifo_top_husky(
           .probe22        (slow_fifo_overflow_reg),// input wire [0:0] probe22
           .probe23        (slow_fifo_underflow_sticky) // input wire [0:0] probe23
        );
+
+   `endif
+
+
+   `ifdef ILA_RESET
+       ila_reset_fifo U_ila_reset_fifo (
+          .clk            (adc_sampleclk),
+          .probe0         (reset),
+          .probe1         (state),                      // 3
+          .probe2         (presample_counter),          // 15
+          .probe3         (sample_counter),             // 32
+          .probe4         (fast_fifo_presample_drain),
+          .probe5         (adc_capture_stop),
+          .probe6         (fast_fifo_rd_en),
+          .probe7         (segment_counter),            // 16
+          .probe8         (segment_cycle_counter),      // 20
+          .probe9         (filling_out_to_done),
+          .probe10        (flushing),
+          .probe11        (flushing_adc),
+          .probe12        (flushing_adc_usb),
+          .probe13        (arming),
+          .probe14        (armed_and_ready),
+          .probe15        (capture_go_r),
+          .probe16        (underflow_count),            // 8
+          .probe17        (slow_fifo_underflow_sticky),
+          .probe18        (slow_fifo_underflow_count),
+          .probe19        (fast_write_count),           // 3
+          .probe20        (fast_read_count),            // 2
+          .probe21        (slow_fifo_prewr),
+          .probe22        (slow_read_count),            // 4
+          .probe23        (slow_fifo_rd_slow),
+          .probe24        (slow_fifo_dout_r)            // 4
+      );
 
    `endif
 
