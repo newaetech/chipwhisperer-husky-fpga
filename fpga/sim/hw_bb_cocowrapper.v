@@ -44,14 +44,17 @@ module hw_bb_cocowrapper (
     // testbench things:
     input  wire [31:0]  errors,
 
+    output wire         clock_out_debug,
     input  wire         in_to_out,
     input  wire         tb_data_in,
     input  wire         expected_trigger,
     input  wire         expected_data,
     input  wire         expected_hiz,
+    input  wire         expected_clk,
     output reg          trigger_error,
     output reg          data_error,
-    output reg          hiz_error
+    output reg          hiz_error,
+    output reg          clk_error
 
 );
 
@@ -73,19 +76,36 @@ module hw_bb_cocowrapper (
         else
             trigger_error <= 1'b0;
 
-        if (expected_data != bb_data_out)
+        if (expected_data != bb_data_out_r[1])
             data_error <= 1'b1;
         else
             data_error <= 1'b0;
 
-        if (expected_hiz != ~bb_data_drive)
+        if (expected_hiz != ~bb_data_drive_r[1])
             hiz_error <= 1'b1;
         else
             hiz_error <= 1'b0;
     end
-    wire all_errors = trigger_error || data_error || hiz_error;
+
+    always @(posedge clk_adc) begin
+        if (expected_clk != bb_clock_out)
+            clk_error <= 1'b1;
+        else
+            clk_error <= 1'b0;
+    end
+
+    wire all_errors = trigger_error || data_error || hiz_error || clk_error;
 
     wire bb_data_in = (in_to_out)? bb_data_out : tb_data_in;
+
+
+    // since bb_data_out comes out a quarter-period early, delay it to compensate:
+    reg [1:0] bb_data_out_r;
+    reg [1:0] bb_data_drive_r;
+    always @(posedge clk_adc) begin
+        bb_data_out_r <= {bb_data_out_r[0], bb_data_out};
+        bb_data_drive_r <= {bb_data_drive_r[0], bb_data_drive};
+    end
 
 
     hw_bb_wrapper #(
@@ -108,6 +128,7 @@ module hw_bb_cocowrapper (
         .bb_data_out        (bb_data_out  ),
         .bb_data_drive      (bb_data_drive),
         .bb_clock_out       (bb_clock_out ),
+        .clock_out_debug    (clock_out_debug),
         .trigger_bb         (trigger_bb   ),
         .glitchclk          (glitchclk    )
     );

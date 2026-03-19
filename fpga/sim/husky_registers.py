@@ -65,7 +65,10 @@ class Registers(object):
         try:
             await self.setup_rw_address(address)
             for i in range(size):
-                data.append(await self.read_next_byte())
+                rdata = await self.read_next_byte()
+                if not rdata.is_resolvable:
+                    self.dut._log.warning('read unresolvable data from address %0x, byte %d: %s' % (address, i, rdata))
+                data.append(rdata)
         finally:
             self.lock.release()
         return bytearray(data)

@@ -51,6 +51,7 @@ from husky_registers import Registers
 # - clk_div
 # - continuous_clk = 1
 # - trigger_when_matched = 0
+# - clock_inactive_state = 1
 # - enable_glitch_output (and anything with glitches)
 #
 # Additionally, since this is a block-level testbench, data_pin and clock_pin can't be covered.
@@ -219,6 +220,7 @@ class HW_BB_Test(object):
         self.trigger_error = self.dut.trigger_error
         self.data_error = self.dut.data_error
         self.hiz_error = self.dut.hiz_error
+        self.clk_error = self.dut.clk_error
 
         self._coro = None
 
@@ -267,6 +269,7 @@ class HW_BB_Test(object):
         raw[1] = (self.continuous_clk << 7) + \
                  (self.inactive_data << 6) + \
                  (self.inactive_state << 5) + \
+                 (self.clock_inactive_state << 4) + \
                  (self.trigger_when_matched << 3) + \
                  (self.enable_glitch_output << 2) + \
                  (self.drive_edge << 1) + \
@@ -293,25 +296,110 @@ class HW_BB_Test(object):
 
         self.trigger_en = 1
         self.continuous_clk = 0
-        self.inactive_data = random.randint(0,1)
-        self.inactive_state = random.randint(0,1)
+        #self.inactive_data = random.randint(0,1)
+        #self.inactive_state = random.randint(0,1)
+        #self.clock_inactive_state = 0 # note: not covered
+
+        #self.inactive_data = 1
+        self.inactive_data = 1
+        self.inactive_state = 1
+        self.clock_inactive_state = 1 # note: not covered
+
         self.trigger_when_matched = 0 # note: not covered
         self.enable_glitch_output = 0 # note: not covered
-        self.drive_edge = 0
-        self.check_edge = 0
-        self.clk_div = 8 # note: not covered
+        self.drive_edge = 1
+        self.check_edge = 1
+        self.clk_div = 8 # note: not covered; also, hw_bb_cocowrapper assumes this to be 8
         self.num_bits = 24
         await self.go(False)
         self.set_expected_defaults()
 
 
+    def A2bits(self, address):
+        x = []
+        for i in range(16):
+            bitpos = 15-i
+            if address & 2**bitpos:
+                x.append(1)
+            else:
+                x.append(0)
+        # insert space for ACK bit:
+        x.insert(8,0)
+        return x
+
+    def D2bits(self, data):
+        x = []
+        for i in range(8):
+            bitpos = 7-i
+            if data & 2**bitpos:
+                x.append(1)
+            else:
+                x.append(0)
+        return x
+
+
     async def _dispatch_thread(self):
         # simple directed test -- modify as needed:
-        pattern_data = [1,0,0,0,0,1]*4
+        pattern_data = [0,1,0,0,0,1]*1
         pattern_en = [1]*len(pattern_data)
-        record_en = [1,1,0,0,0,1]*4
-        trigger_en = [1,1,0,0,0,1]*4
+        record_en = [1,1,0,0,0,1]*1
+        trigger_en = [1,1,0,0,0,1]*1
         hiz = [0]*len(pattern_data)
+        hiz[2] = 1
+        clk_en = [1]*len(pattern_data)
+        clk_en[0] = 0
+        clk_en[2] = 0
+        clk_en[-1] = 0
+        #clk_en[1] = 0
+        self.num_bits = len(pattern_data)
+
+        #              start dev address   W  ACK  word addresses: 0xFF00             ACK   STOP (temp)
+        #pattern_data = [0,0, 1,0,1,0,1,1,1,0, 0,   1,1,1,1,1,1,1,1, 1,1,1,1,0,0,0,0,  0,    0,0]
+        #hiz          = [0,0, 0,0,0,0,0,0,0,0, 1,   0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,  1,    0,0]
+        #clk_en       = [1]*len(pattern_data)
+        #pattern_en   = [1]*len(pattern_data)
+        #record_en    = [0]*len(pattern_data)
+        #trigger_en   = [0]*len(pattern_data)
+        #clk_en[0] = 0
+        #clk_en[-1] = 0
+        #self.num_bits = len(pattern_data)
+
+        #address = 0xFFF0
+        #abits = self.A2bits(address)
+        #dev_addr = [1,0,1,0,0,0,0]
+        #pattern_data = [0,0, 1,0,1,0,0,0,0, 0, 0,   0,0,0,0,0,0,0,0, 0, 0,0,0,0,0,0,0,0,  0,    1,0,   1,0,1,0,0,0,0, 1,  1,  0,0,0,0,0,0,0,0, 1,  0]
+        #hiz          = [0,0, 0,0,0,0,0,0,0, 0, 1,   0,0,0,0,0,0,0,0, 1, 0,0,0,0,0,0,0,0,  1,    0,0,   0,0,0,0,0,0,0, 0,  1,  1,1,1,1,1,1,1,1, 0,  0]
+        #clk_en       = [0,1, 1,1,1,1,1,1,1, 1, 1,   1,1,1,1,1,1,1,1, 1, 1,1,1,1,1,1,1,1,  1,    0,1,   1,1,1,1,1,1,1, 1,  1,  1,1,1,1,1,1,1,1, 1,  0]
+        #pattern_data[2:9] = dev_addr
+        #pattern_data[11:11+len(abits)] = abits
+        #pattern_en   = [1]*len(pattern_data)
+        #trigger_en   = [0]*len(pattern_data)
+        #record_en    = [0]*len(pattern_data)
+        #record_en[40:48] = [1]*8
+        #self.num_bits = len(pattern_data)
+
+        #pattern_data = [0,0, 1,0,1,0,0,0,0, 1,  1,  0,0,0,0,0,0,0,0, 1,  0, 1]
+        #hiz          = [0,0, 0,0,0,0,0,0,0, 0,  1,  1,1,1,1,1,1,1,1, 0,  0, 0]
+        #clk_en       = [0,0, 1,1,1,1,1,1,1, 1,  1,  1,1,1,1,1,1,1,1, 1,  1, 0]
+        #pattern_en   = [1]*len(pattern_data)
+        #trigger_en   = [0]*len(pattern_data)
+        #record_en    = [0]*len(pattern_data)
+        #self.num_bits = len(pattern_data)
+
+        pattern_data = [0,1,1,0,0]
+        hiz          = [0,0,0,0,0]
+        clk_en       = [1,1,1,0,1]
+        pattern_en   = [0,0,0,0,0]
+        trigger_en   = [0,1,0,0,0]
+        record_en    = [1]*len(pattern_data)
+        self.num_bits = len(pattern_data)
+
+
+
+        #self.drive_edge = 0
+        #self.check_edge = 0
+        self.inactive_data = 1
+        self.clock_inactive_state = 0
 
         in_to_out = 0
         self.dut.in_to_out.value = in_to_out
@@ -319,14 +407,24 @@ class HW_BB_Test(object):
         data_in[2] = not data_in[2]
         pattern_en[2] = 0
 
-        await self.set_bb_data(pattern_data, hiz, pattern_en, trigger_en, record_en)
-        await self.go(True)
-        await self._generate_expected_outputs(pattern_data, hiz, pattern_en, trigger_en, data_in)
-        await self.wait_done()
-        matched = await self.matched()
-        if not matched:
-            self.dut._log.error('Matched status bit is not set.')
-            self.harness.inc_error()
+        for check_edge in [0,1]:
+            for drive_edge in [1,0]:
+                for clock_inactive_state in [0]: #[0,0]:
+
+                    self.drive_edge = drive_edge
+                    self.check_edge = check_edge
+                    self.clock_inactive_state = clock_inactive_state
+
+                    await self.set_bb_data(pattern_data, hiz, pattern_en, trigger_en, record_en, clk_en)
+                    await self.go(True)
+                    await self._generate_expected_outputs(pattern_data, hiz, pattern_en, trigger_en, clk_en, data_in)
+                    await self.wait_done()
+
+                    matched = await self.matched()
+                    if not matched:
+                        self.dut._log.error('Matched status bit is not set.')
+                        self.harness.inc_error()
+
 
         # Randomized tests:
         # Randomize the number of bits, the pattern data, the triggers, and hiz.
@@ -337,16 +435,30 @@ class HW_BB_Test(object):
         # c) pattern_en is randomized and all disabled bits are inverted ("matched" is True)
         # So in total, 12 patterns are issued.
         for rep in range(self.reps):
+            # randomize start time WRT bit-bang clock phase to ensure there is no dependency there:
+            await ClockCycles(self.dut.clk_adc, random.randint(0, self.clk_div))
             num_bits = random.randint(self.save_depth, self.pattern_depth)
             self.num_bits = num_bits
             pattern_data = []
             trigger_en = []
             hiz = []
+            clk_en = []
             record_en = [0]*num_bits
             for i in range(num_bits):
                 pattern_data.append(random.randint(0,1))
-                trigger_en.append(random.randint(0,1))
+                clk_en.append(random.randint(0,1))
                 hiz.append(random.randint(0,1))
+                # triggers are less frequent so we'll get better effective coverage if the test reflects that:
+                if random.randint(0,10):
+                    trigger_en.append(0)
+                else:
+                    trigger_en.append(1)
+
+            # TODO: randomize clk_en?
+            #clk_en = [1]*num_bits
+            #clk_en[0] = 0
+            #clk_en[1] = 0
+            #clk_en[2] = 0
 
             # randomly choose which bits to record:
             for i in range(self.save_depth):
@@ -364,10 +476,23 @@ class HW_BB_Test(object):
             self.dut._log.info('Randomized job data:')
             self.dut._log.info('    num_bits=%d' % num_bits)
             self.dut._log.info('    pattern_data=%s' % pattern_data)
-            self.dut._log.info('    trigger_en=%s' % trigger_en)
-            self.dut._log.info('    record_en=%s' % record_en)
-            self.dut._log.info('    hiz=%s' % hiz)
-
+            self.dut._log.info('    trigger_en  =%s' % trigger_en)
+            self.dut._log.info('    record_en   =%s' % record_en)
+            self.dut._log.info('    hiz         =%s' % hiz)
+            self.dut._log.info('    clk_en      =%s' % clk_en)
+            if num_bits > 16:
+                self.dut._log.info('First 8 bits of job data:')
+                self.dut._log.info('    pattern_data=%s' % pattern_data[:8])
+                self.dut._log.info('    trigger_en  =%s' % trigger_en[:8])
+                self.dut._log.info('    record_en   =%s' % record_en[:8])
+                self.dut._log.info('    hiz         =%s' % hiz[:8])
+                self.dut._log.info('    clk_en      =%s' % clk_en[:8])
+                self.dut._log.info('Last 8 bits of job data:')
+                self.dut._log.info('    pattern_data=%s' % pattern_data[-8:])
+                self.dut._log.info('    trigger_en  =%s' % trigger_en[-8:])
+                self.dut._log.info('    record_en   =%s' % record_en[-8:])
+                self.dut._log.info('    hiz         =%s' % hiz[-8:])
+                self.dut._log.info('    clk_en      =%s' % clk_en[-8:])
             for drive_edge in [0,1]:
                 for check_edge in [0,1]:
                     for pattern_en_case in range(3):
@@ -390,7 +515,6 @@ class HW_BB_Test(object):
                             pattern_en = []
                             for i in range(num_bits):
                                 pattern_en.append(random.randint(0,1))
-                                pattern_en.append(1)
                             bitflip = random.randint(0, num_bits-1)
                             data_in[bitflip] = not data_in[bitflip]
                             pattern_en[bitflip] = 1
@@ -409,9 +533,9 @@ class HW_BB_Test(object):
                                     data_in[i] = not data_in[i]
                             expected_rdata = self.get_expected_rdata(record_en, data_in)
 
-                        await self.set_bb_data(pattern_data, hiz, pattern_en, trigger_en, record_en)
+                        await self.set_bb_data(pattern_data, hiz, pattern_en, trigger_en, record_en, clk_en)
                         await self.go(True)
-                        await self._generate_expected_outputs(pattern_data, hiz, pattern_en, trigger_en, data_in)
+                        await self._generate_expected_outputs(pattern_data, hiz, pattern_en, trigger_en, clk_en, data_in)
                         await self.wait_done()
                         matched = await self.matched()
                         if matched != expect_match:
@@ -436,22 +560,45 @@ class HW_BB_Test(object):
                 j += 1
         return expected_rdata
 
+    async def _generate_expected_clock(self, clk_en):
+        # when driving on a negative edge, an extra clock gets put out:
+        clk_en_copy = clk_en.copy()
+        if not self.drive_edge:
+            clk_en_copy.append(clk_en_copy[-1])
+            #self.dut._log.info('Extended clk_en: %s' % clk_en_copy)
+        for cen in clk_en_copy:
+            await RisingEdge(self.dut.clock_out_debug)
+            if cen:
+                self.dut.expected_clk.value = 1
+            else:
+                self.dut.expected_clk.value = 0
+            await FallingEdge(self.dut.clock_out_debug)
+            self.dut.expected_clk.value = 0
 
-    async def _generate_expected_outputs(self, pattern_data, hiz, pattern_en, trigger_en, data_in):
+
+    async def _generate_expected_outputs(self, pattern_data, hiz, pattern_en, trigger_en, clk_en, data_in):
+        b = 0
+        cocotb.start_soon(self._generate_expected_clock(clk_en)) # clock checking is easier to handle in a separate thread
         for expected_data, expected_hiz, expected_en, expected_trigger, tb_data_in in zip(pattern_data, hiz, pattern_en, trigger_en, data_in):
             # drive-edge driven I/O's:
+            #self.dut._log.info('awaiting drive edge %d...' % b)
             await self._next_drive_edge()
+            #self.dut._log.info('got it')
             self.dut.expected_data.value = expected_data
             self.dut.expected_hiz.value = expected_hiz
 
             # check-edge driven I/O's:
             if self.drive_edge != self.check_edge:
+                #self.dut._log.info('awaiting check edge %d...' % b)
                 await self._next_check_edge()
+                #self.dut._log.info('got it')
             self.dut.tb_data_in.value = tb_data_in
             self.dut.expected_trigger.value = expected_trigger
             # trigger is a single fast clock cycle:
             await ClockCycles(self.dut.clk_adc, 1)
             self.dut.expected_trigger.value = 0
+
+            b += 1
 
         # count with fast clock here because target-driven clock won't be there
         if self.drive_edge != self.check_edge:
@@ -470,22 +617,26 @@ class HW_BB_Test(object):
 
     async def _next_drive_edge(self):
         if self.drive_edge:
-            await RisingEdge(self.dut.bb_clock_out)
+            await RisingEdge(self.dut.clock_out_debug)
         else:
-            await FallingEdge(self.dut.bb_clock_out)
+            await FallingEdge(self.dut.clock_out_debug)
 
 
     async def _next_check_edge(self):
         if self.check_edge:
-            await RisingEdge(self.dut.bb_clock_out)
+            await RisingEdge(self.dut.clock_out_debug)
         else:
-            await FallingEdge(self.dut.bb_clock_out)
+            await FallingEdge(self.dut.clock_out_debug)
 
 
-    async def set_bb_data(self, pattern_data, hiz, pattern_en, trigger_en, record_en):
+    async def set_bb_data(self, pattern_data, hiz, pattern_en, trigger_en, record_en, clk_en):
         bb_data = []
-        for a,b,c,d,e in zip(pattern_data, hiz, pattern_en, trigger_en, record_en):
-            bb_data.append(a + (b<<1) + (c<<2) + (d<<3) + (e<<4))
+        if not(len(pattern_data) == len(hiz) == len(pattern_en) == len(trigger_en) == len(record_en) == len(clk_en)):
+            self.dut._log.error('Internal error: unequal lengths (%d, %d, %d, %d, %d, %d)' % (len(pattern_data), len(hiz), len(pattern_en), len(trigger_en), len(record_en), len(clk_en)))
+            assert False
+        for a,b,c,d,e,f in zip(pattern_data, hiz, pattern_en, trigger_en, record_en, clk_en):
+            #bb_data.append(a + (b<<1) + (c<<2) + (d<<3) + (e<<4))
+            bb_data.append(a + (b<<1) + (c<<2) + (d<<3) + (e<<4) + (f<<5))
         await self.registers.write(self.reg_addr['BB_TRIG_DATA'], bb_data)
 
 
@@ -552,9 +703,10 @@ class HW_BB_Test(object):
         self.dut._log.debug('_run starting')
         await self.dut_setup()
 
-        self._trigger_watch_coro = cocotb.start_soon(self._trigger_watch_thread())
-        self._data_watch_coro = cocotb.start_soon(self._data_watch_thread())
-        self._hiz_watch_coro = cocotb.start_soon(self._hiz_watch_thread())
+        cocotb.start_soon(self._trigger_watch_thread())
+        cocotb.start_soon(self._data_watch_thread())
+        cocotb.start_soon(self._hiz_watch_thread())
+        cocotb.start_soon(self._clk_watch_thread())
 
         #self._dispatch_coro = cocotb.start_soon(self._dispatch_thread())
         await self._dispatch_thread()
@@ -584,6 +736,15 @@ class HW_BB_Test(object):
             await Edge(self.hiz_error)
             self.harness.inc_error()
             self.dut._log.error('ERROR: unexpected hiz value!')
+
+    async def _clk_watch_thread(self) -> None:
+        """ Checks for clk errors
+        """
+        while True:
+            await Edge(self.clk_error)
+            self.harness.inc_error()
+            self.dut._log.error('ERROR: unexpected clk value!')
+
 
 
 
