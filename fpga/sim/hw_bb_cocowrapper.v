@@ -76,12 +76,12 @@ module hw_bb_cocowrapper (
         else
             trigger_error <= 1'b0;
 
-        if (expected_data != bb_data_out_r[1])
+        if (expected_data != bb_data_out_compensated)
             data_error <= 1'b1;
         else
             data_error <= 1'b0;
 
-        if (expected_hiz != ~bb_data_drive_r[1])
+        if (expected_hiz != ~bb_data_drive_compensated)
             hiz_error <= 1'b1;
         else
             hiz_error <= 1'b0;
@@ -100,12 +100,22 @@ module hw_bb_cocowrapper (
 
 
     // since bb_data_out comes out a quarter-period early, delay it to compensate:
-    reg [1:0] bb_data_out_r;
-    reg [1:0] bb_data_drive_r;
+    reg [3:0] bb_data_out_r;
+    reg [3:0] bb_data_drive_r;
     always @(posedge clk_adc) begin
-        bb_data_out_r <= {bb_data_out_r[0], bb_data_out};
-        bb_data_drive_r <= {bb_data_drive_r[0], bb_data_drive};
+        bb_data_out_r <= {bb_data_out_r[2:0], bb_data_out};
+        bb_data_drive_r <= {bb_data_drive_r[2:0], bb_data_drive};
     end
+
+    wire [15:0] clk_div_debug;
+    wire bb_data_out_compensated = (clk_div_debug == 8)?  bb_data_out_r[1] :
+                                   (clk_div_debug == 12)? bb_data_out_r[2] :
+                                   (clk_div_debug == 16)? bb_data_out_r[3] : 1'b0;
+
+    wire bb_data_drive_compensated = (clk_div_debug == 8)?  bb_data_drive_r[1] :
+                                     (clk_div_debug == 12)? bb_data_drive_r[2] :
+                                     (clk_div_debug == 16)? bb_data_drive_r[3] : 1'b0;
+
 
 
     hw_bb_wrapper #(
@@ -129,6 +139,7 @@ module hw_bb_cocowrapper (
         .bb_data_drive      (bb_data_drive),
         .bb_clock_out       (bb_clock_out ),
         .clock_out_debug    (clock_out_debug),
+        .clk_div_debug      (clk_div_debug),
         .trigger_bb         (trigger_bb   ),
         .glitchclk          (glitchclk    )
     );

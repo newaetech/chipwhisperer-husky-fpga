@@ -58,7 +58,10 @@ module hw_bb_trig #(
    input  wire                          glitch_in,
 
    output wire [7:0]                    debug,
-   output wire                          clock_out_debug // for testbench only
+
+   // for testbench only:
+   output wire                          clock_out_debug,
+   output wire [15:0]                   clk_div_debug
 );
 
     localparam pCOUNTER_WIDTH = (pPATTERN_DEPTH <= 32)?  5 :
@@ -102,6 +105,8 @@ module hw_bb_trig #(
     reg check_edge = 1'b1; // check data and fire trigger on falling (0) / rising (1) edge of clock_out_pre
 
     wire bitrecord_supported = (pBITRECORD_SUPPORTED)? 1'b1 : 1'b0;
+
+    assign clk_div_debug = clk_div;
 
     reg internal_error = 1'b0;
 
@@ -264,7 +269,7 @@ module hw_bb_trig #(
         // note that clk_div_fix is the number of input clock cycles per *half period* of
         // the generated clock; in other words, clk_div_fix is twice the actual clock divisor:
         clock_out_pre_r <= clock_out_pre;
-        if (clock_counter == (clk_div_fix-1)) begin
+        if (clock_counter >= (clk_div_fix-1)) begin // >= only really needed for testbench; when on-target it'll wrap around fast enough
             clock_counter <= 0;
             clock_out_pre <= ~clock_out_pre;
         end

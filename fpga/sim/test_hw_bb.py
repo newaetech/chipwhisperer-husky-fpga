@@ -48,7 +48,6 @@ from husky_registers import Registers
 # Every combination of drive_edge and check_edge is used on each run.
 #
 # The following attributes are NOT checked:
-# - clk_div
 # - continuous_clk = 1
 # - trigger_when_matched = 0
 # - clock_inactive_state = 1
@@ -65,7 +64,7 @@ fh = logging.FileHandler(logfile, 'w')
 fh.setFormatter(SimLogFormatter())
 root_logger.addHandler(fh)
 
-timeout_time = int(os.getenv('TIMEOUT_TIME', '800'))
+timeout_time = int(os.getenv('TIMEOUT_TIME', '1600'))
 
 class Harness(object):
     def __init__(self, dut, registers, reps):
@@ -309,7 +308,8 @@ class HW_BB_Test(object):
         self.enable_glitch_output = 0 # note: not covered
         self.drive_edge = 1
         self.check_edge = 1
-        self.clk_div = 8 # note: not covered; also, hw_bb_cocowrapper assumes this to be 8
+        self.clk_div = 4*random.randint(2,4) # hw_bb_cocowrapper only supports these values
+        self.dut._log.info('clk_div: %d' % self.clk_div)
         self.num_bits = 24
         await self.go(False)
         self.set_expected_defaults()
@@ -414,6 +414,7 @@ class HW_BB_Test(object):
                     self.drive_edge = drive_edge
                     self.check_edge = check_edge
                     self.clock_inactive_state = clock_inactive_state
+                    #self.clk_div = clk_div
 
                     await self.set_bb_data(pattern_data, hiz, pattern_en, trigger_en, record_en, clk_en)
                     await self.go(True)
