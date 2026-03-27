@@ -46,6 +46,7 @@ module hw_bb_wrapper #(
     input  wire         glitchclk,
 
     output wire         clock_out_debug,
+    output wire         clock_out_normal,
     output wire [15:0]  clk_div_debug
 
 );
@@ -111,6 +112,7 @@ module hw_bb_wrapper #(
       .data_drive               (bb_data_drive ),
       .clock_out                (bb_clock_out  ),
       .clock_out_debug          (clock_out_debug),
+      .clock_out_normal         (clock_out_normal),
       .clk_div_debug            (clk_div_debug ),
       .trigger_pulse            (trigger_bb    ),
 

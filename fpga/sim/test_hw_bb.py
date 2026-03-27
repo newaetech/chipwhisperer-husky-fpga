@@ -259,6 +259,8 @@ class HW_BB_Test(object):
         # Most properties of this module are only written out to the hardware when this
         # method is called; by setting the "go" argument to False, the properties get
         # pushed out without making it "go".
+        # prevent clock errors when changing clock_inactive_state:
+        self.dut.expected_clk.value = cocotb.types.Logic('z')
         if go:
             writes = 7
         else:
@@ -388,7 +390,7 @@ class HW_BB_Test(object):
 
         pattern_data = [0,1,1,0,0]
         hiz          = [0,0,0,0,0]
-        clk_en       = [1,1,1,0,1]
+        clk_en       = [1,1,0,1,1]
         pattern_en   = [0,0,0,0,0]
         trigger_en   = [0,1,0,0,0]
         record_en    = [1]*len(pattern_data)
@@ -409,11 +411,13 @@ class HW_BB_Test(object):
 
         for check_edge in [0,1]:
             for drive_edge in [1,0]:
-                for clock_inactive_state in [0]: #[0,0]:
+                for clock_inactive_state in [0,1]:
+                #for continuous in [0,1]: #[0,0]:
 
                     self.drive_edge = drive_edge
                     self.check_edge = check_edge
                     self.clock_inactive_state = clock_inactive_state
+                    #self.continuous_clk = continuous
                     #self.clk_div = clk_div
 
                     await self.set_bb_data(pattern_data, hiz, pattern_en, trigger_en, record_en, clk_en)
@@ -563,18 +567,58 @@ class HW_BB_Test(object):
 
     async def _generate_expected_clock(self, clk_en):
         # when driving on a negative edge, an extra clock gets put out:
+        #self.dut.expected_clk.value = cocotb.types.Logic('z')
+        self.dut.expected_clk.value = self.clock_inactive_state
         clk_en_copy = clk_en.copy()
         if not self.drive_edge:
             clk_en_copy.append(clk_en_copy[-1])
             #self.dut._log.info('Extended clk_en: %s' % clk_en_copy)
-        for cen in clk_en_copy:
-            await RisingEdge(self.dut.clock_out_debug)
-            if cen:
-                self.dut.expected_clk.value = 1
-            else:
+
+        if self.clock_inactive_state == 0:
+            for cen in clk_en_copy:
+                await RisingEdge(self.dut.clock_out_normal)
+                if cen:
+                    self.dut.expected_clk.value = 1
+                else:
+                    self.dut.expected_clk.value = 0
+                await FallingEdge(self.dut.clock_out_normal)
                 self.dut.expected_clk.value = 0
-            await FallingEdge(self.dut.clock_out_debug)
-            self.dut.expected_clk.value = 0
+
+        else:
+            # things are a bit different (and messy!) in this case!
+            # 1. the first rising edge is masked IF drive_edge=1
+            # 2. clk_en low on cycle i means that the clock is held high on cycle i-1 
+            #    (otherwise, there would have to be a rising edge on cycle i)
+            if self.drive_edge:
+                start_index = 1
+            else:
+                start_index = 0
+            await FallingEdge(self.dut.clock_out_normal)
+            if clk_en_copy[start_index]:
+                self.dut.expected_clk.value = 0
+            else:
+                self.dut.expected_clk.value = 1
+            await RisingEdge(self.dut.clock_out_normal)
+            self.dut.expected_clk.value = 1
+
+            for cen in clk_en_copy[start_index+1:]:
+                await FallingEdge(self.dut.clock_out_normal)
+                if cen:
+                    self.dut.expected_clk.value = 0
+                else:
+                    self.dut.expected_clk.value = 1
+                await RisingEdge(self.dut.clock_out_normal)
+                self.dut.expected_clk.value = 1
+
+            # last cycle:
+            await FallingEdge(self.dut.clock_out_normal)
+            if clk_en_copy[-1]:
+                self.dut.expected_clk.value = 0
+            else:
+                self.dut.expected_clk.value = 1
+            await RisingEdge(self.dut.clock_out_debug)
+            self.dut.expected_clk.value = 1
+
 
 
     async def _generate_expected_outputs(self, pattern_data, hiz, pattern_en, trigger_en, clk_en, data_in):
@@ -618,16 +662,16 @@ class HW_BB_Test(object):
 
     async def _next_drive_edge(self):
         if self.drive_edge:
-            await RisingEdge(self.dut.clock_out_debug)
+            await RisingEdge(self.dut.clock_out_normal)
         else:
-            await FallingEdge(self.dut.clock_out_debug)
+            await FallingEdge(self.dut.clock_out_normal)
 
 
     async def _next_check_edge(self):
         if self.check_edge:
-            await RisingEdge(self.dut.clock_out_debug)
+            await RisingEdge(self.dut.clock_out_normal)
         else:
-            await FallingEdge(self.dut.clock_out_debug)
+            await FallingEdge(self.dut.clock_out_normal)
 
 
     async def set_bb_data(self, pattern_data, hiz, pattern_en, trigger_en, record_en, clk_en):

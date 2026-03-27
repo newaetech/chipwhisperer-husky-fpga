@@ -45,6 +45,7 @@ module hw_bb_cocowrapper (
     input  wire [31:0]  errors,
 
     output wire         clock_out_debug,
+    output wire         clock_out_normal,
     input  wire         in_to_out,
     input  wire         tb_data_in,
     input  wire         expected_trigger,
@@ -139,6 +140,7 @@ module hw_bb_cocowrapper (
         .bb_data_drive      (bb_data_drive),
         .bb_clock_out       (bb_clock_out ),
         .clock_out_debug    (clock_out_debug),
+        .clock_out_normal   (clock_out_normal),
         .clk_div_debug      (clk_div_debug),
         .trigger_bb         (trigger_bb   ),
         .glitchclk          (glitchclk    )

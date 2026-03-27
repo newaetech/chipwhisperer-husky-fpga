@@ -61,6 +61,7 @@ module hw_bb_trig #(
 
    // for testbench only:
    output wire                          clock_out_debug,
+   output wire                          clock_out_normal,
    output wire [15:0]                   clk_div_debug
 );
 
@@ -198,6 +199,10 @@ module hw_bb_trig #(
     // version of clock_out which doesn't factor in clk_en; useful for debugging; also used by testbench for sampling data:
     assign clock_out_debug = (clock_enable)? clock_out_pre_r ^ (!drive_edge) : clock_inactive_state;
 
+    // same but don't go to inactive high state; makes a bunch of testbench stuff easier, 
+    // and is also used here in the check logic:
+    assign clock_out_normal = (clock_enable)? clock_out_pre_r ^ (!drive_edge) : 1'b0;
+
     wire fifo_overflow_error;
     wire fifo_underflow_error;
     wire fifo_empty;
@@ -332,7 +337,7 @@ module hw_bb_trig #(
             // check logic:
             if (clock_counter == 0) begin
                 // check pattern match and fire trigger on falling or rising edge (bit messy but it works!):
-                if ((clock_out_debug != check_edge) && ((drive_edge && check_edge)? !clock_out_pre_r : 1'b1)) begin 
+                if ((clock_out_normal != check_edge) && ((drive_edge && check_edge)? !clock_out_pre_r : 1'b1)) begin 
                     bit_counter_check <= bit_counter_check + 1;
                     match_check <= 1'b1;
                     if (record_en_check) 
