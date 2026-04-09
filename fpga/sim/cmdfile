@@ -13,6 +13,8 @@
 ../hdl/usb_reg_main.v
 ../hdl/fifo_top_husky.v
 ../hdl/semipro_slow_fifo.v
+../hdl/semipro_slow_fifo1.v
+../hdl/semipro_slow_fifo2.v
 ../hdl/reg_clockglitch.v
 ../hdl/cwhusky_top.v
 ../hdl/cwhusky_fifoonly.v
