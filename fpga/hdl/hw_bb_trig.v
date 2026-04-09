@@ -113,6 +113,7 @@ module hw_bb_trig #(
                       2: reg_datao = pPATTERN_DEPTH >> 8;
                       3: reg_datao = pSAVE_DEPTH & 8'hFF;
                       4: reg_datao = pSAVE_DEPTH >> 8;
+                      default: reg_datao = 0;
                   endcase
               end
               default: reg_datao = 0;
