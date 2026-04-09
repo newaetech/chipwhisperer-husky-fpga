@@ -605,6 +605,12 @@ module openadc_interface #(
     localparam pNUM_GROUPS = 16;
 `endif
 
+`ifdef FIFOONLY
+    assign reg_datao_sad = 0;
+    assign sad_debug = 0;
+    assign trigger_sad = 0;
+`else
+
 `ifdef SAD_X2
        sad_x2_slowclock #(
            .pBYTECNT_SIZE           (pBYTECNT_SIZE),
@@ -772,6 +778,7 @@ module openadc_interface #(
        );
 `endif
 
+`endif // FIFOONLY
 
    edge_trigger #(
        .pBYTECNT_SIZE           (pBYTECNT_SIZE)

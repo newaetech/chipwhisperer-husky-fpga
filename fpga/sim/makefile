@@ -211,6 +211,7 @@ compile:
 	-y/$(VIVADO_PATH)/$(VIVADO_VERSION)/ids_lite/ISE/verilog/src/unisims/ \
 	-g2005-sv \
 	-gsupported-assertions \
+	-s glbl \
 	-I../hdl \
 	-I../tracewhisperer/hdl/ \
 	-Wportbind \
@@ -222,6 +223,7 @@ compile:
 	-DTRACE \
 	-D$(VARIANT) \
 	-D$(FIFO_TYPE) \
+	-DNOXILINXFIFO \
 	-I../tracewhisperer/hdl/ \
 	-P cwhusky_tb.pADC_LOW_RES=$(ADC_LOW_RES) \
 	-P cwhusky_tb.pSLOW_ADC=$(SLOW_ADC) \
@@ -276,6 +278,7 @@ compile_coco:
 	-DCOCOTB_SIM=1 \
 	-P $(TOP).pDUMP=$(DUMP) \
 	-o $(EXEFILE) \
+	$(EXTRA) \
 	../hdl/$(TOP).v \
 
 

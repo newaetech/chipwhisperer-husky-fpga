@@ -194,7 +194,7 @@ class Harness(object):
         self.dut._log.debug("Register addresses: %s" % self.reg_addr)
 
 
-    async def initialize_dut(self) -> None:
+    async def initialize_dut(self, noglitch) -> None:
         self.dut.target_io4.value = 0
         await self.reset()
         # the reset will cause target_io4 to "lose" the 0 we'd assigned to it... possibly a simulator/cocotb bug?
@@ -202,9 +202,10 @@ class Harness(object):
         self.dut.USERIO_D.value = 0
         await self.registers.write(self.reg_addr['CLOCKGLITCH_SETTINGS'], [0,0,0,0,0,0xcc,0,1])  # set source to clk_usb (otherwise, X's propagate)
         #await self.registers.write(self.reg_addr['CLOCKGLITCH_SETTINGS'], [0,0,0,0,0,0x4c,0,1])  # set source to clk_usb (otherwise, X's propagate)
-        self.dut.U_dut.reg_clockglitch.U_clockglitch.glitch_go.value = Force(0)
-        await ClockCycles(self.dut.clk_usb, 10)
-        self.dut.U_dut.reg_clockglitch.U_clockglitch.glitch_go.value = Release()
+        if not noglitch:
+            self.dut.U_dut.reg_clockglitch.U_clockglitch.glitch_go.value = Force(0)
+            await ClockCycles(self.dut.clk_usb, 10)
+            self.dut.U_dut.reg_clockglitch.U_clockglitch.glitch_go.value = Release()
         await self.registers.write(self.reg_addr['NO_CLIP_ERRORS'], [3]) # disable gain errors
 
     async def reset(self):
@@ -372,7 +373,8 @@ async def capture(dut):
     registers = Registers(dut)
     harness = Harness(dut, registers, stream, is_pro, stop_first_error)
 
-    await harness.initialize_dut()
+    noglitch = int(os.getenv('NO_GLITCH', 0))
+    await harness.initialize_dut(noglitch)
     if int(os.getenv('NO_DOWNSTREAM_TRIGGERS', 0)):
         harness.allow_downstream_triggers = False
 

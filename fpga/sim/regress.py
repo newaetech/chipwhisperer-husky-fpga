@@ -13,6 +13,7 @@ group = parser.add_mutually_exclusive_group()
 group.add_argument("--runs", type=int, help="Number of iterations.", default=1)
 group.add_argument("--test", help="Testcase to run")
 parser.add_argument("--variant", help="Husky variant (regular/plus/pro)", default='regular')
+parser.add_argument("--fifoonly", help="FIFO-only top-level", action='store_true')
 parser.add_argument("--seed", type=int, help="Seed to use when running a single test with --test.")
 parser.add_argument("--timeout", type=int, help="Simulation timeout.")
 parser.add_argument("--tests", help="Run all tests whose name contains TESTS", default='')
@@ -455,6 +456,9 @@ if args.dump:
     makeargs.append('DUMP=1')
 if args.fast_fifo_sim:
     makeargs.append('FAST_FIFO_SIM=FAST_FIFO_SIM')
+if args.fifoonly:
+    makeargs.append('EXTRA=-DFIFOONLY')
+print("Running make:\n%s" % makeargs)
 result = subprocess.run(makeargs, stdout=outfile, stderr=outfile)
 if result.returncode:
     print ("Compilation for target %s failed (return code: %d), check coco_compile.out." % result.returncode)
@@ -498,6 +502,10 @@ for test in tests:
 
       if args.timeout:
           makeargs.append('TIMEOUT_TIME=%d' % args.timeout)
+
+      if args.fifoonly:
+          makeargs.append('NO_GLITCH=1')
+          makeargs.append('EXTRA=-DFIFOONLY')
 
       run_test = True
       # build make command:
