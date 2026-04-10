@@ -816,11 +816,11 @@ module fifo_top_husky(
             .underflow      (fast_fifo_underflow)
         );
         `ifdef PLUS
-            semipro_slow_fifo #(
+            semipro_slow_fifo2 #(
                 .pDEPTH1        (pUSB_DEPTH1),
                 .pDEPTH2        (pUSB_DEPTH2)
             ) U_usb_slow_fifo (
-                .streaming              (stream_mode),
+                //.streaming              (stream_mode),
                 .wclk                   (adc_sampleclk),
                 .rclk                   (clk_usb),
                 .rst_n                  (~reset),
@@ -831,9 +831,9 @@ module fifo_top_husky(
                 .rd                     (slow_fifo_rd),
                 .dout                   (slow_fifo_dout),
                 .empty                  (slow_fifo_empty),
-                .underflow              (slow_fifo_underflow),
-                .fast_fifo_wr           (fast_fifo_wr),
-                .fast_fifo_full         (fast_fifo_full)
+                .underflow              (slow_fifo_underflow)
+                //.fast_fifo_wr           (fast_fifo_wr),
+                //.fast_fifo_full         (fast_fifo_full)
             );
         `else
             fifo_async #(
@@ -895,8 +895,8 @@ module fifo_top_husky(
                   .underflow    (fast_fifo_underflow)
                );
            `endif
-           semipro_slow_fifo U_usb_slow_fifo (
-               .streaming              (stream_mode),
+           semipro_slow_fifo2 U_usb_slow_fifo (
+               //.streaming              (stream_mode),
                .wclk                   (adc_sampleclk),
                .rclk                   (clk_usb),
                .rst_n                  (~reset),
@@ -907,9 +907,9 @@ module fifo_top_husky(
                .rd                     (slow_fifo_rd),
                .dout                   (slow_fifo_dout),
                .empty                  (slow_fifo_empty),
-               .underflow              (slow_fifo_underflow),
-               .fast_fifo_wr           (fast_fifo_wr),
-               .fast_fifo_full         (fast_fifo_full)
+               .underflow              (slow_fifo_underflow)
+               //.fast_fifo_wr           (fast_fifo_wr),
+               //.fast_fifo_full         (fast_fifo_full)
            );
 
         `else // regular Husky
