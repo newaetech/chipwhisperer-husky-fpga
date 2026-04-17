@@ -25,6 +25,7 @@ Author: Jean-Pierre Thibault <jpthibault@newae.com>
 module slow_fifo_wrapper (
     input  wire                         clk,
     input  wire                         rst_n,
+    input  wire                         fast_fifo_empty,
     input  wire                         fifo_wr,
     input  wire [47:0]                  fifo_din,
     output wire                         fifo_full,
@@ -36,13 +37,14 @@ module slow_fifo_wrapper (
 );
 
 // TODO: tweak these!
+// TODO: do we really need two FIFOs here?
 `ifdef PLUS
     `ifdef TINYFIFO
         localparam pDEPTH1 = 512;
         localparam pDEPTH2 = 512;
     `else
-        localparam pDEPTH1 = 65536;
-        localparam pDEPTH2 = 65536;
+        localparam pDEPTH1 = 32768;
+        localparam pDEPTH2 = 32768;
     `endif
 
 `else
@@ -70,6 +72,7 @@ wire full1;
 wire overflow1;
 wire empty1;
 wire underflow1;
+wire empty_threshold1;
 
 wire full2;
 wire overflow2;
@@ -94,7 +97,7 @@ always @(posedge clk) begin
         pS_IDLE: begin
             rd1 <= 1'b0;
             wr2 <= 1'b0;
-            if (!empty1 && !full2) begin
+            if (!full2 && ((fast_fifo_empty)? !empty1 : !empty_threshold1)) begin
                 rd1 <= 1'b1;
                 state <= pS_WAIT_WRITE;
             end
@@ -129,13 +132,13 @@ end
         .clk                        (clk),
         .rst_n                      (rst_n),
         .full_threshold_value       (0),
-        .empty_threshold_value      (0),
+        .empty_threshold_value      (5),
         .wen                        (wr1),
         .wdata                      (din1),
         .full                       (full1),
         .overflow                   (overflow1),
         .full_threshold             (),
-        .empty_threshold            (),
+        .empty_threshold            (empty_threshold1),
         .ren                        (rd1),
         .rdata                      (dout1),
         .empty                      (empty1),

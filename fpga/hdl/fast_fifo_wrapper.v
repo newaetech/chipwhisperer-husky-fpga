@@ -27,7 +27,6 @@ module fast_fifo_wrapper (
     input  wire                         rclk,
     input  wire                         rst_n,
     input  wire                         flushing,
-    input  wire                         presample_drain,
     input  wire                         low_res,
     input  wire                         low_res_lsb,
     input  wire                         fifo_wr,
@@ -37,25 +36,28 @@ module fast_fifo_wrapper (
     input  wire                         fifo_rd,
     output wire [47:0]                  fifo_dout,
     output wire                         empty,
+    output wire                         almost_empty,
     output wire                         underflow
 );
 
 // TODO: tweak these!
+// TODO: can I get even *MORE* presamples?!?
+// Note: 512 is the minimum built-in FIFO depth; can investigate other implementations...
 `ifdef PLUS
     `ifdef TINYFIFO
-        localparam pDEPTH1 = 128;
+        localparam pDEPTH1 = 512;
         localparam pDEPTH2 = 1024;
     `else
-        localparam pDEPTH1 = 128;
+        localparam pDEPTH1 = 512;
         localparam pDEPTH2 = 16384;
     `endif
 
 `else
     `ifdef TINYFIFO
-        localparam pDEPTH1 = 128;
+        localparam pDEPTH1 = 512;
         localparam pDEPTH2 = 1024;
     `else
-        localparam pDEPTH1 = 128;
+        localparam pDEPTH1 = 512;
         localparam pDEPTH2 = 16384;
     `endif
 
@@ -73,11 +75,13 @@ module fast_fifo_wrapper (
     wire [3:0] overflow_stage2;
     wire [47:0] dout_stage2;
     wire [3:0] empty_stage2;
+    wire [3:0] empty_threshold_stage2;
     wire [3:0] underflow_stage2;
 
 
     assign full = full_stage1;
     assign empty = empty_stage2[0];
+    assign almost_empty = empty_threshold_stage2[0];
     assign overflow = overflow_stage1 || overflow_stage2[0];
     assign underflow = underflow_stage1 || underflow_stage2[0];
     assign fifo_dout = dout_stage2;
@@ -85,12 +89,8 @@ module fast_fifo_wrapper (
     // Operation modes:
     // 1. flushing: all FIFOs are flushed. This is done when arming. Note
     //    that fifo_top_husky is responsible for flushing the stage2 FIFO.
-    // 2. presample_drain: read from stage1, write to stage2.
-    //    Here we assume that stage2 has space (because it always should!)
-    //    and let the overflow error occur if that should turn out to not be
-    //    the case.
-    // 3. normal: like presample_drain, but we allow for stage2 getting full
-    //    (i.e. for when we end up filling up all the FIFOs)
+    // 2. normal: whenever possible, read from stage1 and write to stage2.
+    //    Stalls may occur.
     //
     // We use a simple FSM to cover these cases, and to to handle the case
     // where stage2 is not initially full, and so we read stage1, but then
@@ -104,7 +104,7 @@ module fast_fifo_wrapper (
     localparam pS_FLUSHING = 2;
     reg [1:0] state = pS_IDLE;
 
-    wire normal_mode = !flushing && !presample_drain;
+    wire normal_mode = !flushing;
 
     // TODO: when no longer writing, then read every other cycle, to give the
     // empty flag a chance to show up? 
@@ -206,8 +206,7 @@ module fast_fifo_wrapper (
         .underflow              (underflow_stage1)
     );
 
-    // TODO: will need to go wider here to support presamples!
-    // need to test how quickly CDC pulse can get through
+    // TODO: probably no need for multiple parallel FIFOs; try a single wide FIFO
     genvar i;
     generate
         for (i = 0; i < 4; i = i + 1) begin
@@ -224,7 +223,7 @@ module fast_fifo_wrapper (
                 .wrst_n                 (rst_n),
                 .rrst_n                 (rst_n),
                 .wfull_threshold_value  (0),
-                .rempty_threshold_value (0),
+                .rempty_threshold_value (5),
                 .wen                    (wr_stage2),
                 .wdata                  (din_stage2[i*12 +: 12]),
                 .wfull                  (full_stage2[i]),
@@ -235,7 +234,7 @@ module fast_fifo_wrapper (
                 .rdata                  (dout_stage2[i*12 +: 12]),
                 .rempty                 (empty_stage2[i]),
                 .ralmost_empty          (),
-                .rempty_threshold       (),
+                .rempty_threshold       (empty_threshold_stage2[i]),
                 .runderflow             (underflow_stage2[i])
             );
         end
@@ -256,6 +255,8 @@ module fast_fifo_wrapper (
         .underflow      (underflow_stage1)
     );
 
+    // TODO: (as above) probably no need for multiple parallel FIFOs; try a single wide FIFO
+    // TODO-NOW: add empty threshold
     genvar i;
     generate
         for (i = 0; i < 4; i = i + 1) begin
