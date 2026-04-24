@@ -346,12 +346,17 @@ class ADCTest(GenericTest):
         self.allowed_downstream_triggers = ['LA', 'trace', 'glitch']
 
     async def _job_setup(self) -> dict:
-        samples = random.randint(self.capture_min, self.capture_max)
+        #samples = random.randint(self.capture_min, self.capture_max)
+        #samples = 64
+        samples = random.randint(60, 72)
         if random.randint(0,3) == 0 or self.max_presamples == 0:
             presamples = 0  # no presamples a quarter of the time
         else:
+            # TODO: presamples must now be multiple of 4!
             presamples = random.randint(8, min(self.max_presamples, samples-2)) # DUT doesn't allow for 1-7 presamples, and samples must be at least 2 more than presamples
             self.dut._log.info('setting presamples to %d because samples=%d, min=%d' % (presamples, samples, min(self.max_presamples, samples-2)))
+        #presamples = 31 # TODO- temporary!
+        presamples = random.randint(20, 32)
         if random.randint(0,3) == 0:
             offset = 0  # no offset a quarter of the time
         else:
@@ -360,6 +365,7 @@ class ADCTest(GenericTest):
             bits_per_sample = 12
         else:
             bits_per_sample = 8
+
         segments = random.randint(1, self.max_segments)
         segment_cycles = 0
         segment_counter_en = 0
@@ -480,23 +486,29 @@ class ADCTest(GenericTest):
             self.dut.target_io4.value = 0
 
     async def _pretrigger_wait(self, job) -> None:
+        fixed_wait = False  # TODO-temp for development
         presamples = job['presamples']
         if presamples > 0:
-            wait_cycles = random.randint(presamples+1, presamples*4)
+            if fixed_wait:
+                wait_cycles = 88
+            else:
+                wait_cycles = random.randint(presamples+1, presamples*4)
             self.dut._log.info('%12s pre-trigger waiting %d cycles' % (job['name'], wait_cycles))
             await ClockCycles(self.sampling_clock, wait_cycles) # note: Pro used self.clk_usb, why did that work?!?
         # the FIFO flushing can be *slow*, so explicitely check on FIFO empty flag:
         empty = False
-        while not empty:
-            await ClockCycles(self.clk_usb, 50)
-            empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 2))[1] & 64
+        if not fixed_wait:
+            while not empty:
+                await ClockCycles(self.clk_usb, 50)
+                empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 2))[1] & 64
 
         if self.stream:
             # stream_segment_available is updated every 2**6 cycles (see write_cycle_count in fifo_top_husky.v), so wait enough
             # time for stream_segment_available to be sensical before starting the next capture:
             await ClockCycles(self.sampling_clock, 2**7)
 
-        await ClockCycles(self.clk_usb, 5) # bit more time for armed_and_ready to rise
+        if not fixed_wait:
+            await ClockCycles(self.clk_usb, 5) # bit more time for armed_and_ready to rise
 
 
     def _capture_cycles(self, cycles) -> int:

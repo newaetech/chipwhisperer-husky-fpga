@@ -85,7 +85,6 @@ module fifo_top_husky(
     parameter pMAX_UNDERFLOWS = 3; // TODO: still valid?
 
     wire                fast_fifo_wr;
-    reg                 fast_fifo_presample_drain = 1'b0;
     reg                 fast_fifo_rd_en = 1'b0;
     wire                fast_fifo_rd;
     wire [47:0]         fast_fifo_dout;
@@ -107,7 +106,7 @@ module fifo_top_husky(
     reg                 fast_fifo_overflow_reg;
     reg                 slow_fifo_overflow_reg;
     reg  [14:0]         presample_counter;
-    reg  [1:0]          write_2bit_counter;
+    reg  [2:0]          write_word_counter = 3'b000;
     reg  [31:0]         sample_counter;
     reg  [15:0]         segment_counter;
     reg  [19:0]         segment_cycle_counter;
@@ -121,9 +120,6 @@ module fifo_top_husky(
     reg                 capture_go_r2;
     wire                flushing_adc;
 
-    reg [2:0]           fast_write_count;
-    reg [2:0]           fast_write_count_init;
-    reg                 filling_out_to_done;
     reg                 slow_fifo_underflow_sticky;
     reg [1:0]           slow_fifo_underflow_count;
     reg                 slow_fifo_underflow_masked;
@@ -237,11 +233,30 @@ module fifo_top_husky(
         next_segment_go <= next_segment_go_pre; // this would add a cycle of latency but we've compensate by registering the ADC input in openadc_interface.v
         last_segment <= (segment_counter == (num_segments-1));
         if (downsample_i > 0)
-            last_sample <= (sample_counter == (max_samples_i-1));
+            // TODO- is this ok for downsample?
+            last_sample <= sample_counter == adjusted_samples-1;
         else
-            last_sample <= (sample_counter == (max_samples_i-2));
+            last_sample <= sample_counter == adjusted_samples-2;
         presamp_done1_r <= presamp_done1;
     end
+
+    wire [2:0] sample_mod_op = (low_res)? 6 : 4;
+    reg [31:0] adjusted_samples_pre;
+    reg [31:0] adjusted_samples;
+    reg [2:0] sample_mod = 0;    // max 5
+    // Here we need to fill up to a full 48-bit word boundary.
+    // Bit tricky when presamples are involved, because the first sample can
+    // fall anywhere within the word (indicated by segment_offset)
+    always @(posedge clk_usb) begin
+        // worst-case segment_offset:
+        adjusted_samples_pre = max_samples_i + sample_mod_op - 1;
+        sample_mod <= adjusted_samples_pre % sample_mod_op;
+        if (sample_mod)
+            adjusted_samples <= adjusted_samples_pre + sample_mod_op - sample_mod;
+        else
+            adjusted_samples <= adjusted_samples_pre;
+    end
+
 
     // TODO: re-write clip detection
     /*
@@ -278,17 +293,15 @@ module fifo_top_husky(
 
     // write-side FSM (fast ADC clock):
     // controls writing the first stage of the storage FIFOs
+    reg save_offset = 1'b0;
     always @ (posedge adc_sampleclk) begin
        if (reset) begin
           state <= pS_IDLE;
           presample_counter <= 0;
           sample_counter <= 0;
-          //fast_fifo_presample_drain <= 1'b0; TODO: remove all these
           adc_capture_stop <= 1'b0;
-          //fast_fifo_rd_en <= 1'b0; TODO-remove all these
           segment_counter <= 0;
           segment_cycle_counter <= 0;
-          filling_out_to_done <= 0;
           downsample_error <= 1'b0;
           segment_error <= 1'b0;
        end
@@ -298,14 +311,12 @@ module fifo_top_husky(
           case (state)
 
              pS_IDLE: begin
+                save_offset <= 1'b0;
                 presample_counter <= 0;
                 sample_counter <= 0;
-                //fast_fifo_presample_drain <= 1'b0;
                 adc_capture_stop <= 1'b0;
-                //fast_fifo_rd_en <= 1'b0;
                 segment_counter <= 0;
                 segment_cycle_counter <= 0;
-                filling_out_to_done <= 0;
                 segment_error <= 1'b0;
                 fsm_fast_wr_en <= 1'b0;
 
@@ -327,7 +338,7 @@ module fifo_top_husky(
              end
 
              pS_PRESAMP_FILLING: begin
-                //fast_fifo_presample_drain <= 1'b0;
+                save_offset <= 1'b0;
                 if (next_segment_go && (state_r == pS_PRESAMP_FILLING))
                    segment_error <= 1'b1;
                 if (segment_counter > 0)
@@ -358,28 +369,19 @@ module fifo_top_husky(
                    sample_counter <= presample_i;
                    state <= pS_TRIGGERED;
                 end
-                //if (fast_fifo_wr)
-                //   fast_fifo_presample_drain <= 1'b1;
-                //else
-                //   fast_fifo_presample_drain <= 1'b0;
              end
 
              pS_TRIGGERED: begin
+                save_offset <= 1'b0;
                 if (next_segment_go && (state_r == pS_TRIGGERED))
                    segment_error <= 1'b1;
-                //fast_fifo_presample_drain <= 1'b0;
-                //fast_fifo_rd_en <= 1'b1;
                 segment_cycle_counter <= segment_cycle_counter + 1;
 
-                if (stop_capture_conditions || (last_sample && fast_fifo_wr && last_segment) || (filling_out_to_done && fast_fifo_wr)) begin
-                   if (fast_write_count == 2) begin
-                      adc_capture_stop <= 1'b1;
-                      done_wait_count <= 10;  // established by trial/error to account for the latency in the Xilinx FIFO updating its empty flag; TODO: check/update?
-                      fsm_fast_wr_en <= 1'b0;
-                      state <= pS_DONE;
-                   end
-                   else
-                      filling_out_to_done <= 1'b1;
+                if (stop_capture_conditions || (last_sample && fast_fifo_wr && last_segment)) begin
+                    adc_capture_stop <= 1'b1;
+                    done_wait_count <= 10;  // established by trial/error to account for the latency in the Xilinx FIFO updating its empty flag; TODO: check/update?
+                    fsm_fast_wr_en <= 1'b0;
+                    state <= pS_DONE;
                 end
 
                 else if (last_sample && ~last_segment && fast_fifo_wr) begin
@@ -395,12 +397,12 @@ module fifo_top_husky(
              pS_SEGMENT_DONE: begin
                 segment_cycle_counter <= segment_cycle_counter + 1;
                 if (fast_fifo_empty) begin
-                   //fast_fifo_rd_en <= 1'b0;
                    if (presample_i > 0) begin
                       segment_counter <= segment_counter + 1;
                       sample_counter <= 0;
                       presample_counter <= 0;
                       fsm_fast_wr_en <= 1'b1;
+                      save_offset <= 1'b1;
                       state <= pS_PRESAMP_FILLING;
                    end
                    else if (next_segment_go) begin
@@ -408,11 +410,13 @@ module fifo_top_husky(
                       segment_cycle_counter <= 0;
                       sample_counter <= 0;
                       fsm_fast_wr_en <= 1'b1;
+                      save_offset <= 1'b1;
                       state <= pS_TRIGGERED;
                    end
                 end
                 else if (next_segment_go) begin
                    segment_error <= 1'b1;
+                   // NOTE: we don't save the offset here because the data will be junk anyways
                    state <= pS_IDLE;
                 end
              end
@@ -422,7 +426,7 @@ module fifo_top_husky(
                 // 1. wait for fast FIFO to empty;
                 // 2. wait state so that we don't get back out of idle right away
                 if ((fast_fifo_empty && (done_wait_count == 0)) || arm_i) begin
-                   //fast_fifo_rd_en <= 1'b0;
+                   save_offset <= 1'b1;
                    state <= pS_IDLE;
                 end
                 else
@@ -498,7 +502,7 @@ module fifo_top_husky(
 
 
     assign fast_fifo_wr = downsample_wr_en & fsm_fast_wr_en & !flushing_adc;
-    assign slow_fifo_wr = slow_fifo_prewr & !flushing_adc; // TODO? still holds?
+    assign slow_fifo_wr = slow_fifo_prewr & !flushing_adc || save_offset_usb; // TODO? still holds?
 
     // FIFO flushing mechanism: kick off flushing all FIFOs when arming.
     // Controlled from USB clock domain since that's closest to the ARM event,
@@ -622,52 +626,71 @@ module fifo_top_husky(
 
 
 
-    // Track fast FIFO writes to ensure they're a multiple of 3 by the end of the capture:
-    // TODO: this DEFINITELY needs to change with the new architecture
-    always @(posedge adc_sampleclk) begin
-       if (reset) begin
-          fast_write_count <= 0;
-       end
-       else begin
-          fast_write_count_init <= presample_i % 3; // alternatively, this could be precomputed in Python
-          if (state == pS_IDLE)
-             fast_write_count <= fast_write_count_init;
-          else if (fast_fifo_wr && (state == pS_TRIGGERED))
-             if (fast_write_count < 2)
-                fast_write_count <= fast_write_count + 1;
-             else
-                fast_write_count <= 0;
-       end
-    end
+    wire triggered_usb;
+    cdc_simple U_triggered_cdc (
+        .reset          (reset),
+        .clk            (clk_usb),
+        .data_in        (state == pS_TRIGGERED),
+        .data_out       (triggered_usb),
+        .data_out_r     ()
+    );
 
+    wire presamp_running_usb;
+    cdc_simple U_presamp_running_cdc (
+        .reset          (reset),
+        .clk            (clk_usb),
+        .data_in        (presamp_running),
+        .data_out       (presamp_running_usb),
+        .data_out_r     ()
+    );
+
+    wire save_offset_usb;
+    cdc_pulse U_save_offset_cdc (
+       .reset_i       (reset),
+       .src_clk       (adc_sampleclk),
+       .src_pulse     (save_offset),
+       .dst_clk       (clk_usb),
+       .dst_pulse     (save_offset_usb)
+    );
+
+    wire save_offset_done;
+    cdc_pulse U_save_offset_done_cdc (
+       .reset_i       (reset),
+       .src_clk       (clk_usb),
+       .src_pulse     (save_offset_usb),
+       .dst_clk       (adc_sampleclk),
+       .dst_pulse     (save_offset_done)
+    );
 
     // Read fast FIFO / write slow FIFO. Two states:
     // 1. presamples:
     //    When in pS_PRESAMP_FULL, have ADC side issue CDC'd pulses for reading the
     //    fast FIFO in order to keep its fill level constant
     // 2. otherwise, do a fast-read + slow-write whenever it's possible
-    // TODO-NEXT: code the condition which determines which state we are in
 
-
-    wire triggered_usb;
-    cdc_simple U_triggered_cdc (
-        .reset          (reset),
-        .clk            (clk_usb),
-        .data_in        (state == pS_TRIGGERED),
-        .data_out       (),
-        .data_out_r     (triggered_usb)
-    );
-
-
+    reg presamp_actually_running = 1'b0;
+    reg presamp_running_usb_r;
     always @(posedge clk_usb) begin
-        // TODO: case 1! -- that's handled by presample_fifo_count_rd block
-        // below; maybe combine?
-        // else...
-        if (!slow_fifo_full && 
+        // NOTE: case 1 is handled by presample_fifo_count_rd block
+        // below; maybe combine? except that they're different clock domains--
+        // so just need to make it more clear how these two always blocks are
+        // connected
+        presamp_running_usb_r <= presamp_running_usb;
+        if (presamp_running_usb)
+            presamp_actually_running <= 1'b1;
+        else if (!presamp_running_usb_r && presample_fifo_count_empty)
+            presamp_actually_running <= 1'b0;
+
+        if (presamp_actually_running) begin
+            fast_fifo_rd_en <= 1'b0;
+            slow_fifo_prewr <= 1'b0;
+        end
+        else if (!slow_fifo_full && 
             ((triggered_usb)? !fast_fifo_almost_empty : 
                               !fast_fifo_empty && !fast_fifo_rd_en)) begin
             fast_fifo_rd_en <= 1'b1;
             slow_fifo_prewr <= 1'b1;
+            //slow_fifo_din <= fast_fifo_dout;
         end
         else begin
             fast_fifo_rd_en <= 1'b0;
@@ -694,37 +717,65 @@ module fifo_top_husky(
     //    is done we revert to "normal" operation, where any data in the fast
     //    FIFO is moved onwards into the slow FIFO.
 
-    /*
-    reg presamples_4writes = 1'b0;
-    always @(posedge adc_sampleclk) begin
-        if ((presample_counter[1:0] == 2'b10) && state == pS_PRESAMP_FILLING) // TODO: unsure if this is the best count value to use
-            presamples_4writes <= 1'b1;
-        else
-            presamples_4writes <= 1'b0;
-    end
-    */
-
     wire presample_fifo_count_full;
     wire presample_fifo_count_overflow;
     wire presample_fifo_count_empty;
+    wire presample_fifo_count_almost_empty;
     wire presample_fifo_count_underflow;
     reg  presample_fifo_count_wr = 1'b0;
     reg  presample_fifo_count_rd = 1'b0;
 
-    always @(posedge adc_sampleclk) begin
-        if ((state == pS_PRESAMP_FILLING) && (state_r != pS_PRESAMP_FILLING))
-            write_2bit_counter <= 2'b00;
-        else if (fast_fifo_wr)
-            write_2bit_counter <= write_2bit_counter + 1;
 
-        if ((state == pS_PRESAMP_FULL) && fast_fifo_wr && (write_2bit_counter == 2'b11))
-            presample_fifo_count_wr <= 1'b1;
-        else
+    reg presamp_running = 1'b0;
+    reg presamp_fifo_filling = 1'b0;
+    reg [2:0] segment_offset;
+    always @(posedge adc_sampleclk) begin
+        // NOTE: presamp_running is used to prevent reading the slow FIFO
+        //if (state == pS_IDLE) // this resets too early!
+        if ((state == pS_PRESAMP_FILLING) && (state_r != pS_PRESAMP_FILLING))
+            presamp_running <= 1'b1;
+        else if ((state_r == pS_PRESAMP_FULL) && (state != pS_PRESAMP_FULL))
+            presamp_running <= 1'b0;
+
+        if (capture_go)
+            presamp_fifo_filling <= 1'b0;
+        else if ((state == pS_PRESAMP_FULL) && (state_r != pS_PRESAMP_FULL))
+            presamp_fifo_filling <= 1'b1;
+
+        if (presamp_fifo_filling && fast_fifo_wr) begin
+            if (low_res) begin
+                if (write_word_counter < 5)
+                    write_word_counter <= write_word_counter + 1;
+                else
+                    write_word_counter <= 0;
+            end
+            else begin
+                if (write_word_counter < 3)
+                    write_word_counter <= write_word_counter + 1;
+                else
+                    write_word_counter <= 0;
+            end
+
+            if (write_word_counter == ((low_res)? 5 : 3))
+                presample_fifo_count_wr <= 1'b1;
+            else
+                presample_fifo_count_wr <= 1'b0;
+
+        end
+        else if (!presamp_fifo_filling) begin
+            write_word_counter <= 1;
             presample_fifo_count_wr <= 1'b0;
+        end
+
+        if (save_offset_done)
+            // need a way to have this zero in the case of no presamples:
+            segment_offset <= 0;
+        else if (next_segment_go)
+            segment_offset <= write_word_counter;
     end
 
     always @(posedge clk_usb) begin
-        if (!presample_fifo_count_empty && !fast_fifo_empty) begin
+        if (!presample_fifo_count_empty && !fast_fifo_almost_empty && !(presample_fifo_count_rd && presample_fifo_count_almost_empty)) begin
             presample_fifo_count_rd <= 1'b1;
         end
         else begin
@@ -758,16 +809,14 @@ module fifo_top_husky(
         .ren                    (presample_fifo_count_rd),
         .rdata                  (),
         .rempty                 (presample_fifo_count_empty),
-        .ralmost_empty          (),
+        .ralmost_empty          (presample_fifo_count_almost_empty),
         .rempty_threshold       (),
         .runderflow             (presample_fifo_count_underflow)
     );
 
 
 
-
-    // TODO replacement for: slow_fifo_din <= {slow_fifo_din[23:0], fast_fifo_dout}; ?
-    assign slow_fifo_din = fast_fifo_dout;
+    assign slow_fifo_din = (save_offset_usb)? {5'b0, segment_offset, {40{1'b1}}} : fast_fifo_dout;
 
     reg [2:0] slow_read_count = 0; // 48/8 = 6 USB reads required for each FIFO read, regardless of low_res
 
@@ -793,8 +842,8 @@ module fifo_top_husky(
            slow_fifo_rd_slow <= 1'b0;
     end
 
-    // TODO!
-    assign slow_fifo_rd_fast = fifo_read_fifoen && (low_res? (slow_read_count == 2) : ((slow_read_count == 3) || (slow_read_count == 8)));
+    // TODO: ?
+    assign slow_fifo_rd_fast = fifo_read_fifoen && ((low_res)? (slow_read_count == 2) : ((slow_read_count == 3) || (slow_read_count == 8)));
 
     assign slow_fifo_rd = (flushing && ~slow_fifo_empty) || (fast_fifo_read_mode? slow_fifo_rd_fast : slow_fifo_rd_slow);
 
@@ -824,7 +873,6 @@ module fifo_top_husky(
 
     end
 
-    //assign fast_fifo_rd = fast_fifo_presample_drain || 
     assign fast_fifo_rd = presample_fifo_count_rd || 
                           (fast_fifo_rd_en && !slow_fifo_full && !fast_fifo_empty) ||
                           (flushing && !fast_fifo_empty);

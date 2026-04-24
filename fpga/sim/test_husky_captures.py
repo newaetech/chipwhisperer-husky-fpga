@@ -152,6 +152,10 @@ class GenericCapture(object):
 
     def _limit_read(self, job) -> int:
         """ To test that the design functions correctly when the full capture is not read back.
+        TODO: this will need to change a bit- we still want to test recovery from incomplete
+        reads, however since we won't read the offset at the end of the capture data, none of
+        the data can be validated. All we will verify is that the *next* capture works as
+        intended.
         """
         samples = job['samples']
         if 'segments' in job.keys():
@@ -238,11 +242,30 @@ class ADCCapture(GenericCapture):
         self.sample_increment = 1
 
     async def read_adc_data(self, samples, bits_per_sample):
-        # do the read:
+        # Figure out how many bytes to read.
+        # First: figure out how many samples:
+        self.dut._log.info("XXX # samples to read: %d" % samples)
+
+        # account for worst-case offset:
+        if bits_per_sample == 12:
+            samples += 3
+        else:
+            samples += 5
+        self.dut._log.info("XXX # samples after accounting for worst-case offset: %d" % samples)  # TODO: remove later
+
+        # turn into bytes and round up to a multiple of the word size (48 bits / 6 bytes):
         if bits_per_sample == 12:
             bytes_to_read = math.ceil(samples*1.5)
         else:
             bytes_to_read = samples
+
+        mod = bytes_to_read % 6
+        if mod:
+            bytes_to_read += 6 - mod
+        self.dut._log.info("XXX # bytes accounting for word size: %d bytes" % bytes_to_read)  # TODO: remove later
+
+        bytes_to_read += 6 # to grab the offset; TODO: allow for more with segmenting!
+        self.dut._log.info("XXX after adding offset word: %d bytes" % bytes_to_read)  # TODO: change to _log.debug later
         raw = list(await self.harness.registers.read(self.reg_addr['ADCREAD_ADDR'], bytes_to_read))
         return raw
 
@@ -263,7 +286,8 @@ class ADCCapture(GenericCapture):
 
     async def _read_samples(self, job) -> list:
         job_name = job['name']
-        samples = self._limit_read(job)
+        samples = job['samples']
+        #samples = self._limit_read(job) # TODO: don't do this for now, revisit later!
         bits_per_sample = job['bits_per_sample']
         if self.stream:
             stream_segment_n = 0
@@ -293,6 +317,11 @@ class ADCCapture(GenericCapture):
             self.raw_read_data = await self.read_adc_data(samples, bits_per_sample)
 
         data = self.processHuskyData(samples, bytearray(self.raw_read_data), bits_per_sample)
+        dataread = 'Data read (%d samples): ' % len(data)
+        for b in data:
+            dataread += '%3x ' % b
+        dataread += '\n'
+        self.dut._log.info(dataread)
         return data
 
 
@@ -312,8 +341,17 @@ class ADCCapture(GenericCapture):
             self.dut._log.error('%12s fast/pre-DDR FIFO not empty after reading all samples.' % job_name)
             self.harness.inc_error()
 
-    @staticmethod
-    def processHuskyData(NumberPoints, data, bits_per_sample):
+    def processHuskyData(self, NumberPoints, data, bits_per_sample):
+        # 1. validate and remove the offset word:
+        self.dut._log.info('Raw read data: %s' % (list(data)))
+
+        if list(data[-5:]) != [0xff]*5:
+            self.dut._log.warning('Unexpected offset word: %s' % data[-6:])
+            offset = 0
+        else:
+            offset = data[-6]
+        self.dut._log.info('Offset extracted from payload: %d' % offset)
+        data = data[:-6]
         if bits_per_sample == 12:
             if len(data)%3:
                 data.extend([0]*(3-len(data)%3))
@@ -322,7 +360,17 @@ class ADCCapture(GenericCapture):
             fst_uint12 = (fst_uint8 << 4) + (mid_uint8 >> 4)
             snd_uint12 = ((mid_uint8 % 16) << 8) + lst_uint8
             data = np.reshape(np.concatenate((fst_uint12[:, None], snd_uint12[:, None]), axis=1), 2 * fst_uint12.shape[0])
-        return data[:NumberPoints]
+        # TODO-important! check that we have the expected number of samples! (here or where the per-sample check is done)
+        #self.dut._log.info('XXX NumberPoints: %d; full data: %s' % (NumberPoints, data))
+        #self.dut._log.info('XXX offsetted data: %s' % data[offset:offset+NumberPoints])
+
+        dataread = 'Samples (without offset) (%d samples): ' % len(data)
+        for b in data:
+            dataread += '%3x ' % b
+        dataread += '\n'
+        self.dut._log.info(dataread)
+
+        return data[offset:offset+NumberPoints]
 
 
     def _check_samples(self, job, data) -> None:
@@ -332,6 +380,8 @@ class ADCCapture(GenericCapture):
         current_count = data[0]
         self.first_read_sample = int(current_count)
         expected = (self._actual_first_write - job['presamples']) % MOD
+        for i in range(4):
+            self.dut._log.info('XXX sample %d: %3x' % (i, data[i]))
         if int(current_count) != expected:
             self.dut._log.error("%12s First sample: expected %3x got %3x" % (job['name'], expected, current_count))
             self.inc_error()
