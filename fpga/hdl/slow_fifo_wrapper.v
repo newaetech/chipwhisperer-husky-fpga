@@ -205,6 +205,7 @@ end
             .dout               (dout1),
             .full               (full1),
             .empty              (empty1),
+            .prog_empty         (empty_threshold1),
             .overflow           (overflow1),
             .underflow          (underflow1)
         );

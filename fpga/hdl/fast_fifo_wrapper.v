@@ -206,7 +206,9 @@ module fast_fifo_wrapper (
         .underflow              (underflow_stage1)
     );
 
-    // TODO: probably no need for multiple parallel FIFOs; try a single wide FIFO
+    // NOTE: could use a single wide FIFO, but it's easier to mirror what the
+    // Xilinx case does, where we use 4x parallel FIFOs because it meets
+    // timing more easily :shrug:
     genvar i;
     generate
         for (i = 0; i < 4; i = i + 1) begin
@@ -255,8 +257,6 @@ module fast_fifo_wrapper (
         .underflow      (underflow_stage1)
     );
 
-    // TODO: (as above) probably no need for multiple parallel FIFOs; try a single wide FIFO
-    // TODO-NOW: add empty threshold
     genvar i;
     generate
         for (i = 0; i < 4; i = i + 1) begin
@@ -270,6 +270,7 @@ module fast_fifo_wrapper (
                 .dout               (dout_stage2[i*12 +: 12]),
                 .full               (full_stage2[i]),
                 .empty              (empty_stage2[i]),
+                .prog_empty         (empty_threshold_stage2[i]),
                 .overflow           (overflow_stage2[i]),
                 .underflow          (underflow_stage2[i])
             );
