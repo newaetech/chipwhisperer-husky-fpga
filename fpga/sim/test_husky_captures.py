@@ -241,31 +241,8 @@ class ADCCapture(GenericCapture):
         self.name = 'ADC'
         self.sample_increment = 1
 
-    async def read_adc_data(self, samples, bits_per_sample):
-        # Figure out how many bytes to read.
-        # First: figure out how many samples:
-        self.dut._log.info("XXX # samples to read: %d" % samples)
-
-        # account for worst-case offset:
-        if bits_per_sample == 12:
-            samples += 3
-        else:
-            samples += 5
-        self.dut._log.info("XXX # samples after accounting for worst-case offset: %d" % samples)  # TODO: remove later
-
-        # turn into bytes and round up to a multiple of the word size (48 bits / 6 bytes):
-        if bits_per_sample == 12:
-            bytes_to_read = math.ceil(samples*1.5)
-        else:
-            bytes_to_read = samples
-
-        mod = bytes_to_read % 6
-        if mod:
-            bytes_to_read += 6 - mod
-        self.dut._log.info("XXX # bytes accounting for word size: %d bytes" % bytes_to_read)  # TODO: remove later
-
-        bytes_to_read += 6 # to grab the offset; TODO: allow for more with segmenting!
-        self.dut._log.info("XXX after adding offset word: %d bytes" % bytes_to_read)  # TODO: change to _log.debug later
+    async def read_adc_data(self, bytes_to_read):
+        self.dut._log.info("reading %d bytes" % bytes_to_read)
         raw = list(await self.harness.registers.read(self.reg_addr['ADCREAD_ADDR'], bytes_to_read))
         return raw
 
@@ -301,6 +278,7 @@ class ADCCapture(GenericCapture):
                         self.dut._log.info('%12s waiting for stream segment to be available...' % job_name)
                         wait_printed = True
                     await ClockCycles(self.clk_usb, 10)
+                # TODO: update for new scheme
                 samples_to_read = min(stream_segment_size, samples_left)
                 self.dut._log.info('%12s starting stream segment read %d: reading %d samples' % (job_name, stream_segment_n, samples_to_read))
                 stream_segment = await self.read_adc_data(samples_to_read, bits_per_sample)
@@ -310,11 +288,12 @@ class ADCCapture(GenericCapture):
 
         else:
             downsample = job['downsample']
+            bytes_to_read = job['bytes_to_read']
             # if capture is downsampled, we could read it too fast and underflow:
             if downsample > 1:
+                # TODO: any tweaks required here?
                 await ClockCycles(self.sampling_clock, math.ceil(samples * downsample * bits_per_sample/8))
-            #self.dut._log.info("starting the read (%0d samples)" % samples)
-            self.raw_read_data = await self.read_adc_data(samples, bits_per_sample)
+            self.raw_read_data = await self.read_adc_data(bytes_to_read)
 
         data = self.processHuskyData(samples, bytearray(self.raw_read_data), bits_per_sample)
         dataread = 'Data read (%d samples): ' % len(data)

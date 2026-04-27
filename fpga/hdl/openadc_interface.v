@@ -567,7 +567,7 @@ module openadc_interface #(
    wire [14:0] presamples;
    wire [31:0] maxsamples_limit;
    wire [31:0] maxsamples;
-
+   wire [31:0] samples_to_collect;
 
    wire [12:0] downsample;
    wire [7:0] reg_datao_oadc;
@@ -836,6 +836,7 @@ module openadc_interface #(
       .presamples_o                 (presamples),
       .maxsamples_i                 (maxsamples_limit),
       .maxsamples_o                 (maxsamples),
+      .samples_to_collect           (samples_to_collect),
       .downsample_o                 (downsample),
       .clkblock_dcm_locked_i        (1'b0),
       .clkblock_gen_locked_i        (1'b0),
@@ -1177,6 +1178,7 @@ module openadc_interface #(
 
           .presample_i              (presamples),
           .max_samples_i            (maxsamples),
+          .samples_to_collect       (samples_to_collect),
           .max_samples_o            (maxsamples_limit),
           .downsample_i             (downsample),
 

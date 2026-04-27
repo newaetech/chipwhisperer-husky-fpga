@@ -386,6 +386,7 @@ class ADCTest(GenericTest):
                     wait_samples = random.randint(min_wait_samples, min_wait_samples*self.segment_time_factor)
                     segment_times.append(wait_samples)
                     capture_samples_time += wait_samples
+            # TODO-segments: surely needs tweaking
             if presamples > 0 and not self.harness.is_pro and samples % 3:
                 if samples < 3:
                     samples = 3
@@ -402,8 +403,39 @@ class ADCTest(GenericTest):
             await self.registers.write(self.reg_addr['STREAM_SEGMENT_THRESHOLD'], self.registers.to_bytes(stream_segment_threshold, 3))
             await self.registers.write(self.reg_addr['SETTINGS_ADDR'], [0x24 + (1<<4)])
 
+        # calculate the actual number of samples that will be collected:
+        # 1. account for worst-case offset:
+        if bits_per_sample == 12:
+            bytes_to_read = samples + 3
+        else:
+            bytes_to_read = samples + 5
+        # 2. turn into bytes:
+        if bits_per_sample == 12:
+            bytes_to_read = math.ceil(bytes_to_read*1.5)
+        else:
+            bytes_to_read = bytes_to_read
+        # 3. round up to a multiple of the word size (48 bits / 6 bytes):
+        mod = bytes_to_read % 6
+        if mod:
+            bytes_to_read += 6 - mod
+        # 4. add offset word TODO: allow for more with segmenting!
+        bytes_to_read += 6
+
+        # similarly, calculate the actual number of *samples* that need to be collected:
+        if bits_per_sample == 12:
+            samples_to_collect = samples + 3
+            mod_op = 4
+        else:
+            samples_to_collect = samples + 5
+            mod_op = 6
+        mod = samples_to_collect % mod_op
+        if mod:
+            samples_to_collect += mod_op - mod
+
+        samples_combo = (samples << 32) + samples_to_collect
+
         await self.registers.write(self.reg_addr['DECIMATE_ADDR'], self.registers.to_bytes(0, 2)) # clear this first because setting e.g. presamples when the previous job had this non-zero will cause an error
-        await self.registers.write(self.reg_addr['SAMPLES_ADDR'], self.registers.to_bytes(samples, 4))
+        await self.registers.write(self.reg_addr['SAMPLES_ADDR'], self.registers.to_bytes(samples_combo, 8))
         await self.registers.write(self.reg_addr['PRESAMPLES_ADDR'], self.registers.to_bytes(presamples, 2))
         await self.registers.write(self.reg_addr['OFFSET_ADDR'], self.registers.to_bytes(offset, 4))
         await self.registers.write(self.reg_addr['NUM_SEGMENTS'], self.registers.to_bytes(segments, 2))
@@ -420,6 +452,8 @@ class ADCTest(GenericTest):
         else:
             trigger_type = 'manual'
         job = {"samples": samples, "presamples": presamples, "offset": offset, "downsample": downsample, "bits_per_sample": bits_per_sample, "trigger_type": trigger_type}
+        job['bytes_to_read'] = bytes_to_read
+        job['samples_to_collect'] = samples_to_collect
         job['segments'] = segments
         job['segment_counter_en'] = segment_counter_en
         job['segment_cycles'] = segment_cycles

@@ -71,6 +71,7 @@ module reg_openadc #(
    input  wire        clkblock_gen_locked_i,
    output wire [14:0] presamples_o,
    output wire [31:0] maxsamples_o,
+   output wire [31:0] samples_to_collect,
    input  wire [31:0] maxsamples_i,
    output wire [12:0] downsample_o,
    output wire        fifo_stream,
@@ -112,7 +113,7 @@ module reg_openadc #(
    wire [31:0] registers_advclocksettings_read;
    wire [31:0] registers_extclk_frequency;
    wire [31:0] registers_adcclk_frequency;
-   reg [31:0] registers_samples;
+   reg [63:0] registers_samples;
    reg [14:0] registers_presamples;
    reg [31:0] registers_offset;
    wire [47:0] version_data;
@@ -149,7 +150,8 @@ module reg_openadc #(
    assign registers_advclocksettings_read[25] = 1'b0;
 
    assign gain = registers_gain;
-   assign maxsamples_o = registers_samples;
+   assign maxsamples_o = registers_samples[63:32];
+   assign samples_to_collect = registers_samples[31:0];
    assign presamples_o = registers_presamples;
 
    assign registers_extclk_frequency = (extmeasure_src)? pllclk_frequency : extclk_frequency;

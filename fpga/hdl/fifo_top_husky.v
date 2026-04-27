@@ -50,6 +50,7 @@ module fifo_top_husky(
 
     input wire  [14:0]  presample_i,
     input wire  [31:0]  max_samples_i,
+    input wire  [31:0]  samples_to_collect,
     output wire [31:0]  max_samples_o,
     input wire  [12:0]  downsample_i, //Ignores this many samples inbetween captured measurements
 
@@ -234,27 +235,10 @@ module fifo_top_husky(
         last_segment <= (segment_counter == (num_segments-1));
         if (downsample_i > 0)
             // TODO- is this ok for downsample?
-            last_sample <= sample_counter == adjusted_samples-1;
+            last_sample <= sample_counter == samples_to_collect-1;
         else
-            last_sample <= sample_counter == adjusted_samples-2;
+            last_sample <= sample_counter == samples_to_collect-2;
         presamp_done1_r <= presamp_done1;
-    end
-
-    wire [2:0] sample_mod_op = (low_res)? 6 : 4;
-    reg [31:0] adjusted_samples_pre;
-    reg [31:0] adjusted_samples;
-    reg [2:0] sample_mod = 0;    // max 5
-    // Here we need to fill up to a full 48-bit word boundary.
-    // Bit tricky when presamples are involved, because the first sample can
-    // fall anywhere within the word (indicated by segment_offset)
-    always @(posedge clk_usb) begin
-        // worst-case segment_offset:
-        adjusted_samples_pre = max_samples_i + sample_mod_op - 1;
-        sample_mod <= adjusted_samples_pre % sample_mod_op;
-        if (sample_mod)
-            adjusted_samples <= adjusted_samples_pre + sample_mod_op - sample_mod;
-        else
-            adjusted_samples <= adjusted_samples_pre;
     end
 
 
@@ -950,7 +934,7 @@ module fifo_top_husky(
          stream_segment_available <= 1'b0;
       end
       else begin
-         total_samples <= max_samples_i * num_segments;
+         total_samples <= max_samples_i * num_segments; // TODO: update to max_samples_mod_i?
          if (slow_fifo_rd)
             read_count <= read_count + 3;
          if (stream_mode && |error_stat[3:0])
