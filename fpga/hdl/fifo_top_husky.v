@@ -93,6 +93,7 @@ module fifo_top_husky(
     wire                fast_fifo_almost_empty;
     wire                fast_fifo_overflow;
     wire                fast_fifo_underflow;
+    reg                 reset_fast_fifo_internal_count;
 
     wire [47:0]         slow_fifo_din;
     reg                 slow_fifo_prewr = 1'b0;
@@ -221,7 +222,8 @@ module fifo_top_husky(
                                                           (capture_go && ~capture_go_r);
 
     wire presamp_done = presamp_done1_r || next_segment_go;
-    wire presamp_error = presamp_done && (state == pS_PRESAMP_FILLING);
+    //wire presamp_error = presamp_done && (state == pS_PRESAMP_FILLING);
+    wire presamp_error = presamp_done && (state == pS_PRESAMP_FILLING) || presample_fifo_error; // TODO-temporary(?)
 
     reg next_segment_go;
     reg last_segment;
@@ -303,6 +305,7 @@ module fifo_top_husky(
                 segment_cycle_counter <= 0;
                 segment_error <= 1'b0;
                 fsm_fast_wr_en <= 1'b0;
+                reset_fast_fifo_internal_count <= 1'b0;
 
                 if ((downsample_i > 0) && ((presample_i > 0) || (num_segments > 1)))
                    downsample_error <= 1'b1;
@@ -322,6 +325,7 @@ module fifo_top_husky(
              end
 
              pS_PRESAMP_FILLING: begin
+                reset_fast_fifo_internal_count <= 1'b0;
                 save_offset <= 1'b0;
                 if (next_segment_go && (state_r == pS_PRESAMP_FILLING))
                    segment_error <= 1'b1;
@@ -356,8 +360,9 @@ module fifo_top_husky(
              end
 
              pS_TRIGGERED: begin
+                reset_fast_fifo_internal_count <= 1'b0;
                 save_offset <= 1'b0;
-                if (next_segment_go && (state_r == pS_TRIGGERED))
+                if ( (next_segment_go && (state_r == pS_TRIGGERED)) || save_offset_done)
                    segment_error <= 1'b1;
                 segment_cycle_counter <= segment_cycle_counter + 1;
 
@@ -387,6 +392,7 @@ module fifo_top_husky(
                       presample_counter <= 0;
                       fsm_fast_wr_en <= 1'b1;
                       save_offset <= 1'b1;
+                      reset_fast_fifo_internal_count <= 1'b1;
                       state <= pS_PRESAMP_FILLING;
                    end
                    else if (next_segment_go) begin
@@ -395,12 +401,14 @@ module fifo_top_husky(
                       sample_counter <= 0;
                       fsm_fast_wr_en <= 1'b1;
                       save_offset <= 1'b1;
+                      reset_fast_fifo_internal_count <= 1'b1;
                       state <= pS_TRIGGERED;
                    end
                 end
                 else if (next_segment_go) begin
                    segment_error <= 1'b1;
                    // NOTE: we don't save the offset here because the data will be junk anyways
+                   reset_fast_fifo_internal_count <= 1'b1;
                    state <= pS_IDLE;
                 end
              end
@@ -535,6 +543,7 @@ module fifo_top_husky(
     );
 
     // TODO: add more granularity to over/underflow flags?
+    // TODO: do we need to CDC things that originate in the USB clock domain?
     function [9:0] error_bits (input [9:0] current_error);
        begin
           error_bits = current_error;
@@ -713,6 +722,7 @@ module fifo_top_husky(
     reg presamp_running = 1'b0;
     reg presamp_fifo_filling = 1'b0;
     reg [2:0] segment_offset;
+    reg next_segment_go_r;
     always @(posedge adc_sampleclk) begin
         // NOTE: presamp_running is used to prevent reading the slow FIFO
         //if (state == pS_IDLE) // this resets too early!
@@ -721,7 +731,7 @@ module fifo_top_husky(
         else if ((state_r == pS_PRESAMP_FULL) && (state != pS_PRESAMP_FULL))
             presamp_running <= 1'b0;
 
-        if (capture_go)
+        if (capture_go || next_segment_go_pre)
             presamp_fifo_filling <= 1'b0;
         else if ((state == pS_PRESAMP_FULL) && (state_r != pS_PRESAMP_FULL))
             presamp_fifo_filling <= 1'b1;
@@ -751,10 +761,12 @@ module fifo_top_husky(
             presample_fifo_count_wr <= 1'b0;
         end
 
+        next_segment_go_r <= next_segment_go;
         if (save_offset_done)
             // need a way to have this zero in the case of no presamples:
             segment_offset <= 0;
-        else if (next_segment_go)
+        // note that capture_go condition is needed for the first segment of a segment_cycle_counter_en capture:
+        else if (next_segment_go || (capture_go_r && !capture_go_r2))
             segment_offset <= write_word_counter;
     end
 
@@ -769,7 +781,7 @@ module fifo_top_husky(
 
 
     // Note: the latency through this FIFO will NOT match that of the
-    // (composite) fast FIFO! The logic above must account for that!
+    // (composite) fast FIFO! I think that's ok? Or does the logic above must account for that! TODO: how?
     fifo_async #(
         .pDATA_WIDTH    (1), // ideally 0 but synthesis should optimize this out anyways
         .pDEPTH         (8), // TODO: tune to worst-case (NOTE: fifo_async mininum depth is 8)
@@ -797,6 +809,12 @@ module fifo_top_husky(
         .rempty_threshold       (),
         .runderflow             (presample_fifo_count_underflow)
     );
+    // TODO: if segments are too close together, then presample fifo is likely
+    // to overflow (because we won't be reading it because the fast FIFO isn't
+    // almost empty yet), which should get flagged as a segment_error
+
+    // TODO: do we need to CDC the underflow?
+    wire presample_fifo_error = presample_fifo_count_overflow || presample_fifo_count_underflow;
 
 
 
@@ -871,6 +889,7 @@ module fifo_top_husky(
         .rclk                   (clk_usb),
         .rst_n                  (~reset),
         .flushing               (flushing),
+        .reset_internal_count   (reset_fast_fifo_internal_count),
         .low_res                (low_res),
         .low_res_lsb            (low_res_lsb),
         .fifo_wr                (fast_fifo_wr),

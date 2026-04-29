@@ -27,6 +27,7 @@ module fast_fifo_wrapper (
     input  wire                         rclk,
     input  wire                         rst_n,
     input  wire                         flushing,
+    input  wire                         reset_internal_count,
     input  wire                         low_res,
     input  wire                         low_res_lsb,
     input  wire                         fifo_wr,
@@ -156,7 +157,7 @@ module fast_fifo_wrapper (
 
     always @(posedge wclk) begin
         wr_stage2 <= 1'b0;
-        if (flushing)
+        if (flushing || reset_internal_count)
             ren_stage1_count <= 0;
         else begin
             ren_stage1_r <= ren_stage1;

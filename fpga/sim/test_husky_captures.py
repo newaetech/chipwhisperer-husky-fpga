@@ -183,6 +183,7 @@ class GenericCapture(object):
         prints the sequence of expected 32-bit words and the actual received
         sequence of 32-bit words; this makes it easier to
         see where things diverged.
+        TODO: update (low priority, only if needed)
         """
         expected_words = []
         actual_words = []
@@ -266,6 +267,7 @@ class ADCCapture(GenericCapture):
         samples = job['samples']
         #samples = self._limit_read(job) # TODO: don't do this for now, revisit later!
         bits_per_sample = job['bits_per_sample']
+        segments = job['segments']
         if self.stream:
             stream_segment_n = 0
             stream_segment_size = job['stream_segment_threshold'] # N.B.: does NOT need to be equal, though in practice (and by default) it usually is
@@ -288,14 +290,28 @@ class ADCCapture(GenericCapture):
 
         else:
             downsample = job['downsample']
-            bytes_to_read = job['bytes_to_read']
+            bytes_per_segment = job['bytes_to_read']
+            bytes_to_read = bytes_per_segment * segments
             # if capture is downsampled, we could read it too fast and underflow:
             if downsample > 1:
                 # TODO: any tweaks required here?
                 await ClockCycles(self.sampling_clock, math.ceil(samples * downsample * bits_per_sample/8))
             self.raw_read_data = await self.read_adc_data(bytes_to_read)
 
-        data = self.processHuskyData(samples, bytearray(self.raw_read_data), bits_per_sample)
+        if segments:
+            data = []
+            for s in range(segments):
+                sdata = self.processHuskyData(samples, bytearray(self.raw_read_data[s*bytes_per_segment:(s+1)*bytes_per_segment]), bits_per_sample)
+                data.extend(sdata)
+                dataread = 'Segment %d data read (%d samples): ' % (s, len(sdata))
+                for b in sdata:
+                    dataread += '%3x ' % b
+                dataread += '\n'
+                self.dut._log.info(dataread)
+
+        else:
+            data = self.processHuskyData(samples, bytearray(self.raw_read_data), bits_per_sample)
+
         dataread = 'Data read (%d samples): ' % len(data)
         for b in data:
             dataread += '%3x ' % b
