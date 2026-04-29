@@ -29,6 +29,7 @@ module slow_fifo_wrapper (
     input  wire                         fifo_wr,
     input  wire [47:0]                  fifo_din,
     output wire                         fifo_full,
+    output wire                         fifo_full_threshold,
     output wire                         overflow,
     input  wire                         fifo_rd,
     output wire [47:0]                  fifo_dout,
@@ -73,6 +74,7 @@ wire overflow1;
 wire empty1;
 wire underflow1;
 wire empty_threshold1;
+wire full_threshold1;
 
 wire full2;
 wire overflow2;
@@ -81,6 +83,7 @@ wire underflow2;
 
 assign fifo_dout = dout2;
 assign fifo_full = full1;
+assign fifo_full_threshold = full_threshold1;
 assign fifo_empty = empty2;
 assign overflow = overflow1 || overflow2;
 assign underflow = underflow1 || underflow2;
@@ -131,13 +134,13 @@ end
     ) U_fifo1 (
         .clk                        (clk),
         .rst_n                      (rst_n),
-        .full_threshold_value       (0),
+        .full_threshold_value       (pDEPTH1-1),
         .empty_threshold_value      (5),
         .wen                        (wr1),
         .wdata                      (din1),
         .full                       (full1),
         .overflow                   (overflow1),
-        .full_threshold             (),
+        .full_threshold             (full_threshold1),
         .empty_threshold            (empty_threshold1),
         .ren                        (rd1),
         .rdata                      (dout1),
@@ -206,6 +209,7 @@ end
             .full               (full1),
             .empty              (empty1),
             .prog_empty         (empty_threshold1),
+            .prog_full          (full_threshold1),
             .overflow           (overflow1),
             .underflow          (underflow1)
         );

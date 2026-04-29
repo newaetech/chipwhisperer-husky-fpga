@@ -101,6 +101,7 @@ module fifo_top_husky(
     wire                slow_fifo_rd_fast;
     wire [47:0]         slow_fifo_dout;
     wire                slow_fifo_full;
+    wire                slow_fifo_full_threshold;
     wire                slow_fifo_empty;
     wire                slow_fifo_overflow;
     wire                slow_fifo_underflow;
@@ -385,7 +386,7 @@ module fifo_top_husky(
 
              pS_SEGMENT_DONE: begin
                 segment_cycle_counter <= segment_cycle_counter + 1;
-                if (fast_fifo_empty) begin
+                if (fast_fifo_empty && !slow_fifo_full_adc) begin
                    if (presample_i > 0) begin
                       segment_counter <= segment_counter + 1;
                       sample_counter <= 0;
@@ -415,12 +416,14 @@ module fifo_top_husky(
 
              pS_DONE: begin
                 // serves two purposes:
-                // 1. wait for fast FIFO to empty;
+                // 1. wait for the fast FIFO to empty (and for the slow FIFO to have space for the offset word)
                 // 2. wait state so that we don't get back out of idle right away
-                if ((fast_fifo_empty && (done_wait_count == 0)) || arm_i) begin
+                if (fast_fifo_empty && !slow_fifo_full_adc && (done_wait_count == 0)) begin
                    save_offset <= 1'b1;
                    state <= pS_IDLE;
                 end
+                else if (arm_i)
+                   state <= pS_IDLE;
                 else
                    done_wait_count <= done_wait_count - 1;
              end
@@ -678,12 +681,11 @@ module fifo_top_husky(
             fast_fifo_rd_en <= 1'b0;
             slow_fifo_prewr <= 1'b0;
         end
-        else if (!slow_fifo_full && 
+        else if ( ((slow_fifo_prewr)? !slow_fifo_full_threshold : !slow_fifo_full) && 
             ((triggered_usb)? !fast_fifo_almost_empty : 
                               !fast_fifo_empty && !fast_fifo_rd_en)) begin
             fast_fifo_rd_en <= 1'b1;
             slow_fifo_prewr <= 1'b1;
-            //slow_fifo_din <= fast_fifo_dout;
         end
         else begin
             fast_fifo_rd_en <= 1'b0;
@@ -916,12 +918,23 @@ module fifo_top_husky(
         .fifo_wr                (slow_fifo_wr),
         .fifo_din               (slow_fifo_din),
         .fifo_full              (slow_fifo_full),
+        .fifo_full_threshold    (slow_fifo_full_threshold),
         .overflow               (slow_fifo_overflow),
         .fifo_rd                (slow_fifo_rd),
         .fifo_dout              (slow_fifo_dout),
         .fifo_empty             (slow_fifo_empty),
         .underflow              (slow_fifo_underflow)
     );
+
+    wire slow_fifo_full_adc;
+    cdc_simple U_slow_fifo_full_cdc (
+        .reset          (reset),
+        .clk            (adc_sampleclk),
+        .data_in        (slow_fifo_full),
+        .data_out       (),
+        .data_out_r     (slow_fifo_full_adc)
+    );
+
 
 
    reg read_update;
