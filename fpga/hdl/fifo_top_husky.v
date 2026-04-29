@@ -223,7 +223,7 @@ module fifo_top_husky(
 
     wire presamp_done = presamp_done1_r || next_segment_go;
     //wire presamp_error = presamp_done && (state == pS_PRESAMP_FILLING);
-    wire presamp_error = presamp_done && (state == pS_PRESAMP_FILLING) || presample_fifo_error; // TODO-temporary(?)
+    wire presamp_error = presamp_done && (state == pS_PRESAMP_FILLING) || presample_fifo_error; // TODO-temporary(?): presample_fifo_error piggy-backing here
 
     reg next_segment_go;
     reg last_segment;
@@ -767,7 +767,7 @@ module fifo_top_husky(
             segment_offset <= 0;
         // note that capture_go condition is needed for the first segment of a segment_cycle_counter_en capture:
         else if (next_segment_go || (capture_go_r && !capture_go_r2))
-            segment_offset <= write_word_counter;
+            segment_offset <= (presample_i > 0)? write_word_counter : 0;
     end
 
     always @(posedge clk_usb) begin
@@ -780,11 +780,18 @@ module fifo_top_husky(
     end
 
 
-    // Note: the latency through this FIFO will NOT match that of the
-    // (composite) fast FIFO! I think that's ok? Or does the logic above must account for that! TODO: how?
+    // Note 1: the latency through this FIFO will NOT match that of
+    // fast_fifo_wrapper, but that's ok since the logic around this accounts
+    // for that.
+    //
+    // Note 2: a shallower depth could be used but would restrict the
+    // *minimum* number of presamples. This may be surprising and is best
+    // understood by comparing simulation waveforms with more vs fewer
+    // presamples.
+    //
     fifo_async #(
         .pDATA_WIDTH    (1), // ideally 0 but synthesis should optimize this out anyways
-        .pDEPTH         (8), // TODO: tune to worst-case (NOTE: fifo_async mininum depth is 8)
+        .pDEPTH         (16),
         .pFALLTHROUGH   (1),
         .pFLOPS         (1),
         .pDISTRIBUTED   (0),
@@ -815,8 +822,6 @@ module fifo_top_husky(
 
     // TODO: do we need to CDC the underflow?
     wire presample_fifo_error = presample_fifo_count_overflow || presample_fifo_count_underflow;
-
-
 
     assign slow_fifo_din = (save_offset_usb)? {5'b0, segment_offset, {40{1'b1}}} : fast_fifo_dout;
 
