@@ -51,6 +51,7 @@ module fifo_top_husky(
     input wire  [14:0]  presample_i,
     input wire  [31:0]  max_samples_i, // TODO: maybe we don't actually need this?
     input wire  [31:0]  samples_to_collect,
+    input wire  [31:0]  total_stream_bytes,
     output wire [31:0]  max_samples_o,
     input wire  [12:0]  downsample_i, //Ignores this many samples inbetween captured measurements
 
@@ -961,14 +962,12 @@ module fifo_top_husky(
       end
    end
 
-   reg [31:0] total_bytes;
    always @(posedge clk_usb) begin
       if (arm_pulse_usb) begin
          read_count <= 0;
          stream_segment_available <= 1'b0;
       end
       else begin
-         total_bytes <= (samples_to_collect + ((low_res)? 0 : (samples_to_collect>>1) + samples_to_collect[0])) * num_segments + 6;
          if (slow_fifo_rd)
             read_count <= read_count + 6;
          if (stream_mode && |error_stat[3:0])
@@ -978,7 +977,7 @@ module fifo_top_husky(
              stream_segment_available <= 1'b1;
          else if (read_update_usb) begin
             if (write_count_to_usb > read_count)
-               stream_segment_available <= ( (write_count_to_usb - read_count > stream_segment_threshold) || (write_count_to_usb >= total_bytes) );
+               stream_segment_available <= ( (write_count_to_usb - read_count > stream_segment_threshold) || (write_count_to_usb >= total_stream_bytes) );
             else
                stream_segment_available <= 1'b0;
          end
