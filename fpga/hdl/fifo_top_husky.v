@@ -49,7 +49,7 @@ module fifo_top_husky(
     input  wire         fast_fifo_read_mode, // not to be confused with the ADC fast FIFO, this denote fast reading of the *slow* FIFO
 
     input wire  [14:0]  presample_i,
-    input wire  [31:0]  max_samples_i,
+    input wire  [31:0]  max_samples_i, // TODO: maybe we don't actually need this?
     input wire  [31:0]  samples_to_collect,
     output wire [31:0]  max_samples_o,
     input wire  [12:0]  downsample_i, //Ignores this many samples inbetween captured measurements
@@ -531,7 +531,7 @@ module fifo_top_husky(
 
     always @(*) begin
        if (stream_mode)
-          slow_fifo_underflow_masked = slow_fifo_underflow && (read_count < max_samples_i) && ~no_underflow_errors;
+          slow_fifo_underflow_masked = slow_fifo_underflow && (read_count < samples_to_collect) && ~no_underflow_errors; // TODO: account for offset word in samples_to_collect ?
        else
           slow_fifo_underflow_masked = slow_fifo_underflow && ~no_underflow_errors && (slow_fifo_underflow_count == pMAX_UNDERFLOWS);
     end
@@ -851,10 +851,9 @@ module fifo_top_husky(
            slow_fifo_rd_slow <= 1'b0;
     end
 
-    // TODO: ?
-    assign slow_fifo_rd_fast = fifo_read_fifoen && ((low_res)? (slow_read_count == 2) : ((slow_read_count == 3) || (slow_read_count == 8)));
+    assign slow_fifo_rd_fast = fifo_read_fifoen && (slow_read_count == 5); // TODO: I think this is correct; need to validate on-target
 
-    assign slow_fifo_rd = (flushing && ~slow_fifo_empty) || (fast_fifo_read_mode? slow_fifo_rd_fast : slow_fifo_rd_slow);
+    assign slow_fifo_rd = (flushing && ~slow_fifo_empty) || ((fast_fifo_read_mode)? slow_fifo_rd_fast : slow_fifo_rd_slow);
 
     reg [7:0] fifo_read_data_pre;
     always @(*) begin
@@ -936,15 +935,13 @@ module fifo_top_husky(
     );
 
 
-
    reg read_update;
    wire read_update_usb;
    reg [31:0] write_count;
    (* ASYNC_REG = "TRUE" *) reg [31:0] write_count_to_usb;
    reg [5:0] write_cycle_count = 0;
 
-   // track how many FIFO entries (roughly) are available to be read; tricky because of two clock domains!
-   // TODO: update!
+   // track how many *bytes* (not samples!) (roughly) are available to be read; tricky because of two clock domains!
    always @(posedge adc_sampleclk) begin
       if (arm_pulse_adc) begin
          write_count <= 0;
@@ -954,7 +951,7 @@ module fifo_top_husky(
       else begin
          write_cycle_count <= write_cycle_count + 1;
          if (slow_fifo_wr)
-            write_count <= write_count + 3;
+            write_count <= write_count + 6;
          if (write_cycle_count == 0) begin
             read_update <= 1'b1;
             write_count_to_usb <= write_count;
@@ -964,23 +961,24 @@ module fifo_top_husky(
       end
    end
 
-   reg [31:0] total_samples;
+   reg [31:0] total_bytes;
    always @(posedge clk_usb) begin
       if (arm_pulse_usb) begin
          read_count <= 0;
          stream_segment_available <= 1'b0;
       end
       else begin
-         total_samples <= max_samples_i * num_segments; // TODO: update to max_samples_mod_i?
+         total_bytes <= (samples_to_collect + ((low_res)? 0 : (samples_to_collect>>1) + samples_to_collect[0])) * num_segments + 6;
          if (slow_fifo_rd)
-            read_count <= read_count + 3;
+            read_count <= read_count + 6;
          if (stream_mode && |error_stat[3:0])
              // if any FIFO overflow/underflow errors occur, ensure that SAM3U will be able to read as much as it wants
              // (so that the capture terminates normally on the SAM3U side)
+             // TODO: if any new errors are added, account for them here
              stream_segment_available <= 1'b1;
          else if (read_update_usb) begin
             if (write_count_to_usb > read_count)
-               stream_segment_available <= ( (write_count_to_usb - read_count > stream_segment_threshold) || (write_count_to_usb >= total_samples) );
+               stream_segment_available <= ( (write_count_to_usb - read_count > stream_segment_threshold) || (write_count_to_usb >= total_bytes) );
             else
                stream_segment_available <= 1'b0;
          end

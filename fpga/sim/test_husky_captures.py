@@ -268,30 +268,30 @@ class ADCCapture(GenericCapture):
         #samples = self._limit_read(job) # TODO: don't do this for now, revisit later!
         bits_per_sample = job['bits_per_sample']
         segments = job['segments']
+        bytes_per_segment = job['bytes_to_read']
+        bytes_to_read = bytes_per_segment * segments
+
         if self.stream:
             stream_segment_n = 0
             stream_segment_size = job['stream_segment_threshold'] # N.B.: does NOT need to be equal, though in practice (and by default) it usually is
             self.raw_read_data = []
-            samples_left = samples
-            while samples_left:
+            bytes_left = bytes_to_read
+            while bytes_left:
                 wait_printed = False
                 while self.dut.USB_SPARE0.value == 0:
                     if not wait_printed:
                         self.dut._log.info('%12s waiting for stream segment to be available...' % job_name)
                         wait_printed = True
                     await ClockCycles(self.clk_usb, 10)
-                # TODO: update for new scheme
-                samples_to_read = min(stream_segment_size, samples_left)
-                self.dut._log.info('%12s starting stream segment read %d: reading %d samples' % (job_name, stream_segment_n, samples_to_read))
-                stream_segment = await self.read_adc_data(samples_to_read, bits_per_sample)
+                read_chunk_size = min(stream_segment_size, bytes_left)
+                self.dut._log.info('%12s starting stream segment read %d: reading %d bytes' % (job_name, stream_segment_n, read_chunk_size))
+                stream_segment = await self.read_adc_data(read_chunk_size)
                 self.raw_read_data.extend(stream_segment)
-                samples_left -= samples_to_read
+                bytes_left -= read_chunk_size
                 stream_segment_n += 1
 
         else:
             downsample = job['downsample']
-            bytes_per_segment = job['bytes_to_read']
-            bytes_to_read = bytes_per_segment * segments
             # if capture is downsampled, we could read it too fast and underflow:
             if downsample > 1:
                 # TODO: any tweaks required here?
