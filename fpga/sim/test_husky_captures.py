@@ -387,7 +387,7 @@ class ADCCapture(GenericCapture):
             tolerance = 0
             if (i+1) % job['samples'] == 0:
                 if job['segment_counter_en']:
-                    current_count += job['segment_cycles'] - job['samples']
+                    current_count += job['segment_cycles'] - (job['samples']*job['downsample'])
                 else:
                     current_count += job['segment_times'][segment] - job['samples']
                     tolerance = 2 # because of the USB <-> sampling clock conversion

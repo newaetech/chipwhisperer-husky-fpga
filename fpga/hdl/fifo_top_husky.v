@@ -202,6 +202,7 @@ module fifo_top_husky(
     localparam pS_TRIGGERED = 3;
     localparam pS_SEGMENT_DONE = 4;
     localparam pS_DONE = 5;
+    localparam pS_SAVE_OFFSET = 6;
     reg [2:0] state_r;
 
     // strictly for easier debugging:
@@ -211,6 +212,7 @@ module fifo_top_husky(
     wire state_triggered = (state == pS_TRIGGERED);
     wire state_segment_done = (state == pS_SEGMENT_DONE);
     wire state_done = (state == pS_DONE);
+    wire state_save_offset = (state == pS_SAVE_OFFSET);
 
     wire stop_capture_conditions;
     reg fsm_fast_wr_en;
@@ -238,7 +240,6 @@ module fifo_top_husky(
         next_segment_go <= next_segment_go_pre; // this would add a cycle of latency but we've compensate by registering the ADC input in openadc_interface.v
         last_segment <= (segment_counter == (num_segments-1));
         if (downsample_i > 0)
-            // TODO- is this ok for downsample?
             last_sample <= sample_counter == samples_to_collect-1;
         else
             last_sample <= sample_counter == samples_to_collect-2;
@@ -309,7 +310,10 @@ module fifo_top_husky(
                 fsm_fast_wr_en <= 1'b0;
                 reset_fast_fifo_internal_count <= 1'b0;
 
-                if ((downsample_i > 0) && ((presample_i > 0) || (num_segments > 1)))
+                // TODO: it's really not necessary to capture this error - it's a 
+                // waste of logic and error bits
+                //if ((downsample_i > 0) && ((presample_i > 0) || (num_segments > 1)))
+                if ((downsample_i > 0) && (presample_i > 0))
                    downsample_error <= 1'b1;
                 else
                    downsample_error <= 1'b0;
@@ -387,7 +391,13 @@ module fifo_top_husky(
 
              pS_SEGMENT_DONE: begin
                 segment_cycle_counter <= segment_cycle_counter + 1;
-                if (fast_fifo_empty && !slow_fifo_full_adc) begin
+                if (next_segment_go) begin
+                   segment_error <= 1'b1;
+                   // NOTE: we don't save the offset here because the data will be junk anyways
+                   reset_fast_fifo_internal_count <= 1'b1;
+                   state <= pS_IDLE;
+                end
+                else if (fast_fifo_empty && !slow_fifo_full_adc) begin
                    if (presample_i > 0) begin
                       segment_counter <= segment_counter + 1;
                       sample_counter <= 0;
@@ -397,21 +407,23 @@ module fifo_top_husky(
                       reset_fast_fifo_internal_count <= 1'b1;
                       state <= pS_PRESAMP_FILLING;
                    end
-                   else if (next_segment_go) begin
-                      segment_counter <= segment_counter + 1;
-                      segment_cycle_counter <= 0;
-                      sample_counter <= 0;
-                      fsm_fast_wr_en <= 1'b1;
+                   else begin
                       save_offset <= 1'b1;
-                      reset_fast_fifo_internal_count <= 1'b1;
-                      state <= pS_TRIGGERED;
+                      state <= pS_SAVE_OFFSET;
                    end
                 end
-                else if (next_segment_go) begin
-                   segment_error <= 1'b1;
-                   // NOTE: we don't save the offset here because the data will be junk anyways
+             end
+
+             pS_SAVE_OFFSET: begin
+                segment_cycle_counter <= segment_cycle_counter + 1;
+                save_offset <= 1'b0;
+                if (next_segment_go) begin
+                   segment_counter <= segment_counter + 1;
+                   segment_cycle_counter <= 0;
+                   sample_counter <= 0;
+                   fsm_fast_wr_en <= 1'b1;
                    reset_fast_fifo_internal_count <= 1'b1;
-                   state <= pS_IDLE;
+                   state <= pS_TRIGGERED;
                 end
              end
 
