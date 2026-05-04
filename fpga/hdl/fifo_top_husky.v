@@ -510,7 +510,7 @@ module fifo_top_husky(
 
 
     assign fast_fifo_wr = downsample_wr_en & fsm_fast_wr_en & !flushing_adc;
-    assign slow_fifo_wr = slow_fifo_prewr & !flushing_adc || save_offset_usb; // TODO? still holds?
+    assign slow_fifo_wr = slow_fifo_prewr & !flushing_adc || save_offset_usb;
 
     // FIFO flushing mechanism: kick off flushing all FIFOs when arming.
     // Controlled from USB clock domain since that's closest to the ARM event,
@@ -948,53 +948,35 @@ module fifo_top_husky(
     );
 
 
-   reg read_update;
-   wire read_update_usb;
+   // track how many *bytes* (not samples!) (roughly) are available to be read
    reg [31:0] write_count;
-   (* ASYNC_REG = "TRUE" *) reg [31:0] write_count_to_usb;
-   reg [5:0] write_cycle_count = 0;
-
-   // track how many *bytes* (not samples!) (roughly) are available to be read; tricky because of two clock domains!
-   always @(posedge adc_sampleclk) begin
-      if (arm_pulse_adc) begin
-         write_count <= 0;
-         write_count_to_usb <= 0;
-         read_update <= 1'b0;
-      end
-      else begin
-         write_cycle_count <= write_cycle_count + 1;
-         if (slow_fifo_wr)
-            write_count <= write_count + 6;
-         if (write_cycle_count == 0) begin
-            read_update <= 1'b1;
-            write_count_to_usb <= write_count;
-         end
-         else
-            read_update <= 1'b0;
-      end
-   end
-
    always @(posedge clk_usb) begin
-      if (arm_pulse_usb) begin
-         read_count <= 0;
-         stream_segment_available <= 1'b0;
-      end
-      else begin
-         if (slow_fifo_rd)
-            read_count <= read_count + 6;
-         if (stream_mode && |error_stat[3:0])
-             // if any FIFO overflow/underflow errors occur, ensure that SAM3U will be able to read as much as it wants
-             // (so that the capture terminates normally on the SAM3U side)
-             // TODO: if any new errors are added, account for them here
-             stream_segment_available <= 1'b1;
-         else if (read_update_usb) begin
-            if (write_count_to_usb > read_count)
-               stream_segment_available <= ( (write_count_to_usb - read_count > stream_segment_threshold) || (write_count_to_usb >= total_stream_bytes) );
-            else
-               stream_segment_available <= 1'b0;
-         end
-      end
+       if (arm_pulse_usb) begin
+           write_count <= 0;
+           read_count <= 0;
+           stream_segment_available <= 1'b0;
+       end
+       else begin
+           if (slow_fifo_wr)
+               write_count <= write_count + 6;
+           if (slow_fifo_rd)
+               read_count <= read_count + 6;
+
+           if (|error_stat[3:0])
+               // if any FIFO overflow/underflow errors occur, ensure that SAM3U will be able to read as much as it wants
+               // (so that the capture terminates normally on the SAM3U side)
+               // TODO: if any new errors are added, account for them here
+               stream_segment_available <= 1'b1;
+           else begin
+               if (write_count > read_count)
+                   stream_segment_available <= ( (write_count - read_count > stream_segment_threshold) || (write_count >= total_stream_bytes) );
+               else
+                   stream_segment_available <= 1'b0;
+           end
+
+       end
    end
+
 
    // for debug: count FIFO reads
    always @(posedge clk_usb) begin
@@ -1009,14 +991,6 @@ module fifo_top_husky(
       end
    end
 
-
-   cdc_pulse U_read_update_cdc (
-      .reset_i       (reset),
-      .src_clk       (adc_sampleclk),
-      .src_pulse     (read_update),
-      .dst_clk       (clk_usb),
-      .dst_pulse     (read_update_usb)
-   );
 
    assign debug = {adc_capture_stop,
                    arm_pulse_adc,
