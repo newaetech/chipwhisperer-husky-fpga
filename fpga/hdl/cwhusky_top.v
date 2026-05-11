@@ -420,9 +420,15 @@ module cwhusky_top(
    wire disable_adc_error;
    reg PLL_STATUS_reg = 1'b1;
 
-   // fast-flash red LEDs when some internal error has occurred:
-   assign LED_ADC = (error_flag)? flash_pattern : ~PLL_STATUS_reg;
-   assign LED_GLITCH = error_flag? flash_pattern : led_glitch;
+   // fast-flash red LEDs when some internal error has occurred;
+   // also, show reg_address on LEDs for debug:
+   wire [2:0] led_select;
+   assign LED_ADC = (led_select == 3'b100)? reg_address[2] :
+                    (led_select == 3'b101)? reg_address[6] :
+                    (error_flag)? flash_pattern : ~PLL_STATUS_reg;
+   assign LED_GLITCH = (led_select == 3'b100)? reg_address[3] :
+                       (led_select == 3'b101)? reg_address[7] :
+                       (error_flag)? flash_pattern : led_glitch;
    assign LED_CAP = cw_led_cap;
    assign LED_ARMED = cw_led_armed;
 
@@ -488,6 +494,7 @@ module cwhusky_top(
 
         .flash_pattern          (flash_pattern),
 
+        .led_select             (led_select),
         .slow_fifo_wr           (slow_fifo_wr),
         .slow_fifo_rd           (slow_fifo_rd),
         .la_debug2              (la_debug2),
