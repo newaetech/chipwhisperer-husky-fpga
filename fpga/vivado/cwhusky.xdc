@@ -263,8 +263,11 @@ set_input_delay -clock clk_usb 2.000 [get_ports USB_ALEn]
 set_input_delay -clock clk_usb 2.000 [get_ports USB_CEn]
 set_input_delay -clock clk_usb 2.000 [get_ports USB_RDn]
 set_input_delay -clock clk_usb 2.000 [get_ports USB_WRn]
-set_input_delay -clock clk_usb 2.000 [get_ports USB_Data]
 set_input_delay -clock clk_usb 2.000 [get_ports USB_Addr]
+
+# Center-Aligned Rising Edge Source Synchronous Inputs:
+set_input_delay -clock clk_usb -max 3.5 [get_ports USB_Data];   # SAM3U datasheet p.1128: SMC15
+set_input_delay -clock clk_usb -min 4.0 [get_ports USB_Data];   # SAM3U datasheet p.1128: SMC21
 
 set_output_delay -clock clk_usb 0.000 [get_ports USB_SPARE0]
 set_false_path -to [get_ports USB_SPARE0]
