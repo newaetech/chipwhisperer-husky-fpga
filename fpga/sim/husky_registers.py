@@ -26,6 +26,7 @@ import random
 class Registers(object):
     def __init__(self, dut):
         self.dut = dut
+        self.fast_read_mode = False
         self.lock = Lock()
         self.dut.USB_RDn.value = 1
         self.dut.USB_WRn.value = 1
@@ -46,12 +47,13 @@ class Registers(object):
             await RisingEdge(self.dut.clk_usb) # ensure all that follows is sync'd to clock
             await self.setup_rw_address(address)
             for i in range(len(data)):
-                self.dut.USB_Data.value = data[i]
-                self.dut.USB_WRn.value = 0
                 await ClockCycles(self.dut.clk_usb, 1)
-                self.dut.USB_WRn.value = 1
+                self.dut.USB_WRn.value = 0
                 self.dut.USB_CEn.value = 0
                 await ClockCycles(self.dut.clk_usb, 1)
+                self.dut.USB_Data.value = data[i]
+                await ClockCycles(self.dut.clk_usb, 1)
+                self.dut.USB_WRn.value = 1
                 self.dut.USB_CEn.value = 1
                 await ClockCycles(self.dut.clk_usb, 1)
                 if wait:
@@ -64,6 +66,8 @@ class Registers(object):
         await self.lock.acquire()
         try:
             await self.setup_rw_address(address)
+            if self.fast_read_mode:
+                await ClockCycles(self.dut.clk_usb, 1)
             for i in range(size):
                 data.append(await self.read_next_byte())
         finally:
@@ -71,14 +75,24 @@ class Registers(object):
         return bytearray(data)
 
     async def read_next_byte(self) -> int:
-        self.dut.USB_RDn.value = 0
-        self.dut.USB_CEn.value = 0
-        await ClockCycles(self.dut.clk_usb, 1)
-        self.dut.USB_CEn.value = 1
-        await ClockCycles(self.dut.clk_usb, 2)
-        rdata = self.dut.USB_Data.value
-        self.dut.USB_RDn.value = 1
-        await ClockCycles(self.dut.clk_usb, 1)
+        if self.fast_read_mode:
+            self.dut.USB_RDn.value = 0
+            self.dut.USB_CEn.value = 0
+            await ClockCycles(self.dut.clk_usb, 1)
+            rdata = self.dut.USB_Data.value
+            self.dut.USB_RDn.value = 1
+            self.dut.USB_CEn.value = 1
+            await ClockCycles(self.dut.clk_usb, 1)
+
+        else:
+            self.dut.USB_RDn.value = 0
+            self.dut.USB_CEn.value = 0
+            await ClockCycles(self.dut.clk_usb, 1)
+            self.dut.USB_CEn.value = 1
+            await ClockCycles(self.dut.clk_usb, 2)
+            rdata = self.dut.USB_Data.value
+            self.dut.USB_RDn.value = 1
+            await ClockCycles(self.dut.clk_usb, 1)
         return rdata
 
     def to_bytes(self, data, size) -> list:

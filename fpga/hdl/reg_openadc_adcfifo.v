@@ -293,7 +293,8 @@ module reg_openadc_adcfifo #(
        // accomodate slower read times on CW310:
        assign fifo_rd_en_condition = reg_read_pipe[4] && ~reg_read_pipe[5];
    `else
-       assign fifo_rd_en_condition = reg_read && ~reg_read_r;
+       // NOTE used to be one cycle earlier but this is safer:
+       assign fifo_rd_en_condition = reg_read_pipe[0] && ~reg_read_pipe[1];
    `endif
    always @(posedge clk_usb) begin
       reg_read_pipe <= {reg_read_pipe[4:0], reg_read};

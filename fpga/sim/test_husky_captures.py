@@ -243,7 +243,14 @@ class ADCCapture(GenericCapture):
             bytes_to_read = math.ceil(samples*1.5)
         else:
             bytes_to_read = samples
+        if random.randint(0,5):
+            # fast reads most of the time (in the interest of simulation time)
+            self.dut._log.info('using FAST read mode for reading ADC samples')
+            await self.harness.fast_read_mode(1)
+        else:
+            self.dut._log.info('using SLOW read mode for reading ADC samples')
         raw = list(await self.harness.registers.read(self.reg_addr['ADCREAD_ADDR'], bytes_to_read))
+        await self.harness.fast_read_mode(0)
         return raw
 
     async def _initiate_read(self) -> None:
@@ -293,6 +300,11 @@ class ADCCapture(GenericCapture):
             self.raw_read_data = await self.read_adc_data(samples, bits_per_sample)
 
         data = self.processHuskyData(samples, bytearray(self.raw_read_data), bits_per_sample)
+        #dataread = 'Data read (%d samples): ' % len(data)
+        #for b in data:
+        #    dataread += '%3x ' % b
+        #dataread += '\n'
+        #self.dut._log.info(dataread)
         return data
 
 
