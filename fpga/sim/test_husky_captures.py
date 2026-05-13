@@ -290,6 +290,9 @@ class ADCCapture(GenericCapture):
                 self.raw_read_data.extend(stream_segment)
                 samples_left -= samples_to_read
                 stream_segment_n += 1
+                # stream_segment_available is updated every 2**6 cycles (see write_cycle_count in fifo_top_husky.v), so wait enough
+                # time for stream_segment_available to get updated before checking it again:
+                await ClockCycles(self.sampling_clock, 2**7)
 
         else:
             downsample = job['downsample']

@@ -36,9 +36,11 @@ class Registers(object):
         self.dut.USB_CEn.value = 1
         self.dut.USB_Addr.value = address
         self.dut.USB_ALEn.value = 0
-        await ClockCycles(self.dut.clk_usb, 1)
+        # NOTE: a single-cycle pulse should do here, but there seems to be a cocotb
+        # bug which sometimes makes a one-cycle pulse disappear?!?
+        await ClockCycles(self.dut.clk_usb, 2)
         self.dut.USB_ALEn.value = 1
-        await ClockCycles(self.dut.clk_usb, 1)
+        await ClockCycles(self.dut.clk_usb, 3)
 
 
     async def write(self, address, data, wait=None) -> None:
@@ -66,8 +68,6 @@ class Registers(object):
         await self.lock.acquire()
         try:
             await self.setup_rw_address(address)
-            if self.fast_read_mode:
-                await ClockCycles(self.dut.clk_usb, 1)
             for i in range(size):
                 data.append(await self.read_next_byte())
         finally:
