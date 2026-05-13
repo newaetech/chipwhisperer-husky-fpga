@@ -143,6 +143,7 @@ module userio #(
                         4: reg_datao_reg = {7'b0, userio_cwdriven[8]};                                                  // ''
                         5: reg_datao_reg = reg_userio_clockout[7:0];                                                    // old USERIO_CLOCK_OUT register
                         6: reg_datao_reg = {7'b0, reg_userio_clockout[8]};                                              // ''
+                        default: reg_datao_reg = 0;
                     endcase
 
                 `USERIO_DRIVE_DATA:          reg_datao_reg = userio_read[reg_bytecnt*8 +: 8];
