@@ -380,8 +380,7 @@ async def capture(dut):
 
     registers = Registers(dut)
     harness = Harness(dut, registers, stream, is_pro, stop_first_error)
-
-
+    registers.fast_fifo_read_addr = harness.reg_addr['FAST_FIFO_READ_MODE']
 
     await harness.initialize_dut()
     if int(os.getenv('NO_DOWNSTREAM_TRIGGERS', 0)):

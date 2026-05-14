@@ -246,11 +246,12 @@ class ADCCapture(GenericCapture):
         if random.randint(0,5):
             # fast reads most of the time (in the interest of simulation time)
             self.dut._log.info('using FAST read mode for reading ADC samples')
-            await self.harness.fast_read_mode(1)
+            await self.harness.registers.fast_read_mode_start()
+            raw = list(await self.harness.registers.read(self.reg_addr['ADCREAD_ADDR'], bytes_to_read, fast_fifo_read=True))
+            await self.harness.registers.fast_read_mode_stop()
         else:
             self.dut._log.info('using SLOW read mode for reading ADC samples')
-        raw = list(await self.harness.registers.read(self.reg_addr['ADCREAD_ADDR'], bytes_to_read))
-        await self.harness.fast_read_mode(0)
+            raw = list(await self.harness.registers.read(self.reg_addr['ADCREAD_ADDR'], bytes_to_read, fast_fifo_read=False))
         return raw
 
     async def _initiate_read(self) -> None:
