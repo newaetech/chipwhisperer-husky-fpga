@@ -692,7 +692,7 @@ class GlitchCapture(GenericCapture):
             if self.harness.is_pro: # offset difference is from USB write timing differences:
                 actual_offset = 0
             else:
-                actual_offset = 3
+                actual_offset = 2
         else:
             actual_offset = job['offset'] + 2
             await FallingEdge(self.sampling_clock) # because incoming trigger to reg_clockglitch.v first gets negedge sampled
