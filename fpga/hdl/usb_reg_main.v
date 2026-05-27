@@ -46,14 +46,17 @@ module usb_reg_main #(
    input  wire [7:0]   reg_datai,    // Data to read
    output reg          reg_read,     // Read flag. One clock cycle AFTER this flag is high
                                      // valid data must be present on the reg_datai bus
-   output reg          reg_write     // Write flag. When high on rising edge valid data is
+   output reg          reg_write,    // Write flag. When high on rising edge valid data is
                                      // present on reg_datao
+   output wire [7:0]   debug
 );
 
 
+   assign debug = {cwusb_alen_r, cwusb_cen, cwusb_wrn, cwusb_wrn_r[0], cwusb_wrn_r[1], reg_write, clk_usb, 1'b0};
+
    reg reg_read_r = 1'b0;
-   reg [1:0] cwusb_wrn_r;
-   reg [1:0] cwusb_alen_r;
+   (*ASYNC_REG = "True" *) reg [1:0] cwusb_wrn_r;
+   (*ASYNC_REG = "True" *) reg [1:0] cwusb_alen_r;
    reg reg_write_dly;
    reg drive_data_out = 1'b0;
    reg fast_fifo_read_r;

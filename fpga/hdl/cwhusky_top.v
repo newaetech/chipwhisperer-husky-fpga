@@ -303,7 +303,8 @@ module cwhusky_top(
       .reg_datao        (write_data), 
       .reg_datai        (read_data),
       .reg_read         (reg_read), 
-      .reg_write        (reg_write) 
+      .reg_write        (reg_write),
+      .debug            (usb_reg_debug)
    );
 
    wire [7:0] usb_debug1 = { USB_RDn,           // D7
@@ -361,6 +362,7 @@ module cwhusky_top(
          .O_slow        (slow_fifo_rd_slow)
       );
 
+      wire [7:0] usb_reg_debug;
       assign userio_debug_data = (userio_fpga_debug_select == 5'b00000)? {glitch_enable,
                                                                          glitchclk,
                                                                          fifo_error_flag,
@@ -401,6 +403,7 @@ module cwhusky_top(
                                  (userio_fpga_debug_select == 5'b01111)? seq_trace_sad_debug2 :
                                  (userio_fpga_debug_select == 5'b10000)? sad_debug :
                                  (userio_fpga_debug_select == 5'b10001)? bb_debug : 8'b0;
+                                 //(userio_fpga_debug_select == 5'b10010)? usb_reg_debug : 8'b0;
 
    `else
       assign userio_debug_data[7:0] = 8'bz;
