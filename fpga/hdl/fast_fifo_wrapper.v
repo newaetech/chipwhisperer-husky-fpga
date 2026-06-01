@@ -26,6 +26,7 @@ module fast_fifo_wrapper (
     input  wire                         wclk,
     input  wire                         rclk,
     input  wire                         rst_n,
+    input  wire                         done_writing,
     input  wire                         flushing,
     input  wire                         reset_internal_count,
     input  wire                         low_res,
@@ -36,7 +37,8 @@ module fast_fifo_wrapper (
     output wire                         overflow,
     input  wire                         fifo_rd,
     output wire [47:0]                  fifo_dout,
-    output wire                         empty,
+    output wire                         empty_usb,
+    output wire                         empty_adc,
     output wire                         almost_empty,
     output wire                         underflow
 );
@@ -81,7 +83,6 @@ module fast_fifo_wrapper (
 
 
     assign full = full_stage1;
-    assign empty = empty_stage2[0];
     assign almost_empty = empty_threshold_stage2[0];
     assign overflow = overflow_stage1 || overflow_stage2[0];
     assign underflow = underflow_stage1 || underflow_stage2[0];
@@ -177,6 +178,108 @@ module fast_fifo_wrapper (
             end
         end
     end
+
+    // read-side empty signal is simply the 2nd FIFO's empty signal;
+    // it accurately reflects whether data is available to be read; note that 
+    // it does NOT mean or imply that the 1st FIFO is empty!
+    assign empty_usb = empty_stage2[0];
+
+    // The write-side empty flag *conservately* indicates whether all the
+    // FIFOs here are well and truly empty. It is OK to show "not empty" when
+    // it is, but not vice-versa.
+    // 
+    // This is tricky to get right, due to the two-stage architecture.
+    // Consider this scenario where we could declare the FIFOs empty when they
+    // are actually not:
+    // - stage1 is no longer being written (the full capture or the segment is done)
+    // - stage2 is read and is about to go empty
+    // - but stage1 had one entry left; we don't know this because there is no "almost empty" flag available
+    // - this triggers one more write to stage2, and so (after CDC delays) it
+    //   will no longer be empty, and it gets read one last time
+    // - the problem happens if that last read, which triggers a slow FIFO
+    //   write, comes after (or at the same time) as the save_offset write:
+    //   this makes things out of whack.
+    //
+    // If you're not convinced, try this in a regression and you *will* see
+    // failures!
+    // assign empty_adc = empty_stage2[0];  to induce errors!
+    //
+    // We use a simple FSM to construct our conservative empty flag. CDC
+    // to-and-from the USB clock domain is key. This is quite conservative;
+    // empty_adc is slow to go high, but that's quite alright (the only cost
+    // to this is that segments can't be as close together as they possibly
+    // could, but that is a rather degenerate use case anyhow).
+
+    localparam pS_EMPTY_NOT = 0;
+    localparam pS_EMPTY_WAIT = 1;
+    localparam pS_EMPTY_DONE = 2;
+    reg [1:0] empty_state = pS_EMPTY_NOT;
+
+    reg empty_adc_reg = 1'b0;
+    reg empty_pulse = 1'b0;
+    wire empty_pulse_rclk;
+    wire empty_pulse_back;
+    wire empty_stage2_adc;
+    assign empty_adc = empty_adc_reg;
+
+    localparam pDONE_WRITING_DELAY = 4;
+    reg [pDONE_WRITING_DELAY-1:0] done_writing_pulse = {pDONE_WRITING_DELAY{1'b0}};
+    always @(posedge wclk) done_writing_pulse <= {done_writing_pulse[pDONE_WRITING_DELAY-2:0], done_writing};
+
+    always @(posedge wclk) begin
+        case (empty_state)
+            pS_EMPTY_NOT: begin
+                empty_adc_reg <= 1'b0;
+                if (done_writing_pulse[pDONE_WRITING_DELAY-1] && empty_stage1 && empty_stage2_adc) begin
+                    empty_state <= pS_EMPTY_WAIT;
+                    empty_pulse <= 1'b1;
+                end
+            end
+
+            pS_EMPTY_WAIT: begin
+                empty_pulse <= 1'b0;
+                if (fifo_wr) begin // should not happen under normal use! (but might)
+                    empty_adc_reg <= 1'b0;
+                    empty_state <= pS_EMPTY_NOT;
+                end
+                else if (empty_pulse_back)
+                    empty_state <= pS_EMPTY_DONE;
+            end
+
+            pS_EMPTY_DONE: begin
+                empty_adc_reg <= 1'b1;
+                if (fifo_wr) begin
+                    empty_adc_reg <= 1'b0;
+                    empty_state <= pS_EMPTY_NOT;
+                end
+            end
+        endcase
+    end
+
+    cdc_pulse U_empty_pulse_cdc (
+       .reset_i       (!rst_n),
+       .src_clk       (wclk),
+       .src_pulse     (empty_pulse),
+       .dst_clk       (rclk),
+       .dst_pulse     (empty_pulse_rclk)
+    );
+
+    cdc_pulse U_empty_pulse_back_cdc (
+       .reset_i       (!rst_n),
+       .src_clk       (rclk),
+       .src_pulse     (empty_pulse_rclk),
+       .dst_clk       (wclk),
+       .dst_pulse     (empty_pulse_back)
+    );
+
+    cdc_simple U_empty2_cdc (
+        .reset          (!rst_n),
+        .clk            (wclk),
+        .data_in        (empty_stage2[0]),
+        .data_out       (empty_stage2_adc),
+        .data_out_r     ()
+    );
+
 
 
 

@@ -283,6 +283,7 @@ module fifo_top_husky(
     // write-side FSM (fast ADC clock):
     // controls writing the first stage of the storage FIFOs
     reg save_offset = 1'b0;
+    reg done_writing = 1'b0;
     always @ (posedge adc_sampleclk) begin
        if (reset) begin
           state <= pS_IDLE;
@@ -309,6 +310,7 @@ module fifo_top_husky(
                 segment_error <= 1'b0;
                 fsm_fast_wr_en <= 1'b0;
                 reset_fast_fifo_internal_count <= 1'b0;
+                done_writing <= 1'b0;
 
                 // TODO: it's really not necessary to capture this error - it's a 
                 // waste of logic and error bits
@@ -359,6 +361,8 @@ module fifo_top_husky(
                    state <= pS_DONE;
                 end
                 else if (presamp_done) begin
+                   if (state_r != pS_PRESAMP_FULL)
+                       segment_error <= 1'b1;
                    segment_cycle_counter <= 0;
                    sample_counter <= presample_i;
                    state <= pS_TRIGGERED;
@@ -376,11 +380,13 @@ module fifo_top_husky(
                     adc_capture_stop <= 1'b1;
                     done_wait_count <= 10;  // established by trial/error to account for the latency in the Xilinx FIFO updating its empty flag; TODO: check/update?
                     fsm_fast_wr_en <= 1'b0;
+                    done_writing <= 1'b1;
                     state <= pS_DONE;
                 end
 
                 else if (last_sample && ~last_segment && fast_fifo_wr) begin
                    fsm_fast_wr_en <= 1'b0;
+                   done_writing <= 1'b1;
                    state <= pS_SEGMENT_DONE;
                 end
 
@@ -397,7 +403,7 @@ module fifo_top_husky(
                    reset_fast_fifo_internal_count <= 1'b1;
                    state <= pS_IDLE;
                 end
-                else if (fast_fifo_empty && !slow_fifo_full_adc) begin
+                else if (fast_fifo_empty_adc && !slow_fifo_full_adc) begin
                    if (presample_i > 0) begin
                       segment_counter <= segment_counter + 1;
                       sample_counter <= 0;
@@ -431,7 +437,7 @@ module fifo_top_husky(
                 // serves two purposes:
                 // 1. wait for the fast FIFO to empty (and for the slow FIFO to have space for the offset word)
                 // 2. wait state so that we don't get back out of idle right away
-                if (fast_fifo_empty && !slow_fifo_full_adc && (done_wait_count == 0)) begin
+                if (fast_fifo_empty_adc && !slow_fifo_full_adc && (done_wait_count == 0)) begin
                    save_offset <= 1'b1;
                    state <= pS_IDLE;
                 end
@@ -898,15 +904,20 @@ module fifo_top_husky(
                           (fast_fifo_rd_en && !slow_fifo_full && !fast_fifo_empty) ||
                           (flushing && !fast_fifo_empty);
 
+    // checked by testbench:
+    wire debug_illegal_fast_fifo_rd = fast_fifo_rd && (state == pS_SAVE_OFFSET);
+
     // strictly for easier debugging:
-    wire all_fifos_empty = fast_fifo_empty | slow_fifo_empty;
+    wire all_fifos_empty = fast_fifo_empty_adc | slow_fifo_empty;
     wire all_fifos_full  = fast_fifo_full  & slow_fifo_full;
     wire any_fifo_overunder = fast_fifo_underflow | fast_fifo_overflow | slow_fifo_underflow | slow_fifo_overflow;
 
+    wire fast_fifo_empty_adc;
     fast_fifo_wrapper U_fast_fifo_wrapper (
         .wclk                   (adc_sampleclk),
         .rclk                   (clk_usb),
         .rst_n                  (~reset),
+        .done_writing           (done_writing),
         .flushing               (flushing),
         .reset_internal_count   (reset_fast_fifo_internal_count),
         .low_res                (low_res),
@@ -917,7 +928,8 @@ module fifo_top_husky(
         .overflow               (fast_fifo_overflow),
         .fifo_rd                (fast_fifo_rd),
         .fifo_dout              (fast_fifo_dout),
-        .empty                  (fast_fifo_empty),
+        .empty_usb              (fast_fifo_empty),
+        .empty_adc              (fast_fifo_empty_adc),
         .almost_empty           (fast_fifo_almost_empty),
         .underflow              (fast_fifo_underflow)
     );

@@ -294,7 +294,6 @@ class ADCCapture(GenericCapture):
             downsample = job['downsample']
             # if capture is downsampled, we could read it too fast and underflow:
             if downsample > 1:
-                # TODO: any tweaks required here?
                 await ClockCycles(self.sampling_clock, math.ceil(samples * downsample * bits_per_sample/8))
             self.raw_read_data = await self.read_adc_data(bytes_to_read)
 
@@ -341,7 +340,8 @@ class ADCCapture(GenericCapture):
         self.dut._log.info('Raw read data: %s' % (list(data)))
 
         if list(data[-5:]) != [0xff]*5:
-            self.dut._log.warning('Unexpected offset word: %s' % data[-6:])
+            self.dut._log.error('Unexpected offset word: %s' % data[-6:])
+            self.harness.inc_error()
             offset = 0
         else:
             offset = data[-6]

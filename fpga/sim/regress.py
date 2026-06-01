@@ -103,6 +103,7 @@ tests.append(dict(name  = 'all_capture_no_downstream',
              description = 'All sources capture, no downstream triggers.'))
 
 tests.append(dict(name  = 'big_capture',
+             # TODO: need to update this testcase for new architecture
              testcase = 'capture',
              frequency = 4,
              MIN_SIZE = 300,
@@ -111,17 +112,25 @@ tests.append(dict(name  = 'big_capture',
              description = 'All sources, larger captures.'))
 
 tests.append(dict(name  = 'huge_adc_capture',
+             # TODO: need to update this testcase for new architecture
              testcase = 'capture',
              frequency = 7,
              # note: max_size will get adjusted down if not pro
-             MIN_SIZE = 12000,
-             MAX_SIZE = 12100,
+             # TODO: max for 8-bit is 12800... also; adjust to actual limits
+             MIN_SIZE = 8604,
+             MAX_SIZE = 8704,
              NUM_CAPTURES = 1,
              LA_CAPTURE = 0,
              TRACE_CAPTURE = 0,
              GLITCH_CAPTURE = 0,
              FIFOSIZE = "TINYFIFO",
              # with TINY FIFO, for ADC we have:
+             # fast1: 512 
+             # fast2: 1024*4
+             # slow1: 512*4
+             # slow2: 512*4
+             # TOTAL: 8704 (8-bit: 12800)
+             #
              # fast FIFO: 1024 samples
              # pre DDR: 512*64/12 = 2730 samples
              # post DDR: 512*64/12 = 2730 samples
@@ -139,7 +148,7 @@ tests.append(dict(name  = 'adc_stream_regular',
              GLITCH_CAPTURE = 0,
              STREAM = 1,
              FIFOSIZE = "TINYFIFO",
-             VARIANT = 'regular', # will only run with --variant=regular
+             VARIANT = 'plus', # TODO: do we want to specify a variant here? used to be "regular"...
              TIMEOUT_TIME = 10000,
              description = 'ADC-only stream capture (regular Husky only).'))
 
@@ -153,7 +162,7 @@ tests.append(dict(name  = 'adc_concurrent_stream_regular',
              TRACE_CAPTURE = 1,
              STREAM = 1,
              FIFOSIZE = "TINYFIFO",
-             VARIANT = 'regular', # will only run with --variant=regular
+             VARIANT = 'regular', # will only run with --variant=regular; TODO: as adc_stream_regular?
              TIMEOUT_TIME = 15000,
              description = 'ADC stream capture plus other sources (regular Husky only).'))
 

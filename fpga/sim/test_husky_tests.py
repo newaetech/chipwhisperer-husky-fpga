@@ -310,7 +310,7 @@ class GenericTest(object):
             timeout = self.harness.max_job_times()
             self.dut._log.info('%12s kicking off _wait_capture_done() timer for %d us...' % (job_name, timeout))
             try:
-                await with_timeout(self._wait_capture_done(job), timeout*4, 'us') # TODO-temp (timeout multiplier)
+                await with_timeout(self._wait_capture_done(job), timeout, 'us')
             except:
                 raise SimTimeoutError('%12s timed out on _wait_capture_done()' % job_name)
             self.harness.queue_get(self.name)
@@ -343,24 +343,17 @@ class ADCTest(GenericTest):
         if harness.is_pro:
             ddr_watch_thread = cocotb.start_soon(self.ddr_model_watch())
         trigger_watch_thread = cocotb.start_soon(self.trigger_ready_watch())
+        save_offset_watch_thread = cocotb.start_soon(self.save_offset_watch())
+
         self.allowed_downstream_triggers = ['LA', 'trace', 'glitch']
 
     async def _job_setup(self) -> dict:
-        #samples = random.randint(self.capture_min, self.capture_max)
-        #samples = 8704
-        #samples = 12790
-        #samples = random.randint(60, 72)
-        samples = 2048
+        samples = random.randint(self.capture_min, self.capture_max)
         if random.randint(0,3) == 0 or self.max_presamples == 0:
             presamples = 0  # no presamples a quarter of the time
         else:
-            # TODO: presamples must now be multiple of 4! hmmm no...
-            presamples = random.randint(8, min(self.max_presamples, samples-2)) # DUT doesn't allow for 1-7 presamples, and samples must be at least 2 more than presamples; TODO: restrictions have changed- anything other than 1 should be ok now? regress to confirm and update
+            presamples = random.randint(2, min(self.max_presamples, samples)) # only restriction on presamples is that it can't be 1 (and, obviously, can't be greater than samples)
             self.dut._log.info('setting presamples to %d because samples=%d, min=%d' % (presamples, samples, min(self.max_presamples, samples-2)))
-        #presamples = 31 # TODO- temporary!
-        presamples = random.randint(20, 32)
-        #presamples = 27 # TODO-NOW:TEMP!
-        #presamples = 0
         if random.randint(0,3) == 0:
             offset = 0  # no offset a quarter of the time
         else:
@@ -369,50 +362,6 @@ class ADCTest(GenericTest):
             bits_per_sample = 12
         else:
             bits_per_sample = 8
-        bits_per_sample = 12 # TODO-NOW:TEMP!
-
-        #segments = random.randint(1, self.max_segments)
-        segments = 2
-        #segments = 4
-        segment_cycles = 0
-        segment_counter_en = 0
-        segment_times = []
-        capture_samples_time = samples + offset
-        if segments > 1:
-            #segment_counter_en = random.randint(0,1)
-            segment_counter_en = 0
-            if segment_counter_en:
-                # NOTE: this is pessimistic (one segment doesn't last samples+offset+presamples); may want to tighten this?
-                if samples+1+offset+presamples >= samples+self.max_segment_cycles:
-                    segments = 1
-                else:
-                    # TODO: readjust minimum boundary!
-                    #segment_cycles = random.randint(samples+1+offset+2*presamples, samples+self.max_segment_cycles)
-                    segment_cycles = 512
-                    #segment_cycles = 116
-                    capture_samples_time = segment_cycles * segments
-            else:
-                for i in range(segments-1):
-                    min_wait_samples = samples + presamples + offset + 1
-                    wait_samples = random.randint(min_wait_samples, min_wait_samples*self.segment_time_factor)
-                    segment_times.append(wait_samples)
-                    capture_samples_time += wait_samples
-            # TODO-segments: surely needs tweaking - or simply no longer needed?
-            #if presamples > 0 and not self.harness.is_pro and samples % 3:
-            #    if samples < 3:
-            #        samples = 3
-            #    else:
-            #        samples -= (samples %3)
-            #if samples - presamples < 2: # in case we adjusted samples into an invalid number of presamples, correct it
-            #    presamples = samples - 2
-        if random.randint(0,1) or presamples or segments > 1:
-            downsample = 1  # downsamples with presamples or segments is not allowed; TODO: can we add it at low cost/effort?
-        else:
-            downsample = random.randint(1, self.max_downsample)
-        if self.stream:
-            stream_segment_threshold = random.randint(256, 1024)
-            await self.registers.write(self.reg_addr['STREAM_SEGMENT_THRESHOLD'], self.registers.to_bytes(stream_segment_threshold, 3))
-            await self.registers.write(self.reg_addr['SETTINGS_ADDR'], [0x24 + (1<<4)])
 
         # calculate the actual number of samples that will be collected per segment:
         # 1. account for worst-case offset:
@@ -443,7 +392,45 @@ class ADCTest(GenericTest):
         if mod:
             samples_to_collect += mod_op - mod
 
-        # finally, in support of streaming, calculate the total number of bytes that will be read:
+        segments = random.randint(1, self.max_segments)
+        segment_cycles = 0
+        segment_counter_en = 0
+        segment_times = []
+        capture_samples_time = samples + offset
+        # This is not exact or tight! In particular the actual minimum time depends on the ADC clock,
+        # which we don't account for here. Errors from too-close segments are easy to identify:
+        # you'll get a segment and/or presample error; a quick look at the waveform can confirm that
+        # the design is working as intended.
+        min_wait_segment_samples = offset + samples_to_collect + 80
+        # when there are "enough" presamples, the presample filling stage gives us more time:
+        if presamples < 32:
+            min_wait_segment_samples += 20
+
+        if segments > 1:
+            segment_counter_en = random.randint(0,1)
+            if segment_counter_en:
+                # NOTE: this is pessimistic (one segment doesn't last samples+offset+presamples); may want to tighten this?
+                # TODO: adjust as per below!
+                if min_wait_segment_samples >= self.max_segment_cycles:
+                    segments = 1
+                else:
+                    segment_cycles = random.randint(min_wait_segment_samples, self.max_segment_cycles)
+                    capture_samples_time = segment_cycles * segments
+            else:
+                for i in range(segments-1):
+                    wait_samples = random.randint(min_wait_segment_samples, min_wait_segment_samples*self.segment_time_factor)
+                    segment_times.append(wait_samples)
+                    capture_samples_time += wait_samples
+        if random.randint(0,1) or presamples:
+            downsample = 1  # downsamples with presamples doesn't make sense
+        else:
+            downsample = random.randint(1, self.max_downsample)
+        if self.stream:
+            stream_segment_threshold = random.randint(256, 1024)
+            await self.registers.write(self.reg_addr['STREAM_SEGMENT_THRESHOLD'], self.registers.to_bytes(stream_segment_threshold, 3))
+            await self.registers.write(self.reg_addr['SETTINGS_ADDR'], [0x24 + (1<<4)])
+
+        # in support of streaming, calculate the total number of bytes that will be read:
         streaming_bytes_to_read = bytes_to_read * segments
 
         samples_combo = (streaming_bytes_to_read << 64) + (samples << 32) + samples_to_collect
@@ -598,6 +585,15 @@ class ADCTest(GenericTest):
             self.dut._log.error('Trigger before armed_and_ready! (testbench error)')
             self.harness.inc_error()
 
+    async def save_offset_watch(self) -> None:
+        # A tricky part of the new fast_fifo_wrapper.v design is determining when the FIFO is actually empty;
+        # getting this wrong risks clobbering the offset write from fifo_top_husky.v (or having it in the wrong order)
+        # To ensure there is no risk of that happening, we check that when in the pS_SAVE_OFFSET state, the
+        # fast FIFO is never read:
+        while True:
+            await RisingEdge(self.dut.U_dut.oadc.U_fifo.debug_illegal_fast_fifo_rd)
+            self.dut._log.error('illegal_fast_fifo_rd: fast FIFO was read (and thus not empty) in the SAVE_OFFSET state!')
+            self.harness.inc_error()
 
     def get_downstream_trigger(self, job) -> list:
         # Randomly choose the number of *potential* downstream triggers, up to and including all possible downstream triggers.
