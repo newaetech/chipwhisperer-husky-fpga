@@ -313,9 +313,9 @@ module fifo_top_husky(
                 end
 
                 if (no_gain_errors || clear_fifo_errors)
-                    logain_lores[j] <= 1'b0;
+                    logain_hires[j] <= 1'b0;
                 else if (capture_go)
-                    logain_lores[j] <= 1'b1;
+                    logain_hires[j] <= 1'b1;
                 else if (slow_fifo_din[(j*12)+11]? slow_fifo_din[(j*12)+9+:2] != 2'b00 : slow_fifo_din[(j*12)+8+:3] != 3'b111)
                     logain_hires[j] <= 1'b1;
                 else
