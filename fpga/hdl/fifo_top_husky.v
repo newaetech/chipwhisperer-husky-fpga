@@ -133,7 +133,6 @@ module fifo_top_husky(
     reg                 segment_error;
     reg                 clip_error;
     reg                 gain_too_low;
-    reg                 downsample_error;
     wire                clear_fifo_errors_adc;
 
     reg [31:0]          read_count;
@@ -292,7 +291,6 @@ module fifo_top_husky(
           adc_capture_stop <= 1'b0;
           segment_counter <= 0;
           segment_cycle_counter <= 0;
-          downsample_error <= 1'b0;
           segment_error <= 1'b0;
        end
 
@@ -311,14 +309,6 @@ module fifo_top_husky(
                 fsm_fast_wr_en <= 1'b0;
                 reset_fast_fifo_internal_count <= 1'b0;
                 done_writing <= 1'b0;
-
-                // TODO: it's really not necessary to capture this error - it's a 
-                // waste of logic and error bits
-                //if ((downsample_i > 0) && ((presample_i > 0) || (num_segments > 1)))
-                if ((downsample_i > 0) && (presample_i > 0))
-                   downsample_error <= 1'b1;
-                else
-                   downsample_error <= 1'b0;
 
                 if (armed_and_ready && ~adc_capture_stop) begin
                    if (presample_i > 0) begin
@@ -572,7 +562,7 @@ module fifo_top_husky(
           if (trigger_too_soon)                 error_bits[9] = 1'b1;
           if (gain_error)                       error_bits[8] = 1'b1;
           if (segment_error)                    error_bits[7] = 1'b1;
-          if (downsample_error)                 error_bits[6] = 1'b1;
+          // note: this position is unused      error_bits[6] = 1'b1;
           if (clip_error)                       error_bits[5] = 1'b1;
           if (presamp_error)                    error_bits[4] = 1'b1;
           if (fast_fifo_overflow)               error_bits[3] = 1'b1;
@@ -599,7 +589,7 @@ module fifo_top_husky(
              first_error_state <= pS_IDLE;
           end
           else begin
-             if (gain_error || segment_error || downsample_error || clip_error || presamp_error || 
+             if (gain_error || segment_error || clip_error || presamp_error || 
                  fast_fifo_overflow || fast_fifo_underflow || slow_fifo_overflow || slow_fifo_underflow_masked_adc) begin
                 error_flag <= 1;
                 if (!error_flag) begin

@@ -563,7 +563,7 @@ class ADCTest(GenericTest):
             if error_value & 2**9 : error_message += "trigger_too_soon_error "
             if error_value & 2**8 : error_message += "gain_error "
             if error_value & 2**7 : error_message += "segment_error "
-            if error_value & 2**6 : error_message += "downsample_error "
+            #if error_value & 2**6 : NOTE: unused position
             if error_value & 2**5 : error_message += "clip_error "
             if error_value & 2**4 : error_message += "presamp_error "
             if error_value & 2**3 : error_message += "fast_fifo_overflow"
