@@ -133,10 +133,10 @@ module fifo_top_husky(
     reg                 slow_fifo_underflow_masked;
 
     reg  [3:0]          done_wait_count;
-    reg                 gain_error;
+    reg                 gain_error = 1'b0;
     reg                 segment_error;
-    reg                 clip_error;
-    reg                 gain_too_low;
+    reg                 clip_error = 1'b0;
+    reg                 gain_too_low = 1'b0;
     wire                clear_fifo_errors_adc;
 
     reg [31:0]          read_count;
@@ -270,38 +270,72 @@ module fifo_top_husky(
     end
 
 
-    // TODO: re-write clip detection
-    /*
-    always @ (posedge adc_sampleclk) begin
-        if (reset) begin
+    // gain errors:
+    genvar i, j;
+    reg [5:0] clip_lores;
+    reg [4:0] clip_hires;
+    reg [5:0] logain_lores;
+    reg [4:0] logain_hires;
+    generate
+        for (i = 0; i < 6; i = i + 1) begin: clip_gen_lores
+            always @(posedge clk_usb) begin
+                if (clear_fifo_errors)
+                    clip_lores[i] <= 1'b0;
+                else if (slow_fifo_wr && low_res) begin
+                    if (slow_fifo_din[i*8+:8] == {8'h00} || slow_fifo_din[i*8+:8] == {8'hFF})
+                        clip_lores[i] <= 1'b1;
+                    else
+                        clip_lores[i] <= 1'b0;
+                end
+
+                if (no_gain_errors || clear_fifo_errors)
+                    logain_lores[i] <= 1'b0;
+                else if (capture_go)
+                    logain_lores[i] <= 1'b1;
+                else if (slow_fifo_din[(i*8)+7]? slow_fifo_din[(i*8)+5+:2] != 2'b00 : slow_fifo_din[(i*8)+4+:3] != 3'b111)
+                    logain_lores[i] <= 1'b0;
+                else
+                    logain_lores[i] <= 1'b1;
+            end
+        end
+    endgenerate
+
+    generate
+        for (j = 0; j < 4; j = j + 1) begin: clip_gen_hires
+            always @(posedge clk_usb) begin
+                if (clear_fifo_errors)
+                    clip_hires[j] <= 1'b0;
+                else if (slow_fifo_wr && ~low_res) begin
+                    if (slow_fifo_din[j*12+:12] == {12'h000} || slow_fifo_din[j*12+:12] == {12'hFFF})
+                        clip_hires[j] <= 1'b1;
+                    else
+                        clip_hires[j] <= 1'b0;
+                end
+
+                if (no_gain_errors || clear_fifo_errors)
+                    logain_lores[j] <= 1'b0;
+                else if (capture_go)
+                    logain_lores[j] <= 1'b1;
+                else if (slow_fifo_din[(j*12)+11]? slow_fifo_din[(j*12)+9+:2] != 2'b00 : slow_fifo_din[(j*12)+8+:3] != 3'b111)
+                    logain_hires[j] <= 1'b1;
+                else
+                    logain_hires[j] <= 1'b0;
+            end
+        end
+    endgenerate
+
+    always @ (posedge clk_usb) begin
+        if (no_clip_errors || clear_fifo_errors)
             clip_error <= 1'b0;
-            gain_too_low <= 1'b0;
+        else if ((low_res)? |clip_lores : |clip_hires)
+            clip_error <= 1'b1;
+
+        if (no_gain_errors || clear_fifo_errors)
             gain_error <= 1'b0;
-        end
-        else begin
-            if (no_clip_errors || clear_fifo_errors_adc)
-                clip_error <= 1'b0;
-            else if (slow_fifo_wr && ( (slow_fifo_din[11:0]  == {12{1'b1}} || slow_fifo_din[11:0]  == {12{1'b0}}) ||
-                                       (slow_fifo_din[23:12] == {12{1'b1}} || slow_fifo_din[23:12] == {12{1'b0}}) ||
-                                       (slow_fifo_din[35:24] == {12{1'b1}} || slow_fifo_din[35:24] == {12{1'b0}}) ) )
-                clip_error <= 1'b1;
-
-            if (no_gain_errors || clear_fifo_errors_adc)
-                gain_too_low <= 1'b0;
-            else if (capture_go)
-                gain_too_low <= 1'b1;
-            else if (slow_fifo_wr && ( (slow_fifo_din[11]? slow_fifo_din[10:9]  != 2'b00 : slow_fifo_din[10:8]  != 3'b111) ||
-                                       (slow_fifo_din[23]? slow_fifo_din[22:21] != 2'b00 : slow_fifo_din[22:20] != 3'b111) ||
-                                       (slow_fifo_din[35]? slow_fifo_din[34:33] != 2'b00 : slow_fifo_din[34:32] != 3'b111) ) )
-                gain_too_low <= 1'b0;
-
-            if (no_gain_errors || clear_fifo_errors_adc)
-                gain_error <= 1'b0;
-            else if ((state == pS_IDLE) && (state_r == pS_DONE) && gain_too_low)
-                gain_error <= 1'b1;
-        end
+        else if ((state == pS_IDLE) && (state_r == pS_DONE) && ((low_res)? |logain_lores : |logain_hires))
+            gain_error <= 1'b1;
     end
-    */
+
 
     // write-side FSM (fast ADC clock):
     // controls writing the first stage of the storage FIFOs
