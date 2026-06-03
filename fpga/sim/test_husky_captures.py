@@ -243,9 +243,17 @@ class ADCCapture(GenericCapture):
         self.sample_increment = 1
 
     async def read_adc_data(self, bytes_to_read):
-        self.dut._log.info("reading %d bytes" % bytes_to_read)
-        raw = list(await self.harness.registers.read(self.reg_addr['ADCREAD_ADDR'], bytes_to_read))
+        if random.randint(0,5):
+            # fast reads most of the time (in the interest of simulation time)
+            self.dut._log.info('using FAST read mode for reading ADC samples (%d bytes)' % bytes_to_read)
+            await self.harness.registers.fast_read_mode_start()
+            raw = list(await self.harness.registers.read(self.reg_addr['ADCREAD_ADDR'], bytes_to_read, fast_fifo_read=True))
+            await self.harness.registers.fast_read_mode_stop()
+        else:
+            self.dut._log.info('using SLOW read mode for reading ADC samples (%d bytes)' % bytes_to_read)
+            raw = list(await self.harness.registers.read(self.reg_addr['ADCREAD_ADDR'], bytes_to_read, fast_fifo_read=False))
         return raw
+
 
     async def _initiate_read(self) -> None:
         #self.dut._log.info("issuing initiate read command...")
@@ -289,6 +297,9 @@ class ADCCapture(GenericCapture):
                 self.raw_read_data.extend(stream_segment)
                 bytes_left -= read_chunk_size
                 stream_segment_n += 1
+                # stream_segment_available is updated every 2**6 cycles (see write_cycle_count in fifo_top_husky.v), so wait enough
+                # time for stream_segment_available to get updated before checking it again:
+                await ClockCycles(self.sampling_clock, 2**7)
 
         else:
             downsample = job['downsample']
@@ -722,7 +733,7 @@ class GlitchCapture(GenericCapture):
             if self.harness.is_pro: # offset difference is from USB write timing differences:
                 actual_offset = 0
             else:
-                actual_offset = 3
+                actual_offset = 2
         else:
             actual_offset = job['offset'] + 2
             await FallingEdge(self.sampling_clock) # because incoming trigger to reg_clockglitch.v first gets negedge sampled

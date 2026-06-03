@@ -44,72 +44,64 @@ module usb_reg_main #(
    output reg  [pBYTECNT_SIZE-1:0]  reg_bytecnt,  // Current byte count
    output reg  [7:0]   reg_datao,    // Data to write
    input  wire [7:0]   reg_datai,    // Data to read
-   output wire         reg_read,     // Read flag. One clock cycle AFTER this flag is high
+   output reg          reg_read,     // Read flag. One clock cycle AFTER this flag is high
                                      // valid data must be present on the reg_datai bus
-   output reg          reg_write     // Write flag. When high on rising edge valid data is
+   output reg          reg_write,    // Write flag. When high on rising edge valid data is
                                      // present on reg_datao
+   output wire [7:0]   debug
 );
 
 
-   reg isoutreg = 1'b0;
-   reg isoutregdly = 1'b0;
-   reg cwusb_wrn_rs, cwusb_wrn_rs_dly;
-   reg cwusb_cen_r;
-   reg cwusb_alen_r;
+   assign debug = {cwusb_alen_r, cwusb_cen, cwusb_wrn, cwusb_wrn_r[0], cwusb_wrn_r[1], reg_write, clk_usb, 1'b0};
+
+   reg reg_read_r = 1'b0;
+   (*ASYNC_REG = "True" *) reg [1:0] cwusb_wrn_r;
+   (*ASYNC_REG = "True" *) reg [1:0] cwusb_alen_r;
    reg reg_write_dly;
    reg drive_data_out = 1'b0;
    reg fast_fifo_read_r;
 
    // note: could possibly be simplified, and delays reduced?
    always @(posedge clk_usb) begin
-      isoutreg <= ~cwusb_rdn;
-      isoutregdly <= isoutreg;
-
-      cwusb_alen_r <= cwusb_alen;
-      cwusb_cen_r <= cwusb_cen;
-
-      cwusb_wrn_rs <= cwusb_wrn;
-      cwusb_wrn_rs_dly <= cwusb_wrn_rs;
-      reg_write <= cwusb_wrn_rs & ~cwusb_wrn_rs_dly;
-   end
-
-
-   assign reg_read = isoutreg;
-   assign cwusb_dout = reg_datai;
-
-   //Don't immediatly turn off output drivers
-   assign cwusb_isout = isoutreg | isoutregdly | (drive_data_out & cwusb_wrn_rs);
-
-   // for fast FIFO reading, we need to talk hold of the data bus; we only
-   // give it up when we see a write start:
-   always @(posedge clk_usb) begin
+      reg_read <= ~cwusb_rdn;
+      reg_read_r <= reg_read;
       fast_fifo_read_r <= fast_fifo_read;
-      reg_address <= cwusb_addr;
+      cwusb_alen_r <= {cwusb_alen_r[0], cwusb_alen};
+      cwusb_wrn_r <= {cwusb_wrn_r[0], cwusb_wrn};
 
-      // Used to consider only cwusb_wrn_rs and cwusb_cen; then proper
-      // register read/write started failing on a frequent number of bitfiles.
-      // Wasn't able to confirm (with ILAs) that this was the issue, but after
-      // adding cwusb_cen_r no more "bad bitfiles" were encountered:
-      if (~cwusb_wrn_rs & (~cwusb_cen | ~cwusb_cen_r))
-         reg_datao <= cwusb_din;
+      if (~cwusb_wrn_r[1] && cwusb_wrn_r[0]) begin
+          reg_write <= 1'b1;
+          reg_datao <= cwusb_din;
+      end
+      else
+          reg_write <= 1'b0;
 
-      if (~cwusb_wrn_rs)
+      if ((pUSE_ALE)? !cwusb_alen_r[1] : !cwusb_cen)
+          reg_address <= cwusb_addr;
+
+      // for fast FIFO reading, we need to keep hold of the data bus; we only
+      // give it up when we see a write start:
+      if (~cwusb_wrn)
          drive_data_out <= 1'b0;
       else if (fast_fifo_read & ~fast_fifo_read_r)
          drive_data_out <= 1'b1;
    end
 
-   // Byte count block. We need to increment after a read or after a write
-   always @(posedge clk_usb) reg_write_dly <= reg_write;
+   assign cwusb_dout = reg_datai;
 
+   // control timing of when we drive the data bus; two cases:
+   assign cwusb_isout = reg_read | reg_read_r |        // 1. regular reads: delay turning off output drivers
+                        (drive_data_out & cwusb_wrn);  // 2. fast reads: as long as wrn stays high
+
+   // Byte count block. We need to increment after a read or after a write
    always @(posedge clk_usb) begin
+      reg_write_dly <= reg_write;
       if (reset)
          reg_bytecnt <= 0;
-      else if (pUSE_ALE? ~cwusb_alen_r : (reg_address != cwusb_addr)) begin
+      else if ((pUSE_ALE)? ~cwusb_alen_r[1] : (reg_address != cwusb_addr)) begin
          reg_bytecnt <= 0;
-      end else if ((isoutregdly & !isoutreg) || (reg_write_dly) ) begin
-         //roll-over is allowed (only access to use it is FIFO read, where we
-         //only look at reg_bytecnt % 4)
+      end else if ((reg_read_r & !reg_read) || (reg_write_dly) ) begin
+         //roll-over is allowed (only access to use it is FIFO read, where we only look at reg_bytecnt % 4)
          reg_bytecnt <= reg_bytecnt + 1;
       end
    end

@@ -76,7 +76,7 @@ module reg_openadc #(
    input  wire [31:0] maxsamples_i,
    output wire [12:0] downsample_o,
    output wire        fifo_stream,
-   output reg  [1:0]  led_select,
+   output reg  [2:0]  led_select,
    output reg         no_clip_errors,
    output reg         no_gain_errors,
 
@@ -109,6 +109,7 @@ module reg_openadc #(
    reg [7:0]  registers_gain;
    reg [7:0]  registers_settings = 8'b0010_0100;
    reg [63:0]  registers_echo;
+   reg [31:0] sam3u_wr_debug = 32'd0;
    reg [15:0] registers_downsample;
    reg [31:0] registers_advclocksettings;
    wire [31:0] registers_advclocksettings_read;
@@ -171,6 +172,7 @@ module reg_openadc #(
                 `SETTINGS_ADDR: reg_datao_reg = registers_settings;
                 `STATUS_ADDR: reg_datao_reg = status; 
                 `ECHO_ADDR: reg_datao_reg = registers_echo[reg_bytecnt*8 +: 8];
+                `REG_SAM3U_WR_DEBUG: reg_datao_reg = sam3u_wr_debug[reg_bytecnt*8 +: 8];
                 `EXTFREQ_ADDR: reg_datao_reg = registers_extclk_frequency[reg_bytecnt*8 +: 8]; 
                 `ADCFREQ_ADDR: reg_datao_reg = registers_adcclk_frequency[reg_bytecnt*8 +: 8]; 
                 `VERSION_ADDR: reg_datao_reg = version_data[reg_bytecnt*8 +: 8];
@@ -205,7 +207,7 @@ module reg_openadc #(
       if (reset) begin
          registers_gain <= 0;
          registers_settings <= 8'b0010_0100; // default to trigger on rising edge
-         registers_echo <= 0;
+         registers_echo <= 64'h1234_5678_9abc_def0; // known value for sanity check
          registers_samples <= maxsamples_i; // for backwards compatibility with CW-lite, but
                                             // MAX_SAMPLES_ADDR and MAX_SEGMENT_SAMPLES_ADDR registers should be used instead
          registers_presamples <= 0;
@@ -239,7 +241,7 @@ module reg_openadc #(
                 `NUM_SEGMENTS: num_segments[reg_bytecnt*8 +: 8] <= reg_datai;
                 `SEGMENT_CYCLES: segment_cycles[reg_bytecnt*8 +: 8] <= reg_datai;
                 `SEGMENT_CYCLE_COUNTER_EN: segment_cycle_counter_en <= reg_datai[0];
-                `LED_SELECT: led_select <= reg_datai[1:0];
+                `LED_SELECT: led_select <= reg_datai[2:0];
                 `NO_CLIP_ERRORS: {no_gain_errors, no_clip_errors} <= reg_datai[1:0];
                 `EXTCLK_MONITOR: extclk_limit[reg_bytecnt*8 +: 8] <= reg_datai;
                 `ADC_TRIGGER_LEVEL: trigger_adclevel[reg_bytecnt*8 +: 8] <= reg_datai;
@@ -258,6 +260,12 @@ module reg_openadc #(
              trigger_fifo_rd_usb <= 1'b1;
          else
              trigger_fifo_rd_usb <= 1'b0;
+
+         if (reg_write) begin
+             sam3u_wr_debug[7:0] <= reg_address;
+             sam3u_wr_debug[15:8] <= reg_datai;
+             sam3u_wr_debug[31:16] <= sam3u_wr_debug[31:16] + 1;
+         end
 
       end
    end

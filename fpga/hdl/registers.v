@@ -366,6 +366,8 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define SEQ_TRIGGERS_MINMAX     22
 `define SEQ_TRIGGERS_UART_EDGE_CHOOSER 23
 
+`define REG_SAM3U_WR_DEBUG      121
+
 `define REG_DDR3_STAT           114
 `define REG_DDR3_TEST_LOOPS     115
 `define REG_XO_EN               117

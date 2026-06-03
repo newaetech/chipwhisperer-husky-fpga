@@ -226,6 +226,11 @@ class Harness(object):
         else:
             return False
 
+    async def fast_read_mode(self, active) -> None:
+        await self.registers.write(self.reg_addr['FAST_FIFO_READ_MODE'], [active])
+        await ClockCycles(self.dut.clk_usb, 5) # give time for write to propagate
+        self.registers.fast_read_mode = active
+
     async def wait_flush(self, source) -> None:
         if source == 'ADC':
             bitmask = 16
@@ -281,14 +286,18 @@ class Harness(object):
             assert False
 
     async def register_rw_thread(self, address, size) -> None:
+        i = 0
         while True:
             wdata = random.randint(1,2**(size*8)-1)
-            #self.dut._log.info("Writing to %d at time %s" % (address, cocotb.utils.get_sim_time('ns')))
+            self.dut._log.info("Writing to %d at time %s" % (address, cocotb.utils.get_sim_time('ns')))
             await self.registers.write(address, self.registers.to_bytes(wdata, size))
             await ClockCycles(self.dut.clk_usb, random.randint(0, 50))
-            #self.dut._log.info("Reading from %d at time %s" % (address, cocotb.utils.get_sim_time('ns')))
+            self.dut._log.info("Reading from %d at time %s" % (address, cocotb.utils.get_sim_time('ns')))
+            await self.registers.write(self.reg_addr['FAST_FIFO_READ_MODE'], [i%2])
             rdata = self.registers.from_bytes(await self.registers.read(address, size))
             assert rdata == wdata, "Wrote %x but read %x" % (wdata, rdata)
+            await self.registers.write(self.reg_addr['FPGA_BUILDTIME_ADDR'], [1])
+            i += 1
 
     @staticmethod
     def hexstring(string, max_chars=24) -> int:
@@ -372,6 +381,7 @@ async def capture(dut):
 
     registers = Registers(dut)
     harness = Harness(dut, registers, stream, is_pro, stop_first_error)
+    registers.fast_fifo_read_addr = harness.reg_addr['FAST_FIFO_READ_MODE']
 
     noglitch = int(os.getenv('NO_GLITCH', 0))
     await harness.initialize_dut(noglitch)

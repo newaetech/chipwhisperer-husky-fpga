@@ -130,6 +130,7 @@ module openadc_interface #(
     output wire                         armed_and_ready,
 
     // for debug only:
+    output wire [2:0]                   led_select,
     output wire                         slow_fifo_wr,
     output wire                         slow_fifo_rd,
     output wire [8:0]                   la_debug,
@@ -152,7 +153,6 @@ module openadc_interface #(
     wire [15:0] num_segments;
     wire [19:0] segment_cycles;
     wire        segment_cycle_counter_en;
-    wire [1:0]  led_select;
     wire       data_source_select;
     wire [13:0] fifo_error_stat;
     wire [13:0] fifo_first_error_stat;
@@ -239,19 +239,27 @@ module openadc_interface #(
 
 
    always @(*) begin
-      if (extclk_change_usb) begin
+      if (led_select == 3'b100) begin
+         LED_armed = reg_address[0];
+         LED_capture = reg_address[1];
+      end
+      else if (led_select == 3'b101) begin
+         LED_armed = reg_address[4];
+         LED_capture = reg_address[5];
+      end
+      else if (extclk_change_usb) begin
          LED_armed = flash_pattern;
          LED_capture = flash_pattern;
       end
-      else if (led_select == 2'b01) begin
+      else if (led_select == 3'b001) begin
          LED_armed = timer_heartbeat[24];
          LED_capture = clkgen_heartbeat[24];
       end
-      else if (led_select == 2'b10) begin
+      else if (led_select == 3'b010) begin
          LED_armed = adc_fb_heartbeat[24];
          LED_capture = adc_out_heartbeat[24];
       end
-      else if (led_select == 2'b11) begin
+      else if (led_select == 3'b011) begin
          LED_armed = pll_fpga_clk_heartbeat[24];
          LED_capture = extclk_change_usb;
       end

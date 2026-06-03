@@ -26,7 +26,10 @@ import random
 class Registers(object):
     def __init__(self, dut):
         self.dut = dut
+        self.fast_fifo_read_addr = None
+        self.fast_read_mode = False
         self.lock = Lock()
+        self.fast_lock = Lock()
         self.dut.USB_RDn.value = 1
         self.dut.USB_WRn.value = 1
         self.dut.USB_CEn.value = 1
@@ -35,23 +38,29 @@ class Registers(object):
         self.dut.USB_CEn.value = 1
         self.dut.USB_Addr.value = address
         self.dut.USB_ALEn.value = 0
-        await ClockCycles(self.dut.clk_usb, 1)
+        # NOTE: a single-cycle pulse should do here, but there seems to be a cocotb
+        # bug which sometimes makes a one-cycle pulse disappear?!?
+        await ClockCycles(self.dut.clk_usb, 2)
         self.dut.USB_ALEn.value = 1
-        await ClockCycles(self.dut.clk_usb, 1)
+        await ClockCycles(self.dut.clk_usb, 3)
 
 
-    async def write(self, address, data, wait=None) -> None:
+    async def write(self, address, data, wait=None, fast_read_control=False) -> None:
+        if not fast_read_control:
+            while self.fast_lock.locked():
+                await ClockCycles(self.dut.clk_usb, 100)
         await self.lock.acquire()
         try:
             await RisingEdge(self.dut.clk_usb) # ensure all that follows is sync'd to clock
             await self.setup_rw_address(address)
             for i in range(len(data)):
-                self.dut.USB_Data.value = data[i]
-                self.dut.USB_WRn.value = 0
                 await ClockCycles(self.dut.clk_usb, 1)
-                self.dut.USB_WRn.value = 1
+                self.dut.USB_WRn.value = 0
                 self.dut.USB_CEn.value = 0
                 await ClockCycles(self.dut.clk_usb, 1)
+                self.dut.USB_Data.value = data[i]
+                await ClockCycles(self.dut.clk_usb, 1)
+                self.dut.USB_WRn.value = 1
                 self.dut.USB_CEn.value = 1
                 await ClockCycles(self.dut.clk_usb, 1)
                 if wait:
@@ -59,7 +68,10 @@ class Registers(object):
         finally:
             self.lock.release()
 
-    async def read(self, address, size=1) -> bytearray:
+    async def read(self, address, size=1, fast_fifo_read=False) -> bytearray:
+        if not fast_fifo_read:
+            while self.fast_lock.locked():
+                await ClockCycles(self.dut.clk_usb, 100)
         data = []
         await self.lock.acquire()
         try:
@@ -71,15 +83,36 @@ class Registers(object):
         return bytearray(data)
 
     async def read_next_byte(self) -> int:
-        self.dut.USB_RDn.value = 0
-        self.dut.USB_CEn.value = 0
-        await ClockCycles(self.dut.clk_usb, 1)
-        self.dut.USB_CEn.value = 1
-        await ClockCycles(self.dut.clk_usb, 2)
-        rdata = self.dut.USB_Data.value
-        self.dut.USB_RDn.value = 1
-        await ClockCycles(self.dut.clk_usb, 1)
+        if self.fast_read_mode:
+            self.dut.USB_RDn.value = 0
+            self.dut.USB_CEn.value = 0
+            await ClockCycles(self.dut.clk_usb, 1)
+            rdata = self.dut.USB_Data.value
+            self.dut.USB_RDn.value = 1
+            self.dut.USB_CEn.value = 1
+            await ClockCycles(self.dut.clk_usb, 1)
+
+        else:
+            self.dut.USB_RDn.value = 0
+            self.dut.USB_CEn.value = 0
+            await ClockCycles(self.dut.clk_usb, 1)
+            self.dut.USB_CEn.value = 1
+            await ClockCycles(self.dut.clk_usb, 2)
+            rdata = self.dut.USB_Data.value
+            self.dut.USB_RDn.value = 1
+            await ClockCycles(self.dut.clk_usb, 1)
         return rdata
+
+    async def fast_read_mode_start(self) -> None:
+        await self.fast_lock.acquire()
+        await self.write(self.fast_fifo_read_addr, [1], fast_read_control=True)
+        await ClockCycles(self.dut.clk_usb, 5) # give time for write to propagate
+        self.fast_read_mode = 1
+
+    async def fast_read_mode_stop(self) -> None:
+        self.fast_lock.release()
+        await self.write(self.fast_fifo_read_addr, [0], fast_read_control=True)
+        self.fast_read_mode = 0
 
     def to_bytes(self, data, size) -> list:
         return list(int.to_bytes(data, length=size, byteorder='little'))
