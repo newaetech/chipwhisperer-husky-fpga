@@ -44,8 +44,8 @@ module slow_fifo_wrapper (
         localparam pDEPTH1 = 512;
         localparam pDEPTH2 = 512;
     `else
-        localparam pDEPTH1 = 32768;
-        localparam pDEPTH2 = 32768;
+        localparam pDEPTH1 = 4096;
+        localparam pDEPTH2 = 65536;
     `endif
 
 `else
@@ -64,8 +64,8 @@ wire wr1 = fifo_wr;
 wire [47:0] din1 = fifo_din;
 wire [47:0] dout1;
 reg  rd1 = 1'b0;
-reg  wr2 = 1'b0;
-reg  [47:0] din2;
+wire wr2;
+wire [47:0] din2;
 wire [47:0] dout2;
 wire rd2 = fifo_rd;
 
@@ -75,6 +75,7 @@ wire empty1;
 wire underflow1;
 wire empty_threshold1;
 wire full_threshold1;
+wire full_threshold2;
 
 wire full2;
 wire overflow2;
@@ -88,38 +89,15 @@ assign fifo_empty = empty2;
 assign overflow = overflow1 || overflow2;
 assign underflow = underflow1 || underflow2;
 
-
-// simple FSM to handle case where fifo2 is not initially full,
-// and so we read fifo1, but then fifo2 *is* full when we're ready to write to it:
-localparam pS_IDLE = 0;
-localparam pS_WAIT_WRITE = 1;
-reg state = pS_IDLE;
+assign wr2 = rd1;
+assign din2 = dout1;
 
 always @(posedge clk) begin
-    case (state)
-        pS_IDLE: begin
-            rd1 <= 1'b0;
-            wr2 <= 1'b0;
-            if (!full2 && ((fast_fifo_empty)? !empty1 : !empty_threshold1)) begin
-                rd1 <= 1'b1;
-                state <= pS_WAIT_WRITE;
-            end
-        end
-
-        pS_WAIT_WRITE: begin
-            rd1 <= 1'b0;
-            if (!full2 && !rd1) begin
-                wr2 <= 1'b1;
-                state <= pS_IDLE;
-            end
-        end
-
-    endcase
-end
-
-always @(posedge clk) begin
-    if (rd1)
-        din2 <= dout1;
+    if ((rd1)? (!empty_threshold1 && !full_threshold2) : 
+               (!empty1 && !full2))
+        rd1 <= 1'b1;
+    else
+        rd1 <= 1'b0;
 end
 
 
@@ -160,13 +138,13 @@ end
     ) U_fifo2 (
         .clk                        (clk),
         .rst_n                      (rst_n),
-        .full_threshold_value       (0),
+        .full_threshold_value       (pDEPTH2-1),
         .empty_threshold_value      (0),
         .wen                        (wr2),
         .wdata                      (din2),
         .full                       (full2),
         .overflow                   (overflow2),
-        .full_threshold             (),
+        .full_threshold             (full_threshold2),
         .empty_threshold            (),
         .ren                        (rd2),
         .rdata                      (dout2),
@@ -179,23 +157,34 @@ end
 
 `else
     `ifdef TINYFIFO
-        // no point in splitting FIFOs here!
-        tiny_usb_slow_fifo1_semipro U_fifo1(
+        // we still split the FIFO for debug purposes!
+        tiny_usb_slow_fifo1_plus U_fifo1(
             .clk                (clk),
             .rst                (~rst_n),
-            .din                (fifo_din),
+            .din                (din1),
             .wr_en              (wr1),
+            .rd_en              (rd1),
+            .dout               (dout1),
+            .full               (full1),
+            .empty              (empty1),
+            .prog_empty         (empty_threshold1),
+            .prog_full          (full_threshold1),
+            .overflow           (overflow1),
+            .underflow          (underflow1)
+        );
+        tiny_usb_slow_fifo2_plus U_fifo2(
+            .clk                (clk),
+            .rst                (~rst_n),
+            .din                (din2),
+            .wr_en              (wr2),
             .rd_en              (rd2),
             .dout               (dout2),
-            .full               (full1),
+            .full               (full2),
             .empty              (empty2),
+            .prog_full          (full_threshold2),
             .overflow           (overflow2),
             .underflow          (underflow2)
         );
-        assign full2 = 1'b0;
-        assign empty1 = 1'b0; // so that the (uneeded in this case) FSM remains idle
-        assign overflow1 = 1'b0;
-        assign underflow1 = 1'b0;
 
     `else
         // TODO: Plus/Regular
@@ -213,7 +202,6 @@ end
             .overflow           (overflow1),
             .underflow          (underflow1)
         );
-
         usb_slow_fifo2_plus U_fifo2(
             .clk                (clk),
             .rst                (~rst_n),
@@ -223,6 +211,7 @@ end
             .dout               (dout2),
             .full               (full2),
             .empty              (empty2),
+            .prog_full          (full_threshold2),
             .overflow           (overflow2),
             .underflow          (underflow2)
         );
@@ -230,5 +219,30 @@ end
     `endif
 
 `endif
+
+
+`ifdef ILA_SLOW_FIFO_WRAPPER
+    ila_slow_fifo_wrap U_ila1 (
+        .clk            (clk),
+        .probe0         (wr1),
+        .probe1         (full1),
+        .probe2         (overflow1),
+        .probe3         (full_threshold1),
+        .probe4         (empty_threshold1),
+        .probe5         (rd1),
+        .probe6         (empty1),
+        .probe7         (underflow1),
+
+        .probe8         (wr2),
+        .probe9         (full2),
+        .probe10        (overflow2),
+        .probe11        (rd2),
+        .probe12        (empty2),
+        .probe13        (underflow2),
+        .probe14        (fifo_empty)
+    );
+
+`endif
+
 
 endmodule

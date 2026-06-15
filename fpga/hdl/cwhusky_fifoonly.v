@@ -117,7 +117,7 @@ module cwhusky_fifoonly(
     parameter pBYTECNT_SIZE = 7;
     parameter pUSERIO_WIDTH = 8;
     parameter pSEQUENCER_NUM_TRIGGERS = 2;
-    parameter pSEQUENCER_COUNTER_WIDTH = 16;
+    parameter pSEQUENCER_COUNTER_WIDTH = 8;
 
 
 `ifdef __ICARUS__

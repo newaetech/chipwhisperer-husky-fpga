@@ -752,6 +752,20 @@ module fifo_top_husky(
     end
 
 
+`ifdef ILA_DEBUG_FIFOS
+    ila_fifos U_ila_fifos (
+        .clk            (clk_usb),
+        .probe0         (slow_fifo_prewr),
+        .probe1         (fast_fifo_rd_en),
+        .probe2         (slow_fifo_full_threshold),
+        .probe3         (slow_fifo_full),
+        .probe4         (fast_fifo_almost_empty),
+        .probe5         (fast_fifo_empty),
+        .probe6         (fast_fifo_overflow)
+    );
+`endif
+
+
     // Details of how the presamples feature is implemented:
     // 1. Fill phase (pS_PRESAMP_FILLING):
     //    Fast FIFO is written but not read.

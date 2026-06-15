@@ -49,10 +49,10 @@ module fast_fifo_wrapper (
 `ifdef PLUS
     `ifdef TINYFIFO
         localparam pDEPTH1 = 512;
-        localparam pDEPTH2 = 1024;
+        localparam pDEPTH2 = 512;
     `else
-        localparam pDEPTH1 = 512;
-        localparam pDEPTH2 = 16384;
+        localparam pDEPTH1 = 2048;
+        localparam pDEPTH2 = 8192;
     `endif
 
 `else
@@ -347,41 +347,100 @@ module fast_fifo_wrapper (
     endgenerate
 
 `else
-    // TODO: Plus/Regular
-    adc_fast_fifo U_fast_fifo (
-        .clk            (wclk),
-        .rst            (~rst_n),
-        .din            (adc_datain),
-        .wr_en          (fifo_wr),
-        .rd_en          (ren_stage1),
-        .dout           (dout_stage1),
-        .full           (full_stage1),
-        .empty          (empty_stage1),
-        .overflow       (overflow_stage1),
-        .underflow      (underflow_stage1)
-    );
+    `ifdef TINYFIFO
+        // TODO: Plus/Regular
+        tiny_adc_fast_fifo U_fast_fifo (
+            .clk            (wclk),
+            .rst            (~rst_n),
+            .din            (adc_datain),
+            .wr_en          (fifo_wr),
+            .rd_en          (ren_stage1),
+            .dout           (dout_stage1),
+            .full           (full_stage1),
+            .empty          (empty_stage1),
+            .overflow       (overflow_stage1),
+            .underflow      (underflow_stage1)
+        );
+        genvar i;
+        generate
+            for (i = 0; i < 4; i = i + 1) begin
+                tiny_fast_slower_fifo U_slower_fifos (
+                    .rst                (~rst_n),
+                    .wr_clk             (wclk),
+                    .rd_clk             (rclk),
+                    .din                (din_stage2[i*12 +: 12]),
+                    .wr_en              (wr_stage2),
+                    .rd_en              (fifo_rd),
+                    .dout               (dout_stage2[i*12 +: 12]),
+                    .full               (full_stage2[i]),
+                    .empty              (empty_stage2[i]),
+                    .prog_empty         (empty_threshold_stage2[i]),
+                    .overflow           (overflow_stage2[i]),
+                    .underflow          (underflow_stage2[i])
+                );
+            end
+        endgenerate
 
-    genvar i;
-    generate
-        for (i = 0; i < 4; i = i + 1) begin
-            fast_slower_fifo U_slower_fifos (
-                .rst                (~rst_n),
-                .wr_clk             (wclk),
-                .rd_clk             (rclk),
-                .din                (din_stage2[i*12 +: 12]),
-                .wr_en              (wr_stage2),
-                .rd_en              (fifo_rd),
-                .dout               (dout_stage2[i*12 +: 12]),
-                .full               (full_stage2[i]),
-                .empty              (empty_stage2[i]),
-                .prog_empty         (empty_threshold_stage2[i]),
-                .overflow           (overflow_stage2[i]),
-                .underflow          (underflow_stage2[i])
-            );
-        end
-    endgenerate
+    `else
+        // TODO: Plus/Regular
+        adc_fast_fifo U_fast_fifo (
+            .clk            (wclk),
+            .rst            (~rst_n),
+            .din            (adc_datain),
+            .wr_en          (fifo_wr),
+            .rd_en          (ren_stage1),
+            .dout           (dout_stage1),
+            .full           (full_stage1),
+            .empty          (empty_stage1),
+            .overflow       (overflow_stage1),
+            .underflow      (underflow_stage1)
+        );
+        genvar i;
+        generate
+            for (i = 0; i < 4; i = i + 1) begin
+                fast_slower_fifo U_slower_fifos (
+                    .rst                (~rst_n),
+                    .wr_clk             (wclk),
+                    .rd_clk             (rclk),
+                    .din                (din_stage2[i*12 +: 12]),
+                    .wr_en              (wr_stage2),
+                    .rd_en              (fifo_rd),
+                    .dout               (dout_stage2[i*12 +: 12]),
+                    .full               (full_stage2[i]),
+                    .empty              (empty_stage2[i]),
+                    .prog_empty         (empty_threshold_stage2[i]),
+                    .overflow           (overflow_stage2[i]),
+                    .underflow          (underflow_stage2[i])
+                );
+            end
+        endgenerate
+    `endif
 
 `endif
 
+`ifdef ILA_FAST_FIFO_WRAPPER
+    ila_fast_fifo_wrap_write U_ila1 (
+        .clk            (wclk),
+        .probe0         (fifo_wr),
+        .probe1         (full_stage1),
+        .probe2         (overflow_stage1),
+        .probe3         (ren_stage1),
+        .probe4         (empty_stage1),
+        .probe5         (underflow_stage1),
+        .probe6         (wr_stage2),
+        .probe7         (full_stage2[0]),
+        .probe8         (empty_adc),
+        .probe9         (empty_stage2[0])
+    );
+
+    ila_fast_fifo_wrap_read U_ila2 (
+        .clk            (rclk),
+        .probe0         (fifo_rd),
+        .probe1         (empty_stage2[0]),
+        .probe2         (underflow_stage2[0]),
+        .probe3         (empty_usb)
+    );
+
+`endif
 
 endmodule
