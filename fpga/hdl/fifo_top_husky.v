@@ -281,7 +281,7 @@ module fifo_top_husky(
             always @(posedge clk_usb) begin
                 if (clear_fifo_errors)
                     clip_lores[i] <= 1'b0;
-                else if (slow_fifo_wr && low_res) begin
+                else if (slow_fifo_prewr && low_res) begin
                     if (slow_fifo_din[i*8+:8] == {8'h00} || slow_fifo_din[i*8+:8] == {8'hFF})
                         clip_lores[i] <= 1'b1;
                     else
@@ -305,7 +305,7 @@ module fifo_top_husky(
             always @(posedge clk_usb) begin
                 if (clear_fifo_errors)
                     clip_hires[j] <= 1'b0;
-                else if (slow_fifo_wr && ~low_res) begin
+                else if (slow_fifo_prewr && ~low_res) begin
                     if (slow_fifo_din[j*12+:12] == {12'h000} || slow_fifo_din[j*12+:12] == {12'hFFF})
                         clip_hires[j] <= 1'b1;
                     else
@@ -898,7 +898,7 @@ module fifo_top_husky(
     // errors are close relatives).
     wire presample_fifo_error = presample_fifo_count_overflow_reg || presample_fifo_count_underflow_reg;
 
-    assign slow_fifo_din = (save_offset_usb)? {5'b0, segment_offset, {40{1'b1}}} : fast_fifo_dout;
+    assign slow_fifo_din = (save_offset_usb)? {5'b0, segment_offset, 8'hFF, 8'h00, 8'hEE, 8'h11, 8'hDD} : fast_fifo_dout;
 
     reg [2:0] slow_read_count = 0; // 48/8 = 6 USB reads required for each FIFO read, regardless of low_res
 

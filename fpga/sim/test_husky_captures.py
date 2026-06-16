@@ -350,7 +350,7 @@ class ADCCapture(GenericCapture):
         # 1. validate and remove the offset word:
         self.dut._log.info('Raw read data: %s' % (list(data)))
 
-        if list(data[-5:]) != [0xff]*5:
+        if list(data[-5:]) != [0xff, 0x00, 0xee, 0x11, 0xdd]:
             self.dut._log.error('Unexpected offset word: %s' % data[-6:])
             self.harness.inc_error()
             offset = 0
