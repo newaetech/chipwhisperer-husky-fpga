@@ -136,7 +136,6 @@ module fifo_top_husky(
     reg                 gain_error = 1'b0;
     reg                 segment_error;
     reg                 clip_error = 1'b0;
-    reg                 gain_too_low = 1'b0;
     wire                clear_fifo_errors_adc;
 
     reg [31:0]          read_count;
@@ -273,9 +272,9 @@ module fifo_top_husky(
     // gain errors:
     genvar i, j;
     reg [5:0] clip_lores;
-    reg [4:0] clip_hires;
+    reg [3:0] clip_hires;
     reg [5:0] logain_lores;
-    reg [4:0] logain_hires;
+    reg [3:0] logain_hires;
     generate
         for (i = 0; i < 6; i = i + 1) begin: clip_gen_lores
             always @(posedge clk_usb) begin
@@ -292,10 +291,8 @@ module fifo_top_husky(
                     logain_lores[i] <= 1'b0;
                 else if (capture_go)
                     logain_lores[i] <= 1'b1;
-                else if (slow_fifo_din[(i*8)+7]? slow_fifo_din[(i*8)+5+:2] != 2'b00 : slow_fifo_din[(i*8)+4+:3] != 3'b111)
+                else if (low_res && slow_fifo_prewr && (slow_fifo_din[(i*8)+7]? slow_fifo_din[(i*8)+5+:2] != 2'b00 : slow_fifo_din[(i*8)+4+:3] != 3'b111))
                     logain_lores[i] <= 1'b0;
-                else
-                    logain_lores[i] <= 1'b1;
             end
         end
     endgenerate
@@ -316,9 +313,7 @@ module fifo_top_husky(
                     logain_hires[j] <= 1'b0;
                 else if (capture_go)
                     logain_hires[j] <= 1'b1;
-                else if (slow_fifo_din[(j*12)+11]? slow_fifo_din[(j*12)+9+:2] != 2'b00 : slow_fifo_din[(j*12)+8+:3] != 3'b111)
-                    logain_hires[j] <= 1'b1;
-                else
+                else if (~low_res && slow_fifo_prewr && (slow_fifo_din[(j*12)+11]? slow_fifo_din[(j*12)+9+:2] != 2'b00 : slow_fifo_din[(j*12)+8+:3] != 3'b111))
                     logain_hires[j] <= 1'b0;
             end
         end
@@ -332,7 +327,7 @@ module fifo_top_husky(
 
         if (no_gain_errors || clear_fifo_errors)
             gain_error <= 1'b0;
-        else if ((state == pS_IDLE) && (state_r == pS_DONE) && ((low_res)? |logain_lores : |logain_hires))
+        else if ((state == pS_IDLE) && (state_r == pS_DONE) && ((low_res)? &logain_lores : &logain_hires))
             gain_error <= 1'b1;
     end
 
@@ -1202,7 +1197,7 @@ module fifo_top_husky(
    `ifdef ILA_FIFO_GAIN
        ila_fifo_gain U_ila_fifo_gain (
           .clk            (clk_usb),              // input wire clk
-          .probe0         (gain_too_low),         // input wire [0:0]  probe0 
+          .probe0         (gain_error),           // input wire [0:0]  probe0 
           .probe1         (clip_error),           // input wire [0:0]  probe1 
           .probe2         (clear_fifo_errors_adc),// input wire [0:0]  probe2 
           .probe3         (clear_fifo_errors),    // input wire [0:0]  probe3 
