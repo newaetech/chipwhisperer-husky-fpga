@@ -94,6 +94,7 @@ module fifo_top_husky(
     wire                fast_fifo_almost_empty;
     wire                fast_fifo_overflow;
     wire                fast_fifo_underflow;
+    wire                empty_stage1_usb;
     reg                 reset_fast_fifo_internal_count;
 
     wire [47:0]         slow_fifo_din;
@@ -673,17 +674,6 @@ module fifo_top_husky(
        end
     end
 
-
-
-    wire triggered_usb;
-    cdc_simple U_triggered_cdc (
-        .reset          (reset),
-        .clk            (clk_usb),
-        .data_in        (state == pS_TRIGGERED),
-        .data_out       (triggered_usb),
-        .data_out_r     ()
-    );
-
     wire presamp_running_usb;
     cdc_simple U_presamp_running_cdc (
         .reset          (reset),
@@ -734,12 +724,13 @@ module fifo_top_husky(
             fast_fifo_rd_en <= 1'b0;
             slow_fifo_prewr <= 1'b0;
         end
-        else if ( ((slow_fifo_prewr)? !slow_fifo_full_threshold : !slow_fifo_full) && 
-            ((triggered_usb)? !fast_fifo_almost_empty : 
-                              !fast_fifo_empty && !fast_fifo_rd_en)) begin
+
+        else if ( (!slow_fifo_full_threshold && !fast_fifo_almost_empty) ||
+                  (!slow_fifo_prewr && !slow_fifo_full && !fast_fifo_empty && empty_stage1_usb) ) begin
             fast_fifo_rd_en <= 1'b1;
             slow_fifo_prewr <= 1'b1;
         end
+
         else begin
             fast_fifo_rd_en <= 1'b0;
             slow_fifo_prewr <= 1'b0;
@@ -980,7 +971,8 @@ module fifo_top_husky(
         .empty_usb              (fast_fifo_empty),
         .empty_adc              (fast_fifo_empty_adc),
         .almost_empty           (fast_fifo_almost_empty),
-        .underflow              (fast_fifo_underflow)
+        .underflow              (fast_fifo_underflow),
+        .empty_stage1_usb       (empty_stage1_usb)
     );
 
 

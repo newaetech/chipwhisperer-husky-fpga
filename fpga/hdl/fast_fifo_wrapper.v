@@ -40,7 +40,8 @@ module fast_fifo_wrapper (
     output wire                         empty_usb,
     output wire                         empty_adc,
     output wire                         almost_empty,
-    output wire                         underflow
+    output wire                         underflow,
+    output wire                         empty_stage1_usb
 );
 
 // TODO: tweak these!
@@ -80,6 +81,14 @@ module fast_fifo_wrapper (
     wire [3:0] empty_stage2;
     wire [3:0] empty_threshold_stage2;
     wire [3:0] underflow_stage2;
+
+    cdc_simple U_empty_stage1_cdc (
+        .reset          (!rst_n),
+        .clk            (rclk),
+        .data_in        (empty_stage1_delayed),
+        .data_out       (empty_stage1_usb),
+        .data_out_r     ()
+    );
 
 
     assign full = full_stage1;
@@ -156,7 +165,10 @@ module fast_fifo_wrapper (
     reg [2:0] ren_stage1_count = 3'd0;
     reg ren_stage1_r = 1'b0;
 
+    reg [1:0] empty_stage1_r;
+    wire empty_stage1_delayed = empty_stage1_r[1] && empty_stage1_r[0];
     always @(posedge wclk) begin
+        empty_stage1_r <= {empty_stage1_r[0], empty_stage1};
         wr_stage2 <= 1'b0;
         if (flushing || reset_internal_count)
             ren_stage1_count <= 0;

@@ -93,12 +93,34 @@ assign wr2 = rd1;
 assign din2 = dout1;
 
 always @(posedge clk) begin
-    if ((rd1)? (!empty_threshold1 && !full_threshold2) : 
-               (!empty1 && !full2))
+    if ( (!empty_threshold1 && !full_threshold2) ||
+         (!rd1 && !empty1 && !full2 && fast_fifo_empty))
         rd1 <= 1'b1;
     else
         rd1 <= 1'b0;
 end
+
+/* debug only!
+reg [31:0] fill_size2;
+reg [31:0] fill_size_ext;
+always @(posedge clk) begin
+    if (arm_pulse_usb) begin
+        fill_size2 <= 0;
+        fill_size_ext <= 0;
+    end
+    else begin
+        case ({wr2, rd2})
+            2'b10: fill_size2 <= fill_size2 + 6;
+            2'b01: fill_size2 <= fill_size2 - 6;
+        endcase
+
+        case ({fifo_wr, fifo_rd})
+            2'b10: fill_size_ext <= fill_size_ext + 6;
+            2'b01: fill_size_ext <= fill_size_ext - 6;
+        endcase
+    end
+end
+*/
 
 
 `ifdef NOXILINXFIFO
