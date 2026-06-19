@@ -34,7 +34,8 @@ module slow_fifo_wrapper (
     input  wire                         fifo_rd,
     output wire [47:0]                  fifo_dout,
     output wire                         fifo_empty,
-    output wire                         underflow
+    output wire                         underflow,
+    output wire                         stage2_wr
 );
 
 // TODO: tweak these!
@@ -59,6 +60,7 @@ module slow_fifo_wrapper (
 
 `endif
 
+assign stage2_wr = wr2;
 
 wire wr1 = fifo_wr;
 wire [47:0] din1 = fifo_din;

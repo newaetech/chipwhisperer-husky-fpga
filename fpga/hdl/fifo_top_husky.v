@@ -976,6 +976,7 @@ module fifo_top_husky(
     );
 
 
+    wire slow_fifo_stage2_wr;
     slow_fifo_wrapper U_slow_fifo_wrapper (
         .clk                    (clk_usb),
         .rst_n                  (~reset),
@@ -988,7 +989,8 @@ module fifo_top_husky(
         .fifo_rd                (slow_fifo_rd),
         .fifo_dout              (slow_fifo_dout),
         .fifo_empty             (slow_fifo_empty),
-        .underflow              (slow_fifo_underflow)
+        .underflow              (slow_fifo_underflow),
+        .stage2_wr              (slow_fifo_stage2_wr)
     );
 
     wire slow_fifo_full_adc;
@@ -1010,7 +1012,7 @@ module fifo_top_husky(
            stream_segment_available <= 1'b0;
        end
        else begin
-           if (slow_fifo_wr)
+           if (slow_fifo_stage2_wr)
                write_count <= write_count + 6;
            if (slow_fifo_rd)
                read_count <= read_count + 6;
