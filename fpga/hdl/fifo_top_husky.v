@@ -148,7 +148,7 @@ module fifo_top_husky(
 
     // make overflows and underflows sticky:
     always @(posedge adc_sampleclk) begin
-       if (arm_pulse_adc) begin
+       if (arm_pulse_adc || clear_fifo_errors_adc) begin
           fast_fifo_overflow_reg <= 1'b0;
           presample_fifo_count_overflow_reg <= 1'b0;
           presample_fifo_count_underflow_reg <= 1'b0;
@@ -164,7 +164,7 @@ module fifo_top_husky(
     end
 
     always @(posedge clk_usb) begin
-       if (arm_pulse_usb) begin
+       if (arm_pulse_usb || clear_fifo_errors) begin
           slow_fifo_overflow_reg <= 1'b0;
           slow_fifo_underflow_reg <= 1'b0;
           fast_fifo_underflow_reg <= 1'b0;

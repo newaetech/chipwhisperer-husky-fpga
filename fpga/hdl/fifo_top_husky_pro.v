@@ -134,7 +134,7 @@ module fifo_top_husky_pro (
 
     // make overflow sticky:
     always @(posedge adc_sampleclk) begin
-       if (arm_pulse_adc) begin
+       if (arm_pulse_adc || clear_fifo_errors_adc) begin
           fast_fifo_overflow_reg <= 1'b0;
           preddr_fifo_overflow_reg <= 1'b0;
        end
