@@ -79,13 +79,23 @@ class Harness(object):
                                         # trace+LA can't be simultaneously active; this lock manages that
         # Actual seed is obtained only if RANDOM_SEED is defined on vvp command line (otherwise you get 0)
         # regress.py always specifies the seed so this is fine.
-        self.dut._log.info("seed: %d" % int(os.getenv('RANDOM_SEED', '0')))
+        self.seed = int(os.getenv('RANDOM_SEED', '0'))
+        self.dut._log.info("seed: %d" % self.seed)
         #cocotb.start_soon(Clock(dut.clk_usb, 1, units='ns').start())
         self.usb_period = 10
         if stream: # slow ADC clock *way* down in order to allow for slow FIFO reads to (usually) outpace writes, like IRL:
             self.adc_period = random.randint(50, 200)
         else:
-            self.adc_period = random.randint(4, 25)
+            # full range for Husky is 4ns to 200ns (250 MHz to 5 MHz);
+            # however in the interest of simulation time we limit the min frequency to 40 MHz / 25 ns;
+            # moreover, we favour the extreme clock frequencies most of the time:
+            case = random.randint(0,3)
+            if case == 0:
+                self.adc_period = 4
+            elif case == 1:
+                self.adc_period = 25
+            else:
+                self.adc_period = random.randint(4, 25)
         self.dut._log.info("ADC clock randomized to %5.1f MHz" % (1/self.adc_period*1000))
         usb_clock_thread = cocotb.start_soon(Clock(dut.clk_usb, self.usb_period, units="ns").start())
         adc_clock_thread = cocotb.start_soon(Clock(dut.PLL_CLK1, self.adc_period, units="ns").start())
@@ -374,6 +384,7 @@ async def capture(dut):
     else:
         LA_MAX = 4095
         TRACE_MAX = 2047
+        # TODO: tweak!
         if stream:
             ADC_MAX = 16384 # not the actual limit -- just in interest of simulation time
         else:
