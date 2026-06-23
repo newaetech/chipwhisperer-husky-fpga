@@ -85,9 +85,9 @@ class GenericTest(object):
         """ wait for _run() to complete """
         await Join(self._coro)
         if self.errors:
-            self.dut._log.error("%6s test done, failed with %d errors" % (self.name, self.errors))
+            self.dut._log.error("%6s test done, failed with %d errors (seed: %d)" % (self.name, self.errors, self.harness.seed))
         else:
-            self.dut._log.info("%6s test done: passed!" % self.name)
+            self.dut._log.info("%6s test done: passed! (seed: %d)" % (self.name, self.harness.seed))
 
     async def _job_setup(self) -> dict:
         """ Generate and program properties of the job that will be run.
@@ -363,6 +363,8 @@ class ADCTest(GenericTest):
         else:
             bits_per_sample = 8
 
+        # NOTE: any modifications here affecting what gets written to SAMPLES_ADDR
+        # need to get mirrored in _OpenADCInterface.py's updateHuskySamplesRegister().
         # calculate the actual number of samples that will be collected per segment:
         # 1. account for worst-case offset:
         if bits_per_sample == 12:
