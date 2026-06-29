@@ -89,7 +89,7 @@ module fifo_top_husky(
     wire                fast_fifo_wr;
     reg                 fast_fifo_rd_en = 1'b0;
     wire                fast_fifo_rd;
-    wire [47:0]         fast_fifo_dout;
+    wire [71:0]         fast_fifo_dout;
     wire                fast_fifo_full;
     wire                fast_fifo_almost_empty;
     wire                fast_fifo_overflow;
@@ -97,11 +97,11 @@ module fifo_top_husky(
     wire                empty_stage1_usb;
     reg                 reset_fast_fifo_internal_count;
 
-    wire [47:0]         slow_fifo_din;
+    wire [71:0]         slow_fifo_din;
     reg                 slow_fifo_prewr = 1'b0;
     reg                 slow_fifo_rd_slow = 1'b0;
     wire                slow_fifo_rd_fast;
-    wire [47:0]         slow_fifo_dout;
+    wire [71:0]         slow_fifo_dout;
     wire                slow_fifo_full;
     wire                slow_fifo_full_threshold;
     wire                slow_fifo_empty;
@@ -115,8 +115,8 @@ module fifo_top_husky(
     reg                 presample_fifo_count_overflow_reg;
     reg                 presample_fifo_count_underflow_reg;
 
-    reg  [14:0]         presample_counter;
-    reg  [2:0]          write_word_counter = 3'b000;
+    reg  [14:0]         presample_counter; // TODO: adjust width if needed
+    reg  [3:0]          write_word_counter = 4'b0000;
     reg  [31:0]         sample_counter;
     reg  [15:0]         segment_counter;
     reg  [19:0]         segment_cycle_counter;
@@ -272,12 +272,12 @@ module fifo_top_husky(
 
     // gain errors:
     genvar i, j;
-    reg [5:0] clip_lores;
-    reg [3:0] clip_hires;
-    reg [5:0] logain_lores;
-    reg [3:0] logain_hires;
+    reg [8:0] clip_lores;
+    reg [5:0] clip_hires;
+    reg [9:0] logain_lores;
+    reg [5:0] logain_hires;
     generate
-        for (i = 0; i < 6; i = i + 1) begin: clip_gen_lores
+        for (i = 0; i < 9; i = i + 1) begin: clip_gen_lores
             always @(posedge clk_usb) begin
                 if (clear_fifo_errors)
                     clip_lores[i] <= 1'b0;
@@ -299,7 +299,7 @@ module fifo_top_husky(
     endgenerate
 
     generate
-        for (j = 0; j < 4; j = j + 1) begin: clip_gen_hires
+        for (j = 0; j < 6; j = j + 1) begin: clip_gen_hires
             always @(posedge clk_usb) begin
                 if (clear_fifo_errors)
                     clip_hires[j] <= 1'b0;
@@ -781,7 +781,7 @@ module fifo_top_husky(
 
     reg presamp_running = 1'b0;
     reg presamp_fifo_filling = 1'b0;
-    reg [2:0] segment_offset;
+    reg [3:0] segment_offset;
     reg next_segment_go_r;
     always @(posedge adc_sampleclk) begin
         // NOTE: presamp_running is used to prevent reading the slow FIFO
@@ -798,19 +798,19 @@ module fifo_top_husky(
 
         if (presamp_fifo_filling && fast_fifo_wr) begin
             if (low_res) begin
-                if (write_word_counter < 5)
+                if (write_word_counter < 8)
                     write_word_counter <= write_word_counter + 1;
                 else
                     write_word_counter <= 0;
             end
             else begin
-                if (write_word_counter < 3)
+                if (write_word_counter < 5)
                     write_word_counter <= write_word_counter + 1;
                 else
                     write_word_counter <= 0;
             end
 
-            if (write_word_counter == ((low_res)? 5 : 3))
+            if (write_word_counter == ((low_res)? 8 : 5))
                 presample_fifo_count_wr <= 1'b1;
             else
                 presample_fifo_count_wr <= 1'b0;
@@ -884,9 +884,9 @@ module fifo_top_husky(
     // errors are close relatives).
     wire presample_fifo_error = presample_fifo_count_overflow_reg || presample_fifo_count_underflow_reg;
 
-    assign slow_fifo_din = (save_offset_usb)? {5'b0, segment_offset, 8'hFF, 8'h00, 8'hEE, 8'h11, 8'hDD} : fast_fifo_dout;
+    assign slow_fifo_din = (save_offset_usb)? {4'b0, segment_offset, 8'hFF, 8'h00, 8'hEE, 8'h11, 8'hDD, 8'h00, 8'hCC, 8'hFF} : fast_fifo_dout;
 
-    reg [2:0] slow_read_count = 0; // 48/8 = 6 USB reads required for each FIFO read, regardless of low_res
+    reg [3:0] slow_read_count = 0; // 72/8 = 9 USB reads required for each FIFO read, regardless of low_res
 
     // Read slow FIFO:
     always @(posedge clk_usb) begin
@@ -897,7 +897,7 @@ module fifo_top_husky(
 
        else if (fifo_read_fifoen || first_read) begin
        //else if (fifo_read_fifoen) begin
-           if (slow_read_count < 5) begin
+           if (slow_read_count < 8) begin
                slow_read_count <= slow_read_count + 1;
                slow_fifo_rd_slow <= 1'b0;
            end
@@ -910,7 +910,7 @@ module fifo_top_husky(
            slow_fifo_rd_slow <= 1'b0;
     end
 
-    assign slow_fifo_rd_fast = fifo_read_fifoen && (slow_read_count == 5); // TODO: I think this is correct; need to validate on-target
+    assign slow_fifo_rd_fast = fifo_read_fifoen && (slow_read_count == 8); // TODO: I think this is correct; need to validate on-target
 
     assign slow_fifo_rd = (flushing && ~slow_fifo_empty) || ((fast_fifo_read_mode)? slow_fifo_rd_fast : slow_fifo_rd_slow);
 
@@ -919,7 +919,7 @@ module fifo_top_husky(
         if (slow_fifo_underflow_reg)
             fifo_read_data_pre = 0;
         else begin
-            fifo_read_data_pre = slow_fifo_dout[(5-slow_read_count)*8 +: 8];
+            fifo_read_data_pre = slow_fifo_dout[(8-slow_read_count)*8 +: 8];
         end
     end
     // register the FIFO output to help meet timing
@@ -1004,6 +1004,8 @@ module fifo_top_husky(
 
 
    // track how many *bytes* (not samples!) (roughly) are available to be read
+   // TODO: we should be counting words instead of bytes! Since we know the
+   // FIFO will be filled with full words.
    reg [31:0] write_count;
    always @(posedge clk_usb) begin
        if (arm_pulse_usb) begin
@@ -1013,9 +1015,9 @@ module fifo_top_husky(
        end
        else begin
            if (slow_fifo_stage2_wr)
-               write_count <= write_count + 6;
+               write_count <= write_count + 9;
            if (slow_fifo_rd)
-               read_count <= read_count + 6;
+               read_count <= read_count + 9;
 
            if (|error_stat[3:0])
                // if any FIFO overflow/underflow errors occur, ensure that SAM3U will be able to read as much as it wants

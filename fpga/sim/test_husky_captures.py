@@ -350,15 +350,16 @@ class ADCCapture(GenericCapture):
         # 1. validate and remove the offset word:
         self.dut._log.info('Raw read data: %s' % (list(data)))
 
-        if list(data[-5:]) != [0xff, 0x00, 0xee, 0x11, 0xdd]:
-            self.dut._log.error('Unexpected offset word: %s' % data[-6:])
+        if list(data[-8:]) != [0xff, 0x00, 0xee, 0x11, 0xdd, 0x00, 0xcc, 0xff]:
+            self.dut._log.error('Unexpected offset word: %s' % data[-9:])
             self.harness.inc_error()
             offset = 0
         else:
-            offset = data[-6]
+            offset = data[-9]
         self.dut._log.info('Offset extracted from payload: %d' % offset)
         data = data[:-6]
         if bits_per_sample == 12:
+            # TODO: shouldn't need this %3 stuff anymore maybe?
             if len(data)%3:
                 data.extend([0]*(3-len(data)%3))
             data = np.frombuffer(data, dtype=np.uint8)

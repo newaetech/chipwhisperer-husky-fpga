@@ -36,7 +36,7 @@ module fast_fifo_wrapper (
     output wire                         full,
     output wire                         overflow,
     input  wire                         fifo_rd,
-    output wire [47:0]                  fifo_dout,
+    output wire [71:0]                  fifo_dout,
     output wire                         empty_usb,
     output wire                         empty_adc,
     output wire                         almost_empty,
@@ -74,13 +74,13 @@ module fast_fifo_wrapper (
     wire empty_stage1;
     wire underflow_stage1;
     reg  wr_stage2 = 1'b0;
-    reg  [47:0] din_stage2 = 48'd0;
-    wire [3:0] full_stage2;
-    wire [3:0] overflow_stage2;
-    wire [47:0] dout_stage2;
-    wire [3:0] empty_stage2;
-    wire [3:0] empty_threshold_stage2;
-    wire [3:0] underflow_stage2;
+    reg  [71:0] din_stage2 = 72'd0;
+    wire full_stage2;
+    wire overflow_stage2;
+    wire [71:0] dout_stage2;
+    wire empty_stage2;
+    wire empty_threshold_stage2;
+    wire underflow_stage2;
 
     cdc_simple U_empty_stage1_cdc (
         .reset          (!rst_n),
@@ -92,9 +92,9 @@ module fast_fifo_wrapper (
 
 
     assign full = full_stage1;
-    assign almost_empty = empty_threshold_stage2[0];
-    assign overflow = overflow_stage1 || overflow_stage2[0];
-    assign underflow = underflow_stage1 || underflow_stage2[0];
+    assign almost_empty = empty_threshold_stage2;
+    assign overflow = overflow_stage1 || overflow_stage2;
+    assign underflow = underflow_stage1 || underflow_stage2;
     assign fifo_dout = dout_stage2;
 
     // Operation modes:
@@ -129,7 +129,7 @@ module fast_fifo_wrapper (
                 ren_stage1 <= 1'b0;
                 if (flushing)
                     state <= pS_FLUSHING;
-                else if (!empty_stage1 && (normal_mode? !full_stage2[0] : 1'b1)) begin
+                else if (!empty_stage1 && (normal_mode? !full_stage2 : 1'b1)) begin
                     // to prevent underflowing on the last reads:
                     // TODO: make sure this works fine with downsampling (it should!)
                     if (fifo_wr || ! ren_stage1)
@@ -162,7 +162,7 @@ module fast_fifo_wrapper (
         endcase
     end
 
-    reg [2:0] ren_stage1_count = 3'd0;
+    reg [3:0] ren_stage1_count = 4'd0;
     reg ren_stage1_r = 1'b0;
 
     reg [1:0] empty_stage1_r;
@@ -176,7 +176,7 @@ module fast_fifo_wrapper (
             ren_stage1_r <= ren_stage1;
 
             if (ren_stage1_r) begin
-                if (ren_stage1_count == ((low_res)? 5:3)) begin
+                if (ren_stage1_count == ((low_res)? 8:5)) begin
                     ren_stage1_count <= 0;
                     wr_stage2 <= 1'b1;
                 end
@@ -184,9 +184,10 @@ module fast_fifo_wrapper (
                     ren_stage1_count <= ren_stage1_count + 1;
 
                 if (low_res) 
-                    din_stage2 <= {din_stage2[39:0], (low_res_lsb)? dout_stage1[7:0] : dout_stage1[11:4]};
+                    din_stage2 <= {din_stage2[63:0], (low_res_lsb)? dout_stage1[7:0] : dout_stage1[11:4]};
                 else
-                    din_stage2 <= {din_stage2[37:0], dout_stage1[11:0]};
+                    din_stage2 <= {din_stage2[59:0], dout_stage1[11:0]};
+
             end
         end
     end
@@ -194,7 +195,7 @@ module fast_fifo_wrapper (
     // read-side empty signal is simply the 2nd FIFO's empty signal;
     // it accurately reflects whether data is available to be read; note that 
     // it does NOT mean or imply that the 1st FIFO is empty!
-    assign empty_usb = empty_stage2[0];
+    assign empty_usb = empty_stage2;
 
     // The write-side empty flag *conservately* indicates whether all the
     // FIFOs here are well and truly empty. It is OK to show "not empty" when
@@ -214,7 +215,7 @@ module fast_fifo_wrapper (
     //
     // If you're not convinced, try this in a regression and you *will* see
     // failures!
-    // assign empty_adc = empty_stage2[0];  to induce errors!
+    // assign empty_adc = empty_stage2;  to induce errors!
     //
     // We use a simple FSM to construct our conservative empty flag. CDC
     // to-and-from the USB clock domain is key. This is quite conservative;
@@ -287,7 +288,7 @@ module fast_fifo_wrapper (
     cdc_simple U_empty2_cdc (
         .reset          (!rst_n),
         .clk            (wclk),
-        .data_in        (empty_stage2[0]),
+        .data_in        (empty_stage2),
         .data_out       (empty_stage2_adc),
         .data_out_r     ()
     );
@@ -322,41 +323,34 @@ module fast_fifo_wrapper (
         .underflow              (underflow_stage1)
     );
 
-    // NOTE: could use a single wide FIFO, but it's easier to mirror what the
-    // Xilinx case does, where we use 4x parallel FIFOs because it meets
-    // timing more easily :shrug:
-    genvar i;
-    generate
-        for (i = 0; i < 4; i = i + 1) begin
-            fifo_async #(
-                .pDATA_WIDTH    (12),
-                .pDEPTH         (pDEPTH2),
-                .pFALLTHROUGH   (1),
-                .pFLOPS         (0),
-                .pDISTRIBUTED   (0),
-                .pBRAM          (1)
-            ) U_slower_fifos (
-                .wclk                   (wclk),
-                .rclk                   (rclk),
-                .wrst_n                 (rst_n),
-                .rrst_n                 (rst_n),
-                .wfull_threshold_value  (0),
-                .rempty_threshold_value (5),
-                .wen                    (wr_stage2),
-                .wdata                  (din_stage2[i*12 +: 12]),
-                .wfull                  (full_stage2[i]),
-                .walmost_full           (),
-                .woverflow              (overflow_stage2[i]),
-                .wfull_threshold        (),
-                .ren                    (fifo_rd),
-                .rdata                  (dout_stage2[i*12 +: 12]),
-                .rempty                 (empty_stage2[i]),
-                .ralmost_empty          (),
-                .rempty_threshold       (empty_threshold_stage2[i]),
-                .runderflow             (underflow_stage2[i])
-            );
-        end
-    endgenerate
+    fifo_async #(
+        .pDATA_WIDTH    (72),
+        .pDEPTH         (pDEPTH2),
+        .pFALLTHROUGH   (1),
+        .pFLOPS         (0),
+        .pDISTRIBUTED   (0),
+        .pBRAM          (1)
+    ) U_slower_fifos (
+        .wclk                   (wclk),
+        .rclk                   (rclk),
+        .wrst_n                 (rst_n),
+        .rrst_n                 (rst_n),
+        .wfull_threshold_value  (0),
+        .rempty_threshold_value (5),
+        .wen                    (wr_stage2),
+        .wdata                  (din_stage2),
+        .wfull                  (full_stage2),
+        .walmost_full           (),
+        .woverflow              (overflow_stage2),
+        .wfull_threshold        (),
+        .ren                    (fifo_rd),
+        .rdata                  (dout_stage2),
+        .rempty                 (empty_stage2),
+        .ralmost_empty          (),
+        .rempty_threshold       (empty_threshold_stage2),
+        .runderflow             (underflow_stage2)
+    );
+
 
 `else
     `ifdef TINYFIFO
@@ -373,25 +367,20 @@ module fast_fifo_wrapper (
             .overflow       (overflow_stage1),
             .underflow      (underflow_stage1)
         );
-        genvar i;
-        generate
-            for (i = 0; i < 4; i = i + 1) begin
-                tiny_fast_slower_fifo U_slower_fifos (
-                    .rst                (~rst_n),
-                    .wr_clk             (wclk),
-                    .rd_clk             (rclk),
-                    .din                (din_stage2[i*12 +: 12]),
-                    .wr_en              (wr_stage2),
-                    .rd_en              (fifo_rd),
-                    .dout               (dout_stage2[i*12 +: 12]),
-                    .full               (full_stage2[i]),
-                    .empty              (empty_stage2[i]),
-                    .prog_empty         (empty_threshold_stage2[i]),
-                    .overflow           (overflow_stage2[i]),
-                    .underflow          (underflow_stage2[i])
-                );
-            end
-        endgenerate
+        tiny_fast_slower_fifo U_slower_fifos (
+            .rst                (~rst_n),
+            .wr_clk             (wclk),
+            .rd_clk             (rclk),
+            .din                (din_stage2),
+            .wr_en              (wr_stage2),
+            .rd_en              (fifo_rd),
+            .dout               (dout_stage2),
+            .full               (full_stage2),
+            .empty              (empty_stage2),
+            .prog_empty         (empty_threshold_stage2),
+            .overflow           (overflow_stage2),
+            .underflow          (underflow_stage2)
+        );
 
     `else
         // TODO: Plus/Regular
@@ -407,25 +396,20 @@ module fast_fifo_wrapper (
             .overflow       (overflow_stage1),
             .underflow      (underflow_stage1)
         );
-        genvar i;
-        generate
-            for (i = 0; i < 4; i = i + 1) begin
-                fast_slower_fifo U_slower_fifos (
-                    .rst                (~rst_n),
-                    .wr_clk             (wclk),
-                    .rd_clk             (rclk),
-                    .din                (din_stage2[i*12 +: 12]),
-                    .wr_en              (wr_stage2),
-                    .rd_en              (fifo_rd),
-                    .dout               (dout_stage2[i*12 +: 12]),
-                    .full               (full_stage2[i]),
-                    .empty              (empty_stage2[i]),
-                    .prog_empty         (empty_threshold_stage2[i]),
-                    .overflow           (overflow_stage2[i]),
-                    .underflow          (underflow_stage2[i])
-                );
-            end
-        endgenerate
+        fast_slower_fifo U_slower_fifos (
+            .rst                (~rst_n),
+            .wr_clk             (wclk),
+            .rd_clk             (rclk),
+            .din                (din_stage2),
+            .wr_en              (wr_stage2),
+            .rd_en              (fifo_rd),
+            .dout               (dout_stage2),
+            .full               (full_stage2),
+            .empty              (empty_stage2),
+            .prog_empty         (empty_threshold_stage2),
+            .overflow           (overflow_stage2),
+            .underflow          (underflow_stage2)
+        );
     `endif
 
 `endif
@@ -440,16 +424,16 @@ module fast_fifo_wrapper (
         .probe4         (empty_stage1),
         .probe5         (underflow_stage1),
         .probe6         (wr_stage2),
-        .probe7         (full_stage2[0]),
+        .probe7         (full_stage2),
         .probe8         (empty_adc),
-        .probe9         (empty_stage2[0])
+        .probe9         (empty_stage2)
     );
 
     ila_fast_fifo_wrap_read U_ila2 (
         .clk            (rclk),
         .probe0         (fifo_rd),
-        .probe1         (empty_stage2[0]),
-        .probe2         (underflow_stage2[0]),
+        .probe1         (empty_stage2),
+        .probe2         (underflow_stage2),
         .probe3         (empty_usb)
     );
 

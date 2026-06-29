@@ -27,12 +27,12 @@ module slow_fifo_wrapper (
     input  wire                         rst_n,
     input  wire                         fast_fifo_empty,
     input  wire                         fifo_wr,
-    input  wire [47:0]                  fifo_din,
+    input  wire [71:0]                  fifo_din,
     output wire                         fifo_full,
     output wire                         fifo_full_threshold,
     output wire                         overflow,
     input  wire                         fifo_rd,
-    output wire [47:0]                  fifo_dout,
+    output wire [71:0]                  fifo_dout,
     output wire                         fifo_empty,
     output wire                         underflow,
     output wire                         stage2_wr
@@ -63,12 +63,12 @@ module slow_fifo_wrapper (
 assign stage2_wr = wr2;
 
 wire wr1 = fifo_wr;
-wire [47:0] din1 = fifo_din;
-wire [47:0] dout1;
+wire [71:0] din1 = fifo_din;
+wire [71:0] dout1;
 reg  rd1 = 1'b0;
 wire wr2;
-wire [47:0] din2;
-wire [47:0] dout2;
+wire [71:0] din2;
+wire [71:0] dout2;
 wire rd2 = fifo_rd;
 
 wire full1;
@@ -127,7 +127,7 @@ end
 
 `ifdef NOXILINXFIFO
     fifo_sync #(
-        .pDATA_WIDTH    (48),
+        .pDATA_WIDTH    (72),
         .pDEPTH         (pDEPTH1),
         .pFALLTHROUGH   (1),
         .pFLOPS         (0),
@@ -153,7 +153,7 @@ end
     );
 
     fifo_sync #(
-        .pDATA_WIDTH    (48),
+        .pDATA_WIDTH    (72),
         .pDEPTH         (pDEPTH2),
         .pFALLTHROUGH   (1),
         .pFLOPS         (0),

@@ -368,28 +368,28 @@ class ADCTest(GenericTest):
         # calculate the actual number of samples that will be collected per segment:
         # 1. account for worst-case offset:
         if bits_per_sample == 12:
-            bytes_to_read = samples + 3
-        else:
             bytes_to_read = samples + 5
+        else:
+            bytes_to_read = samples + 8
         # 2. turn into bytes:
         if bits_per_sample == 12:
             bytes_to_read = math.ceil(bytes_to_read*1.5)
         else:
             bytes_to_read = bytes_to_read
-        # 3. round up to a multiple of the word size (48 bits / 6 bytes):
-        mod = bytes_to_read % 6
+        # 3. round up to a multiple of the word size (72 bits / 9 bytes):
+        mod = bytes_to_read % 9
         if mod:
-            bytes_to_read += 6 - mod
+            bytes_to_read += 9 - mod
         # 4. add offset word
-        bytes_to_read += 6
+        bytes_to_read += 9
 
         # similarly, calculate the actual number of *samples* that need to be collected:
         if bits_per_sample == 12:
-            samples_to_collect = samples + 3
-            mod_op = 4
-        else:
             samples_to_collect = samples + 5
             mod_op = 6
+        else:
+            samples_to_collect = samples + 8
+            mod_op = 9
         mod = samples_to_collect % mod_op
         if mod:
             samples_to_collect += mod_op - mod
@@ -403,7 +403,7 @@ class ADCTest(GenericTest):
         # which we don't account for here. Errors from too-close segments are easy to identify:
         # you'll get a segment and/or presample error; a quick look at the waveform can confirm that
         # the design is working as intended.
-        min_wait_segment_samples = offset + samples_to_collect + 80
+        min_wait_segment_samples = offset + samples_to_collect + 100
         # when there are "enough" presamples, the presample filling stage gives us more time:
         if presamples < 32:
             min_wait_segment_samples += 20
