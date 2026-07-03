@@ -467,6 +467,7 @@ module fifo_top_husky(
              pS_SAVE_OFFSET: begin
                 segment_cycle_counter <= segment_cycle_counter + 1;
                 save_offset <= 1'b0;
+                done_writing <= 1'b0;
                 if (next_segment_go) begin
                    segment_counter <= segment_counter + 1;
                    segment_cycle_counter <= 0;
@@ -725,8 +726,10 @@ module fifo_top_husky(
             slow_fifo_prewr <= 1'b0;
         end
 
-        else if ( (!slow_fifo_full_threshold && !fast_fifo_almost_empty) ||
+        else if ( (!slow_fifo_full_threshold && !fast_fifo_almost_empty && !fast_fifo_empty) ||
                   (!slow_fifo_prewr && !slow_fifo_full && !fast_fifo_empty && empty_stage1_usb) ) begin
+                  // TODO-note: maybe need to split up the slow_fifo_full / fast_fifo_empty cases? because only latter should care about
+                  // empty_stage1_usb. But maybe this is ok for simplicity? Need to test carefully.
             fast_fifo_rd_en <= 1'b1;
             slow_fifo_prewr <= 1'b1;
         end
