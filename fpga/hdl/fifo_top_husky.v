@@ -48,7 +48,7 @@ module fifo_top_husky(
     output reg  [7:0]   fifo_read_data,
     input  wire         fast_fifo_read_mode, // not to be confused with the ADC fast FIFO, this denote fast reading of the *slow* FIFO
 
-    input wire  [14:0]  presample_i,
+    input wire  [16:0]  presample_i,
     input wire  [31:0]  max_samples_i, // TODO: maybe we don't actually need this?
     input wire  [31:0]  samples_to_collect,
     input wire  [31:0]  total_stream_bytes,
@@ -115,7 +115,7 @@ module fifo_top_husky(
     reg                 presample_fifo_count_overflow_reg;
     reg                 presample_fifo_count_underflow_reg;
 
-    reg  [14:0]         presample_counter; // TODO: adjust width if needed
+    reg  [16:0]         presample_counter;
     reg  [3:0]          write_word_counter = 4'b0000;
     reg  [31:0]         sample_counter;
     reg  [15:0]         segment_counter;

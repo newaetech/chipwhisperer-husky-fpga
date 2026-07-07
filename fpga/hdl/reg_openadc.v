@@ -69,7 +69,7 @@ module reg_openadc #(
    /* Additional ADC control lines */
    input  wire        clkblock_dcm_locked_i,
    input  wire        clkblock_gen_locked_i,
-   output wire [14:0] presamples_o,
+   output wire [16:0] presamples_o,
    output wire [31:0] maxsamples_o,
    output wire [31:0] samples_to_collect,
    output wire [31:0] total_stream_bytes,
@@ -116,7 +116,7 @@ module reg_openadc #(
    wire [31:0] registers_extclk_frequency;
    wire [31:0] registers_adcclk_frequency;
    reg [95:0] registers_samples;
-   reg [14:0] registers_presamples;
+   reg [16:0] registers_presamples;
    reg [31:0] registers_offset;
    wire [47:0] version_data;
    wire [31:0] system_frequency = 32'd`SYSTEM_CLK;
