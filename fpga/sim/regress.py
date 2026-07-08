@@ -45,6 +45,40 @@ tests.append(dict(name  = 'adc_capture',
              MAX_DOWNSAMPLE = 4,
              description = 'ADC-only capture.'))
 
+tests.append(dict(name  = 'adc_max_presamples_12b',
+             testcase = 'capture',
+             frequency = 8,
+             LA_CAPTURE = 0,
+             TRACE_CAPTURE = 0,
+             GLITCH_CAPTURE = 0,
+             MIN_SIZE = 1770,
+             MAX_SIZE = 1788,
+             MIN_PRESAMPLES = 1770,
+             MAX_PRESAMPLES = 1770,
+             MAX_OFFSET = 100,
+             MAX_DOWNSAMPLE = 1,
+             FIFOSIZE = "TINYFIFO",
+             ADC_RES = 12,
+             NUM_CAPTURES = 2,
+             description = 'ADC-only capture, max presamples, 12-bit mode.'))
+
+tests.append(dict(name  = 'adc_max_presamples_8b',
+             testcase = 'capture',
+             frequency = 8,
+             LA_CAPTURE = 0,
+             TRACE_CAPTURE = 0,
+             GLITCH_CAPTURE = 0,
+             MIN_SIZE = 2530,
+             MAX_SIZE = 2557,
+             MIN_PRESAMPLES = 2530,
+             MAX_PRESAMPLES = 2530,
+             MAX_OFFSET = 100,
+             MAX_DOWNSAMPLE = 1,
+             FIFOSIZE = "TINYFIFO",
+             ADC_RES = 8,
+             NUM_CAPTURES = 2,
+             description = 'ADC-only capture, max presamples, 8-bit mode.'))
+
 # downsamples gets its own testcase because it has restrictions on presamples and segments:
 tests.append(dict(name  = 'adc_downsample',
              testcase = 'capture',
@@ -117,19 +151,20 @@ tests.append(dict(name  = 'huge_adc_capture',
              frequency = 7,
              # note: max_size will get adjusted down if not pro
              # TODO: max for 8-bit is 12800... also; adjust to actual limits
-             MIN_SIZE = 8604,
-             MAX_SIZE = 8704,
+             MIN_SIZE = 4850,
+             MAX_SIZE = 4860,
              NUM_CAPTURES = 1,
              LA_CAPTURE = 0,
              TRACE_CAPTURE = 0,
              GLITCH_CAPTURE = 0,
+             TIMEOUT_TIME = 100000,
              FIFOSIZE = "TINYFIFO",
              # with TINY FIFO, for ADC we have:
-             # fast1: 512 
-             # fast2: 1024*4
-             # slow1: 512*4
-             # slow2: 512*4
-             # TOTAL: 8704 (8-bit: 12800)
+             # fast1: 256 
+             # fast2: 256*6
+             # slow1: 256*6
+             # slow2: 256*6
+             # TOTAL: 4864 (8-bit: 7168)
              #
              # fast FIFO: 1024 samples
              # pre DDR: 512*64/12 = 2730 samples

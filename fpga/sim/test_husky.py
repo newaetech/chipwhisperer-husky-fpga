@@ -362,9 +362,11 @@ async def capture(dut):
 
 
     num_captures = int(os.getenv('NUM_CAPTURES', '3'))
+    adc_res = int(os.getenv('ADC_RES', '0'))
     min_size = int(os.getenv('MIN_SIZE', '30'))
     max_size = int(os.getenv('MAX_SIZE', '100'))
     max_presamples = int(os.getenv('MAX_PRESAMPLES', '100'))
+    min_presamples = int(os.getenv('MIN_PRESAMPLES', '0'))
     max_offset =  int(os.getenv('MAX_OFFSET', '100'))
     max_downsample =  int(os.getenv('MAX_DOWNSAMPLE', '1'))
     min_glitches = int(os.getenv('MIN_GLITCHES', '1'))
@@ -378,6 +380,7 @@ async def capture(dut):
 
     if is_pro:
         # actual limits are higher (depends on DDR model size); these are in the interest of simulation time:
+        # TODO: adjust all these!
         ADC_MAX = 16384
         LA_MAX = 16384
         TRACE_MAX = 16384
@@ -388,7 +391,7 @@ async def capture(dut):
         if stream:
             ADC_MAX = 16384 # not the actual limit -- just in interest of simulation time
         else:
-            ADC_MAX = 4095
+            ADC_MAX = 4860
 
     registers = Registers(dut)
     harness = Harness(dut, registers, stream, is_pro, stop_first_error)
@@ -412,8 +415,10 @@ async def capture(dut):
             dut._log.error('Cannot test ext_continuous glitches when ADC is active')
         adctest = ADCTest(dut, dut.PLL_CLK1, harness, registers, dut.adc_job, dut.adc_reading)
         adctest.num_captures = num_captures
+        adctest.adc_res = adc_res
         adctest.capture_max = min(max_size, ADC_MAX)
         adctest.capture_min = min(min_size, adctest.capture_max)
+        adctest.min_presamples = min_presamples
         adctest.max_presamples = max_presamples
         adctest.max_offset = max_offset
         adctest.max_downsample = max_downsample

@@ -183,6 +183,7 @@ class GenericTest(object):
                 await ClockCycles(self.clk_usb, 50)
                 not_done_writing = not await self.harness.ddr_done_writing()
             self.dut._log.info("%12s DDR write done" % job['name'])
+        # TODO: wait longer! due to new FIFO architecture
 
     def get_downstream_trigger(self, job) -> list:
         """ If a job triggers another job, returns that second job's Test
@@ -339,6 +340,7 @@ class ADCTest(GenericTest):
         self.max_segments = None
         self.max_segment_cycles = None
         self.segment_time_factor = 4
+        self.adc_res = None
         fifo_watch_thread = cocotb.start_soon(self.fifo_watch())
         if harness.is_pro:
             ddr_watch_thread = cocotb.start_soon(self.ddr_model_watch())
@@ -349,16 +351,25 @@ class ADCTest(GenericTest):
 
     async def _job_setup(self) -> dict:
         samples = random.randint(self.capture_min, self.capture_max)
-        if random.randint(0,3) == 0 or self.max_presamples == 0:
-            presamples = 0  # no presamples a quarter of the time
+        # if allowed, no presamples a quarter of the time:
+        if (self.min_presamples == 0 and random.randint(0,3) == 0) or self.max_presamples == 0:
+            presamples = 0
+        # otherwise, favour max presamples a remaining quarter of the time:
+        elif random.randint(0,3) == 0:
+            presamples = min(self.max_presamples, samples)  # max presamples a remaining quarter of the time
+        # otherwise, randomize in specified range but excluding 1 which is not allowed:
         else:
-            presamples = random.randint(2, min(self.max_presamples, samples)) # only restriction on presamples is that it can't be 1 (and, obviously, can't be greater than samples)
+            presamples = random.randint(self.min_presamples, min(self.max_presamples, samples))
+            if presamples == 1:
+                presamples = self.min_presamples
             self.dut._log.info('setting presamples to %d because samples=%d, min=%d' % (presamples, samples, min(self.max_presamples, samples-2)))
         if random.randint(0,3) == 0:
             offset = 0  # no offset a quarter of the time
         else:
             offset = random.randint(0, self.max_offset)
-        if random.randint(0,1):
+        if self.adc_res:
+            bits_per_sample = self.adc_res
+        elif random.randint(0,1):
             bits_per_sample = 12
         else:
             bits_per_sample = 8
