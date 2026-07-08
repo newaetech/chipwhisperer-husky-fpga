@@ -44,13 +44,11 @@ module fast_fifo_wrapper (
     output wire                         empty_stage1_usb
 );
 
-// TODO: tweak these!
-// TODO: can I get even *MORE* presamples?!?
-// Note: 512 is the minimum built-in FIFO depth; can investigate other implementations...
+// Note: 512 is the minimum Xilinx built-in FIFO depth, but our simulation FIFOs can do 256
 `ifdef PLUS
     `ifdef TINYFIFO
-        localparam pDEPTH1 = 512;
-        localparam pDEPTH2 = 512;
+        localparam pDEPTH1 = 256;
+        localparam pDEPTH2 = 256;
     `else
         localparam pDEPTH1 = 2048;
         localparam pDEPTH2 = 8192;
@@ -58,11 +56,11 @@ module fast_fifo_wrapper (
 
 `else
     `ifdef TINYFIFO
-        localparam pDEPTH1 = 512;
-        localparam pDEPTH2 = 1024;
+        localparam pDEPTH1 = 256;
+        localparam pDEPTH2 = 256;
     `else
-        localparam pDEPTH1 = 512;
-        localparam pDEPTH2 = 16384;
+        localparam pDEPTH1 = 2048;
+        localparam pDEPTH2 = 4096;
     `endif
 
 `endif
@@ -111,18 +109,12 @@ module fast_fifo_wrapper (
     // support higher throughput than the stage1 FIFO, by design).
 
     localparam pS_IDLE = 0;
-    localparam pS_WAIT_WRITE = 1;
-    localparam pS_FLUSHING = 2;
-    reg [1:0] state = pS_IDLE;
+    localparam pS_FLUSHING = 1;
+    reg state = pS_IDLE;
 
     wire normal_mode = !flushing;
 
-    // TODO: when no longer writing, then read every other cycle, to give the
-    // empty flag a chance to show up? 
-    //  - What about downsample? that's easy because by definition not writing
-    //    each cycle!
-    // Also TODO: when all is done, reconsider whether we need an FSM
-
+    // Note: FSM may be overkill here but it works
     always @(posedge wclk) begin
         case (state)
             pS_IDLE: begin
@@ -131,26 +123,14 @@ module fast_fifo_wrapper (
                     state <= pS_FLUSHING;
                 else if (!empty_stage1 && (normal_mode? !full_stage2 : 1'b1)) begin
                     // to prevent underflowing on the last reads:
-                    // TODO: make sure this works fine with downsampling (it should!)
                     if (fifo_wr || ! ren_stage1)
                         ren_stage1 <= 1'b1;
                     state <= pS_IDLE;
                 end
             end
 
-            // TODO: don't need this?
-            /*
-            pS_WAIT_WRITE: begin
-                ren_stage1 <= 1'b0;
-                if (!full2 && !ren_stage1) begin
-                    wr2 <= 1'b1;
-                    state <= pS_IDLE;
-                end
-            end
-            */
-
             pS_FLUSHING: begin
-                // note: stage2 is flushed by fifo_top_husky
+                // Note: stage2 is flushed by fifo_top_husky
                 if (!empty_stage1)
                     ren_stage1 <= 1'b1;
                 else begin
@@ -295,7 +275,6 @@ module fast_fifo_wrapper (
 
 
 
-
 `ifdef NOXILINXFIFO
     fifo_sync #(
         .pDATA_WIDTH            (12),
@@ -354,7 +333,6 @@ module fast_fifo_wrapper (
 
 `else
     `ifdef TINYFIFO
-        // TODO: Plus/Regular
         tiny_adc_fast_fifo U_fast_fifo (
             .clk            (wclk),
             .rst            (~rst_n),
@@ -383,7 +361,6 @@ module fast_fifo_wrapper (
         );
 
     `else
-        // TODO: Plus/Regular
         adc_fast_fifo U_fast_fifo (
             .clk            (wclk),
             .rst            (~rst_n),

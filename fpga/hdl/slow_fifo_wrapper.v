@@ -38,23 +38,21 @@ module slow_fifo_wrapper (
     output wire                         stage2_wr
 );
 
-// TODO: tweak these!
-// TODO: do we really need two FIFOs here?
 `ifdef PLUS
     `ifdef TINYFIFO
-        localparam pDEPTH1 = 512;
-        localparam pDEPTH2 = 512;
+        localparam pDEPTH1 = 256;
+        localparam pDEPTH2 = 256;
     `else
-        localparam pDEPTH1 = 4096;
-        localparam pDEPTH2 = 65536;
+        localparam pDEPTH1 = 16384;
+        localparam pDEPTH2 = 32768;
     `endif
 
 `else
     `ifdef TINYFIFO
-        localparam pDEPTH1 = 512;
-        localparam pDEPTH2 = 512;
+        localparam pDEPTH1 = 256;
+        localparam pDEPTH2 = 256;
     `else
-        localparam pDEPTH1 = 16384;
+        localparam pDEPTH1 = 2048;
         localparam pDEPTH2 = 16384;
     `endif
 
@@ -181,8 +179,7 @@ end
 
 `else
     `ifdef TINYFIFO
-        // we still split the FIFO for debug purposes!
-        tiny_usb_slow_fifo1_plus U_fifo1(
+        tiny_usb_slow_fifo1 U_fifo1(
             .clk                (clk),
             .rst                (~rst_n),
             .din                (din1),
@@ -196,7 +193,7 @@ end
             .overflow           (overflow1),
             .underflow          (underflow1)
         );
-        tiny_usb_slow_fifo2_plus U_fifo2(
+        tiny_usb_slow_fifo2 U_fifo2(
             .clk                (clk),
             .rst                (~rst_n),
             .din                (din2),
@@ -211,8 +208,7 @@ end
         );
 
     `else
-        // TODO: Plus/Regular
-        usb_slow_fifo1_plus U_fifo1(
+        usb_slow_fifo1 U_fifo1(
             .clk                (clk),
             .rst                (~rst_n),
             .din                (din1),
@@ -226,7 +222,7 @@ end
             .overflow           (overflow1),
             .underflow          (underflow1)
         );
-        usb_slow_fifo2_plus U_fifo2(
+        usb_slow_fifo2 U_fifo2(
             .clk                (clk),
             .rst                (~rst_n),
             .din                (din2),
@@ -265,7 +261,6 @@ end
         .probe13        (underflow2),
         .probe14        (fifo_empty)
     );
-
 `endif
 
 
