@@ -360,7 +360,6 @@ async def reg_rw(dut, wait_cycles=1000):
 async def capture(dut):
     """Concurrent captures of ADC, trace and LA."""
 
-
     num_captures = int(os.getenv('NUM_CAPTURES', '3'))
     adc_res = int(os.getenv('ADC_RES', '0'))
     min_size = int(os.getenv('MIN_SIZE', '30'))
@@ -387,11 +386,7 @@ async def capture(dut):
     else:
         LA_MAX = 4095
         TRACE_MAX = 2047
-        # TODO: tweak!
-        if stream:
-            ADC_MAX = 16384 # not the actual limit -- just in interest of simulation time
-        else:
-            ADC_MAX = 4860
+        ADC_MAX = 16384 # Note: not sure this is actually needed anymore? Also depends on bits/sample...
 
     registers = Registers(dut)
     harness = Harness(dut, registers, stream, is_pro, stop_first_error)

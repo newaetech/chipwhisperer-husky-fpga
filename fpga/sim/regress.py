@@ -145,32 +145,64 @@ tests.append(dict(name  = 'big_capture',
              NUM_CAPTURES = 2,
              description = 'All sources, larger captures.'))
 
-tests.append(dict(name  = 'huge_adc_capture',
-             # TODO: need to update this testcase for new architecture
+tests.append(dict(name  = 'huge_adc_capture_12b',
              testcase = 'capture',
-             frequency = 7,
-             # note: max_size will get adjusted down if not pro
-             # TODO: max for 8-bit is 12800... also; adjust to actual limits
-             MIN_SIZE = 4850,
-             MAX_SIZE = 4860,
+             frequency = 5,
+             MIN_SIZE = 3072,
+             MAX_SIZE = 4608,
              NUM_CAPTURES = 1,
              LA_CAPTURE = 0,
              TRACE_CAPTURE = 0,
              GLITCH_CAPTURE = 0,
              TIMEOUT_TIME = 100000,
+             ADC_RES = 12,
              FIFOSIZE = "TINYFIFO",
-             # with TINY FIFO, for ADC we have:
-             # fast1: 256 
-             # fast2: 256*6
-             # slow1: 256*6
-             # slow2: 256*6
-             # TOTAL: 4864 (8-bit: 7168)
-             #
-             # fast FIFO: 1024 samples
-             # pre DDR: 512*64/12 = 2730 samples
-             # post DDR: 512*64/12 = 2730 samples
-             # DDR capacity: selectable via TINYDDR, 256*64/12 = 1365 or 64K*64/12 = 349525 samples
-             description = 'ADC capture exceeding pre-DDR FIFO size.'))
+             description = 'ADC capture exceeding slow FIFO size.'))
+
+tests.append(dict(name  = 'huge_adc_capture_8b',
+             testcase = 'capture',
+             frequency = 5,
+             MIN_SIZE = 4608,
+             MAX_SIZE = 6912,
+             NUM_CAPTURES = 1,
+             LA_CAPTURE = 0,
+             TRACE_CAPTURE = 0,
+             GLITCH_CAPTURE = 0,
+             TIMEOUT_TIME = 100000,
+             ADC_RES = 8,
+             FIFOSIZE = "TINYFIFO",
+             description = 'ADC capture exceeding slow FIFO size.'))
+
+
+tests.append(dict(name  = 'full_adc_capture_12b',
+             testcase = 'capture',
+             frequency = 5,
+             MIN_SIZE = 4843,
+             MAX_SIZE = 4849,
+             NUM_CAPTURES = 2,
+             LA_CAPTURE = 0,
+             TRACE_CAPTURE = 0,
+             GLITCH_CAPTURE = 0,
+             TIMEOUT_TIME = 100000,
+             ADC_RES = 12,
+             FIFOSIZE = "TINYFIFO",
+             description = 'ADC capture using near-to-full storage.'))
+
+
+tests.append(dict(name  = 'full_adc_capture_8b',
+             testcase = 'capture',
+             frequency = 5,
+             MIN_SIZE = 7129,
+             MAX_SIZE = 7138,
+             NUM_CAPTURES = 2,
+             LA_CAPTURE = 0,
+             TRACE_CAPTURE = 0,
+             GLITCH_CAPTURE = 0,
+             TIMEOUT_TIME = 100000,
+             ADC_RES = 8,
+             FIFOSIZE = "TINYFIFO",
+             description = 'ADC capture using near-to-full storage.'))
+
 
 tests.append(dict(name  = 'adc_stream_regular',
              testcase = 'capture',

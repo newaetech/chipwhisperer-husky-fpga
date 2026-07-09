@@ -243,7 +243,7 @@ class ADCCapture(GenericCapture):
         self.sample_increment = 1
 
     async def read_adc_data(self, bytes_to_read):
-        if random.randint(0,5):
+        if random.randint(0,5) or bytes_to_read > 500:
             # fast reads most of the time (in the interest of simulation time)
             self.dut._log.info('using FAST read mode for reading ADC samples (%d bytes)' % bytes_to_read)
             await self.harness.registers.fast_read_mode_start()
