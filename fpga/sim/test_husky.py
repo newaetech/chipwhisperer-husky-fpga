@@ -370,6 +370,7 @@ async def capture(dut):
     max_downsample =  int(os.getenv('MAX_DOWNSAMPLE', '1'))
     min_glitches = int(os.getenv('MIN_GLITCHES', '1'))
     max_glitches = int(os.getenv('MAX_GLITCHES', '5'))
+    min_segments = int(os.getenv('MIN_SEGMENTS', '1'))
     max_segments = int(os.getenv('MAX_SEGMENTS', '1'))
     max_segment_cycles = int(os.getenv('MAX_SEGMENT_CYCLES', '1'))
     stream = int(os.getenv('STREAM', '0'))
@@ -417,6 +418,7 @@ async def capture(dut):
         adctest.max_presamples = max_presamples
         adctest.max_offset = max_offset
         adctest.max_downsample = max_downsample
+        adctest.min_segments = min_segments
         adctest.max_segments = max_segments
         adctest.max_segment_cycles = max_segment_cycles
         adctest.stream = stream

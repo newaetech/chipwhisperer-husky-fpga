@@ -337,6 +337,7 @@ class ADCTest(GenericTest):
         self.dut_job_signal = dut_job_signal
         self.checker = ADCCapture(dut, sampling_clock, harness, dut_reading_signal)
         self.name = 'ADC'
+        self.min_segments = None
         self.max_segments = None
         self.max_segment_cycles = None
         self.segment_time_factor = 4
@@ -405,7 +406,7 @@ class ADCTest(GenericTest):
         if mod:
             samples_to_collect += mod_op - mod
 
-        segments = random.randint(1, self.max_segments)
+        segments = random.randint(self.min_segments, self.max_segments)
         segment_cycles = 0
         segment_counter_en = 0
         segment_times = []

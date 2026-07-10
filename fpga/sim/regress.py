@@ -106,6 +106,29 @@ tests.append(dict(name  = 'adc_segments',
              MAX_SEGMENT_CYCLES = 1000,
              description = 'ADC-only capture with segments.'))
 
+tests.append(dict(name  = 'adc_max_segments',
+             testcase = 'capture',
+             frequency = 10,
+             LA_CAPTURE = 0,
+             TRACE_CAPTURE = 0,
+             GLITCH_CAPTURE = 0,
+             MIN_SIZE = 119,
+             MAX_SIZE = 127,
+             MAX_PRESAMPLES = 127,
+             MAX_OFFSET = 1000,
+             MIN_SEGMENTS = 32,
+             MAX_SEGMENTS = 32,
+             MAX_SEGMENT_CYCLES = 1000,
+             ADC_RES = 8,
+             FIFOSIZE = "TINYFIFO",
+             TIMEOUT_TIME = 5000,
+             description = 'ADC-only capture with segments filling up the slow FIFO.'))
+             # Slow FIFO (8b) is 256*18 = 4608 bytes samples; that's 32 segments of 144 bytes.
+             # 9 bytes go to the offset word, leaving 135 bytes of sample data (which happily
+             # is a multiple of 9);
+             # an extra 8 bytes are required for offset variability, so the actual captured 
+             # sample count is 127 bytes.
+
 tests.append(dict(name  = 'la_capture',
              testcase = 'capture',
              frequency = 4,
