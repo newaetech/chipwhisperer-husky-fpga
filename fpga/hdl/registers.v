@@ -336,7 +336,6 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 `define SEGMENT_CYCLE_COUNTER_EN 92
 
 `define MAX_SAMPLES_ADDR        93
-`define MAX_SEGMENT_SAMPLES_ADDR 94
 
 `define EXTERNAL_CLOCK          95
 `define COMPONENTS_EXIST        96
@@ -389,6 +388,7 @@ Note: some register bitfields are defined in reg_clockglitch.v and reg_chipwhisp
 //`define UNUSED_ADDRESS 70
 //`define UNUSED_ADDRESS 85
 //`define UNUSED_ADDRESS 106
+//`define UNUSED_ADDRESS 94
 //`define UNUSED_ADDRESS 97
 //`define UNUSED_ADDRESS 86
 //`define UNUSED_ADDRESS 87

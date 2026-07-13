@@ -573,10 +573,14 @@ module openadc_interface #(
    wire [16:0] stream_segment_threshold;
 
    wire [16:0] presamples;
-   wire [31:0] maxsamples_limit;
-   wire [31:0] maxsamples;
    wire [31:0] samples_to_collect;
    wire [31:0] total_stream_bytes;
+
+   wire [23:0] max_samples_8b;
+   wire [23:0] max_samples_12b;
+   wire [23:0] max_presamples_8b;
+   wire [23:0] max_presamples_12b;
+   wire [23:0] max_segment_total_bytes;
 
    wire [12:0] downsample;
    wire [7:0] reg_datao_oadc;
@@ -843,8 +847,13 @@ module openadc_interface #(
       .uiclk_frequency              (uiclk_frequency_masked),
       .pllclk_frequency             (pllclk_frequency_masked),
       .presamples_o                 (presamples),
-      .maxsamples_i                 (maxsamples_limit),
-      .maxsamples_o                 (maxsamples),
+
+      .max_samples_8b               (max_samples_8b         ),
+      .max_samples_12b              (max_samples_12b        ),
+      .max_presamples_8b            (max_presamples_8b      ),
+      .max_presamples_12b           (max_presamples_12b     ),
+      .max_segment_total_bytes      (max_segment_total_bytes),
+
       .samples_to_collect           (samples_to_collect),
       .total_stream_bytes           (total_stream_bytes),
       .downsample_o                 (downsample),
@@ -1005,8 +1014,8 @@ module openadc_interface #(
           .clk_usb                  (clk_usb),
 
           .presample_i              (presamples),
-          .max_samples_i            (maxsamples),
-          .max_samples_o            (maxsamples_limit),
+          .max_samples_i            (maxsamples), // TODO: no longer exists (use max_samples_8b, etc...)
+          .max_samples_o            (maxsamples_limit), // TODO: update as per fifo_top_husky (max_samples_8b, etc...)
           .downsample_i             (downsample),
 
           .fifo_overflow            (fifo_overflow_noddr),
@@ -1187,10 +1196,15 @@ module openadc_interface #(
           .stream_segment_threshold (stream_segment_threshold),
 
           .presample_i              (presamples),
-          .max_samples_i            (maxsamples),
           .samples_to_collect       (samples_to_collect),
           .total_stream_bytes       (total_stream_bytes),
-          .max_samples_o            (maxsamples_limit),
+
+          .max_samples_8b           (max_samples_8b         ),
+          .max_samples_12b          (max_samples_12b        ),
+          .max_presamples_8b        (max_presamples_8b      ),
+          .max_presamples_12b       (max_presamples_12b     ),
+          .max_segment_total_bytes  (max_segment_total_bytes),
+
           .downsample_i             (downsample),
 
           .fifo_overflow            (fifo_overflow),

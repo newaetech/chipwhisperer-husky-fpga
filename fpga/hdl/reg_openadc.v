@@ -70,15 +70,19 @@ module reg_openadc #(
    input  wire        clkblock_dcm_locked_i,
    input  wire        clkblock_gen_locked_i,
    output wire [16:0] presamples_o,
-   output wire [31:0] maxsamples_o,
    output wire [31:0] samples_to_collect,
    output wire [31:0] total_stream_bytes,
-   input  wire [31:0] maxsamples_i,
    output wire [12:0] downsample_o,
    output wire        fifo_stream,
    output reg  [2:0]  led_select,
    output reg         no_clip_errors,
    output reg         no_gain_errors,
+
+   input  wire [23:0] max_samples_8b,
+   input  wire [23:0] max_samples_12b,
+   input  wire [23:0] max_presamples_8b,
+   input  wire [23:0] max_presamples_12b,
+   input  wire [23:0] max_segment_total_bytes,
 
    input  wire        trigger_event, // capture_go_o from trigger_unit.v, to count cycles between successive triggers
 
@@ -101,9 +105,6 @@ module reg_openadc #(
    reg reset_fromreg = 1'b0;
    assign reset = reset_i | reset_fromreg;
    assign reset_o = reset;
-
-   wire [31:0] max_samples_constant = 32'd`MAX_SAMPLES;
-   wire [31:0] max_segment_samples_constant = 32'd`MAX_SEGMENT_SAMPLES;
 
    //Register definitions
    reg [7:0]  registers_gain;
@@ -153,7 +154,6 @@ module reg_openadc #(
 
    assign gain = registers_gain;
    assign total_stream_bytes = registers_samples[95:64];
-   assign maxsamples_o = registers_samples[63:32];
    assign samples_to_collect = registers_samples[31:0];
    assign presamples_o = registers_presamples;
 
@@ -164,6 +164,12 @@ module reg_openadc #(
    assign reg_datao = reg_datao_reg;
 
    assign extclk_monitor_disabled = (extclk_limit == 0);
+
+   wire [24*5-1:0] max_samples_combo = {max_samples_8b,
+                                        max_samples_12b,
+                                        max_presamples_8b,
+                                        max_presamples_12b,
+                                        max_segment_total_bytes};
 
    always @(*) begin
           if (reg_read) begin
@@ -178,8 +184,7 @@ module reg_openadc #(
                 `VERSION_ADDR: reg_datao_reg = version_data[reg_bytecnt*8 +: 8];
                 `DECIMATE_ADDR: reg_datao_reg = registers_downsample[reg_bytecnt*8 +: 8];
                 `SAMPLES_ADDR: reg_datao_reg = registers_samples[reg_bytecnt*8 +: 8];
-                `MAX_SAMPLES_ADDR: reg_datao_reg = max_samples_constant[reg_bytecnt*8 +: 8];
-                `MAX_SEGMENT_SAMPLES_ADDR: reg_datao_reg = max_segment_samples_constant[reg_bytecnt*8 +: 8];
+                `MAX_SAMPLES_ADDR: reg_datao_reg = max_samples_combo[reg_bytecnt*8 +: 8];
                 `PRESAMPLES_ADDR: reg_datao_reg = registers_presamples[reg_bytecnt*8 +: 8];
                 `OFFSET_ADDR: reg_datao_reg = registers_offset[reg_bytecnt*8 +: 8];
                 `ADVCLOCK_ADDR: reg_datao_reg = registers_advclocksettings_read[reg_bytecnt*8 +: 8];
@@ -208,8 +213,7 @@ module reg_openadc #(
          registers_gain <= 0;
          registers_settings <= 8'b0010_0100; // default to trigger on rising edge
          registers_echo <= 64'h1234_5678_9abc_def0; // known value for sanity check
-         registers_samples <= maxsamples_i; // for backwards compatibility with CW-lite, but
-                                            // MAX_SAMPLES_ADDR and MAX_SEGMENT_SAMPLES_ADDR registers should be used instead
+         registers_samples <= 0;
          registers_presamples <= 0;
          registers_offset <= 0;
          registers_advclocksettings <= 32'h00000102;

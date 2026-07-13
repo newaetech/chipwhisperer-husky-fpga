@@ -49,10 +49,15 @@ module fifo_top_husky(
     input  wire         fast_fifo_read_mode, // not to be confused with the ADC fast FIFO, this denote fast reading of the *slow* FIFO
 
     input wire  [16:0]  presample_i,
-    input wire  [31:0]  max_samples_i, // TODO: maybe we don't actually need this?
     input wire  [31:0]  samples_to_collect,
     input wire  [31:0]  total_stream_bytes,
-    output wire [31:0]  max_samples_o,
+
+    output wire [23:0]  max_samples_8b,
+    output wire [23:0]  max_samples_12b,
+    output wire [23:0]  max_presamples_8b,
+    output wire [23:0]  max_presamples_12b,
+    output wire [23:0]  max_segment_total_bytes,
+
     input wire  [12:0]  downsample_i, //Ignores this many samples inbetween captured measurements
 
     output wire         fifo_overflow, //If overflow happens (bad during stream mode)
@@ -83,8 +88,29 @@ module fifo_top_husky(
 
 );
 
-    parameter pFIFO_FULL_SIZE = `MAX_SAMPLES; // TODO: update!
     parameter pMAX_UNDERFLOWS = 3; // TODO: still valid?
+
+`ifdef PLUS
+    parameter pMAX_SAMPLES_8b = 518353;
+    parameter pMAX_SAMPLES_12b = 346246;
+    parameter pMAX_PRESAMPLES_8b = 75745;
+    parameter pMAX_PRESAMPLES_12b = 51163;
+    parameter pMAX_SEGMENT_TOTAL_BYTES = 48*9*1024;
+
+`else
+    parameter pMAX_SAMPLES_8b = 204796;
+    parameter pMAX_SAMPLES_12b = 137215;
+    parameter pMAX_PRESAMPLES_8b = 38890;
+    parameter pMAX_PRESAMPLES_12b = 26605;
+    parameter pMAX_SEGMENT_TOTAL_BYTES = 18*9*1024;
+
+`endif
+
+    assign max_samples_8b          = pMAX_SAMPLES_8b;
+    assign max_samples_12b         = pMAX_SAMPLES_12b;
+    assign max_presamples_8b       = pMAX_PRESAMPLES_8b;
+    assign max_presamples_12b      = pMAX_PRESAMPLES_12b;
+    assign max_segment_total_bytes = pMAX_SEGMENT_TOTAL_BYTES;
 
     wire                fast_fifo_wr;
     reg                 fast_fifo_rd_en = 1'b0;
@@ -208,8 +234,6 @@ module fifo_top_husky(
           end
        end
     end
-
-    assign max_samples_o = pFIFO_FULL_SIZE;
 
 
     // Presample logic: when armed, we always write to the fast FIFO. When
@@ -666,7 +690,7 @@ module fifo_top_husky(
           // SAM3U likes to read multiples of 4 bytes, so we don't flag an
           // underflow unless we observe at least pMAX_UNDERFLOWS underflow reads.
           // Note that with this architecture, the Python side code reads
-          // multiples of *6* bytes, so these underflows can still occur.
+          // multiples of *9* bytes, so these underflows can still occur.
           if (arm_pulse_usb)
              slow_fifo_underflow_count <= 0;
           else if (slow_fifo_underflow && slow_fifo_underflow_count < pMAX_UNDERFLOWS)
