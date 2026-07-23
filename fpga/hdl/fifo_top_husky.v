@@ -66,6 +66,10 @@ module fifo_top_husky(
     output reg [9:0]    error_stat,
     output reg [9:0]    first_error_stat,
     output reg [2:0]    first_error_state,
+    output reg [16:0]   first_error_presample_counter,
+    output reg [15:0]   first_error_segment_counter,
+    output reg [31:0]   first_error_sample_counter,
+
     input  wire         clear_fifo_errors,
     input  wire         trigger_too_soon,
     output reg          stream_segment_available,
@@ -672,6 +676,9 @@ module fifo_top_husky(
                 if (!error_flag) begin
                    first_error_stat <= error_bits(first_error_stat);
                    first_error_state <= state_r;
+                   first_error_presample_counter <= presample_counter;
+                   first_error_sample_counter <= sample_counter;
+                   first_error_segment_counter <= segment_counter;
                 end
              end
 
@@ -774,8 +781,30 @@ module fifo_top_husky(
         .probe3         (slow_fifo_full),
         .probe4         (fast_fifo_almost_empty),
         .probe5         (fast_fifo_empty),
-        .probe6         (fast_fifo_overflow)
+        .probe6         (fast_fifo_overflow),
+        .probe7         (state),
+        .probe8         (error_flag),
+        .probe9         (error_stat),
+        .probe10        (flushing),
+        .probe11        (all_fifos_empty)
     );
+
+    ila_fifos U_ila_fifos_adc (
+        .clk            (adc_sampleclk),
+        .probe0         (fast_fifo_empty_adc),
+        .probe1         (fast_fifo_empty),
+        .probe2         (flushing_adc),
+        .probe3         (slow_fifo_full_adc),
+        .probe4         (save_offset),
+        .probe5         (next_segment_go),
+        .probe6         (fast_fifo_overflow),
+        .probe7         (state),
+        .probe8         (error_flag),
+        .probe9         (error_stat),
+        .probe10        (segment_error),
+        .probe11        (all_fifos_empty)
+    );
+
 `endif
 
 
@@ -858,7 +887,16 @@ module fifo_top_husky(
     end
 
     always @(posedge clk_usb) begin
-        if (!presample_fifo_count_empty && !fast_fifo_almost_empty && !(presample_fifo_count_rd && presample_fifo_count_almost_empty)) begin
+        // Important note!
+        // The (!fast_fifo_rd && !fast_fifo_empty) condition added to handle
+        // issue which occurs only on-target with Xilinx FIFOs, never in
+        // simulation: without this condition, the presample FIFO would
+        // *occasionally* not empty which would ultimately result in remaining
+        // stuck in pS_SEGMENT_DONE. This was seen when using segments with
+        // presamples. A similar issue *should* have occurred with presamples
+        // and no segments, but this was never observed. Can't get rid of the
+        // Xilinx FIFOs fast enough...
+        if (!presample_fifo_count_empty && (!fast_fifo_almost_empty || (!fast_fifo_rd && !fast_fifo_empty)) && !(presample_fifo_count_rd && presample_fifo_count_almost_empty)) begin
             presample_fifo_count_rd <= 1'b1;
         end
         else begin
@@ -999,7 +1037,8 @@ module fifo_top_husky(
         .empty_adc              (fast_fifo_empty_adc),
         .almost_empty           (fast_fifo_almost_empty),
         .underflow              (fast_fifo_underflow),
-        .empty_stage1_usb       (empty_stage1_usb)
+        .empty_stage1_usb       (empty_stage1_usb),
+        .segment_error          (segment_error)
     );
 
 

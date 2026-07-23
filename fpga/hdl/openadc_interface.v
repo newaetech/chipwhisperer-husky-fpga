@@ -157,6 +157,10 @@ module openadc_interface #(
     wire [13:0] fifo_error_stat;
     wire [13:0] fifo_first_error_stat;
     wire [2:0] fifo_first_error_state;
+    wire [16:0] fifo_first_error_presample_counter;
+    wire [15:0] fifo_first_error_segment_counter;
+    wire [31:0] fifo_first_error_sample_counter;
+
     wire       no_clip_errors;
     wire       no_gain_errors;
     wire       capture_done;
@@ -905,6 +909,9 @@ module openadc_interface #(
       .fifo_error_stat                  (fifo_error_stat),
       .fifo_first_error_stat            (fifo_first_error_stat),
       .fifo_first_error_state           (fifo_first_error_state),
+      .fifo_first_error_presample_counter (fifo_first_error_presample_counter),
+      .fifo_first_error_segment_counter   (fifo_first_error_segment_counter),
+      .fifo_first_error_sample_counter    (fifo_first_error_sample_counter),
       .fifo_read_count                  (fifo_read_count),
       .fifo_read_count_error_freeze     (fifo_read_count_error_freeze),
       .underflow_count                  (underflow_count),
@@ -1213,6 +1220,10 @@ module openadc_interface #(
           .error_stat               (fifo_error_stat[9:0]),
           .first_error_stat         (fifo_first_error_stat[9:0]),
           .first_error_state        (fifo_first_error_state),
+          .first_error_presample_counter (fifo_first_error_presample_counter),
+          .first_error_segment_counter   (fifo_first_error_segment_counter),
+          .first_error_sample_counter    (fifo_first_error_sample_counter),
+
           .clear_fifo_errors        (clear_fifo_errors),
           .trigger_too_soon         (trigger_too_soon),
           .stream_segment_available (stream_segment_available),

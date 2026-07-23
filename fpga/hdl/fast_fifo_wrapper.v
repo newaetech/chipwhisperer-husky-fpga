@@ -41,7 +41,10 @@ module fast_fifo_wrapper (
     output wire                         empty_adc,
     output wire                         almost_empty,
     output wire                         underflow,
-    output wire                         empty_stage1_usb
+    output wire                         empty_stage1_usb,
+
+    // debug only:
+    input  wire                         segment_error
 );
 
 // Note: 512 is the minimum Xilinx built-in FIFO depth, but our simulation FIFOs can do 256
@@ -208,7 +211,7 @@ module fast_fifo_wrapper (
     localparam pS_EMPTY_DONE = 2;
     reg [1:0] empty_state = pS_EMPTY_NOT;
 
-    reg empty_adc_reg = 1'b0;
+    reg empty_adc_reg = 1'b1;
     reg empty_pulse = 1'b0;
     wire empty_pulse_rclk;
     wire empty_pulse_back;
@@ -404,6 +407,20 @@ module fast_fifo_wrapper (
         .probe7         (full_stage2),
         .probe8         (empty_adc),
         .probe9         (empty_stage2)
+    );
+
+    ila_fast_fifo_wrap_write U_empty_ila (
+        .clk            (wclk),
+        .probe0         (fifo_wr),
+        .probe1         (full_stage1),
+        .probe2         (segment_error),
+        .probe3         (ren_stage1),
+        .probe4         (empty_stage1),
+        .probe5         (done_writing_pulse[pDONE_WRITING_DELAY-1]),
+        .probe6         (wr_stage2),
+        .probe7         (full_stage2),
+        .probe8         (empty_pulse),
+        .probe9         (empty_stage2_adc)
     );
 
     ila_fast_fifo_wrap_read U_ila2 (

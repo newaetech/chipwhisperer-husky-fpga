@@ -46,6 +46,10 @@ module reg_openadc_adcfifo #(
    input  wire [13:0]  fifo_error_stat,
    input  wire [13:0]  fifo_first_error_stat,
    input  wire [2:0]   fifo_first_error_state,
+   input  wire [16:0]  fifo_first_error_presample_counter,
+   input  wire [15:0]  fifo_first_error_segment_counter,
+   input  wire [31:0]  fifo_first_error_sample_counter,
+
    output reg          clear_fifo_errors,
 
    input  wire [7:0]   underflow_count,
@@ -142,7 +146,11 @@ module reg_openadc_adcfifo #(
    wire ddr_single_done_usb;
    wire ddr_read_data_done_usb;
 
-   wire [23:0] fifo_first_error_combined;
+   wire [88:0] fifo_first_error_combined;
+
+   assign fifo_first_error_combined[88:72] = fifo_first_error_presample_counter;
+   assign fifo_first_error_combined[71:56] = fifo_first_error_segment_counter;
+   assign fifo_first_error_combined[55:24] = fifo_first_error_sample_counter;
    assign fifo_first_error_combined[23:16] = {5'b0, fifo_first_error_state};
    assign fifo_first_error_combined[15:0] = {2'b0, fifo_first_error_stat};
 
