@@ -174,6 +174,8 @@ class GenericTest(object):
                 samples = job['segments'] * job['segment_cycles'] + job['offset']
             else:
                 samples += job['offset']
+            #samples *= job['downsample'] # TODO: ?
+        #self.dut._log.warning('waiting for %d samples' % samples)
         await ClockCycles(self.sampling_clock, samples)
         # then, wait for DDR to be done writing:
         if self.harness.is_pro:
@@ -183,7 +185,9 @@ class GenericTest(object):
                 await ClockCycles(self.clk_usb, 50)
                 not_done_writing = not await self.harness.ddr_done_writing()
             self.dut._log.info("%12s DDR write done" % job['name'])
-        # TODO: wait longer! due to new FIFO architecture
+        else:
+            # give a bit more time for offset word to be written (new FIFO architecture):
+            await ClockCycles(self.sampling_clock, 50)
 
     def get_downstream_trigger(self, job) -> list:
         """ If a job triggers another job, returns that second job's Test
@@ -359,11 +363,17 @@ class ADCTest(GenericTest):
         elif random.randint(0,3) == 0:
             presamples = min(self.max_presamples, samples)  # max presamples a remaining quarter of the time
         # otherwise, randomize in specified range but excluding 1 which is not allowed:
-        else:
+        elif self.min_presamples <= min(self.max_presamples, samples):
             presamples = random.randint(self.min_presamples, min(self.max_presamples, samples))
-            if presamples == 1:
-                presamples = self.min_presamples
             self.dut._log.info('setting presamples to %d because samples=%d, min=%d' % (presamples, samples, min(self.max_presamples, samples-2)))
+        else:
+            presamples = 0
+        if presamples == 1:
+            presamples = self.min_presamples
+        if self.min_presamples == 1:
+            self.dut._log.error('MIN_PRESAMPLES cannot be 1!')
+            self.harness.inc_error()
+
         if random.randint(0,3) == 0:
             offset = 0  # no offset a quarter of the time
         else:
@@ -378,6 +388,15 @@ class ADCTest(GenericTest):
         # NOTE: any modifications here affecting what gets written to SAMPLES_ADDR
         # need to get mirrored in _OpenADCInterface.py's updateHuskySamplesRegister().
         # calculate the actual number of samples that will be collected per segment:
+        # 0. too-short fix: for very short captures with presamples, we need to capture more samples
+        if presamples:
+            if bits_per_sample == 12:
+                while samples < 20:
+                    samples += 6
+            elif bits_per_sample == 8:
+                while samples < 29:
+                    samples += 9
+
         # 1. account for worst-case offset:
         if bits_per_sample == 12:
             bytes_to_read = samples + 5

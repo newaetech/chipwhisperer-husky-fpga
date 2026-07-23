@@ -45,6 +45,72 @@ tests.append(dict(name  = 'adc_capture',
              MAX_DOWNSAMPLE = 4,
              description = 'ADC-only capture.'))
 
+
+tests.append(dict(name  = 'adc_capture_12b',
+             testcase = 'capture',
+             frequency = 10,
+             LA_CAPTURE = 0,
+             TRACE_CAPTURE = 0,
+             GLITCH_CAPTURE = 0,
+             MAX_SIZE = 300,
+             MAX_PRESAMPLES = 300,
+             MAX_OFFSET = 1000,
+             MAX_DOWNSAMPLE = 4,
+             ADC_RES = 12,
+             description = 'ADC-only capture, 12 bits.'))
+
+tests.append(dict(name  = 'adc_capture_8b',
+             testcase = 'capture',
+             frequency = 10,
+             LA_CAPTURE = 0,
+             TRACE_CAPTURE = 0,
+             GLITCH_CAPTURE = 0,
+             MIN_SIZE = 29,
+             MAX_SIZE = 39,
+             MIN_PRESAMPLES = 24,
+             MAX_PRESAMPLES = 39,
+             MAX_OFFSET = 1000,
+             MAX_DOWNSAMPLE = 4,
+             ADC_RES = 8,
+             description = 'ADC-only capture, 8 bits.'))
+
+
+tests.append(dict(name  = 'adc_capture_short_12b',
+             testcase = 'capture',
+             frequency = 10,
+             LA_CAPTURE = 0,
+             TRACE_CAPTURE = 0,
+             GLITCH_CAPTURE = 0,
+
+             MIN_SIZE = 1,
+             MAX_SIZE = 19,
+             MIN_PRESAMPLES = 2,
+             MAX_PRESAMPLES = 19,
+
+             MAX_OFFSET = 1000,
+             MAX_DOWNSAMPLE = 4,
+             ADC_RES = 12,
+             description = 'ADC-only short capture, 12 bits.'))
+
+
+tests.append(dict(name  = 'adc_capture_short_8b',
+             testcase = 'capture',
+             frequency = 10,
+             LA_CAPTURE = 0,
+             TRACE_CAPTURE = 0,
+             GLITCH_CAPTURE = 0,
+
+             MIN_SIZE = 1,
+             MAX_SIZE = 29,
+             MIN_PRESAMPLES = 2,
+             MAX_PRESAMPLES = 29,
+
+             MAX_OFFSET = 1000,
+             MAX_DOWNSAMPLE = 4,
+             ADC_RES = 8,
+             description = 'ADC-only short capture, 8 bits.'))
+
+
 tests.append(dict(name  = 'adc_max_presamples_12b',
              testcase = 'capture',
              frequency = 8,
