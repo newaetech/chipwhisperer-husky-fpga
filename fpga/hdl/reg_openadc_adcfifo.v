@@ -159,14 +159,15 @@ module reg_openadc_adcfifo #(
    assign ddr3_stats[15:8]  = {6'b0, I_ddr3_fail, I_ddr3_pass};
    assign ddr3_stats[7:0]   = {1'b0, I_ddr3_stat};
 
+   wire [63:0] fifo_read_count_combined = {fifo_read_count, fifo_read_count_error_freeze};
+
    always @(*) begin
       if (reg_read) begin
          case (reg_address)
             `FIFO_STAT:                 reg_datao_reg = fifo_stat[reg_bytecnt*8 +: 8];
             `FIFO_STATE:                reg_datao_reg = {1'b0, state};
             `FIFO_FIRST_ERROR:          reg_datao_reg = fifo_first_error_combined[reg_bytecnt*8 +: 8];
-            `DEBUG_FIFO_READS:          reg_datao_reg = fifo_read_count[reg_bytecnt*8 +: 8];
-            `DEBUG_FIFO_READS_FREEZE:   reg_datao_reg = fifo_read_count_error_freeze[reg_bytecnt*8 +: 8];
+            `DEBUG_FIFO_READS:          reg_datao_reg = fifo_read_count_combined[reg_bytecnt*8 +: 8];
             `STREAM_SEGMENT_THRESHOLD:  reg_datao_reg = stream_segment_threshold[reg_bytecnt*8 +: 8];
             `ADC_LOW_RES:               reg_datao_reg = {6'b0, low_res_lsb, low_res};
             `FIFO_UNDERFLOW_COUNT:      reg_datao_reg = underflow_count;
