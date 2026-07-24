@@ -459,14 +459,14 @@ class ADCTest(GenericTest):
         else:
             downsample = random.randint(1, self.max_downsample)
         if self.stream:
-            stream_segment_threshold = random.randint(256, 1024)
+            stream_segment_threshold = random.randint(256//9, 1024//9)
             await self.registers.write(self.reg_addr['STREAM_SEGMENT_THRESHOLD'], self.registers.to_bytes(stream_segment_threshold, 3))
             await self.registers.write(self.reg_addr['SETTINGS_ADDR'], [0x24 + (1<<4)])
 
         # in support of streaming, calculate the total number of bytes that will be read:
-        streaming_bytes_to_read = bytes_to_read * segments
+        streaming_words_to_read = math.ceil(bytes_to_read * segments / 9)
 
-        samples_combo = (streaming_bytes_to_read << 64) + (samples << 32) + samples_to_collect
+        samples_combo = (streaming_words_to_read << 64) + (samples << 32) + samples_to_collect
 
         await self.registers.write(self.reg_addr['DECIMATE_ADDR'], self.registers.to_bytes(0, 2)) # clear this first because setting e.g. presamples when the previous job had this non-zero will cause an error
         await self.registers.write(self.reg_addr['SAMPLES_ADDR'], self.registers.to_bytes(samples_combo, 12))

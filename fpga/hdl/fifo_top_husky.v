@@ -42,7 +42,7 @@ module fifo_top_husky(
     input wire          clk_usb,
     input wire          low_res,        // if set, return just 8 bits per sample; if clear return all 12 bits per sample
     input wire          low_res_lsb,    // useless except for testing: if set, return the 8 LSB bits when in low_res mode
-    input wire [16:0]   stream_segment_threshold,
+    input wire [13:0]   stream_segment_threshold,
     input wire          fifo_read_fifoen,
     output wire         fifo_read_fifoempty,
     output reg  [7:0]   fifo_read_data,
@@ -50,7 +50,7 @@ module fifo_top_husky(
 
     input wire  [16:0]  presample_i,
     input wire  [31:0]  samples_to_collect,
-    input wire  [31:0]  total_stream_bytes,
+    input wire  [31:0]  total_stream_words,
 
     output wire [23:0]  max_samples_8b,
     output wire [23:0]  max_samples_12b,
@@ -623,7 +623,7 @@ module fifo_top_husky(
 
     always @(*) begin
        if (stream_mode)
-          slow_fifo_underflow_masked = slow_fifo_underflow_reg && (read_count < total_stream_bytes) && ~no_underflow_errors; 
+          slow_fifo_underflow_masked = slow_fifo_underflow_reg && (read_count < total_stream_words) && ~no_underflow_errors; 
        else
           slow_fifo_underflow_masked = slow_fifo_underflow_reg && ~no_underflow_errors && (slow_fifo_underflow_count == pMAX_UNDERFLOWS);
     end
@@ -1069,9 +1069,7 @@ module fifo_top_husky(
     );
 
 
-   // track how many *bytes* (not samples!) (roughly) are available to be read
-   // TODO: we should be counting words instead of bytes! Since we know the
-   // FIFO will be filled with full words.
+   // track how many *words* (not samples or bytes, as used to be the case!) are available to be read:
    reg [31:0] write_count;
    always @(posedge clk_usb) begin
        if (arm_pulse_usb) begin
@@ -1081,9 +1079,9 @@ module fifo_top_husky(
        end
        else begin
            if (slow_fifo_stage2_wr)
-               write_count <= write_count + 9;
+               write_count <= write_count + 1;
            if (slow_fifo_rd)
-               read_count <= read_count + 9;
+               read_count <= read_count + 1;
 
            if (|error_stat[3:0])
                // if any FIFO overflow/underflow errors occur, ensure that SAM3U will be able to read as much as it wants
@@ -1092,7 +1090,7 @@ module fifo_top_husky(
                stream_segment_available <= 1'b1;
            else begin
                if (write_count > read_count)
-                   stream_segment_available <= ( (write_count - read_count > stream_segment_threshold) || (write_count >= total_stream_bytes) );
+                   stream_segment_available <= ( (write_count - read_count > stream_segment_threshold) || (write_count >= total_stream_words) );
                else
                    stream_segment_available <= 1'b0;
            end

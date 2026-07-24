@@ -574,11 +574,11 @@ module openadc_interface #(
    wire fifo_rd_en;
    wire low_res;
    wire low_res_lsb;
-   wire [16:0] stream_segment_threshold;
+   wire [13:0] stream_segment_threshold;
 
    wire [16:0] presamples;
    wire [31:0] samples_to_collect;
-   wire [31:0] total_stream_bytes;
+   wire [31:0] total_stream_words;
 
    wire [23:0] max_samples_8b;
    wire [23:0] max_samples_12b;
@@ -859,7 +859,7 @@ module openadc_interface #(
       .max_segment_total_bytes      (max_segment_total_bytes),
 
       .samples_to_collect           (samples_to_collect),
-      .total_stream_bytes           (total_stream_bytes),
+      .total_stream_words           (total_stream_words),
       .downsample_o                 (downsample),
       .clkblock_dcm_locked_i        (1'b0),
       .clkblock_gen_locked_i        (1'b0),
@@ -1204,7 +1204,7 @@ module openadc_interface #(
 
           .presample_i              (presamples),
           .samples_to_collect       (samples_to_collect),
-          .total_stream_bytes       (total_stream_bytes),
+          .total_stream_words       (total_stream_words),
 
           .max_samples_8b           (max_samples_8b         ),
           .max_samples_12b          (max_samples_12b        ),

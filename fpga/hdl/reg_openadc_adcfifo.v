@@ -42,7 +42,7 @@ module reg_openadc_adcfifo #(
    output reg          low_res,
    output reg          low_res_lsb,
    output reg          fast_fifo_read_mode,
-   output reg  [16:0]  stream_segment_threshold,
+   output reg  [13:0]  stream_segment_threshold,
    input  wire [13:0]  fifo_error_stat,
    input  wire [13:0]  fifo_first_error_stat,
    input  wire [2:0]   fifo_first_error_state,
@@ -197,7 +197,7 @@ module reg_openadc_adcfifo #(
          low_res <= 0;
          low_res_lsb <= 0;
          clear_fifo_errors <= 1'b0;
-         stream_segment_threshold <= 65536;
+         stream_segment_threshold <= 7282; // 65536 / 9, because this counts 9-byte (72-bit) words
          no_underflow_errors <= 1'b0;   // disables flagging of *slow* FIFO underflow errors only
          O_ddr3_rwtest_en <= 1'b0;
          O_ddr3_clear_fail <= 1'b0;

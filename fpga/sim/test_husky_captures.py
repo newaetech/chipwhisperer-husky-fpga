@@ -291,7 +291,7 @@ class ADCCapture(GenericCapture):
                         self.dut._log.info('%12s waiting for stream segment to be available...' % job_name)
                         wait_printed = True
                     await ClockCycles(self.clk_usb, 10)
-                read_chunk_size = min(stream_segment_size, bytes_left)
+                read_chunk_size = min(stream_segment_size*9, bytes_left)
                 self.dut._log.info('%12s starting stream segment read %d: reading %d bytes' % (job_name, stream_segment_n, read_chunk_size))
                 stream_segment = await self.read_adc_data(read_chunk_size)
                 self.raw_read_data.extend(stream_segment)

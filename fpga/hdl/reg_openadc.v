@@ -71,7 +71,7 @@ module reg_openadc #(
    input  wire        clkblock_gen_locked_i,
    output wire [16:0] presamples_o,
    output wire [31:0] samples_to_collect,
-   output wire [31:0] total_stream_bytes,
+   output wire [31:0] total_stream_words,
    output wire [12:0] downsample_o,
    output wire        fifo_stream,
    output reg  [2:0]  led_select,
@@ -153,7 +153,7 @@ module reg_openadc #(
    assign registers_advclocksettings_read[25] = 1'b0;
 
    assign gain = registers_gain;
-   assign total_stream_bytes = registers_samples[95:64];
+   assign total_stream_words = registers_samples[95:64];
    assign samples_to_collect = registers_samples[31:0];
    assign presamples_o = registers_presamples;
 
