@@ -92,7 +92,7 @@ module fifo_top_husky(
 
 );
 
-    parameter pMAX_UNDERFLOWS = 3; // TODO: still valid?
+    parameter pMAX_UNDERFLOWS = 3; // Note: not sure if optimal (could maybe reduce?), but works
 
 `ifdef PLUS
     parameter pMAX_SAMPLES_8b = 518353;
@@ -209,6 +209,17 @@ module fifo_top_husky(
        end
     end
 
+    reg save_offset_error = 1'b0;
+    always @(posedge clk_usb) begin
+       if (arm_pulse_usb || clear_fifo_errors)
+           save_offset_error <= 1'b0;
+       // Note: would be nice to also catch the case of a slow_fifo_prewr
+       // for current capture occuring after save_offset_usb, but could be
+       // hard to avoid false-positives
+       else if (save_offset_usb && slow_fifo_prewr)
+           save_offset_error <= 1'b1;
+   end
+
     assign fifo_read_fifoempty = slow_fifo_empty;
 
     //Counter for downsampling (NOT proper decimation)
@@ -277,8 +288,8 @@ module fifo_top_husky(
                                                           (capture_go && ~capture_go_r);
 
     wire presamp_done = presamp_done1_r || next_segment_go;
-    // Note: presample_fifo_error is piggy-backing here:
-    wire presamp_error = presamp_done && (state == pS_PRESAMP_FILLING) || presample_fifo_error; 
+    wire presamp_error = presamp_done && (state == pS_PRESAMP_FILLING);
+    wire internal_error = presample_fifo_error || save_offset_error;
 
     reg next_segment_go;
     reg last_segment;
@@ -450,7 +461,7 @@ module fifo_top_husky(
 
                 if (stop_capture_conditions || (last_sample && fast_fifo_wr && last_segment)) begin
                     adc_capture_stop <= 1'b1;
-                    done_wait_count <= 10;  // established by trial/error to account for the latency in the Xilinx FIFO updating its empty flag; TODO: check/update?
+                    done_wait_count <= 10;  // established by trial/error to account for the latency in the Xilinx FIFO updating its empty flag
                     fsm_fast_wr_en <= 1'b0;
                     done_writing <= 1'b1;
                     state <= pS_DONE;
@@ -643,7 +654,7 @@ module fifo_top_husky(
           if (trigger_too_soon)                 error_bits[9] = 1'b1;
           if (gain_error)                       error_bits[8] = 1'b1;
           if (segment_error)                    error_bits[7] = 1'b1;
-          // note: this position is unused      error_bits[6] = 1'b1;
+          if (internal_error)                   error_bits[6] = 1'b1;
           if (clip_error)                       error_bits[5] = 1'b1;
           if (presamp_error)                    error_bits[4] = 1'b1;
           if (fast_fifo_overflow_reg)           error_bits[3] = 1'b1;
@@ -670,7 +681,7 @@ module fifo_top_husky(
              first_error_state <= pS_IDLE;
           end
           else begin
-             if (gain_error || segment_error || clip_error || presamp_error || 
+             if (gain_error || segment_error || clip_error || presamp_error || internal_error ||
                  fast_fifo_overflow_reg || fast_fifo_underflow_reg || slow_fifo_overflow_reg || slow_fifo_underflow_masked_adc) begin
                 error_flag <= 1;
                 if (!error_flag) begin
@@ -759,8 +770,8 @@ module fifo_top_husky(
 
         else if ( (!slow_fifo_full_threshold && !fast_fifo_almost_empty && !fast_fifo_empty) ||
                   (!slow_fifo_prewr && !slow_fifo_full && !fast_fifo_empty && empty_stage1_usb) ) begin
-                  // TODO-note: maybe need to split up the slow_fifo_full / fast_fifo_empty cases? because only latter should care about
-                  // empty_stage1_usb. But maybe this is ok for simplicity? Need to test carefully.
+                  // Note: maybe need to split up the slow_fifo_full / fast_fifo_empty cases? because only latter should care about
+                  // empty_stage1_usb. But maybe this is ok for simplicity?
             fast_fifo_rd_en <= 1'b1;
             slow_fifo_prewr <= 1'b1;
         end
@@ -975,7 +986,7 @@ module fifo_top_husky(
            slow_fifo_rd_slow <= 1'b0;
     end
 
-    assign slow_fifo_rd_fast = fifo_read_fifoen && (slow_read_count == 8); // TODO: I think this is correct; need to validate on-target
+    assign slow_fifo_rd_fast = fifo_read_fifoen && (slow_read_count == 8);
 
     assign slow_fifo_rd = (flushing && ~slow_fifo_empty) || ((fast_fifo_read_mode)? slow_fifo_rd_fast : slow_fifo_rd_slow);
 
@@ -1086,7 +1097,6 @@ module fifo_top_husky(
            if (|error_stat[3:0])
                // if any FIFO overflow/underflow errors occur, ensure that SAM3U will be able to read as much as it wants
                // (so that the capture terminates normally on the SAM3U side)
-               // TODO: if any new errors are added, account for them here
                stream_segment_available <= 1'b1;
            else begin
                if (write_count > read_count)
