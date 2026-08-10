@@ -112,7 +112,7 @@ module trigger_unit(
       if (reset) begin
          reset_arm <= 0;
       end else begin
-         if ((trigger_level_match & armed) | trigger_now) begin
+         if ((trigger_level_match & armed_r) | trigger_now) begin
             reset_arm <= 1;
          end else if ((arm_i == 0) & (capture_active_o == 0)) begin
             reset_arm <= 0;
@@ -125,15 +125,17 @@ module trigger_unit(
    wire int_reset_capture;
    assign int_reset_capture = adc_capture_done | reset | (~arm_i);
 
+   reg armed_r = 1'b0;
    always @(posedge adc_clk) begin
+      armed_r <= armed;
       if (int_reset_capture) begin
          capture_active_o <= 1'b0;
          capture_go_start <= 1'b0;
          triggered <= 1'b0;
       end else begin
-         if (((trigger == trigger_level_i) & armed) | trigger_now)
+         if (((trigger == trigger_level_i) & armed_r) | trigger_now)
             capture_active_o <= 1;
-         if ((((trigger == trigger_level_i) & (capture_active_o || armed)) | trigger_now) && !triggered)
+         if ((((trigger == trigger_level_i) & (capture_active_o || armed_r)) | trigger_now) && !triggered)
             capture_go_start <= 1'b1;
          else if (capture_go_o)
             capture_go_start <= 1'b0;
@@ -192,6 +194,7 @@ module trigger_unit(
                        trigger,
                        cmd_arm_usb };
 
+   /*
    assign debug2   = { (adc_delay_cnt == 0),
                        capture_go_o,
                        capture_go_start,
@@ -200,7 +203,17 @@ module trigger_unit(
                        trigger,
                        adc_capture_done,
                        arm_i };
+   */
 
+   assign debug2   = { trigger_level_match,
+                       reset_arm,
+                       armed_r,
+                       resetarm,
+                       capture_active_o,
+                       capture_go_start,
+                       int_reset_capture,
+                       triggered
+                     };
 
 
    `ifdef ILA_TRIG
