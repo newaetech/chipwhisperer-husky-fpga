@@ -103,7 +103,7 @@ module fifo_top_husky(
 
 `else
     parameter pMAX_SAMPLES_8b = 204796;
-    parameter pMAX_SAMPLES_12b = 137215;
+    parameter pMAX_SAMPLES_12b = 137209;
     parameter pMAX_PRESAMPLES_8b = 38890;
     parameter pMAX_PRESAMPLES_12b = 26605;
     parameter pMAX_SEGMENT_TOTAL_BYTES = 18*9*1024;
