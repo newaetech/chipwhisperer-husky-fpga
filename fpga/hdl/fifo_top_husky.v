@@ -267,7 +267,6 @@ module fifo_top_husky(
     localparam pS_SAVE_OFFSET = 6;
     reg [2:0] state_r;
 
-    // strictly for easier debugging:
     wire state_idle = (state == pS_IDLE);
     wire state_presamp_filling = (state == pS_PRESAMP_FILLING);
     wire state_presamp_full = (state == pS_PRESAMP_FULL);
@@ -889,11 +888,13 @@ module fifo_top_husky(
         end
 
         next_segment_go_r <= next_segment_go;
-        if (save_offset_done)
-            // need a way to have this zero in the case of no presamples:
-            segment_offset <= 0;
-        // note that capture_go condition is needed for the first segment of a segment_cycle_counter_en capture:
-        else if (next_segment_go || (capture_go_r && !capture_go_r2))
+        // Note 1: capture_go condition is needed for the first segment of a segment_cycle_counter_en capture:
+        // Note 2: state check is important to ensure that "error" conditions
+        // (that are not real errors depending on the use-case)
+        // don't clobber a previously stored offset (i.e. if multiple triggers
+        // fire in a non-segmented capture)
+        if ( (next_segment_go || (capture_go_r && !capture_go_r2)) &&
+                  (state_idle || state_presamp_full || state_save_offset) )
             segment_offset <= (presample_i > 0)? write_word_counter : 0;
     end
 
