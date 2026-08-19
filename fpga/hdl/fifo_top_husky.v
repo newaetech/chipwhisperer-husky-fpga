@@ -98,7 +98,7 @@ module fifo_top_husky(
     parameter pMAX_UNDERFLOWS = 3; // Note: not sure if optimal (could maybe reduce?), but works
 
 `ifdef PLUS
-    parameter pMAX_SAMPLES_8b = 518353;
+    parameter pMAX_SAMPLES_8b = 518344;
     parameter pMAX_SAMPLES_12b = 346246;
     parameter pMAX_PRESAMPLES_8b = 75745;
     parameter pMAX_PRESAMPLES_12b = 51163;
