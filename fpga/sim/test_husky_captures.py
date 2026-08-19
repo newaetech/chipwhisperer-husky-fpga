@@ -269,6 +269,8 @@ class ADCCapture(GenericCapture):
         while empty:
             await ClockCycles(self.clk_usb, 50)
             empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 2))[1] & 64
+        # because new architecture needs to save the offset, let's wait a bit more so that we don't read too fast:
+        await ClockCycles(self.sampling_clock, 100)
 
     async def _read_samples(self, job) -> list:
         job_name = job['name']

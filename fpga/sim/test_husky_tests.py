@@ -434,7 +434,8 @@ class ADCTest(GenericTest):
         # which we don't account for here. Errors from too-close segments are easy to identify:
         # you'll get a segment and/or presample error; a quick look at the waveform can confirm that
         # the design is working as intended.
-        min_wait_segment_samples = offset + samples_to_collect + 100
+        min_wait_segment_samples = offset + samples_to_collect + 200
+        self.dut._log.warning('XXX: min_wait = %d' % min_wait_segment_samples)
         # when there are "enough" presamples, the presample filling stage gives us more time:
         if presamples < 32:
             min_wait_segment_samples += 20
@@ -596,7 +597,7 @@ class ADCTest(GenericTest):
             if error_value & 2**9 : error_message += "trigger_too_soon_error "
             if error_value & 2**8 : error_message += "gain_error "
             if error_value & 2**7 : error_message += "segment_error "
-            #if error_value & 2**6 : NOTE: unused position
+            if error_value & 2**6 : error_message += "internal_error "
             if error_value & 2**5 : error_message += "clip_error "
             if error_value & 2**4 : error_message += "presamp_error "
             if error_value & 2**3 : error_message += "fast_fifo_overflow"
