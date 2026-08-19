@@ -136,7 +136,9 @@ module openadc_interface #(
     output wire [8:0]                   la_debug,
     output wire [7:0]                   la_debug2,
     output wire [7:0]                   sad_debug,
-    output wire [7:0]                   fifo_debug,
+    output wire [7:0]                   fifo_debug1,
+    output wire [7:0]                   fifo_debug2,
+    output wire [7:0]                   fifo_debug3,
     output wire [7:0]                   edge_trigger_debug
 
 );
@@ -597,6 +599,7 @@ module openadc_interface #(
 
    wire [7:0] underflow_count;
    wire no_underflow_errors;
+   wire [6:0] save_offset_done_wait_count;
 
    wire [15:0]  ddr_test_iteration;
    wire [7:0]   ddr_test_errors;
@@ -916,6 +919,7 @@ module openadc_interface #(
       .fifo_read_count_error_freeze     (fifo_read_count_error_freeze),
       .underflow_count                  (underflow_count),
       .no_underflow_errors              (no_underflow_errors),
+      .save_offset_done_wait_count      (save_offset_done_wait_count),
       .clear_fifo_errors                (clear_fifo_errors),
       .capture_done                     (capture_done),
       .O_data_source_select             (data_source_select),
@@ -1064,7 +1068,7 @@ module openadc_interface #(
           .preddr_fifo_wr           (slow_fifo_wr),
           .preddr_fifo_underflow    (preddr_adc_fifo_underflow ),
           .arm_pulse_usb            (arm_pulse_usb),
-          .debug                    (fifo_debug)
+          .debug                    (fifo_debug1)
        );
 
        wire fifo_overflow_ddr;
@@ -1231,6 +1235,7 @@ module openadc_interface #(
           .no_gain_errors           (no_gain_errors),
           .underflow_count          (underflow_count),
           .no_underflow_errors      (no_underflow_errors),
+          .save_offset_done_wait_count  (save_offset_done_wait_count),
           .capture_done             (capture_done),
           .armed_and_ready          (armed_and_ready),
           .state                    (fifo_state),
@@ -1241,7 +1246,9 @@ module openadc_interface #(
           .slow_fifo_rd             (slow_fifo_rd),
           .fifo_read_count          (fifo_read_count),
           .fifo_read_count_error_freeze (fifo_read_count_error_freeze),
-          .debug                    (fifo_debug)
+          .debug1                   (fifo_debug1),
+          .debug2                   (fifo_debug2),
+          .debug3                   (fifo_debug3)
        );
 
        assign ddr_test_pass = 0;

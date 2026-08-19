@@ -216,7 +216,9 @@ module cwhusky_top(
    wire [7:0] bb_debug;
    wire [7:0] la_debug2;
    wire [7:0] sad_debug;
-   wire [7:0] fifo_debug;
+   wire [7:0] fifo_debug1;
+   wire [7:0] fifo_debug2;
+   wire [7:0] fifo_debug3;
    wire [7:0] sequencer_debug;
    wire [4:0] seq_trace_sad_debug;
    wire [7:0] seq_trace_sad_debug2;
@@ -372,7 +374,7 @@ module cwhusky_top(
                                                                          slow_fifo_wr_slow,
                                                                          stream_segment_available} :
                                  (userio_fpga_debug_select == 5'b00001)? tu_la_debug[7:0] :
-                                 (userio_fpga_debug_select == 5'b00010)? fifo_debug : 
+                                 (userio_fpga_debug_select == 5'b00010)? fifo_debug1 : 
                                  (userio_fpga_debug_select == 5'b00011)? {1'b0,
                                                                          xadc_error_flag,
                                                                          glitch_mmcm1_clk_out,
@@ -402,7 +404,9 @@ module cwhusky_top(
                                  (userio_fpga_debug_select == 5'b01110)? {seq_trace_sad_debug, 3'b0} :
                                  (userio_fpga_debug_select == 5'b01111)? seq_trace_sad_debug2 :
                                  (userio_fpga_debug_select == 5'b10000)? sad_debug :
-                                 (userio_fpga_debug_select == 5'b10001)? bb_debug : 8'b0;
+                                 (userio_fpga_debug_select == 5'b10001)? bb_debug :
+                                 (userio_fpga_debug_select == 5'b10010)? fifo_debug2 : 
+                                 (userio_fpga_debug_select == 5'b10011)? fifo_debug3 : 8'b0;
                                  //(userio_fpga_debug_select == 5'b10010)? usb_reg_debug : 8'b0;
 
    `else
@@ -504,7 +508,9 @@ module cwhusky_top(
         .la_debug               (tu_la_debug),
         .sad_debug              (sad_debug),
         .edge_trigger_debug     (edge_trigger_debug),
-        .fifo_debug             (fifo_debug)
+        .fifo_debug1            (fifo_debug1),
+        .fifo_debug2            (fifo_debug2),
+        .fifo_debug3            (fifo_debug3)
 
    );
 

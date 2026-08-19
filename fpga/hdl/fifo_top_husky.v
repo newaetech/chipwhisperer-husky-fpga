@@ -77,6 +77,7 @@ module fifo_top_husky(
     input  wire         no_gain_errors,
     output reg [7:0]    underflow_count,
     input  wire         no_underflow_errors,  // disables flagging of *slow* FIFO underflow errors only
+    input  wire [6:0]   save_offset_done_wait_count,
     output reg          capture_done,
     output reg          armed_and_ready,
     output reg [2:0]    state,
@@ -88,7 +89,9 @@ module fifo_top_husky(
     output wire         slow_fifo_rd,
     output reg  [31:0]  fifo_read_count,
     output reg  [31:0]  fifo_read_count_error_freeze,
-    output wire [7:0]   debug
+    output wire [7:0]   debug1,
+    output wire [7:0]   debug2,
+    output wire [7:0]   debug3
 
 );
 
@@ -216,7 +219,8 @@ module fifo_top_husky(
        // Note: would be nice to also catch the case of a slow_fifo_prewr
        // for current capture occuring after save_offset_usb, but could be
        // hard to avoid false-positives
-       else if (save_offset_usb && slow_fifo_prewr)
+       else if ( (save_offset_usb && slow_fifo_prewr) ||
+                 (save_offset_done && state_triggered) )
            save_offset_error <= 1'b1;
    end
 
@@ -526,7 +530,7 @@ module fifo_top_husky(
                 end
                 else if (arm_i)
                    state <= pS_IDLE;
-                else
+                else if (done_wait_count > 0)
                    done_wait_count <= done_wait_count - 1;
              end
 
@@ -618,7 +622,7 @@ module fifo_top_husky(
             if (arm_pulse_usb)
                 flushing <= 1'b1;
             // last condition is to ensure that CDC from flushing to flushing_adc had a chance to occur:
-            else if (fast_fifo_empty && slow_fifo_empty && flushing_adc_usb)
+            else if (fast_fifo_empty && slow_fifo_empty && presample_fifo_count_empty && flushing_adc_usb)
                 flushing <= 1'b0;
         end
     end
@@ -898,6 +902,7 @@ module fifo_top_husky(
             segment_offset <= (presample_i > 0)? write_word_counter : 0;
     end
 
+    reg presample_fifo_count_flush = 1'b0;
     always @(posedge clk_usb) begin
         // Important note!
         // The (!fast_fifo_rd && !fast_fifo_empty) condition added to handle
@@ -908,7 +913,14 @@ module fifo_top_husky(
         // presamples. A similar issue *should* have occurred with presamples
         // and no segments, but this was never observed. Can't get rid of the
         // Xilinx FIFOs fast enough...
-        if (!presample_fifo_count_empty && (!fast_fifo_almost_empty || (!fast_fifo_rd && !fast_fifo_empty)) && !(presample_fifo_count_rd && presample_fifo_count_almost_empty)) begin
+        if (flushing && !presample_fifo_count_empty) begin
+            if (!presample_fifo_count_almost_empty || !presample_fifo_count_flush)
+                presample_fifo_count_flush <= 1'b1;
+            else
+                presample_fifo_count_flush <= 1'b0;
+        end
+
+        else if (!presample_fifo_count_empty && (!fast_fifo_almost_empty || (!fast_fifo_rd && !fast_fifo_empty)) && !(presample_fifo_count_rd && presample_fifo_count_almost_empty)) begin
             presample_fifo_count_rd <= 1'b1;
         end
         else begin
@@ -946,7 +958,7 @@ module fifo_top_husky(
         .walmost_full           (),
         .woverflow              (presample_fifo_count_overflow),
         .wfull_threshold        (),
-        .ren                    (presample_fifo_count_rd),
+        .ren                    (presample_fifo_count_rd || presample_fifo_count_flush),
         .rdata                  (),
         .rempty                 (presample_fifo_count_empty),
         .ralmost_empty          (presample_fifo_count_almost_empty),
@@ -1030,11 +1042,14 @@ module fifo_top_husky(
     wire any_fifo_overunder = fast_fifo_underflow_reg | fast_fifo_overflow_reg | slow_fifo_underflow_reg | slow_fifo_overflow_reg;
 
     wire fast_fifo_empty_adc;
+    wire fast_fifo_empty_wait;
+    wire raw_empty_flags_adc;
     fast_fifo_wrapper U_fast_fifo_wrapper (
         .wclk                   (adc_sampleclk),
         .rclk                   (clk_usb),
         .rst_n                  (~reset),
         .done_writing           (done_writing),
+        .save_offset_done_wait_count (save_offset_done_wait_count),
         .flushing               (flushing),
         .reset_internal_count   (reset_fast_fifo_internal_count),
         .low_res                (low_res),
@@ -1050,7 +1065,9 @@ module fifo_top_husky(
         .almost_empty           (fast_fifo_almost_empty),
         .underflow              (fast_fifo_underflow),
         .empty_stage1_usb       (empty_stage1_usb),
-        .segment_error          (segment_error)
+        .segment_error          (segment_error),
+        .empty_wait             (fast_fifo_empty_wait),
+        .raw_empty_flags_adc    (raw_empty_flags_adc)
     );
 
 
@@ -1124,12 +1141,30 @@ module fifo_top_husky(
    end
 
 
-   assign debug = {adc_capture_stop,
-                   arm_pulse_adc,
+   assign debug1 = {adc_capture_stop,
+                   error_flag,
                    armed_and_ready,
                    arming,
                    capture_go,
                    state};
+
+   assign debug2 = {arm_pulse_usb,
+                   flushing,
+                   presample_fifo_count_flush,
+                   presample_fifo_count_rd,
+                   presample_fifo_count_wr,
+                   presample_fifo_count_empty,
+                   presample_fifo_count_full,
+                   error_flag};
+
+   assign debug3 = {done_writing,
+                   error_flag,
+                   fast_fifo_rd,
+                   fast_fifo_empty_adc,
+                   raw_empty_flags_adc,
+                   save_offset_usb,
+                   save_offset_error,
+                   fast_fifo_empty_wait};
 
 
    `ifdef ILA_HUSKY_FIFO

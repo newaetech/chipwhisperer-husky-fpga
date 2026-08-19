@@ -304,7 +304,9 @@ module cwhusky_fifoonly(
         .la_debug               (),
         .sad_debug              (),
         .edge_trigger_debug     (),
-        .fifo_debug             ()
+        .fifo_debug1            (),
+        .fifo_debug2            (),
+        .fifo_debug3            ()
 
    );
 

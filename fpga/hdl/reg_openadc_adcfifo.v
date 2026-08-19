@@ -54,6 +54,7 @@ module reg_openadc_adcfifo #(
 
    input  wire [7:0]   underflow_count,
    output reg          no_underflow_errors,
+   output reg  [6:0]   save_offset_done_wait_count,
    input  wire         capture_done,
    output reg          O_data_source_select,
 
@@ -171,7 +172,7 @@ module reg_openadc_adcfifo #(
             `STREAM_SEGMENT_THRESHOLD:  reg_datao_reg = stream_segment_threshold[reg_bytecnt*8 +: 8];
             `ADC_LOW_RES:               reg_datao_reg = {6'b0, low_res_lsb, low_res};
             `FIFO_UNDERFLOW_COUNT:      reg_datao_reg = underflow_count;
-            `FIFO_NO_UNDERFLOW_ERROR:   reg_datao_reg = {7'b0, no_underflow_errors};
+            `FIFO_NO_UNDERFLOW_ERROR:   reg_datao_reg = {save_offset_done_wait_count, no_underflow_errors};
             `CAPTURE_DONE:              reg_datao_reg = {7'b0, capture_done};
 
             // DDR stuff for Pro:
@@ -199,6 +200,7 @@ module reg_openadc_adcfifo #(
          clear_fifo_errors <= 1'b0;
          stream_segment_threshold <= 7282; // 65536 / 9, because this counts 9-byte (72-bit) words
          no_underflow_errors <= 1'b0;   // disables flagging of *slow* FIFO underflow errors only
+         save_offset_done_wait_count <= 7'd32; // seems to work well, established through trial+error
          O_ddr3_rwtest_en <= 1'b0;
          O_ddr3_clear_fail <= 1'b0;
          O_vddr_enable <= 1'b0;
@@ -221,7 +223,7 @@ module reg_openadc_adcfifo #(
             `ADC_LOW_RES:               {low_res_lsb, low_res} <= reg_datai[1:0];
             `STREAM_SEGMENT_THRESHOLD:  stream_segment_threshold[reg_bytecnt*8 +: 8] <= reg_datai; 
             `FIFO_STAT:                 clear_fifo_errors <= reg_datai[0];
-            `FIFO_NO_UNDERFLOW_ERROR:   no_underflow_errors <= reg_datai[0];
+            `FIFO_NO_UNDERFLOW_ERROR:   {save_offset_done_wait_count, no_underflow_errors} <= reg_datai;
             `REG_DDR3_STAT:             {O_ddr3_clear_fail, O_ddr3_rwtest_en} <= reg_datai[1:0];
             `REG_XO_EN:                 {O_vddr_enable, O_xo_en} <= reg_datai[1:0];
             `FIFO_CONFIG:               {O_data_source_select, O_use_ddr} <= reg_datai[1:0];

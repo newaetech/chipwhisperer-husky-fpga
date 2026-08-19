@@ -27,6 +27,7 @@ module fast_fifo_wrapper (
     input  wire                         rclk,
     input  wire                         rst_n,
     input  wire                         done_writing,
+    input  wire [6:0]                   save_offset_done_wait_count,
     input  wire                         flushing,
     input  wire                         reset_internal_count,
     input  wire                         low_res,
@@ -44,7 +45,9 @@ module fast_fifo_wrapper (
     output wire                         empty_stage1_usb,
 
     // debug only:
-    input  wire                         segment_error
+    input  wire                         segment_error,
+    output wire                         empty_wait,
+    output wire                         raw_empty_flags_adc
 );
 
 // Note: 512 is the minimum Xilinx built-in FIFO depth, but our simulation FIFOs can do 256
@@ -82,6 +85,8 @@ module fast_fifo_wrapper (
     wire empty_stage2;
     wire empty_threshold_stage2;
     wire underflow_stage2;
+
+    assign empty_wait = (empty_state == pS_EMPTY_WAIT);
 
     cdc_simple U_empty_stage1_cdc (
         .reset          (!rst_n),
@@ -200,11 +205,18 @@ module fast_fifo_wrapper (
     // failures!
     // assign empty_adc = empty_stage2;  to induce errors!
     //
-    // We use a simple FSM to construct our conservative empty flag. CDC
-    // to-and-from the USB clock domain is key. This is quite conservative;
-    // empty_adc is slow to go high, but that's quite alright (the only cost
-    // to this is that segments can't be as close together as they possibly
-    // could, but that is a rather degenerate use case anyhow).
+    // We use a simple FSM to construct our conservative empty flag. empty_adc
+    // is slow to go high, but that's quite alright (the only cost to this is
+    // that segments can't be as close together as they possibly could, but
+    // that is a rather degenerate use case anyhow). empty_adc's latency is
+    // controlled via save_offset_done_wait_count (which can be tweaked from
+    // its default setting), which was established empirically through
+    // on-target testing. This cannot be done through simulation because our
+    // simulation FIFO's status flag latency does not match the Xilinx FIFO's.
+    //
+    // IMPORTANT! if the FIFO depths are tweaked, save_offset_done_wait_count
+    // may need to be adjusted. In particular, be sure to test at a wide range
+    // of ADC clock frequencies.
 
     localparam pS_EMPTY_NOT = 0;
     localparam pS_EMPTY_WAIT = 1;
@@ -212,38 +224,33 @@ module fast_fifo_wrapper (
     reg [1:0] empty_state = pS_EMPTY_NOT;
 
     reg empty_adc_reg = 1'b1;
-    reg empty_pulse = 1'b0;
-    wire empty_pulse_rclk;
-    wire empty_pulse_back;
     wire empty_stage2_adc;
     assign empty_adc = empty_adc_reg;
 
-    localparam pDONE_WRITING_DELAY = 4;
-    reg [pDONE_WRITING_DELAY-1:0] done_writing_pulse = {pDONE_WRITING_DELAY{1'b0}};
-    always @(posedge wclk) done_writing_pulse <= {done_writing_pulse[pDONE_WRITING_DELAY-2:0], done_writing};
+    reg [6:0] wait_count = 7'd0;
 
+    assign raw_empty_flags_adc = empty_stage1 && empty_stage2_adc;
+    
     always @(posedge wclk) begin
         case (empty_state)
             pS_EMPTY_NOT: begin
                 empty_adc_reg <= 1'b0;
-                if (done_writing_pulse[pDONE_WRITING_DELAY-1] && empty_stage1 && empty_stage2_adc) begin
+                if (done_writing && raw_empty_flags_adc)
                     empty_state <= pS_EMPTY_WAIT;
-                    empty_pulse <= 1'b1;
-                end
             end
 
             pS_EMPTY_WAIT: begin
-                empty_pulse <= 1'b0;
-                if (fifo_wr) begin // should not happen under normal use! (but might)
-                    empty_adc_reg <= 1'b0;
-                    empty_state <= pS_EMPTY_NOT;
-                end
-                else if (empty_pulse_back)
+                if (fifo_wr || !raw_empty_flags_adc)
+                    wait_count <= 0;
+                else
+                    wait_count <= wait_count + 1;
+                if (wait_count == save_offset_done_wait_count) begin
+                    empty_adc_reg <= 1'b1;
                     empty_state <= pS_EMPTY_DONE;
+                end
             end
 
             pS_EMPTY_DONE: begin
-                empty_adc_reg <= 1'b1;
                 if (fifo_wr) begin
                     empty_adc_reg <= 1'b0;
                     empty_state <= pS_EMPTY_NOT;
@@ -252,22 +259,6 @@ module fast_fifo_wrapper (
         endcase
     end
 
-    cdc_pulse U_empty_pulse_cdc (
-       .reset_i       (!rst_n),
-       .src_clk       (wclk),
-       .src_pulse     (empty_pulse),
-       .dst_clk       (rclk),
-       .dst_pulse     (empty_pulse_rclk)
-    );
-
-    cdc_pulse U_empty_pulse_back_cdc (
-       .reset_i       (!rst_n),
-       .src_clk       (rclk),
-       .src_pulse     (empty_pulse_rclk),
-       .dst_clk       (wclk),
-       .dst_pulse     (empty_pulse_back)
-    );
-
     cdc_simple U_empty2_cdc (
         .reset          (!rst_n),
         .clk            (wclk),
@@ -275,7 +266,6 @@ module fast_fifo_wrapper (
         .data_out       (empty_stage2_adc),
         .data_out_r     ()
     );
-
 
 
 `ifdef NOXILINXFIFO
@@ -416,7 +406,7 @@ module fast_fifo_wrapper (
         .probe2         (segment_error),
         .probe3         (ren_stage1),
         .probe4         (empty_stage1),
-        .probe5         (done_writing_pulse[pDONE_WRITING_DELAY-1]),
+        .probe5         (1'b0),
         .probe6         (wr_stage2),
         .probe7         (full_stage2),
         .probe8         (empty_pulse),
