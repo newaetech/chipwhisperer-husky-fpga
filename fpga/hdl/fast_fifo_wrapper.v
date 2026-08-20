@@ -217,6 +217,9 @@ module fast_fifo_wrapper (
     // IMPORTANT! if the FIFO depths are tweaked, save_offset_done_wait_count
     // may need to be adjusted. In particular, be sure to test at a wide range
     // of ADC clock frequencies.
+    //
+    // Also note that this can likely get much simplified if we switch from
+    // the Xilinx FIFOs to something with more... "normal" flag behaviour...
 
     localparam pS_EMPTY_NOT = 0;
     localparam pS_EMPTY_WAIT = 1;
