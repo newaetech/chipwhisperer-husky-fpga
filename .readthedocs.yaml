@@ -6,12 +6,6 @@ build:
   tools:
     python: "3.13"
   jobs:
-    checkout:
-      # Full repo is large due to Vivado binary files, so only get docs/
-      - git clone --no-checkout --filter=blob:none $READTHEDOCS_GIT_CLONE_URL .
-      - git sparse-checkout init --cone
-      - git sparse-checkout set docs
-      - git checkout $READTHEDOCS_GIT_IDENTIFIER
     pre_build:
       # Generate on-the-fly Sphinx configuration from Jupyter Book's _config.yml
       - "jupyter-book config sphinx docs/source"
