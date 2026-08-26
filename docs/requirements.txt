@@ -1,0 +1,9 @@
+jupyter-book==1.0.4.post1
+sphinx
+sphinx-rtd-theme
+sphinx-inline-tabs
+sphinx-hoverxref
+sphinxcontrib-images
+sphinx-autodoc-typehints
+sphinx-notfound-page
+sphinx-examples

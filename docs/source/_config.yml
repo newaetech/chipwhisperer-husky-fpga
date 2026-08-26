@@ -1,0 +1,74 @@
+# Book settings
+# Learn more at https://jupyterbook.org/customize/config.html
+# Comprehensive example: https://github.com/executablebooks/jupyter-book/blob/master/docs/_config.yml
+
+title: ChipWhisperer Husky FPGA Documentation
+author: NewAE
+copyright: "2026"
+logo: _static/logo.png
+
+# Force re-execution of notebooks on each build.
+# See https://jupyterbook.org/content/execute.html
+execute:
+  execute_notebooks: no
+
+# due to submodules there's lots of files we don't want built:
+only_build_toc_files: true
+#exclude_patterns: [.github/actions/copycat-action/*]
+#exclude_patterns: [chipwhisperer-target-cw308t/.github/*]
+
+
+# Define the name of the latex output file for PDF builds
+latex:
+  latex_documents:
+    targetname: book.tex
+
+# Information about where the book exists on the web
+repository:
+  url: https://github.com/newaetech/chipwhisperer-husky-fpga  # Online location of your book
+  path_to_book: docs  # Optional path to your book, relative to the repository root
+  branch: main  # Which branch of the repository should be used when creating links (optional)
+
+# Add GitHub buttons to your book
+# See https://jupyterbook.org/customize/config.html#add-a-link-to-your-repository
+html:
+  use_issues_button: true
+  use_repository_button: true
+
+sphinx:
+  config:
+    autodoc_warningiserror: true
+    nitpicky: true
+    napoleon_google_docstring: true
+    napoleon_numpy_docstring: true
+    napoleon_include_init_with_doc: false
+    napoleon_include_private_with_doc: false
+    napoleon_include_special_with_doc: true
+    napoleon_use_admonition_for_examples: false
+    napoleon_use_admonition_for_notes: false
+    napoleon_use_admonition_for_references: false
+    napoleon_use_ivar: false
+    napoleon_use_param: true
+    napoleon_use_rtype: true
+    napoleon_preprocess_types: false
+    napoleon_type_aliases: None
+    napoleon_attr_annotations: true
+    todo_include_todos: true
+    myst_heading_anchors: 3
+    suppress_warnings: [mystnb.unknown_mime_type]
+    notfound_urls_prefix: "/en/latest/"
+
+  extra_extensions:
+    - sphinx.ext.napoleon
+    - sphinx.ext.todo
+    - sphinx_autodoc_typehints
+    - sphinx_inline_tabs
+    - sphinxcontrib.images
+    - sphinx_examples
+    - hoverxref.extension
+    - sphinx.ext.autodoc
+    - notfound.extension
+
+  #local_extensions:
+  #    "chipwhisperer": "./../software"
+
