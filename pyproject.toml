@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools >= 61.0", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+#version = "0.0.1"  # Remove any existing version parameter.
+dynamic = ["version"]
+description="ChipWhisperer Husky FPGA"
+name = "chipwhisperer-husky-fpga"
+authors=[{name="Colin O'Flynn", email="coflynn@newae.com"}]
+requires-python = ">=3.13"
+#license = {file = "LICENSE.txt"}
+readme = "README.md"
+
+[project.urls]
+Homepage = "https://www.chipwhisperer.com"
+Documentation = "https://chipwhisperer-husky-fpga.readthedocs.io/en/latest/"
+Repository = "https://github.com/newaetech/chipwhisperer-husky-fpga"
+
