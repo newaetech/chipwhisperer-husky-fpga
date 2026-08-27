@@ -6,15 +6,15 @@ root: index
 parts:
 - caption: Implementation
   chapters:
-  - file: implementation
-  - file: husky_vs_plus
+  - file: Implementation/implementation
+  - file: Implementation/husky_vs_plus
 - caption: Testing
   chapters:
-  - file: testing
-  - file: simulation
-  - file: ontarget
-  - file: architecture
-- caption: ADC Storage Architecture
+  - file: Testing/testing
+  - file: Testing/simulation
+  - file: Testing/ontarget
+  - file: Testing/architecture
+- caption: Architecture
   chapters:
-  - file: highlevel_update
+  - file: Architecture/adc_highlevel_update
 

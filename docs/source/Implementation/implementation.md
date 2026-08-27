@@ -76,7 +76,7 @@ protect the FPGA, but this limits usability.
 
 <!-- TODO: move this to a separate page where issues of this type are listed -->
 Occasionally, a bitfile can be obtained where FPGA register reads/writes
-are unreliable (i.e. [`test_husky_dev.py`'s](ontarget) `test_reg_rw()`
+are unreliable (i.e. [`test_husky_dev.py`'s](../Testing/ontarget) `test_reg_rw()`
 test will fail), which makes the bitfile useless. Again, the solution is to
 re-compile with a different synthesis or implementation strategy. If this
 occurs, connecting to the scope object usually returns this error message:
@@ -92,7 +92,7 @@ inconsequential missing IP modules (e.g. ILAs as noted above) and the the last
 three `dbg_hub` commands.
 
 After any modifications to the Husky source, thorough testing should be
-done, both in simulation and on-target, as explained in the [testing](testing)
-chapter.
+done, both in simulation and on-target, as explained in the
+[testing](../Testing/testing) chapter.
 
 

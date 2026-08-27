@@ -133,7 +133,7 @@ leads to longer routing delays, which makes it harder to meet timing. The
 screenshot below from Vivado's device view of the original architecture
 illustrates the issue:
 
-```{figure} Images/semipro_bad_fifo_timing.png
+```{figure} ../Images/semipro_bad_fifo_timing.png
 :width: 50%
 :align: center
 Long routing delay between BRAM elements with the original architecture.
@@ -159,7 +159,7 @@ that "talk" to each other closer together. The (very short) white lines
 shows the critical path (the timing path that is closest to not meeting
 timing) in this design.
 
-```{figure} Images/new_arch_meets_timing.png
+```{figure} ../Images/new_arch_meets_timing.png
 :width: 50%
 :align: center
 Improved routing between BRAM elements with the new architecture.

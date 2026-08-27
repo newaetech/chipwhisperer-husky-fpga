@@ -26,6 +26,6 @@ the SAD depth; in practice, if we do this, turning on the SAD module when it is
 clocked at 250 MHz creates a large enough power draw that the voltage rails
 (which are monitored by the FPGA's XADC module) exceed their recommended
 operating limits. This is one of the reasons why it is important to do thorough
-[testing](testing).
+[testing](../Testing/testing).
 
 
