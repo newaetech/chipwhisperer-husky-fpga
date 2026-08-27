@@ -70,7 +70,7 @@ on Husky Plus where there are sufficient FPGA resources to do so), this can
 drive up power consumption to the point where the current draw might be too
 great at higher clock frequencies, and/or the FPGA overheats (yes, this can
 actually happen). The `scope.XADC` VCC and temperature alarms can be used to
-protect the FPGA, but this limits useability.
+protect the FPGA, but this limits usability.
 
 <!-- TODO: add table showing current resource utilization -->
 

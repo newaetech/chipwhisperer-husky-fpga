@@ -14,7 +14,7 @@ should work; in practice, iverilog is what we use and support.
 
 ### Why Not Verilator?
 True, Verilator is lightning-fast when using compiled C++ testbenches. It's
-possible to interface a cocotb testbech with Verilator, but some of
+possible to interface a cocotb testbench with Verilator, but some of
 Verilator's speed-up over iverilog would be lost. In practice, we find
 iverilog to be plenty fast, partly thanks to `regress.py`'s ability to
 dispatch multiple simulations in parallel.
@@ -58,11 +58,11 @@ Simulation models for the Xilinx FIFOs are provided in
 are quite finicky about how resets should be applied. The testbench applies
 the reset in a way that should satisfy the Xilinx FIFO requirements but yet
 somehow the FIFOs can sometimes misbehave (X's propagate, status flag remain
-unvalid). 
+invalid). 
 
 For this reason, we developed our own FIFOs; these are in the `fpga-common`
 submodule, located here: `fpga/fpga-common/hdl`. Their behaviour is **not**
-idential to the Xilinx FIFOs; in particular status flag latency is different
+identical to the Xilinx FIFOs; in particular status flag latency is different
 (they also do not suffer from reset bugs 🤣), and while they are fully
 functional and *can* be used for implementation, they are (a) not guaranteed to
 be bug-free and (b) fare worse on timing closure. However, in addition to not
