@@ -14,4 +14,7 @@ parts:
   - file: simulation
   - file: ontarget
   - file: architecture
+- caption: ADC Storage Architecture
+  chapters:
+  - file: highlevel_update
 
