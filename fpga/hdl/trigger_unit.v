@@ -34,13 +34,13 @@ module trigger_unit(
     input wire               trigger_now_i,      //1 = Trigger immediatly when armed
     input wire               arm_i,              //1 = arm, edge-sensitive so must be reset to 0 before arming again. Wait until the
                                                  //    arm_o goes high before doing this, otherwise the arm won't take effect.
-    output reg               arm_o,              //Status of internal arm logic
+    output wire              arm_o,              //Status of internal arm logic
 
     input wire [31:0]        trigger_offset_i,   //Delays the capture_go_o by this many ADC clock cycles
     output reg  [31:0]       trigger_length_o,   //Length of trigger pulse in ADC samples (only valid AFTER trigger happened)
 
-    output reg               capture_active_o,     //1 = trigger conditions met, stays high until 'capture_done_i' goes high
-    output reg               capture_go_o,         //pulses high for each segment capture start (even when segments aren't used)
+    output wire              capture_active_o,     //1 = trigger conditions met, stays high until 'capture_done_i' goes high
+    output wire              capture_go_o,         //pulses high for each segment capture start (even when segments aren't used)
     input wire               capture_done_i,       //1 = capture done
     input wire               armed_and_ready,
 
@@ -52,19 +52,19 @@ module trigger_unit(
     );
 
    //**** Trigger Logic *****
-   reg armed;
+   reg armed = 1'b0;
 
    wire adc_capture_done;
-   reg capture_go_start;
+   reg capture_go_start = 1'b0;
 
    assign adc_capture_done = capture_done_i;
 
-   reg [31:0] adc_delay_cnt;
+   reg [31:0] adc_delay_cnt = 32'd0;
 
    wire trigger_now_r;
    wire trigger_now_r2;
    wire trigger_now;
-   reg triggered;
+   reg triggered = 1'b0;
 
    cdc_simple U_trigger_now_cdc (
        .reset          (reset),
@@ -76,64 +76,62 @@ module trigger_unit(
 
    assign trigger_now = trigger_now_r && ~trigger_now_r2;
 
+   reg capture_go_o_reg = 1'b0;
+   assign capture_go_o = capture_go_o_reg;
+
    always @(posedge adc_clk) begin
-       if (reset) begin
+       if (arm_i & ~arm_i_dly)
+           // this is for the corner case of a large offset with multiple
+           // triggers coming in faster than the offset, post-capture;
+           // without this counter reset, it would end up free-running and
+           // potentially messing up all future captures
+           // https://github.com/newaetech/chipwhisperer-husky-fpga/issues/16
            adc_delay_cnt <= 0;
-           capture_go_o <= 0;
+       else if (capture_go_start && (adc_delay_cnt == trigger_offset_i)) begin
+           adc_delay_cnt <= 0;
+           capture_go_o_reg <= 1'b1;
        end
        else begin
-           if (arm_i & ~arm_i_dly)
-               // this is for the corner case of a large offset with multiple
-               // triggers coming in faster than the offset, post-capture;
-               // without this counter reset, it would end up free-running and
-               // potentially messing up all future captures
-               // https://github.com/newaetech/chipwhisperer-husky-fpga/issues/16
-               adc_delay_cnt <= 0;
-           else if (capture_go_start && (adc_delay_cnt == trigger_offset_i)) begin
-               adc_delay_cnt <= 0;
-               capture_go_o <= 1'b1;
-           end
-           else begin
-               if (capture_go_o)
-                   capture_go_o <= 1'b0;
-               else if (capture_go_start)
-                   adc_delay_cnt <= adc_delay_cnt + 1;
-           end
+           if (capture_go_o_reg)
+               capture_go_o_reg <= 1'b0;
+           else if (capture_go_start)
+               adc_delay_cnt <= adc_delay_cnt + 1;
        end
    end
 
    //ADC Trigger Stuff
-   reg reset_arm;
+   reg reset_arm = 1'b0;
+   reg reset_arm_r = 1'b0;
    wire trigger_level_match = (trigger == trigger_level_i);
    reg trigger_level_match_r;
    always @(posedge adc_clk) trigger_level_match_r <= trigger_level_match;
 
+   reg capture_active_o_reg = 1'b0;
+   assign capture_active_o = capture_active_o_reg;
+
    always @(posedge adc_clk) begin
-      if (reset) begin
-         reset_arm <= 0;
-      end else begin
-         if ((trigger_level_match & armed) | trigger_now) begin
-            reset_arm <= 1;
-         end else if ((arm_i == 0) & (capture_active_o == 0)) begin
-            reset_arm <= 0;
-         end
-      end
+     reset_arm_r <= reset_arm;
+     if (capture_active_o) begin
+        reset_arm <= 1;
+     end else if ((arm_i == 0) & (capture_active_o == 0)) begin
+        reset_arm <= 0;
+     end
    end
 
    assign trigger_too_soon = trigger_level_match && ~trigger_level_match_r && ~armed_and_ready;
 
    wire int_reset_capture;
-   assign int_reset_capture = adc_capture_done | reset | (~arm_i);
+   assign int_reset_capture = adc_capture_done | (~arm_i);
 
    always @(posedge adc_clk) begin
       if (int_reset_capture) begin
-         capture_active_o <= 1'b0;
+         capture_active_o_reg <= 1'b0;
          capture_go_start <= 1'b0;
          triggered <= 1'b0;
       end else begin
-         if (((trigger == trigger_level_i) & armed) | trigger_now)
-            capture_active_o <= 1;
-         if ((((trigger == trigger_level_i) & (capture_active_o || armed)) | trigger_now) && !triggered)
+         if ((trigger_level_match & armed_r) | trigger_now)
+            capture_active_o_reg <= 1;
+         if (((trigger_level_match & (capture_active_o_reg || armed_r)) | trigger_now) && !triggered)
             capture_go_start <= 1'b1;
          else if (capture_go_o)
             capture_go_start <= 1'b0;
@@ -144,27 +142,32 @@ module trigger_unit(
       // like the best solution
       if (capture_go_start)
           triggered <= 1'b1;
-      else if (trigger != trigger_level_i)
+      else if (!trigger_level_match)
           triggered <= 1'b0;
    end
 
-   wire resetarm;
-   assign resetarm = reset | reset_arm;
+   wire resetarm = reset_arm_r;
 
    //'armed' goes high when arm command present & conditions met during rising clock edge
-   always @(posedge adc_clk)
-      if (resetarm) begin
+   reg armed_r = 1'b0;
+   always @(posedge adc_clk) begin
+      armed_r <= armed;
+      //if (resetarm) begin
+      if (reset_arm_r) begin
          armed <= 0;
-      end else if (armed_and_ready & ((trigger != trigger_level_i) | (trigger_wait_i == 0))) begin
+      end else if (armed_and_ready & ((!trigger_level_match) | (trigger_wait_i == 0))) begin
          armed <= 1;
       end
+   end
 
    //'arm_o' goes high when arm command present (doesn't look at other conditions)
+   reg arm_o_reg = 1'b0;
+   assign arm_o = arm_o_reg;
    always @(posedge adc_clk)
-      if (resetarm) begin
-         arm_o <= 0;
+      if (reset_arm_r) begin
+         arm_o_reg <= 0;
       end else if (arm_i) begin
-         arm_o <= 1;
+         arm_o_reg <= 1;
       end
 
    /** Trigger Length Detection - does not account for multiple togglings**/
@@ -176,7 +179,7 @@ module trigger_unit(
    always @(posedge adc_clk) begin
       // don't count in the case of adc_trigger: it makes timing more difficult, it's not
       // likely useful, and it could be calculated by the host
-      if (trigger == trigger_level_i)
+      if (trigger_level_match)
          trigger_length_o <= trigger_length_o + 32'd1;
       else if (arm_i & ~arm_i_dly)
          trigger_length_o <= 0;
@@ -192,14 +195,15 @@ module trigger_unit(
                        trigger,
                        cmd_arm_usb };
 
-   assign debug2   = { (adc_delay_cnt == 0),
-                       capture_go_o,
+   assign debug2   = { int_reset_capture,
+                       resetarm,
                        capture_go_start,
-                       int_reset_capture, 
                        capture_active_o,
-                       trigger,
-                       adc_capture_done,
-                       arm_i };
+                       trigger_level_match,
+                       armed,
+                       armed_and_ready,
+                       triggered
+                     };
 
 
 

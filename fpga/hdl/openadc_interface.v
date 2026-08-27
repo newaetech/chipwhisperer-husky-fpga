@@ -130,12 +130,15 @@ module openadc_interface #(
     output wire                         armed_and_ready,
 
     // for debug only:
+    output wire [2:0]                   led_select,
     output wire                         slow_fifo_wr,
     output wire                         slow_fifo_rd,
     output wire [8:0]                   la_debug,
     output wire [7:0]                   la_debug2,
     output wire [7:0]                   sad_debug,
-    output wire [7:0]                   fifo_debug,
+    output wire [7:0]                   fifo_debug1,
+    output wire [7:0]                   fifo_debug2,
+    output wire [7:0]                   fifo_debug3,
     output wire [7:0]                   edge_trigger_debug
 
 );
@@ -152,11 +155,14 @@ module openadc_interface #(
     wire [15:0] num_segments;
     wire [19:0] segment_cycles;
     wire        segment_cycle_counter_en;
-    wire [1:0]  led_select;
     wire       data_source_select;
     wire [13:0] fifo_error_stat;
     wire [13:0] fifo_first_error_stat;
     wire [2:0] fifo_first_error_state;
+    wire [16:0] fifo_first_error_presample_counter;
+    wire [15:0] fifo_first_error_segment_counter;
+    wire [31:0] fifo_first_error_sample_counter;
+
     wire       no_clip_errors;
     wire       no_gain_errors;
     wire       capture_done;
@@ -239,19 +245,27 @@ module openadc_interface #(
 
 
    always @(*) begin
-      if (extclk_change_usb) begin
+      if (led_select == 3'b100) begin
+         LED_armed = reg_address[0];
+         LED_capture = reg_address[1];
+      end
+      else if (led_select == 3'b101) begin
+         LED_armed = reg_address[4];
+         LED_capture = reg_address[5];
+      end
+      else if (extclk_change_usb) begin
          LED_armed = flash_pattern;
          LED_capture = flash_pattern;
       end
-      else if (led_select == 2'b01) begin
+      else if (led_select == 3'b001) begin
          LED_armed = timer_heartbeat[24];
          LED_capture = clkgen_heartbeat[24];
       end
-      else if (led_select == 2'b10) begin
+      else if (led_select == 3'b010) begin
          LED_armed = adc_fb_heartbeat[24];
          LED_capture = adc_out_heartbeat[24];
       end
-      else if (led_select == 2'b11) begin
+      else if (led_select == 3'b011) begin
          LED_armed = pll_fpga_clk_heartbeat[24];
          LED_capture = extclk_change_usb;
       end
@@ -562,12 +576,17 @@ module openadc_interface #(
    wire fifo_rd_en;
    wire low_res;
    wire low_res_lsb;
-   wire [16:0] stream_segment_threshold;
+   wire [13:0] stream_segment_threshold;
 
-   wire [14:0] presamples;
-   wire [31:0] maxsamples_limit;
-   wire [31:0] maxsamples;
+   wire [16:0] presamples;
+   wire [31:0] samples_to_collect;
+   wire [31:0] total_stream_words;
 
+   wire [23:0] max_samples_8b;
+   wire [23:0] max_samples_12b;
+   wire [23:0] max_presamples_8b;
+   wire [23:0] max_presamples_12b;
+   wire [23:0] max_segment_total_bytes;
 
    wire [12:0] downsample;
    wire [7:0] reg_datao_oadc;
@@ -580,6 +599,7 @@ module openadc_interface #(
 
    wire [7:0] underflow_count;
    wire no_underflow_errors;
+   wire [6:0] save_offset_done_wait_count;
 
    wire [15:0]  ddr_test_iteration;
    wire [7:0]   ddr_test_errors;
@@ -604,6 +624,12 @@ module openadc_interface #(
     localparam pSAD_COUNTER_WIDTH = 12;
     localparam pNUM_GROUPS = 16;
 `endif
+
+`ifdef FIFOONLY
+    assign reg_datao_sad = 0;
+    assign sad_debug = 0;
+    assign trigger_sad = 0;
+`else
 
 `ifdef SAD_X2
        sad_x2_slowclock #(
@@ -772,6 +798,7 @@ module openadc_interface #(
        );
 `endif
 
+`endif // FIFOONLY
 
    edge_trigger #(
        .pBYTECNT_SIZE           (pBYTECNT_SIZE)
@@ -827,8 +854,15 @@ module openadc_interface #(
       .uiclk_frequency              (uiclk_frequency_masked),
       .pllclk_frequency             (pllclk_frequency_masked),
       .presamples_o                 (presamples),
-      .maxsamples_i                 (maxsamples_limit),
-      .maxsamples_o                 (maxsamples),
+
+      .max_samples_8b               (max_samples_8b         ),
+      .max_samples_12b              (max_samples_12b        ),
+      .max_presamples_8b            (max_presamples_8b      ),
+      .max_presamples_12b           (max_presamples_12b     ),
+      .max_segment_total_bytes      (max_segment_total_bytes),
+
+      .samples_to_collect           (samples_to_collect),
+      .total_stream_words           (total_stream_words),
       .downsample_o                 (downsample),
       .clkblock_dcm_locked_i        (1'b0),
       .clkblock_gen_locked_i        (1'b0),
@@ -878,10 +912,14 @@ module openadc_interface #(
       .fifo_error_stat                  (fifo_error_stat),
       .fifo_first_error_stat            (fifo_first_error_stat),
       .fifo_first_error_state           (fifo_first_error_state),
+      .fifo_first_error_presample_counter (fifo_first_error_presample_counter),
+      .fifo_first_error_segment_counter   (fifo_first_error_segment_counter),
+      .fifo_first_error_sample_counter    (fifo_first_error_sample_counter),
       .fifo_read_count                  (fifo_read_count),
       .fifo_read_count_error_freeze     (fifo_read_count_error_freeze),
       .underflow_count                  (underflow_count),
       .no_underflow_errors              (no_underflow_errors),
+      .save_offset_done_wait_count      (save_offset_done_wait_count),
       .clear_fifo_errors                (clear_fifo_errors),
       .capture_done                     (capture_done),
       .O_data_source_select             (data_source_select),
@@ -987,8 +1025,8 @@ module openadc_interface #(
           .clk_usb                  (clk_usb),
 
           .presample_i              (presamples),
-          .max_samples_i            (maxsamples),
-          .max_samples_o            (maxsamples_limit),
+          .max_samples_i            (maxsamples), // TODO: no longer exists (use max_samples_8b, etc...)
+          .max_samples_o            (maxsamples_limit), // TODO: update as per fifo_top_husky (max_samples_8b, etc...)
           .downsample_i             (downsample),
 
           .fifo_overflow            (fifo_overflow_noddr),
@@ -1030,7 +1068,7 @@ module openadc_interface #(
           .preddr_fifo_wr           (slow_fifo_wr),
           .preddr_fifo_underflow    (preddr_adc_fifo_underflow ),
           .arm_pulse_usb            (arm_pulse_usb),
-          .debug                    (fifo_debug)
+          .debug                    (fifo_debug1)
        );
 
        wire fifo_overflow_ddr;
@@ -1169,8 +1207,15 @@ module openadc_interface #(
           .stream_segment_threshold (stream_segment_threshold),
 
           .presample_i              (presamples),
-          .max_samples_i            (maxsamples),
-          .max_samples_o            (maxsamples_limit),
+          .samples_to_collect       (samples_to_collect),
+          .total_stream_words       (total_stream_words),
+
+          .max_samples_8b           (max_samples_8b         ),
+          .max_samples_12b          (max_samples_12b        ),
+          .max_presamples_8b        (max_presamples_8b      ),
+          .max_presamples_12b       (max_presamples_12b     ),
+          .max_segment_total_bytes  (max_segment_total_bytes),
+
           .downsample_i             (downsample),
 
           .fifo_overflow            (fifo_overflow),
@@ -1179,6 +1224,10 @@ module openadc_interface #(
           .error_stat               (fifo_error_stat[9:0]),
           .first_error_stat         (fifo_first_error_stat[9:0]),
           .first_error_state        (fifo_first_error_state),
+          .first_error_presample_counter (fifo_first_error_presample_counter),
+          .first_error_segment_counter   (fifo_first_error_segment_counter),
+          .first_error_sample_counter    (fifo_first_error_sample_counter),
+
           .clear_fifo_errors        (clear_fifo_errors),
           .trigger_too_soon         (trigger_too_soon),
           .stream_segment_available (stream_segment_available),
@@ -1186,6 +1235,7 @@ module openadc_interface #(
           .no_gain_errors           (no_gain_errors),
           .underflow_count          (underflow_count),
           .no_underflow_errors      (no_underflow_errors),
+          .save_offset_done_wait_count  (save_offset_done_wait_count),
           .capture_done             (capture_done),
           .armed_and_ready          (armed_and_ready),
           .state                    (fifo_state),
@@ -1196,7 +1246,9 @@ module openadc_interface #(
           .slow_fifo_rd             (slow_fifo_rd),
           .fifo_read_count          (fifo_read_count),
           .fifo_read_count_error_freeze (fifo_read_count_error_freeze),
-          .debug                    (fifo_debug)
+          .debug1                   (fifo_debug1),
+          .debug2                   (fifo_debug2),
+          .debug3                   (fifo_debug3)
        );
 
        assign ddr_test_pass = 0;

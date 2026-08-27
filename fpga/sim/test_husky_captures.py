@@ -152,6 +152,10 @@ class GenericCapture(object):
 
     def _limit_read(self, job) -> int:
         """ To test that the design functions correctly when the full capture is not read back.
+        TODO: this will need to change a bit- we still want to test recovery from incomplete
+        reads, however since we won't read the offset at the end of the capture data, none of
+        the data can be validated. All we will verify is that the *next* capture works as
+        intended.
         """
         samples = job['samples']
         if 'segments' in job.keys():
@@ -179,6 +183,7 @@ class GenericCapture(object):
         prints the sequence of expected 32-bit words and the actual received
         sequence of 32-bit words; this makes it easier to
         see where things diverged.
+        TODO: update (low priority, only if needed)
         """
         expected_words = []
         actual_words = []
@@ -237,14 +242,18 @@ class ADCCapture(GenericCapture):
         self.name = 'ADC'
         self.sample_increment = 1
 
-    async def read_adc_data(self, samples, bits_per_sample):
-        # do the read:
-        if bits_per_sample == 12:
-            bytes_to_read = math.ceil(samples*1.5)
+    async def read_adc_data(self, bytes_to_read):
+        if random.randint(0,5) or bytes_to_read > 500:
+            # fast reads most of the time (in the interest of simulation time)
+            self.dut._log.info('using FAST read mode for reading ADC samples (%d bytes)' % bytes_to_read)
+            await self.harness.registers.fast_read_mode_start()
+            raw = list(await self.harness.registers.read(self.reg_addr['ADCREAD_ADDR'], bytes_to_read, fast_fifo_read=True))
+            await self.harness.registers.fast_read_mode_stop()
         else:
-            bytes_to_read = samples
-        raw = list(await self.harness.registers.read(self.reg_addr['ADCREAD_ADDR'], bytes_to_read))
+            self.dut._log.info('using SLOW read mode for reading ADC samples (%d bytes)' % bytes_to_read)
+            raw = list(await self.harness.registers.read(self.reg_addr['ADCREAD_ADDR'], bytes_to_read, fast_fifo_read=False))
         return raw
+
 
     async def _initiate_read(self) -> None:
         #self.dut._log.info("issuing initiate read command...")
@@ -260,39 +269,66 @@ class ADCCapture(GenericCapture):
         while empty:
             await ClockCycles(self.clk_usb, 50)
             empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 2))[1] & 64
+        # because new architecture needs to save the offset, let's wait a bit more so that we don't read too fast:
+        await ClockCycles(self.sampling_clock, 100)
 
     async def _read_samples(self, job) -> list:
         job_name = job['name']
-        samples = self._limit_read(job)
+        samples = job['samples']
+        #samples = self._limit_read(job) # TODO: don't do this for now, revisit later!
         bits_per_sample = job['bits_per_sample']
+        segments = job['segments']
+        bytes_per_segment = job['bytes_to_read']
+        bytes_to_read = bytes_per_segment * segments
+
         if self.stream:
             stream_segment_n = 0
             stream_segment_size = job['stream_segment_threshold'] # N.B.: does NOT need to be equal, though in practice (and by default) it usually is
             self.raw_read_data = []
-            samples_left = samples
-            while samples_left:
+            bytes_left = bytes_to_read
+            while bytes_left:
                 wait_printed = False
                 while self.dut.USB_SPARE0.value == 0:
                     if not wait_printed:
                         self.dut._log.info('%12s waiting for stream segment to be available...' % job_name)
                         wait_printed = True
                     await ClockCycles(self.clk_usb, 10)
-                samples_to_read = min(stream_segment_size, samples_left)
-                self.dut._log.info('%12s starting stream segment read %d: reading %d samples' % (job_name, stream_segment_n, samples_to_read))
-                stream_segment = await self.read_adc_data(samples_to_read, bits_per_sample)
+                read_chunk_size = min(stream_segment_size*9, bytes_left)
+                self.dut._log.info('%12s starting stream segment read %d: reading %d bytes' % (job_name, stream_segment_n, read_chunk_size))
+                stream_segment = await self.read_adc_data(read_chunk_size)
                 self.raw_read_data.extend(stream_segment)
-                samples_left -= samples_to_read
+                bytes_left -= read_chunk_size
                 stream_segment_n += 1
+                # stream_segment_available is updated every 2**6 cycles (see write_cycle_count in fifo_top_husky.v), so wait enough
+                # time for stream_segment_available to get updated before checking it again:
+                await ClockCycles(self.sampling_clock, 2**7)
 
         else:
             downsample = job['downsample']
             # if capture is downsampled, we could read it too fast and underflow:
             if downsample > 1:
                 await ClockCycles(self.sampling_clock, math.ceil(samples * downsample * bits_per_sample/8))
-            #self.dut._log.info("starting the read (%0d samples)" % samples)
-            self.raw_read_data = await self.read_adc_data(samples, bits_per_sample)
+            self.raw_read_data = await self.read_adc_data(bytes_to_read)
 
-        data = self.processHuskyData(samples, bytearray(self.raw_read_data), bits_per_sample)
+        if segments:
+            data = []
+            for s in range(segments):
+                sdata = self.processHuskyData(samples, bytearray(self.raw_read_data[s*bytes_per_segment:(s+1)*bytes_per_segment]), bits_per_sample)
+                data.extend(sdata)
+                dataread = 'Segment %d data read (%d samples): ' % (s, len(sdata))
+                for b in sdata:
+                    dataread += '%3x ' % b
+                dataread += '\n'
+                self.dut._log.info(dataread)
+
+        else:
+            data = self.processHuskyData(samples, bytearray(self.raw_read_data), bits_per_sample)
+
+        dataread = 'Data read (%d samples): ' % len(data)
+        for b in data:
+            dataread += '%3x ' % b
+        dataread += '\n'
+        self.dut._log.info(dataread)
         return data
 
 
@@ -312,9 +348,20 @@ class ADCCapture(GenericCapture):
             self.dut._log.error('%12s fast/pre-DDR FIFO not empty after reading all samples.' % job_name)
             self.harness.inc_error()
 
-    @staticmethod
-    def processHuskyData(NumberPoints, data, bits_per_sample):
+    def processHuskyData(self, NumberPoints, data, bits_per_sample):
+        # 1. validate and remove the offset word:
+        self.dut._log.info('Raw read data: %s' % (list(data)))
+
+        if list(data[-8:]) != [0xff, 0x00, 0xee, 0x11, 0xdd, 0x00, 0xcc, 0xff]:
+            self.dut._log.error('Unexpected offset word: %s' % data[-9:])
+            self.harness.inc_error()
+            offset = 0
+        else:
+            offset = data[-9]
+        self.dut._log.info('Offset extracted from payload: %d' % offset)
+        data = data[:-6]
         if bits_per_sample == 12:
+            # TODO: shouldn't need this %3 stuff anymore maybe?
             if len(data)%3:
                 data.extend([0]*(3-len(data)%3))
             data = np.frombuffer(data, dtype=np.uint8)
@@ -322,7 +369,17 @@ class ADCCapture(GenericCapture):
             fst_uint12 = (fst_uint8 << 4) + (mid_uint8 >> 4)
             snd_uint12 = ((mid_uint8 % 16) << 8) + lst_uint8
             data = np.reshape(np.concatenate((fst_uint12[:, None], snd_uint12[:, None]), axis=1), 2 * fst_uint12.shape[0])
-        return data[:NumberPoints]
+        # TODO-important! check that we have the expected number of samples! (here or where the per-sample check is done)
+        #self.dut._log.info('XXX NumberPoints: %d; full data: %s' % (NumberPoints, data))
+        #self.dut._log.info('XXX offsetted data: %s' % data[offset:offset+NumberPoints])
+
+        dataread = 'Samples (without offset) (%d samples): ' % len(data)
+        for b in data:
+            dataread += '%3x ' % b
+        dataread += '\n'
+        self.dut._log.info(dataread)
+
+        return data[offset:offset+NumberPoints]
 
 
     def _check_samples(self, job, data) -> None:
@@ -332,6 +389,8 @@ class ADCCapture(GenericCapture):
         current_count = data[0]
         self.first_read_sample = int(current_count)
         expected = (self._actual_first_write - job['presamples']) % MOD
+        #for i in range(4):
+        #    self.dut._log.info('XXX sample %d: %3x' % (i, data[i]))
         if int(current_count) != expected:
             self.dut._log.error("%12s First sample: expected %3x got %3x" % (job['name'], expected, current_count))
             self.inc_error()
@@ -342,7 +401,7 @@ class ADCCapture(GenericCapture):
             tolerance = 0
             if (i+1) % job['samples'] == 0:
                 if job['segment_counter_en']:
-                    current_count += job['segment_cycles'] - job['samples']
+                    current_count += job['segment_cycles'] - (job['samples']*job['downsample'])
                 else:
                     current_count += job['segment_times'][segment] - job['samples']
                     tolerance = 2 # because of the USB <-> sampling clock conversion
@@ -677,7 +736,7 @@ class GlitchCapture(GenericCapture):
             if self.harness.is_pro: # offset difference is from USB write timing differences:
                 actual_offset = 0
             else:
-                actual_offset = 3
+                actual_offset = 2
         else:
             actual_offset = job['offset'] + 2
             await FallingEdge(self.sampling_clock) # because incoming trigger to reg_clockglitch.v first gets negedge sampled

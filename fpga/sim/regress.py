@@ -13,6 +13,7 @@ group = parser.add_mutually_exclusive_group()
 group.add_argument("--runs", type=int, help="Number of iterations.", default=1)
 group.add_argument("--test", help="Testcase to run")
 parser.add_argument("--variant", help="Husky variant (regular/plus/pro)", default='regular')
+parser.add_argument("--fifoonly", help="FIFO-only top-level", action='store_true')
 parser.add_argument("--seed", type=int, help="Seed to use when running a single test with --test.")
 parser.add_argument("--timeout", type=int, help="Simulation timeout.")
 parser.add_argument("--tests", help="Run all tests whose name contains TESTS", default='')
@@ -44,6 +45,106 @@ tests.append(dict(name  = 'adc_capture',
              MAX_DOWNSAMPLE = 4,
              description = 'ADC-only capture.'))
 
+
+tests.append(dict(name  = 'adc_capture_12b',
+             testcase = 'capture',
+             frequency = 10,
+             LA_CAPTURE = 0,
+             TRACE_CAPTURE = 0,
+             GLITCH_CAPTURE = 0,
+             MAX_SIZE = 300,
+             MAX_PRESAMPLES = 300,
+             MAX_OFFSET = 1000,
+             MAX_DOWNSAMPLE = 4,
+             ADC_RES = 12,
+             description = 'ADC-only capture, 12 bits.'))
+
+tests.append(dict(name  = 'adc_capture_8b',
+             testcase = 'capture',
+             frequency = 10,
+             LA_CAPTURE = 0,
+             TRACE_CAPTURE = 0,
+             GLITCH_CAPTURE = 0,
+             MIN_SIZE = 29,
+             MAX_SIZE = 39,
+             MIN_PRESAMPLES = 24,
+             MAX_PRESAMPLES = 39,
+             MAX_OFFSET = 1000,
+             MAX_DOWNSAMPLE = 4,
+             ADC_RES = 8,
+             description = 'ADC-only capture, 8 bits.'))
+
+
+tests.append(dict(name  = 'adc_capture_short_12b',
+             testcase = 'capture',
+             frequency = 10,
+             LA_CAPTURE = 0,
+             TRACE_CAPTURE = 0,
+             GLITCH_CAPTURE = 0,
+
+             MIN_SIZE = 1,
+             MAX_SIZE = 19,
+             MIN_PRESAMPLES = 2,
+             MAX_PRESAMPLES = 19,
+
+             MAX_OFFSET = 1000,
+             MAX_DOWNSAMPLE = 4,
+             ADC_RES = 12,
+             description = 'ADC-only short capture, 12 bits.'))
+
+
+tests.append(dict(name  = 'adc_capture_short_8b',
+             testcase = 'capture',
+             frequency = 10,
+             LA_CAPTURE = 0,
+             TRACE_CAPTURE = 0,
+             GLITCH_CAPTURE = 0,
+
+             MIN_SIZE = 1,
+             MAX_SIZE = 29,
+             MIN_PRESAMPLES = 2,
+             MAX_PRESAMPLES = 29,
+
+             MAX_OFFSET = 1000,
+             MAX_DOWNSAMPLE = 4,
+             ADC_RES = 8,
+             description = 'ADC-only short capture, 8 bits.'))
+
+
+tests.append(dict(name  = 'adc_max_presamples_12b',
+             testcase = 'capture',
+             frequency = 8,
+             LA_CAPTURE = 0,
+             TRACE_CAPTURE = 0,
+             GLITCH_CAPTURE = 0,
+             MIN_SIZE = 1765,
+             MAX_SIZE = 1788,
+             MIN_PRESAMPLES = 1765,
+             MAX_PRESAMPLES = 1765,
+             MAX_OFFSET = 100,
+             MAX_DOWNSAMPLE = 1,
+             FIFOSIZE = "TINYFIFO",
+             ADC_RES = 12,
+             NUM_CAPTURES = 2,
+             description = 'ADC-only capture, max presamples, 12-bit mode.'))
+
+tests.append(dict(name  = 'adc_max_presamples_8b',
+             testcase = 'capture',
+             frequency = 8,
+             LA_CAPTURE = 0,
+             TRACE_CAPTURE = 0,
+             GLITCH_CAPTURE = 0,
+             MIN_SIZE = 2530,
+             MAX_SIZE = 2557,
+             MIN_PRESAMPLES = 2530,
+             MAX_PRESAMPLES = 2530,
+             MAX_OFFSET = 100,
+             MAX_DOWNSAMPLE = 1,
+             FIFOSIZE = "TINYFIFO",
+             ADC_RES = 8,
+             NUM_CAPTURES = 2,
+             description = 'ADC-only capture, max presamples, 8-bit mode.'))
+
 # downsamples gets its own testcase because it has restrictions on presamples and segments:
 tests.append(dict(name  = 'adc_downsample',
              testcase = 'capture',
@@ -70,6 +171,29 @@ tests.append(dict(name  = 'adc_segments',
              MAX_SEGMENTS = 3,
              MAX_SEGMENT_CYCLES = 1000,
              description = 'ADC-only capture with segments.'))
+
+tests.append(dict(name  = 'adc_max_segments',
+             testcase = 'capture',
+             frequency = 10,
+             LA_CAPTURE = 0,
+             TRACE_CAPTURE = 0,
+             GLITCH_CAPTURE = 0,
+             MIN_SIZE = 119,
+             MAX_SIZE = 127,
+             MAX_PRESAMPLES = 127,
+             MAX_OFFSET = 1000,
+             MIN_SEGMENTS = 32,
+             MAX_SEGMENTS = 32,
+             MAX_SEGMENT_CYCLES = 1000,
+             ADC_RES = 8,
+             FIFOSIZE = "TINYFIFO",
+             TIMEOUT_TIME = 5000,
+             description = 'ADC-only capture with segments filling up the slow FIFO.'))
+             # Slow FIFO (8b) is 256*18 = 4608 bytes samples; that's 32 segments of 144 bytes.
+             # 9 bytes go to the offset word, leaving 135 bytes of sample data (which happily
+             # is a multiple of 9);
+             # an extra 8 bytes are required for offset variability, so the actual captured 
+             # sample count is 127 bytes.
 
 tests.append(dict(name  = 'la_capture',
              testcase = 'capture',
@@ -102,6 +226,7 @@ tests.append(dict(name  = 'all_capture_no_downstream',
              description = 'All sources capture, no downstream triggers.'))
 
 tests.append(dict(name  = 'big_capture',
+             # TODO: need to update this testcase for new architecture
              testcase = 'capture',
              frequency = 4,
              MIN_SIZE = 300,
@@ -109,23 +234,64 @@ tests.append(dict(name  = 'big_capture',
              NUM_CAPTURES = 2,
              description = 'All sources, larger captures.'))
 
-tests.append(dict(name  = 'huge_adc_capture',
+tests.append(dict(name  = 'huge_adc_capture_12b',
              testcase = 'capture',
-             frequency = 7,
-             # note: max_size will get adjusted down if not pro
-             MIN_SIZE = 12000,
-             MAX_SIZE = 12100,
+             frequency = 5,
+             MIN_SIZE = 3072,
+             MAX_SIZE = 4608,
              NUM_CAPTURES = 1,
              LA_CAPTURE = 0,
              TRACE_CAPTURE = 0,
              GLITCH_CAPTURE = 0,
+             TIMEOUT_TIME = 100000,
+             ADC_RES = 12,
              FIFOSIZE = "TINYFIFO",
-             # with TINY FIFO, for ADC we have:
-             # fast FIFO: 1024 samples
-             # pre DDR: 512*64/12 = 2730 samples
-             # post DDR: 512*64/12 = 2730 samples
-             # DDR capacity: selectable via TINYDDR, 256*64/12 = 1365 or 64K*64/12 = 349525 samples
-             description = 'ADC capture exceeding pre-DDR FIFO size.'))
+             description = 'ADC capture exceeding slow FIFO size.'))
+
+tests.append(dict(name  = 'huge_adc_capture_8b',
+             testcase = 'capture',
+             frequency = 5,
+             MIN_SIZE = 4608,
+             MAX_SIZE = 6912,
+             NUM_CAPTURES = 1,
+             LA_CAPTURE = 0,
+             TRACE_CAPTURE = 0,
+             GLITCH_CAPTURE = 0,
+             TIMEOUT_TIME = 100000,
+             ADC_RES = 8,
+             FIFOSIZE = "TINYFIFO",
+             description = 'ADC capture exceeding slow FIFO size.'))
+
+
+tests.append(dict(name  = 'full_adc_capture_12b',
+             testcase = 'capture',
+             frequency = 5,
+             MIN_SIZE = 4843,
+             MAX_SIZE = 4849,
+             NUM_CAPTURES = 2,
+             LA_CAPTURE = 0,
+             TRACE_CAPTURE = 0,
+             GLITCH_CAPTURE = 0,
+             TIMEOUT_TIME = 100000,
+             ADC_RES = 12,
+             FIFOSIZE = "TINYFIFO",
+             description = 'ADC capture using near-to-full storage.'))
+
+
+tests.append(dict(name  = 'full_adc_capture_8b',
+             testcase = 'capture',
+             frequency = 5,
+             MIN_SIZE = 7129,
+             MAX_SIZE = 7138,
+             NUM_CAPTURES = 2,
+             LA_CAPTURE = 0,
+             TRACE_CAPTURE = 0,
+             GLITCH_CAPTURE = 0,
+             TIMEOUT_TIME = 100000,
+             ADC_RES = 8,
+             FIFOSIZE = "TINYFIFO",
+             description = 'ADC capture using near-to-full storage.'))
+
 
 tests.append(dict(name  = 'adc_stream_regular',
              testcase = 'capture',
@@ -138,7 +304,7 @@ tests.append(dict(name  = 'adc_stream_regular',
              GLITCH_CAPTURE = 0,
              STREAM = 1,
              FIFOSIZE = "TINYFIFO",
-             VARIANT = 'regular', # will only run with --variant=regular
+             VARIANT = 'plus', # TODO: do we want to specify a variant here? used to be "regular"...
              TIMEOUT_TIME = 10000,
              description = 'ADC-only stream capture (regular Husky only).'))
 
@@ -152,7 +318,7 @@ tests.append(dict(name  = 'adc_concurrent_stream_regular',
              TRACE_CAPTURE = 1,
              STREAM = 1,
              FIFOSIZE = "TINYFIFO",
-             VARIANT = 'regular', # will only run with --variant=regular
+             VARIANT = 'regular', # will only run with --variant=regular; TODO: as adc_stream_regular?
              TIMEOUT_TIME = 15000,
              description = 'ADC stream capture plus other sources (regular Husky only).'))
 
@@ -455,6 +621,9 @@ if args.dump:
     makeargs.append('DUMP=1')
 if args.fast_fifo_sim:
     makeargs.append('FAST_FIFO_SIM=FAST_FIFO_SIM')
+if args.fifoonly:
+    makeargs.append('EXTRA=-DFIFOONLY')
+print("Running make:\n%s" % makeargs)
 result = subprocess.run(makeargs, stdout=outfile, stderr=outfile)
 if result.returncode:
     print ("Compilation for target %s failed (return code: %d), check coco_compile.out." % result.returncode)
@@ -498,6 +667,10 @@ for test in tests:
 
       if args.timeout:
           makeargs.append('TIMEOUT_TIME=%d' % args.timeout)
+
+      if args.fifoonly:
+          makeargs.append('NO_GLITCH=1')
+          makeargs.append('EXTRA=-DFIFOONLY')
 
       run_test = True
       # build make command:

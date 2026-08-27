@@ -42,6 +42,7 @@ THRESHOLD=0
 VERBOSE=0
 COCOTB_LOG_LEVEL=INFO
 NUM_CAPTURES=3
+ADC_RES=0
 LA_CAPTURE=1
 TRACE_CAPTURE=1
 ADC_CAPTURE=1
@@ -180,6 +181,7 @@ compile_sad_coco:
 	../hdl/sad_x2_slowclock.v \
 	../hdl/sad_x4_slowclock.v \
 	../hdl/usb_reg_main.v \
+	../fpga-common/hdl/async_resetFFstyle2.v \
 	../fpga-common/hdl/fifo_async.v \
 	../fpga-common/hdl/cdc_pulse.v \
 	../fpga-common/hdl/cdc_simple.v \
@@ -211,6 +213,7 @@ compile:
 	-y/$(VIVADO_PATH)/$(VIVADO_VERSION)/ids_lite/ISE/verilog/src/unisims/ \
 	-g2005-sv \
 	-gsupported-assertions \
+	-s glbl \
 	-I../hdl \
 	-I../tracewhisperer/hdl/ \
 	-Wportbind \
@@ -222,6 +225,7 @@ compile:
 	-DTRACE \
 	-D$(VARIANT) \
 	-D$(FIFO_TYPE) \
+	-DNOXILINXFIFO \
 	-I../tracewhisperer/hdl/ \
 	-P cwhusky_tb.pADC_LOW_RES=$(ADC_LOW_RES) \
 	-P cwhusky_tb.pSLOW_ADC=$(SLOW_ADC) \
@@ -276,6 +280,7 @@ compile_coco:
 	-DCOCOTB_SIM=1 \
 	-P $(TOP).pDUMP=$(DUMP) \
 	-o $(EXEFILE) \
+	$(EXTRA) \
 	../hdl/$(TOP).v \
 
 
@@ -382,6 +387,7 @@ run_coco:
 	PRO=$(PRO) \
 	CW310=$(CW310) \
 	NUM_CAPTURES=$(NUM_CAPTURES) \
+	ADC_RES=$(ADC_RES) \
 	LA_CAPTURE=$(LA_CAPTURE) \
 	TRACE_CAPTURE=$(TRACE_CAPTURE) \
 	ADC_CAPTURE=$(ADC_CAPTURE) \

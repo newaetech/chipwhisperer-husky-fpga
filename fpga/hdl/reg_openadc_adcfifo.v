@@ -42,14 +42,19 @@ module reg_openadc_adcfifo #(
    output reg          low_res,
    output reg          low_res_lsb,
    output reg          fast_fifo_read_mode,
-   output reg  [16:0]  stream_segment_threshold,
+   output reg  [13:0]  stream_segment_threshold,
    input  wire [13:0]  fifo_error_stat,
    input  wire [13:0]  fifo_first_error_stat,
    input  wire [2:0]   fifo_first_error_state,
+   input  wire [16:0]  fifo_first_error_presample_counter,
+   input  wire [15:0]  fifo_first_error_segment_counter,
+   input  wire [31:0]  fifo_first_error_sample_counter,
+
    output reg          clear_fifo_errors,
 
    input  wire [7:0]   underflow_count,
    output reg          no_underflow_errors,
+   output reg  [6:0]   save_offset_done_wait_count,
    input  wire         capture_done,
    output reg          O_data_source_select,
 
@@ -142,7 +147,11 @@ module reg_openadc_adcfifo #(
    wire ddr_single_done_usb;
    wire ddr_read_data_done_usb;
 
-   wire [23:0] fifo_first_error_combined;
+   wire [88:0] fifo_first_error_combined;
+
+   assign fifo_first_error_combined[88:72] = fifo_first_error_presample_counter;
+   assign fifo_first_error_combined[71:56] = fifo_first_error_segment_counter;
+   assign fifo_first_error_combined[55:24] = fifo_first_error_sample_counter;
    assign fifo_first_error_combined[23:16] = {5'b0, fifo_first_error_state};
    assign fifo_first_error_combined[15:0] = {2'b0, fifo_first_error_stat};
 
@@ -151,18 +160,19 @@ module reg_openadc_adcfifo #(
    assign ddr3_stats[15:8]  = {6'b0, I_ddr3_fail, I_ddr3_pass};
    assign ddr3_stats[7:0]   = {1'b0, I_ddr3_stat};
 
+   wire [63:0] fifo_read_count_combined = {fifo_read_count, fifo_read_count_error_freeze};
+
    always @(*) begin
       if (reg_read) begin
          case (reg_address)
             `FIFO_STAT:                 reg_datao_reg = fifo_stat[reg_bytecnt*8 +: 8];
             `FIFO_STATE:                reg_datao_reg = {1'b0, state};
             `FIFO_FIRST_ERROR:          reg_datao_reg = fifo_first_error_combined[reg_bytecnt*8 +: 8];
-            `DEBUG_FIFO_READS:          reg_datao_reg = fifo_read_count[reg_bytecnt*8 +: 8];
-            `DEBUG_FIFO_READS_FREEZE:   reg_datao_reg = fifo_read_count_error_freeze[reg_bytecnt*8 +: 8];
+            `DEBUG_FIFO_READS:          reg_datao_reg = fifo_read_count_combined[reg_bytecnt*8 +: 8];
             `STREAM_SEGMENT_THRESHOLD:  reg_datao_reg = stream_segment_threshold[reg_bytecnt*8 +: 8];
             `ADC_LOW_RES:               reg_datao_reg = {6'b0, low_res_lsb, low_res};
             `FIFO_UNDERFLOW_COUNT:      reg_datao_reg = underflow_count;
-            `FIFO_NO_UNDERFLOW_ERROR:   reg_datao_reg = {7'b0, no_underflow_errors};
+            `FIFO_NO_UNDERFLOW_ERROR:   reg_datao_reg = {save_offset_done_wait_count, no_underflow_errors};
             `CAPTURE_DONE:              reg_datao_reg = {7'b0, capture_done};
 
             // DDR stuff for Pro:
@@ -188,8 +198,9 @@ module reg_openadc_adcfifo #(
          low_res <= 0;
          low_res_lsb <= 0;
          clear_fifo_errors <= 1'b0;
-         stream_segment_threshold <= 65536;
+         stream_segment_threshold <= 7282; // 65536 / 9, because this counts 9-byte (72-bit) words
          no_underflow_errors <= 1'b0;   // disables flagging of *slow* FIFO underflow errors only
+         save_offset_done_wait_count <= 7'd32; // seems to work well, established through trial+error
          O_ddr3_rwtest_en <= 1'b0;
          O_ddr3_clear_fail <= 1'b0;
          O_vddr_enable <= 1'b0;
@@ -212,7 +223,7 @@ module reg_openadc_adcfifo #(
             `ADC_LOW_RES:               {low_res_lsb, low_res} <= reg_datai[1:0];
             `STREAM_SEGMENT_THRESHOLD:  stream_segment_threshold[reg_bytecnt*8 +: 8] <= reg_datai; 
             `FIFO_STAT:                 clear_fifo_errors <= reg_datai[0];
-            `FIFO_NO_UNDERFLOW_ERROR:   no_underflow_errors <= reg_datai[0];
+            `FIFO_NO_UNDERFLOW_ERROR:   {save_offset_done_wait_count, no_underflow_errors} <= reg_datai;
             `REG_DDR3_STAT:             {O_ddr3_clear_fail, O_ddr3_rwtest_en} <= reg_datai[1:0];
             `REG_XO_EN:                 {O_vddr_enable, O_xo_en} <= reg_datai[1:0];
             `FIFO_CONFIG:               {O_data_source_select, O_use_ddr} <= reg_datai[1:0];
@@ -293,7 +304,8 @@ module reg_openadc_adcfifo #(
        // accomodate slower read times on CW310:
        assign fifo_rd_en_condition = reg_read_pipe[4] && ~reg_read_pipe[5];
    `else
-       assign fifo_rd_en_condition = reg_read && ~reg_read_r;
+       // NOTE used to be one cycle earlier but this is safer:
+       assign fifo_rd_en_condition = reg_read_pipe[0] && ~reg_read_pipe[1];
    `endif
    always @(posedge clk_usb) begin
       reg_read_pipe <= {reg_read_pipe[4:0], reg_read};

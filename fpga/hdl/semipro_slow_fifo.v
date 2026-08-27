@@ -5,7 +5,7 @@
 This file is part of the ChipWhisperer Project. See www.newae.com for more
 details, or the codebase at http://www.chipwhisperer.com
 
-Copyright (c) 2023, NewAE Technology Inc. All rights reserved.
+Copyright (c) 2023-2026, NewAE Technology Inc. All rights reserved.
 Author: Jean-Pierre Thibault <jpthibault@newae.com>
 
   chipwhisperer is free software: you can redistribute it and/or modify
@@ -139,120 +139,39 @@ module semipro_slow_fifo #(
     end
 
 
-    `ifdef NOXILINXFIFO
+    semipro_slow_fifo1 #(
+        .pDEPTH1         (pDEPTH1/2),
+        .pDEPTH2         (pDEPTH1/2)
+    ) U_fifo1 (
+        .clk                        (wclk),
+        .rst_n                      (rst_n),
+        .wr                         (fifo1_wr),
+        .din                        (fifo1_din),
+        .full                       (fifo1_full),
+        .overflow                   (fifo1_overflow),
+        .rd                         (fifo1_rd),
+        .dout                       (fifo1_dout),
+        .empty                      (fifo1_empty),
+        .underflow                  (fifo1_underflow)
+    );
 
-        fifo_sync #(
-            .pDATA_WIDTH    (36),
-            .pDEPTH         (pDEPTH1),
-            .pFALLTHROUGH   (1),
-            .pFLOPS         (0),
-            .pDISTRIBUTED   (0),
-            .pBRAM          (1)
-        ) U_fifo1 (
-            .clk                        (wclk),
-            .rst_n                      (rst_n),
-            .full_threshold_value       (0),
-            .empty_threshold_value      (0),
-            .wen                        (fifo1_wr),
-            .wdata                      (fifo1_din),
-            .full                       (fifo1_full),
-            .overflow                   (fifo1_overflow),
-            .full_threshold             (),
-            .empty_threshold            (),
-            .ren                        (fifo1_rd),
-            .rdata                      (fifo1_dout),
-            .empty                      (fifo1_empty),
-            .almost_empty               (),
-            .almost_full                (),
-            .underflow                  (fifo1_underflow)
-        );
+    semipro_slow_fifo2 #(
+        .pDEPTH1        (pDEPTH2/2),
+        .pDEPTH2        (pDEPTH2/2)
+    ) U_fifo2 (
+        .wclk                   (wclk),
+        .rclk                   (rclk),
+        .rst_n                  (rst_n),
+        .wr                     (fifo2_wr),
+        .din                    (fifo2_din),
+        .full                   (fifo2_full),
+        .overflow               (fifo2_overflow),
+        .rd                     (rd),
+        .dout                   (dout),
+        .empty                  (fifo2_empty),
+        .underflow              (fifo2_underflow)
+    );
 
-        fifo_async #(
-            .pDATA_WIDTH    (36),
-            .pDEPTH         (pDEPTH2),
-            .pFALLTHROUGH   (1),
-            .pFLOPS         (0),
-            .pDISTRIBUTED   (0),
-            .pBRAM          (1)
-        ) U_fifo2 (
-            .wclk                   (wclk),
-            .rclk                   (rclk),
-            .wrst_n                 (rst_n),
-            .rrst_n                 (rst_n),
-            .wfull_threshold_value  (0),
-            .rempty_threshold_value (0),
-            .wen                    (fifo2_wr),
-            .wdata                  (fifo2_din),
-            .wfull                  (fifo2_full),
-            .walmost_full           (),
-            .woverflow              (fifo2_overflow),
-            .wfull_threshold        (),
-            .ren                    (rd),
-            .rdata                  (dout),
-            .rempty                 (fifo2_empty),
-            .ralmost_empty          (),
-            .rempty_threshold       (),
-            .runderflow             (fifo2_underflow)
-        );
-
-
-    `else
-        `ifdef TINYFIFO
-            tiny_usb_slow_fifo1_semipro U_fifo1(
-                .clk                (wclk),
-                .rst                (~rst_n),
-                .din                (fifo1_din),
-                .wr_en              (fifo1_wr),
-                .rd_en              (fifo1_rd),
-                .dout               (fifo1_dout),
-                .full               (fifo1_full),
-                .empty              (fifo1_empty),
-                .overflow           (fifo1_overflow),
-                .underflow          (fifo1_underflow)
-            );
-            tiny_usb_slow_fifo U_fifo2(
-                .rst                (~rst_n),
-                .wr_clk             (wclk),
-                .rd_clk             (rclk),
-                .din                (fifo2_din),
-                .wr_en              (fifo2_wr),
-                .rd_en              (rd),
-                .dout               (dout),
-                .full               (fifo2_full),
-                .empty              (fifo2_empty),
-                .overflow           (fifo2_overflow),
-                .underflow          (fifo2_underflow)
-            );
-
-        `else
-            usb_slow_fifo1_semipro U_fifo1(
-                .clk                (wclk),
-                .rst                (~rst_n),
-                .din                (fifo1_din),
-                .wr_en              (fifo1_wr),
-                .rd_en              (fifo1_rd),
-                .dout               (fifo1_dout),
-                .full               (fifo1_full),
-                .empty              (fifo1_empty),
-                .overflow           (fifo1_overflow),
-                .underflow          (fifo1_underflow)
-            );
-            usb_slow_fifo_semipro U_fifo2(
-                .rst                (~rst_n),
-                .wr_clk             (wclk),
-                .rd_clk             (rclk),
-                .din                (fifo2_din),
-                .wr_en              (fifo2_wr),
-                .rd_en              (rd),
-                .dout               (dout),
-                .full               (fifo2_full),
-                .empty              (fifo2_empty),
-                .overflow           (fifo2_overflow),
-                .underflow          (fifo2_underflow)
-            );
-        `endif
-
-    `endif
 
     `ifdef ILA_COMBI_FIFO
        ila_combi_fifo U_ila_combi_fifo (

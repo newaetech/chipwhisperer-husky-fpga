@@ -12,9 +12,11 @@
 ../hdl/trigger_sequencer.v
 ../hdl/usb_reg_main.v
 ../hdl/fifo_top_husky.v
-../hdl/semipro_slow_fifo.v
+../hdl/fast_fifo_wrapper.v
+../hdl/slow_fifo_wrapper.v
 ../hdl/reg_clockglitch.v
 ../hdl/cwhusky_top.v
+../hdl/cwhusky_fifoonly.v
 ../hdl/openadc_interface.v
 ../hdl/clock_managment_advanced.v
 ../hdl/reg_husky_adc.v
@@ -37,6 +39,7 @@
 ../fpga-common/hdl/cdc_simple.v
 ../fpga-common/hdl/fifo_async.v
 ../fpga-common/hdl/fifo_sync.v
+../fpga-common/hdl/async_resetFFstyle2.v
 ../tracewhisperer/hdl/trace_top.v
 ../tracewhisperer/hdl/reg_trace.v
 ../tracewhisperer/hdl/fe_capture_trace.v

@@ -85,9 +85,9 @@ class GenericTest(object):
         """ wait for _run() to complete """
         await Join(self._coro)
         if self.errors:
-            self.dut._log.error("%6s test done, failed with %d errors" % (self.name, self.errors))
+            self.dut._log.error("%6s test done, failed with %d errors (seed: %d)" % (self.name, self.errors, self.harness.seed))
         else:
-            self.dut._log.info("%6s test done: passed!" % self.name)
+            self.dut._log.info("%6s test done: passed! (seed: %d)" % (self.name, self.harness.seed))
 
     async def _job_setup(self) -> dict:
         """ Generate and program properties of the job that will be run.
@@ -174,6 +174,8 @@ class GenericTest(object):
                 samples = job['segments'] * job['segment_cycles'] + job['offset']
             else:
                 samples += job['offset']
+            #samples *= job['downsample'] # TODO: ?
+        #self.dut._log.warning('waiting for %d samples' % samples)
         await ClockCycles(self.sampling_clock, samples)
         # then, wait for DDR to be done writing:
         if self.harness.is_pro:
@@ -183,6 +185,9 @@ class GenericTest(object):
                 await ClockCycles(self.clk_usb, 50)
                 not_done_writing = not await self.harness.ddr_done_writing()
             self.dut._log.info("%12s DDR write done" % job['name'])
+        else:
+            # give a bit more time for offset word to be written (new FIFO architecture):
+            await ClockCycles(self.sampling_clock, 50)
 
     def get_downstream_trigger(self, job) -> list:
         """ If a job triggers another job, returns that second job's Test
@@ -336,68 +341,136 @@ class ADCTest(GenericTest):
         self.dut_job_signal = dut_job_signal
         self.checker = ADCCapture(dut, sampling_clock, harness, dut_reading_signal)
         self.name = 'ADC'
+        self.min_segments = None
         self.max_segments = None
         self.max_segment_cycles = None
         self.segment_time_factor = 4
+        self.adc_res = None
         fifo_watch_thread = cocotb.start_soon(self.fifo_watch())
         if harness.is_pro:
             ddr_watch_thread = cocotb.start_soon(self.ddr_model_watch())
         trigger_watch_thread = cocotb.start_soon(self.trigger_ready_watch())
+        save_offset_watch_thread = cocotb.start_soon(self.save_offset_watch())
+
         self.allowed_downstream_triggers = ['LA', 'trace', 'glitch']
 
     async def _job_setup(self) -> dict:
         samples = random.randint(self.capture_min, self.capture_max)
-        if random.randint(0,3) == 0 or self.max_presamples == 0:
-            presamples = 0  # no presamples a quarter of the time
-        else:
-            presamples = random.randint(8, min(self.max_presamples, samples-2)) # DUT doesn't allow for 1-7 presamples, and samples must be at least 2 more than presamples
+        # if allowed, no presamples a quarter of the time:
+        if (self.min_presamples == 0 and random.randint(0,3) == 0) or self.max_presamples == 0:
+            presamples = 0
+        # otherwise, favour max presamples a remaining quarter of the time:
+        elif random.randint(0,3) == 0:
+            presamples = min(self.max_presamples, samples)  # max presamples a remaining quarter of the time
+        # otherwise, randomize in specified range but excluding 1 which is not allowed:
+        elif self.min_presamples <= min(self.max_presamples, samples):
+            presamples = random.randint(self.min_presamples, min(self.max_presamples, samples))
             self.dut._log.info('setting presamples to %d because samples=%d, min=%d' % (presamples, samples, min(self.max_presamples, samples-2)))
+        else:
+            presamples = 0
+        if presamples == 1:
+            presamples = self.min_presamples
+        if self.min_presamples == 1:
+            self.dut._log.error('MIN_PRESAMPLES cannot be 1!')
+            self.harness.inc_error()
+
         if random.randint(0,3) == 0:
             offset = 0  # no offset a quarter of the time
         else:
             offset = random.randint(0, self.max_offset)
-        if random.randint(0,1):
+        if self.adc_res:
+            bits_per_sample = self.adc_res
+        elif random.randint(0,1):
             bits_per_sample = 12
         else:
             bits_per_sample = 8
-        segments = random.randint(1, self.max_segments)
+
+        # NOTE: any modifications here affecting what gets written to SAMPLES_ADDR
+        # need to get mirrored in _OpenADCInterface.py's updateHuskySamplesRegister().
+        # calculate the actual number of samples that will be collected per segment:
+        # 0. too-short fix: for very short captures with presamples, we need to capture more samples
+        if presamples:
+            if bits_per_sample == 12:
+                while samples < 20:
+                    samples += 6
+            elif bits_per_sample == 8:
+                while samples < 29:
+                    samples += 9
+
+        # 1. account for worst-case offset:
+        if bits_per_sample == 12:
+            bytes_to_read = samples + 5
+        else:
+            bytes_to_read = samples + 8
+        # 2. turn into bytes:
+        if bits_per_sample == 12:
+            bytes_to_read = math.ceil(bytes_to_read*1.5)
+        else:
+            bytes_to_read = bytes_to_read
+        # 3. round up to a multiple of the word size (72 bits / 9 bytes):
+        mod = bytes_to_read % 9
+        if mod:
+            bytes_to_read += 9 - mod
+        # 4. add offset word
+        bytes_to_read += 9
+
+        # similarly, calculate the actual number of *samples* that need to be collected:
+        if bits_per_sample == 12:
+            samples_to_collect = samples + 5
+            mod_op = 6
+        else:
+            samples_to_collect = samples + 8
+            mod_op = 9
+        mod = samples_to_collect % mod_op
+        if mod:
+            samples_to_collect += mod_op - mod
+
+        segments = random.randint(self.min_segments, self.max_segments)
         segment_cycles = 0
         segment_counter_en = 0
         segment_times = []
         capture_samples_time = samples + offset
+        # This is not exact or tight! In particular the actual minimum time depends on the ADC clock,
+        # which we don't account for here. Errors from too-close segments are easy to identify:
+        # you'll get a segment and/or presample error; a quick look at the waveform can confirm that
+        # the design is working as intended.
+        min_wait_segment_samples = offset + samples_to_collect + 200
+        self.dut._log.warning('XXX: min_wait = %d' % min_wait_segment_samples)
+        # when there are "enough" presamples, the presample filling stage gives us more time:
+        if presamples < 32:
+            min_wait_segment_samples += 20
+
         if segments > 1:
             segment_counter_en = random.randint(0,1)
             if segment_counter_en:
                 # NOTE: this is pessimistic (one segment doesn't last samples+offset+presamples); may want to tighten this?
-                if samples+1+offset+presamples >= samples+self.max_segment_cycles:
+                # TODO: adjust as per below!
+                if min_wait_segment_samples >= self.max_segment_cycles:
                     segments = 1
                 else:
-                    segment_cycles = random.randint(samples+1+offset+presamples, samples+self.max_segment_cycles)
+                    segment_cycles = random.randint(min_wait_segment_samples, self.max_segment_cycles)
                     capture_samples_time = segment_cycles * segments
             else:
                 for i in range(segments-1):
-                    min_wait_samples = samples + presamples + offset + 1
-                    wait_samples = random.randint(min_wait_samples, min_wait_samples*self.segment_time_factor)
+                    wait_samples = random.randint(min_wait_segment_samples, min_wait_segment_samples*self.segment_time_factor)
                     segment_times.append(wait_samples)
                     capture_samples_time += wait_samples
-            if presamples > 0 and not self.harness.is_pro and samples % 3:
-                if samples < 3:
-                    samples = 3
-                else:
-                    samples -= (samples %3)
-            if samples - presamples < 2: # in case we adjusted samples into an invalid number of presamples, correct it
-                presamples = samples - 2
-        if random.randint(0,1) or presamples or segments > 1:
-            downsample = 1  # downsamples with presamples or segments is not allowed
+        if random.randint(0,1) or presamples:
+            downsample = 1  # downsamples with presamples doesn't make sense
         else:
             downsample = random.randint(1, self.max_downsample)
         if self.stream:
-            stream_segment_threshold = random.randint(256, 1024)
+            stream_segment_threshold = random.randint(256//9, 1024//9)
             await self.registers.write(self.reg_addr['STREAM_SEGMENT_THRESHOLD'], self.registers.to_bytes(stream_segment_threshold, 3))
             await self.registers.write(self.reg_addr['SETTINGS_ADDR'], [0x24 + (1<<4)])
 
+        # in support of streaming, calculate the total number of bytes that will be read:
+        streaming_words_to_read = math.ceil(bytes_to_read * segments / 9)
+
+        samples_combo = (streaming_words_to_read << 64) + (samples << 32) + samples_to_collect
+
         await self.registers.write(self.reg_addr['DECIMATE_ADDR'], self.registers.to_bytes(0, 2)) # clear this first because setting e.g. presamples when the previous job had this non-zero will cause an error
-        await self.registers.write(self.reg_addr['SAMPLES_ADDR'], self.registers.to_bytes(samples, 4))
+        await self.registers.write(self.reg_addr['SAMPLES_ADDR'], self.registers.to_bytes(samples_combo, 12))
         await self.registers.write(self.reg_addr['PRESAMPLES_ADDR'], self.registers.to_bytes(presamples, 2))
         await self.registers.write(self.reg_addr['OFFSET_ADDR'], self.registers.to_bytes(offset, 4))
         await self.registers.write(self.reg_addr['NUM_SEGMENTS'], self.registers.to_bytes(segments, 2))
@@ -414,6 +487,8 @@ class ADCTest(GenericTest):
         else:
             trigger_type = 'manual'
         job = {"samples": samples, "presamples": presamples, "offset": offset, "downsample": downsample, "bits_per_sample": bits_per_sample, "trigger_type": trigger_type}
+        job['bytes_to_read'] = bytes_to_read
+        job['samples_to_collect'] = samples_to_collect
         job['segments'] = segments
         job['segment_counter_en'] = segment_counter_en
         job['segment_cycles'] = segment_cycles
@@ -480,23 +555,29 @@ class ADCTest(GenericTest):
             self.dut.target_io4.value = 0
 
     async def _pretrigger_wait(self, job) -> None:
+        fixed_wait = False  # TODO-temp for development
         presamples = job['presamples']
         if presamples > 0:
-            wait_cycles = random.randint(presamples+1, presamples*4)
+            if fixed_wait:
+                wait_cycles = 88
+            else:
+                wait_cycles = random.randint(presamples+1, presamples*4)
             self.dut._log.info('%12s pre-trigger waiting %d cycles' % (job['name'], wait_cycles))
             await ClockCycles(self.sampling_clock, wait_cycles) # note: Pro used self.clk_usb, why did that work?!?
         # the FIFO flushing can be *slow*, so explicitely check on FIFO empty flag:
         empty = False
-        while not empty:
-            await ClockCycles(self.clk_usb, 50)
-            empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 2))[1] & 64
+        if not fixed_wait:
+            while not empty:
+                await ClockCycles(self.clk_usb, 50)
+                empty = (await self.harness.registers.read(self.reg_addr['FIFO_STAT'], 2))[1] & 64
 
         if self.stream:
             # stream_segment_available is updated every 2**6 cycles (see write_cycle_count in fifo_top_husky.v), so wait enough
             # time for stream_segment_available to be sensical before starting the next capture:
             await ClockCycles(self.sampling_clock, 2**7)
 
-        await ClockCycles(self.clk_usb, 5) # bit more time for armed_and_ready to rise
+        if not fixed_wait:
+            await ClockCycles(self.clk_usb, 5) # bit more time for armed_and_ready to rise
 
 
     def _capture_cycles(self, cycles) -> int:
@@ -516,7 +597,7 @@ class ADCTest(GenericTest):
             if error_value & 2**9 : error_message += "trigger_too_soon_error "
             if error_value & 2**8 : error_message += "gain_error "
             if error_value & 2**7 : error_message += "segment_error "
-            if error_value & 2**6 : error_message += "downsample_error "
+            if error_value & 2**6 : error_message += "internal_error "
             if error_value & 2**5 : error_message += "clip_error "
             if error_value & 2**4 : error_message += "presamp_error "
             if error_value & 2**3 : error_message += "fast_fifo_overflow"
@@ -538,6 +619,15 @@ class ADCTest(GenericTest):
             self.dut._log.error('Trigger before armed_and_ready! (testbench error)')
             self.harness.inc_error()
 
+    async def save_offset_watch(self) -> None:
+        # A tricky part of the new fast_fifo_wrapper.v design is determining when the FIFO is actually empty;
+        # getting this wrong risks clobbering the offset write from fifo_top_husky.v (or having it in the wrong order)
+        # To ensure there is no risk of that happening, we check that when in the pS_SAVE_OFFSET state, the
+        # fast FIFO is never read:
+        while True:
+            await RisingEdge(self.dut.U_dut.oadc.U_fifo.debug_illegal_fast_fifo_rd)
+            self.dut._log.error('illegal_fast_fifo_rd: fast FIFO was read (and thus not empty) in the SAVE_OFFSET state!')
+            self.harness.inc_error()
 
     def get_downstream_trigger(self, job) -> list:
         # Randomly choose the number of *potential* downstream triggers, up to and including all possible downstream triggers.
