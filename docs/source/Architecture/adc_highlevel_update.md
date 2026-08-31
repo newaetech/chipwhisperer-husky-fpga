@@ -22,17 +22,27 @@ made. If you're not interested in those details, here's what you need to
 know about this update as a Husky user:
 
 * There's a small increase in the number of ADC samples in 12-bit mode.
+
 * There's a *large* increase in the number of ADC samples in 8-bit mode.
+
 * There are changes to the maximum number of presamples.
-* There are changes to how many samples can be collected in a segmented capture.
+
+* There are changes to how many samples can be collected in a segmented
+  capture.
+
 * It's now possible to downsample with segments.
+
 * There are fewer limitations on the number of presamples, at the extremes
-  of very few or very many presamples. Previously, scope.adc.presamples
-  needed to be at least 8, and scope.adc.samples needed to be at least
-  scope.adc.presamples + 2. Now, the only limitation is that presamples
+  of very few or very many presamples. Previously, `scope.adc.presamples`
+  needed to be at least 8, and `scope.adc.samples` needed to be at least
+  `scope.adc.presamples + 2`. Now, the only limitation is that presamples
   cannot be 1.
-* The number of samples no longer needs to be a multiple of 3 when using segments.
-* Previously, scope.adc.samples needed to be at least 7; this is no longer the case.
+
+* The number of samples no longer needs to be a multiple of 3 when using
+  segments.
+
+* Previously, `scope.adc.samples` needed to be at least 7; this is no longer
+  the case.
 
 The table below lists the increase in samples, presamples, and segmented
 capture sizes for Husky:
@@ -121,17 +131,19 @@ storage ran at a much lower, fixed 96 MHz clock). And while this worked very
 well in Husky, with Husky Plus we saw that Vivado was actually struggling to
 "meet timing" on the fast FIFOs. There were two reasons for this:
 
-Husky Plus supports a higher maximum sampling rate (250 MHz vs 200 MHz). In
-digital hardware design, the clock speed dictates how much time a digital
-signal can take to travel from the output of one flip-flop to the input of
-the next. Going up from 200 MHz to 250 MHz means that all of the internal
-Husky logic that is clocked at the fast sampling rate has 500ps less time to
-travel from flop to flop. Husky Plus's FPGA is considerably larger than
-Husky's FPGA (over 3 times larger). BRAMs are at fixed locations on the die,
-and some of them are physically further apart than on a smaller FPGA; this
-leads to longer routing delays, which makes it harder to meet timing. The
-screenshot below from Vivado's device view of the original architecture
-illustrates the issue:
+1. Husky Plus supports a higher maximum sampling rate (250 MHz vs 200 MHz). In
+   digital hardware design, the clock speed dictates how much time a digital
+   signal can take to travel from the output of one flip-flop to the input of
+   the next. Going up from 200 MHz to 250 MHz means that all of the internal
+   Husky logic that is clocked at the fast sampling rate has 500ps less time to
+   travel from flop to flop. 
+
+2. Husky Plus's FPGA is considerably larger than Husky's FPGA (over 3 times
+   larger). BRAMs are at fixed locations on the die, and some of them are
+   physically further apart than on a smaller FPGA; this leads to longer
+   routing delays, which makes it harder to meet timing. The screenshot below
+   from Vivado's device view of the original architecture illustrates the
+   issue:
 
 ```{figure} ../Images/semipro_bad_fifo_timing.png
 :width: 50%
