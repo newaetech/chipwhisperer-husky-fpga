@@ -216,7 +216,9 @@ module cwhusky_top(
    wire [7:0] bb_debug;
    wire [7:0] la_debug2;
    wire [7:0] sad_debug;
-   wire [7:0] fifo_debug;
+   wire [7:0] fifo_debug1;
+   wire [7:0] fifo_debug2;
+   wire [7:0] fifo_debug3;
    wire [7:0] sequencer_debug;
    wire [4:0] seq_trace_sad_debug;
    wire [7:0] seq_trace_sad_debug2;
@@ -303,7 +305,8 @@ module cwhusky_top(
       .reg_datao        (write_data), 
       .reg_datai        (read_data),
       .reg_read         (reg_read), 
-      .reg_write        (reg_write) 
+      .reg_write        (reg_write),
+      .debug            (usb_reg_debug)
    );
 
    wire [7:0] usb_debug1 = { USB_RDn,           // D7
@@ -361,6 +364,7 @@ module cwhusky_top(
          .O_slow        (slow_fifo_rd_slow)
       );
 
+      wire [7:0] usb_reg_debug;
       assign userio_debug_data = (userio_fpga_debug_select == 5'b00000)? {glitch_enable,
                                                                          glitchclk,
                                                                          fifo_error_flag,
@@ -370,7 +374,7 @@ module cwhusky_top(
                                                                          slow_fifo_wr_slow,
                                                                          stream_segment_available} :
                                  (userio_fpga_debug_select == 5'b00001)? tu_la_debug[7:0] :
-                                 (userio_fpga_debug_select == 5'b00010)? fifo_debug : 
+                                 (userio_fpga_debug_select == 5'b00010)? fifo_debug1 : 
                                  (userio_fpga_debug_select == 5'b00011)? {1'b0,
                                                                          xadc_error_flag,
                                                                          glitch_mmcm1_clk_out,
@@ -400,7 +404,10 @@ module cwhusky_top(
                                  (userio_fpga_debug_select == 5'b01110)? {seq_trace_sad_debug, 3'b0} :
                                  (userio_fpga_debug_select == 5'b01111)? seq_trace_sad_debug2 :
                                  (userio_fpga_debug_select == 5'b10000)? sad_debug :
-                                 (userio_fpga_debug_select == 5'b10001)? bb_debug : 8'b0;
+                                 (userio_fpga_debug_select == 5'b10001)? bb_debug :
+                                 (userio_fpga_debug_select == 5'b10010)? fifo_debug2 : 
+                                 (userio_fpga_debug_select == 5'b10011)? fifo_debug3 : 8'b0;
+                                 //(userio_fpga_debug_select == 5'b10010)? usb_reg_debug : 8'b0;
 
    `else
       assign userio_debug_data[7:0] = 8'bz;
@@ -420,9 +427,15 @@ module cwhusky_top(
    wire disable_adc_error;
    reg PLL_STATUS_reg = 1'b1;
 
-   // fast-flash red LEDs when some internal error has occurred:
-   assign LED_ADC = (error_flag)? flash_pattern : ~PLL_STATUS_reg;
-   assign LED_GLITCH = error_flag? flash_pattern : led_glitch;
+   // fast-flash red LEDs when some internal error has occurred;
+   // also, show reg_address on LEDs for debug:
+   wire [2:0] led_select;
+   assign LED_ADC = (led_select == 3'b100)? reg_address[2] :
+                    (led_select == 3'b101)? reg_address[6] :
+                    (error_flag)? flash_pattern : ~PLL_STATUS_reg;
+   assign LED_GLITCH = (led_select == 3'b100)? reg_address[3] :
+                       (led_select == 3'b101)? reg_address[7] :
+                       (error_flag)? flash_pattern : led_glitch;
    assign LED_CAP = cw_led_cap;
    assign LED_ARMED = cw_led_armed;
 
@@ -488,13 +501,16 @@ module cwhusky_top(
 
         .flash_pattern          (flash_pattern),
 
+        .led_select             (led_select),
         .slow_fifo_wr           (slow_fifo_wr),
         .slow_fifo_rd           (slow_fifo_rd),
         .la_debug2              (la_debug2),
         .la_debug               (tu_la_debug),
         .sad_debug              (sad_debug),
         .edge_trigger_debug     (edge_trigger_debug),
-        .fifo_debug             (fifo_debug)
+        .fifo_debug1            (fifo_debug1),
+        .fifo_debug2            (fifo_debug2),
+        .fifo_debug3            (fifo_debug3)
 
    );
 

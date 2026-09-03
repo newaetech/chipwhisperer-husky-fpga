@@ -147,6 +147,60 @@ module cwhusky_top_cocowrapper(
    always @(negedge glitch_clk) glitch_error_reg <= glitch_error;
 
 
+`ifdef FIFOONLY
+cwhusky_fifoonly U_dut (  
+    .clk_usb            (clk_usb      ),
+    .ADC_clk_fbp        (PLL_CLK1     ),
+    .ADC_clk_fbn        (1'b0         ),
+    .glitch_out         (glitch_out   ),
+    .glitch_clk         (glitch_clk   ),
+    //.ADC_DP             (6'b0         ),
+    //.ADC_DN             (6'b0         ),
+    //.ADC_CLKP           (             ),
+    //.ADC_CLKN           (             ),
+    .LED_ADC            (LED_ADC      ),
+    .LED_GLITCH         (LED_GLITCH   ),
+    .LED_ARMED          (LED_ARMED    ),
+    .LED_CAP            (LED_CAP      ),
+    .USB_Data           (USB_Data     ),
+    .USB_Addr           (USB_Addr     ),
+    .USB_RDn            (USB_RDn      ),
+    .USB_WRn            (USB_WRn      ),
+    .USB_CEn            (USB_CEn      ),
+    .USB_ALEn           (USB_ALEn     ),
+    .USB_SPARE0         (USB_SPARE0   ),
+    //.FPGA_BONUS1        (FPGA_BONUS1  ),
+    //.FPGA_BONUS2        (FPGA_BONUS2  ),
+    //.FPGA_BONUS3        (FPGA_BONUS3  ),
+    //.FPGA_BONUS4        (FPGA_BONUS4  ),
+    //.SAM_MOSI           (SAM_MOSI     ),
+    //.SAM_MISO           (SAM_MISO     ),
+    //.SAM_SPCK           (SAM_SPCK     ),
+    //.SAM_CS             (SAM_CS       ),
+    .target_PDID        (target_PDID  ),
+    .target_PDIC        (target_PDIC  ),
+    .target_nRST        (target_nRST  ),
+    .target_MISO        (target_MISO  ),
+    .target_MOSI        (target_MOSI  ),
+    .target_SCK         (target_SCK   ),
+    .target_io4         (target_io4   ),
+    .target_io3         (target_io3   ),
+    .target_io2         (target_io2   ),
+    .target_io1         (target_io1   ),
+    .target_hs1         (target_hs1   ),
+    .target_hs2         (target_hs2   ),
+    //.TRIG_GLITCHOUT     (TRIG_GLITCHOUT),
+    .AUXIO              (AUXIO        ),
+    //.ADC_OVR_SDOUT      (1'b0         ),
+    //.FPGA_CDOUT         (1'b0         ),
+    .USERIO_D           (USERIO_D     ),
+    .USERIO_CLK         (USERIO_CLK   ),
+    //.PLL_STATUS         (1'b0         ),
+    .PLLFPGAP           (PLL_CLK1     ),
+    .PLLFPGAN           (1'b0         )
+);
+
+`else
 cwhusky_top U_dut (  
     .clk_usb            (clk_usb      ),
     .ADC_clk_fbp        (PLL_CLK1     ),
@@ -198,6 +252,8 @@ cwhusky_top U_dut (
     .PLLFPGAP           (PLL_CLK1     ),
     .PLLFPGAN           (1'b0         )
 );
+
+`endif
 
 
 endmodule

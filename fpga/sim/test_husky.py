@@ -79,13 +79,23 @@ class Harness(object):
                                         # trace+LA can't be simultaneously active; this lock manages that
         # Actual seed is obtained only if RANDOM_SEED is defined on vvp command line (otherwise you get 0)
         # regress.py always specifies the seed so this is fine.
-        self.dut._log.info("seed: %d" % int(os.getenv('RANDOM_SEED', '0')))
+        self.seed = int(os.getenv('RANDOM_SEED', '0'))
+        self.dut._log.info("seed: %d" % self.seed)
         #cocotb.start_soon(Clock(dut.clk_usb, 1, units='ns').start())
         self.usb_period = 10
         if stream: # slow ADC clock *way* down in order to allow for slow FIFO reads to (usually) outpace writes, like IRL:
             self.adc_period = random.randint(50, 200)
         else:
-            self.adc_period = random.randint(4, 25)
+            # full range for Husky is 4ns to 200ns (250 MHz to 5 MHz);
+            # however in the interest of simulation time we limit the min frequency to 40 MHz / 25 ns;
+            # moreover, we favour the extreme clock frequencies most of the time:
+            case = random.randint(0,3)
+            if case == 0:
+                self.adc_period = 4
+            elif case == 1:
+                self.adc_period = 25
+            else:
+                self.adc_period = random.randint(4, 25)
         self.dut._log.info("ADC clock randomized to %5.1f MHz" % (1/self.adc_period*1000))
         usb_clock_thread = cocotb.start_soon(Clock(dut.clk_usb, self.usb_period, units="ns").start())
         adc_clock_thread = cocotb.start_soon(Clock(dut.PLL_CLK1, self.adc_period, units="ns").start())
@@ -194,7 +204,7 @@ class Harness(object):
         self.dut._log.debug("Register addresses: %s" % self.reg_addr)
 
 
-    async def initialize_dut(self) -> None:
+    async def initialize_dut(self, noglitch) -> None:
         self.dut.target_io4.value = 0
         await self.reset()
         # the reset will cause target_io4 to "lose" the 0 we'd assigned to it... possibly a simulator/cocotb bug?
@@ -202,9 +212,10 @@ class Harness(object):
         self.dut.USERIO_D.value = 0
         await self.registers.write(self.reg_addr['CLOCKGLITCH_SETTINGS'], [0,0,0,0,0,0xcc,0,1])  # set source to clk_usb (otherwise, X's propagate)
         #await self.registers.write(self.reg_addr['CLOCKGLITCH_SETTINGS'], [0,0,0,0,0,0x4c,0,1])  # set source to clk_usb (otherwise, X's propagate)
-        self.dut.U_dut.reg_clockglitch.U_clockglitch.glitch_go.value = Force(0)
-        await ClockCycles(self.dut.clk_usb, 10)
-        self.dut.U_dut.reg_clockglitch.U_clockglitch.glitch_go.value = Release()
+        if not noglitch:
+            self.dut.U_dut.reg_clockglitch.U_clockglitch.glitch_go.value = Force(0)
+            await ClockCycles(self.dut.clk_usb, 10)
+            self.dut.U_dut.reg_clockglitch.U_clockglitch.glitch_go.value = Release()
         await self.registers.write(self.reg_addr['NO_CLIP_ERRORS'], [3]) # disable gain errors
 
     async def reset(self):
@@ -224,6 +235,11 @@ class Harness(object):
             return True
         else:
             return False
+
+    async def fast_read_mode(self, active) -> None:
+        await self.registers.write(self.reg_addr['FAST_FIFO_READ_MODE'], [active])
+        await ClockCycles(self.dut.clk_usb, 5) # give time for write to propagate
+        self.registers.fast_read_mode = active
 
     async def wait_flush(self, source) -> None:
         if source == 'ADC':
@@ -280,14 +296,18 @@ class Harness(object):
             assert False
 
     async def register_rw_thread(self, address, size) -> None:
+        i = 0
         while True:
             wdata = random.randint(1,2**(size*8)-1)
-            #self.dut._log.info("Writing to %d at time %s" % (address, cocotb.utils.get_sim_time('ns')))
+            self.dut._log.info("Writing to %d at time %s" % (address, cocotb.utils.get_sim_time('ns')))
             await self.registers.write(address, self.registers.to_bytes(wdata, size))
             await ClockCycles(self.dut.clk_usb, random.randint(0, 50))
-            #self.dut._log.info("Reading from %d at time %s" % (address, cocotb.utils.get_sim_time('ns')))
+            self.dut._log.info("Reading from %d at time %s" % (address, cocotb.utils.get_sim_time('ns')))
+            await self.registers.write(self.reg_addr['FAST_FIFO_READ_MODE'], [i%2])
             rdata = self.registers.from_bytes(await self.registers.read(address, size))
             assert rdata == wdata, "Wrote %x but read %x" % (wdata, rdata)
+            await self.registers.write(self.reg_addr['FPGA_BUILDTIME_ADDR'], [1])
+            i += 1
 
     @staticmethod
     def hexstring(string, max_chars=24) -> int:
@@ -340,15 +360,17 @@ async def reg_rw(dut, wait_cycles=1000):
 async def capture(dut):
     """Concurrent captures of ADC, trace and LA."""
 
-
     num_captures = int(os.getenv('NUM_CAPTURES', '3'))
+    adc_res = int(os.getenv('ADC_RES', '0'))
     min_size = int(os.getenv('MIN_SIZE', '30'))
     max_size = int(os.getenv('MAX_SIZE', '100'))
     max_presamples = int(os.getenv('MAX_PRESAMPLES', '100'))
+    min_presamples = int(os.getenv('MIN_PRESAMPLES', '0'))
     max_offset =  int(os.getenv('MAX_OFFSET', '100'))
     max_downsample =  int(os.getenv('MAX_DOWNSAMPLE', '1'))
     min_glitches = int(os.getenv('MIN_GLITCHES', '1'))
     max_glitches = int(os.getenv('MAX_GLITCHES', '5'))
+    min_segments = int(os.getenv('MIN_SEGMENTS', '1'))
     max_segments = int(os.getenv('MAX_SEGMENTS', '1'))
     max_segment_cycles = int(os.getenv('MAX_SEGMENT_CYCLES', '1'))
     stream = int(os.getenv('STREAM', '0'))
@@ -358,21 +380,21 @@ async def capture(dut):
 
     if is_pro:
         # actual limits are higher (depends on DDR model size); these are in the interest of simulation time:
+        # TODO: adjust all these!
         ADC_MAX = 16384
         LA_MAX = 16384
         TRACE_MAX = 16384
     else:
         LA_MAX = 4095
         TRACE_MAX = 2047
-        if stream:
-            ADC_MAX = 16384 # not the actual limit -- just in interest of simulation time
-        else:
-            ADC_MAX = 4095
+        ADC_MAX = 16384 # Note: not sure this is actually needed anymore? Also depends on bits/sample...
 
     registers = Registers(dut)
     harness = Harness(dut, registers, stream, is_pro, stop_first_error)
+    registers.fast_fifo_read_addr = harness.reg_addr['FAST_FIFO_READ_MODE']
 
-    await harness.initialize_dut()
+    noglitch = int(os.getenv('NO_GLITCH', 0))
+    await harness.initialize_dut(noglitch)
     if int(os.getenv('NO_DOWNSTREAM_TRIGGERS', 0)):
         harness.allow_downstream_triggers = False
 
@@ -389,11 +411,14 @@ async def capture(dut):
             dut._log.error('Cannot test ext_continuous glitches when ADC is active')
         adctest = ADCTest(dut, dut.PLL_CLK1, harness, registers, dut.adc_job, dut.adc_reading)
         adctest.num_captures = num_captures
+        adctest.adc_res = adc_res
         adctest.capture_max = min(max_size, ADC_MAX)
         adctest.capture_min = min(min_size, adctest.capture_max)
+        adctest.min_presamples = min_presamples
         adctest.max_presamples = max_presamples
         adctest.max_offset = max_offset
         adctest.max_downsample = max_downsample
+        adctest.min_segments = min_segments
         adctest.max_segments = max_segments
         adctest.max_segment_cycles = max_segment_cycles
         adctest.stream = stream

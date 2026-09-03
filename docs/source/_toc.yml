@@ -1,0 +1,20 @@
+# Table of contents
+# Learn more at https://jupyterbook.org/customize/toc.html
+
+format: jb-book
+root: index
+parts:
+- caption: Implementation
+  chapters:
+  - file: Implementation/implementation
+  - file: Implementation/husky_vs_plus
+- caption: Testing
+  chapters:
+  - file: Testing/testing
+  - file: Testing/simulation
+  - file: Testing/ontarget
+  - file: Testing/architecture
+- caption: Architecture
+  chapters:
+  - file: Architecture/adc_highlevel_update
+

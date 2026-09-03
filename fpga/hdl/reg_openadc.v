@@ -69,14 +69,20 @@ module reg_openadc #(
    /* Additional ADC control lines */
    input  wire        clkblock_dcm_locked_i,
    input  wire        clkblock_gen_locked_i,
-   output wire [14:0] presamples_o,
-   output wire [31:0] maxsamples_o,
-   input  wire [31:0] maxsamples_i,
+   output wire [16:0] presamples_o,
+   output wire [31:0] samples_to_collect,
+   output wire [31:0] total_stream_words,
    output wire [12:0] downsample_o,
    output wire        fifo_stream,
-   output reg  [1:0]  led_select,
+   output reg  [2:0]  led_select,
    output reg         no_clip_errors,
    output reg         no_gain_errors,
+
+   input  wire [23:0] max_samples_8b,
+   input  wire [23:0] max_samples_12b,
+   input  wire [23:0] max_presamples_8b,
+   input  wire [23:0] max_presamples_12b,
+   input  wire [23:0] max_segment_total_bytes,
 
    input  wire        trigger_event, // capture_go_o from trigger_unit.v, to count cycles between successive triggers
 
@@ -100,20 +106,18 @@ module reg_openadc #(
    assign reset = reset_i | reset_fromreg;
    assign reset_o = reset;
 
-   wire [31:0] max_samples_constant = 32'd`MAX_SAMPLES;
-   wire [31:0] max_segment_samples_constant = 32'd`MAX_SEGMENT_SAMPLES;
-
    //Register definitions
    reg [7:0]  registers_gain;
    reg [7:0]  registers_settings = 8'b0010_0100;
    reg [63:0]  registers_echo;
+   reg [31:0] sam3u_wr_debug = 32'd0;
    reg [15:0] registers_downsample;
    reg [31:0] registers_advclocksettings;
    wire [31:0] registers_advclocksettings_read;
    wire [31:0] registers_extclk_frequency;
    wire [31:0] registers_adcclk_frequency;
-   reg [31:0] registers_samples;
-   reg [14:0] registers_presamples;
+   reg [95:0] registers_samples;
+   reg [16:0] registers_presamples;
    reg [31:0] registers_offset;
    wire [47:0] version_data;
    wire [31:0] system_frequency = 32'd`SYSTEM_CLK;
@@ -149,7 +153,8 @@ module reg_openadc #(
    assign registers_advclocksettings_read[25] = 1'b0;
 
    assign gain = registers_gain;
-   assign maxsamples_o = registers_samples;
+   assign total_stream_words = registers_samples[95:64];
+   assign samples_to_collect = registers_samples[31:0];
    assign presamples_o = registers_presamples;
 
    assign registers_extclk_frequency = (extmeasure_src)? pllclk_frequency : extclk_frequency;
@@ -160,6 +165,12 @@ module reg_openadc #(
 
    assign extclk_monitor_disabled = (extclk_limit == 0);
 
+   wire [24*5-1:0] max_samples_combo = {max_samples_8b,
+                                        max_samples_12b,
+                                        max_presamples_8b,
+                                        max_presamples_12b,
+                                        max_segment_total_bytes};
+
    always @(*) begin
           if (reg_read) begin
              case (reg_address)
@@ -167,13 +178,13 @@ module reg_openadc #(
                 `SETTINGS_ADDR: reg_datao_reg = registers_settings;
                 `STATUS_ADDR: reg_datao_reg = status; 
                 `ECHO_ADDR: reg_datao_reg = registers_echo[reg_bytecnt*8 +: 8];
+                `REG_SAM3U_WR_DEBUG: reg_datao_reg = sam3u_wr_debug[reg_bytecnt*8 +: 8];
                 `EXTFREQ_ADDR: reg_datao_reg = registers_extclk_frequency[reg_bytecnt*8 +: 8]; 
                 `ADCFREQ_ADDR: reg_datao_reg = registers_adcclk_frequency[reg_bytecnt*8 +: 8]; 
                 `VERSION_ADDR: reg_datao_reg = version_data[reg_bytecnt*8 +: 8];
                 `DECIMATE_ADDR: reg_datao_reg = registers_downsample[reg_bytecnt*8 +: 8];
                 `SAMPLES_ADDR: reg_datao_reg = registers_samples[reg_bytecnt*8 +: 8];
-                `MAX_SAMPLES_ADDR: reg_datao_reg = max_samples_constant[reg_bytecnt*8 +: 8];
-                `MAX_SEGMENT_SAMPLES_ADDR: reg_datao_reg = max_segment_samples_constant[reg_bytecnt*8 +: 8];
+                `MAX_SAMPLES_ADDR: reg_datao_reg = max_samples_combo[reg_bytecnt*8 +: 8];
                 `PRESAMPLES_ADDR: reg_datao_reg = registers_presamples[reg_bytecnt*8 +: 8];
                 `OFFSET_ADDR: reg_datao_reg = registers_offset[reg_bytecnt*8 +: 8];
                 `ADVCLOCK_ADDR: reg_datao_reg = registers_advclocksettings_read[reg_bytecnt*8 +: 8];
@@ -201,9 +212,8 @@ module reg_openadc #(
       if (reset) begin
          registers_gain <= 0;
          registers_settings <= 8'b0010_0100; // default to trigger on rising edge
-         registers_echo <= 0;
-         registers_samples <= maxsamples_i; // for backwards compatibility with CW-lite, but
-                                            // MAX_SAMPLES_ADDR and MAX_SEGMENT_SAMPLES_ADDR registers should be used instead
+         registers_echo <= 64'h1234_5678_9abc_def0; // known value for sanity check
+         registers_samples <= 0;
          registers_presamples <= 0;
          registers_offset <= 0;
          registers_advclocksettings <= 32'h00000102;
@@ -235,7 +245,7 @@ module reg_openadc #(
                 `NUM_SEGMENTS: num_segments[reg_bytecnt*8 +: 8] <= reg_datai;
                 `SEGMENT_CYCLES: segment_cycles[reg_bytecnt*8 +: 8] <= reg_datai;
                 `SEGMENT_CYCLE_COUNTER_EN: segment_cycle_counter_en <= reg_datai[0];
-                `LED_SELECT: led_select <= reg_datai[1:0];
+                `LED_SELECT: led_select <= reg_datai[2:0];
                 `NO_CLIP_ERRORS: {no_gain_errors, no_clip_errors} <= reg_datai[1:0];
                 `EXTCLK_MONITOR: extclk_limit[reg_bytecnt*8 +: 8] <= reg_datai;
                 `ADC_TRIGGER_LEVEL: trigger_adclevel[reg_bytecnt*8 +: 8] <= reg_datai;
@@ -254,6 +264,12 @@ module reg_openadc #(
              trigger_fifo_rd_usb <= 1'b1;
          else
              trigger_fifo_rd_usb <= 1'b0;
+
+         if (reg_write) begin
+             sam3u_wr_debug[7:0] <= reg_address;
+             sam3u_wr_debug[15:8] <= reg_datai;
+             sam3u_wr_debug[31:16] <= sam3u_wr_debug[31:16] + 1;
+         end
 
       end
    end
