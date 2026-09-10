@@ -206,6 +206,7 @@ compile_hw_bb_coco:
 	../hdl/usb_reg_main.v \
 	../fpga-common/hdl/fifo_async.v \
 	../fpga-common/hdl/cdc_pulse.v \
+	../fpga-common/hdl/async_resetFFstyle2.v \
 	hw_bb_cocowrapper.v \
 
 compile:
