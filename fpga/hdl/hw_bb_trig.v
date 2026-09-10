@@ -36,7 +36,10 @@ module hw_bb_trig #(
    parameter pBYTECNT_SIZE = 7,
    parameter pPATTERN_DEPTH = 256,
    parameter pSAVE_DEPTH = 64,
-   parameter pBITRECORD_SUPPORTED = 1
+   parameter pBITRECORD_SUPPORTED = 1,
+   parameter pDRIVE_EDGE = 1,
+   parameter pCLOCK_INACTIVE_STATE = 0,
+   parameter pFIXED_CONFIG = 0
 )(
    input  wire                          reset,
    input  wire                          clk_usb,
@@ -82,7 +85,7 @@ module hw_bb_trig #(
     reg continuous_clk = 1'b0;
     reg trigger_when_matched = 1'b0;
     reg [1:0] data_io_inactive_state = 2'b01;
-    reg clock_inactive_state = 1'b0;
+    reg clock_inactive_state = pCLOCK_INACTIVE_STATE;
     reg trigger_en = 1'b0;
     reg [1:0] glitch_mode = 2'b00;
     reg [15:0] clk_div = {15'd1, 1'b0};
@@ -102,7 +105,7 @@ module hw_bb_trig #(
     wire active = running;
 
     reg enable_glitch_output = 1'b0;
-    reg drive_edge = 1'b1; // drive data on falling (0) / rising (1) edge of clock_out_pre
+    reg drive_edge = pDRIVE_EDGE; // drive data on falling (0) / rising (1) edge of clock_out_pre
     reg check_edge = 1'b1; // check data and fire trigger on falling (0) / rising (1) edge of clock_out_pre
 
     wire bitrecord_supported = (pBITRECORD_SUPPORTED)? 1'b1 : 1'b0;
@@ -149,10 +152,12 @@ module hw_bb_trig #(
                       1: begin
                           continuous_clk                <= reg_datai[7];
                           data_io_inactive_state        <= reg_datai[6:5];
-                          clock_inactive_state          <= reg_datai[4];
+                          if (!pFIXED_CONFIG)
+                              clock_inactive_state      <= reg_datai[4];
                           trigger_when_matched          <= reg_datai[3];
                           enable_glitch_output          <= reg_datai[2];
-                          drive_edge                    <= reg_datai[1];
+                          if (!pFIXED_CONFIG)
+                              drive_edge                <= reg_datai[1];
                           check_edge                    <= reg_datai[0];
                       end
                       2: clk_div[0 +: 8]                <= reg_datai;

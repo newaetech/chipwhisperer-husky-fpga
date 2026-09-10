@@ -121,6 +121,98 @@ module hw_bb_wrapper #(
       .debug                    (              )
     );   
 
+    hw_bb_trig #(
+      .pBYTECNT_SIZE            (pBYTECNT_SIZE),
+      .pPATTERN_DEPTH           (pPATTERN_DEPTH),
+      .pSAVE_DEPTH              (pSAVE_DEPTH),
+      .pDRIVE_EDGE              (1),
+      .pCLOCK_INACTIVE_STATE    (1),
+      .pFIXED_CONFIG            (1)
+    ) U_1b_11 (
+      .reset                    (reset         ),
+      .clk_usb                  (clk_usb       ),
+      .reg_address              (reg_address   ),
+      .reg_bytecnt              (reg_bytecnt   ),
+      .reg_datai                (write_data    ),
+      .reg_datao                (              ),
+      .reg_read                 (reg_read      ),
+      .reg_write                (reg_write     ),
+      .clock                    (clk_adc       ),
+      .data_in                  (bb_data_in    ),
+      .data_out                 (              ),
+      .data_drive               (              ),
+      .clock_out                (              ),
+      .clock_out_debug          (              ),
+      .clock_out_normal         (              ),
+      .clk_div_debug            (              ),
+      .trigger_pulse            (              ),
+      .trigger_active           (1'b1          ),
+      .glitch_in                (glitchclk     ),
+      .debug                    (              )
+    );   
+
+    hw_bb_trig #(
+      .pBYTECNT_SIZE            (pBYTECNT_SIZE),
+      .pPATTERN_DEPTH           (pPATTERN_DEPTH),
+      .pSAVE_DEPTH              (pSAVE_DEPTH),
+      .pDRIVE_EDGE              (0),
+      .pCLOCK_INACTIVE_STATE    (1),
+      .pFIXED_CONFIG            (1)
+    ) U_2a_01 (
+      .reset                    (reset         ),
+      .clk_usb                  (clk_usb       ),
+      .reg_address              (reg_address   ),
+      .reg_bytecnt              (reg_bytecnt   ),
+      .reg_datai                (write_data    ),
+      .reg_datao                (              ),
+      .reg_read                 (reg_read      ),
+      .reg_write                (reg_write     ),
+      .clock                    (clk_adc       ),
+      .data_in                  (bb_data_in    ),
+      .data_out                 (              ),
+      .data_drive               (              ),
+      .clock_out                (              ),
+      .clock_out_debug          (              ),
+      .clock_out_normal         (              ),
+      .clk_div_debug            (              ),
+      .trigger_pulse            (              ),
+      .trigger_active           (1'b1          ),
+      .glitch_in                (glitchclk     ),
+      .debug                    (              )
+    );   
+
+    hw_bb_trig #(
+      .pBYTECNT_SIZE            (pBYTECNT_SIZE),
+      .pPATTERN_DEPTH           (pPATTERN_DEPTH),
+      .pSAVE_DEPTH              (pSAVE_DEPTH),
+      .pDRIVE_EDGE              (0),
+      .pCLOCK_INACTIVE_STATE    (0),
+      .pFIXED_CONFIG            (1)
+    ) U_2b_00 (
+      .reset                    (reset         ),
+      .clk_usb                  (clk_usb       ),
+      .reg_address              (reg_address   ),
+      .reg_bytecnt              (reg_bytecnt   ),
+      .reg_datai                (write_data    ),
+      .reg_datao                (              ),
+      .reg_read                 (reg_read      ),
+      .reg_write                (reg_write     ),
+      .clock                    (clk_adc       ),
+      .data_in                  (bb_data_in    ),
+      .data_out                 (              ),
+      .data_drive               (              ),
+      .clock_out                (              ),
+      .clock_out_debug          (              ),
+      .clock_out_normal         (              ),
+      .clk_div_debug            (              ),
+      .trigger_pulse            (              ),
+      .trigger_active           (1'b1          ),
+      .glitch_in                (glitchclk     ),
+      .debug                    (              )
+    );   
+
+
+
 
 endmodule
 `default_nettype wire
