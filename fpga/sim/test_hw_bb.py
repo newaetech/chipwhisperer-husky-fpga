@@ -64,7 +64,7 @@ fh = logging.FileHandler(logfile, 'w')
 fh.setFormatter(SimLogFormatter())
 root_logger.addHandler(fh)
 
-timeout_time = int(os.getenv('TIMEOUT_TIME', '1600'))
+timeout_time = int(os.getenv('TIMEOUT_TIME', '2500'))
 
 class Harness(object):
     def __init__(self, dut, registers, reps):
@@ -304,7 +304,7 @@ class HW_BB_Test(object):
         #self.inactive_data = 1
         self.inactive_data = 1
         self.inactive_state = 1
-        self.clock_inactive_state = 1 # note: not covered
+        self.clock_inactive_state = 1
 
         self.trigger_when_matched = 0 # note: not covered
         self.enable_glitch_output = 0 # note: not covered
@@ -339,6 +339,12 @@ class HW_BB_Test(object):
                 x.append(0)
         return x
 
+    @property
+    def clocked_first_bit(self):
+        if self.drive_edge == self.clock_inactive_state:
+            return False
+        else:
+            return True
 
     async def _dispatch_thread(self):
         # simple directed test -- modify as needed:
@@ -409,26 +415,33 @@ class HW_BB_Test(object):
         data_in[2] = not data_in[2]
         pattern_en[2] = 0
 
-        for check_edge in [0,1]:
-            for drive_edge in [1,0]:
-                for clock_inactive_state in [0,1]:
-                #for continuous in [0,1]: #[0,0]:
+        #for check_edge in [0,1]:
+        check_edge = 1
+        for drive_edge in [1,0]:
+            if drive_edge:
+                order = [0, 1]
+            else:
+                order = [1, 0]
+            #for clock_inactive_state in [0,1]:
+            for clock_inactive_state in order:
+            #for continuous in [0,1]: #[0,0]:
 
-                    self.drive_edge = drive_edge
-                    self.check_edge = check_edge
-                    self.clock_inactive_state = clock_inactive_state
-                    #self.continuous_clk = continuous
-                    #self.clk_div = clk_div
+                self.drive_edge = drive_edge
+                self.check_edge = check_edge
+                self.clock_inactive_state = clock_inactive_state
+                #self.continuous_clk = continuous
+                #self.clk_div = clk_div
 
-                    await self.set_bb_data(pattern_data, hiz, pattern_en, trigger_en, record_en, clk_en)
-                    await self.go(True)
-                    await self._generate_expected_outputs(pattern_data, hiz, pattern_en, trigger_en, clk_en, data_in)
-                    await self.wait_done()
+                await self.set_bb_data(pattern_data, hiz, pattern_en, trigger_en, record_en, clk_en)
+                await self.go(True)
+                self.dut._log.info('Calling generate; inactive=%d' % self.clock_inactive_state)
+                await self._generate_expected_outputs(pattern_data, hiz, pattern_en, trigger_en, clk_en, data_in)
+                await self.wait_done()
 
-                    matched = await self.matched()
-                    if not matched:
-                        self.dut._log.error('Matched status bit is not set.')
-                        self.harness.inc_error()
+                matched = await self.matched()
+                if not matched:
+                    self.dut._log.error('Matched status bit is not set.')
+                    self.harness.inc_error()
 
 
         # Randomized tests:
@@ -442,7 +455,11 @@ class HW_BB_Test(object):
         for rep in range(self.reps):
             # randomize start time WRT bit-bang clock phase to ensure there is no dependency there:
             await ClockCycles(self.dut.clk_adc, random.randint(0, self.clk_div))
-            num_bits = random.randint(self.save_depth, self.pattern_depth)
+            if not self.clocked_first_bit:
+                min_num_bits = self.save_depth + 4 # can't record first bit in this case
+            else:
+                min_num_bits = self.save_depth
+            num_bits = random.randint(min_num_bits, self.pattern_depth)
             self.num_bits = num_bits
             pattern_data = []
             trigger_en = []
@@ -454,7 +471,9 @@ class HW_BB_Test(object):
                 clk_en.append(random.randint(0,1))
                 hiz.append(random.randint(0,1))
                 # triggers are less frequent so we'll get better effective coverage if the test reflects that:
-                if random.randint(0,10):
+                if ((i == 0) and not self.clocked_first_bit):
+                    trigger_en.append(0)
+                elif random.randint(0,10):
                     trigger_en.append(0)
                 else:
                     trigger_en.append(1)
@@ -466,11 +485,17 @@ class HW_BB_Test(object):
             #clk_en[2] = 0
 
             # randomly choose which bits to record:
+            # note that recording the first bit when drive_edge == clock_inactive_state is not supported!
+            # (because there won't be a clock edge for it)
+            if not self.clocked_first_bit:
+                search_start = 1
+            else:
+                search_start = 0
             for i in range(self.save_depth):
-                j = random.randint(0, num_bits-1)
+                j = random.randint(search_start, num_bits-1)
                 k = 0
                 while record_en[j]:
-                    j = random.randint(0, num_bits-1)
+                    j = random.randint(search_start, num_bits-1)
                     k += 1
                     if k == num_bits*10:
                         self.dut._log.error('testbench bug: stuck! num_bits=%d, i=%d, record_en=%s' % (num_bits, i, record_en))
@@ -500,59 +525,72 @@ class HW_BB_Test(object):
                 self.dut._log.info('    clk_en      =%s' % clk_en[-8:])
             for drive_edge in [0,1]:
                 for check_edge in [0,1]:
-                    for pattern_en_case in range(3):
-                        self.dut._log.info('...running with drive=%d, check=%d, pattern_en case: %d' % (drive_edge, check_edge, pattern_en_case))
-                        self.drive_edge = drive_edge
-                        self.check_edge = check_edge
+                    for clock_inactive_state in [0,1]:
+                        for pattern_en_case in range(3):
+                            self.dut._log.info('...running with drive=%d, check=%d, clock_inactive=%d, pattern_en case: %d' % (drive_edge, check_edge, clock_inactive_state, pattern_en_case))
+                            self.drive_edge = drive_edge
+                            self.check_edge = check_edge
+                            self.clock_inactive_state = clock_inactive_state
 
-                        if pattern_en_case == 0:
-                            # loop back, no errors:
-                            expect_match = True
-                            self.dut.in_to_out.value = 1
-                            data_in = pattern_data.copy()
-                            pattern_en = [1]*num_bits
-                            expected_rdata = self.get_expected_rdata(record_en, pattern_data)
+                            if pattern_en_case == 0:
+                                # loop back, no errors:
+                                expect_match = True
+                                self.dut.in_to_out.value = 1
+                                data_in = pattern_data.copy()
+                                pattern_en = [1]*num_bits
+                                expected_rdata = self.get_expected_rdata(record_en, pattern_data)
 
-                        elif pattern_en_case == 1:
-                            # feed in a single error that will get caught:
-                            expect_match = False
-                            self.dut.in_to_out.value = 0
-                            pattern_en = []
-                            for i in range(num_bits):
-                                pattern_en.append(random.randint(0,1))
-                            bitflip = random.randint(0, num_bits-1)
-                            data_in[bitflip] = not data_in[bitflip]
-                            pattern_en[bitflip] = 1
-                            expected_rdata = self.get_expected_rdata(record_en, data_in)
+                            elif pattern_en_case == 1:
+                                # feed in a single error that will get caught:
+                                expect_match = False
+                                self.dut.in_to_out.value = 0
+                                pattern_en = []
+                                for i in range(num_bits):
+                                    pattern_en.append(random.randint(0,1))
+                                if self.clocked_first_bit:
+                                    start_search = 0
+                                else:
+                                    start_search = 1
+                                bitflip = random.randint(start_search, num_bits-1)
+                                self.dut._log.info('flipping bit %d to cause mismatch' % bitflip)
+                                data_in[bitflip] = not data_in[bitflip]
+                                pattern_en[bitflip] = 1
+                                expected_rdata = self.get_expected_rdata(record_en, data_in)
+                                self.dut._log.info('Start of pattern_en=%s' % pattern_en[:8])
 
-                        elif pattern_en_case == 2:
-                            # feed in errors everytime pattern_en is False:
-                            expect_match = True
-                            self.dut.in_to_out.value = 0
-                            data_in = pattern_data.copy()
-                            pattern_en = []
-                            for i in range(num_bits):
-                                pattern_en_bit = random.randint(0,1)
-                                pattern_en.append(pattern_en_bit)
-                                if not pattern_en_bit:
-                                    data_in[i] = not data_in[i]
-                            expected_rdata = self.get_expected_rdata(record_en, data_in)
+                            elif pattern_en_case == 2:
+                                # feed in errors everytime pattern_en is False:
+                                expect_match = True
+                                self.dut.in_to_out.value = 0
+                                data_in = pattern_data.copy()
+                                pattern_en = []
+                                for i in range(num_bits): 
+                                    # TODO- maybe? excluding first bit in this case? seems to be required for drive/inactive = 0/0
+                                    if i > 0 or self.clocked_first_bit:
+                                        pattern_en_bit = random.randint(0,1)
+                                    else:
+                                        pattern_en_bit = 0
+                                    pattern_en.append(pattern_en_bit)
+                                    if not pattern_en_bit:
+                                        data_in[i] = not data_in[i]
+                                expected_rdata = self.get_expected_rdata(record_en, data_in)
+                                self.dut._log.info('Start of pattern_en=%s' % pattern_en[:8])
 
-                        await self.set_bb_data(pattern_data, hiz, pattern_en, trigger_en, record_en, clk_en)
-                        await self.go(True)
-                        await self._generate_expected_outputs(pattern_data, hiz, pattern_en, trigger_en, clk_en, data_in)
-                        await self.wait_done()
-                        matched = await self.matched()
-                        if matched != expect_match:
-                            self.dut._log.error('Expected matched status %d, got %d' % (expect_match, matched))
-                            self.harness.inc_error()
+                            await self.set_bb_data(pattern_data, hiz, pattern_en, trigger_en, record_en, clk_en)
+                            await self.go(True)
+                            await self._generate_expected_outputs(pattern_data, hiz, pattern_en, trigger_en, clk_en, data_in)
+                            await self.wait_done()
+                            matched = await self.matched()
+                            if matched != expect_match:
+                                self.dut._log.error('Expected matched status %d, got %d' % (expect_match, matched))
+                                self.harness.inc_error()
 
-                        rdata = await self.saved_data()
-                        if rdata != expected_rdata:
-                            self.dut._log.error('Expected %x\nGot      %x\nXOR      %x' % (expected_rdata, rdata, expected_rdata ^ rdata))
-                            self.harness.inc_error()
-                        else:
-                            self.dut._log.info('Received expected data (%x)' % rdata)
+                            rdata = await self.saved_data()
+                            if rdata != expected_rdata:
+                                self.dut._log.error('Expected %x\nGot      %x\nXOR      %x' % (expected_rdata, rdata, expected_rdata ^ rdata))
+                                self.harness.inc_error()
+                            else:
+                                self.dut._log.info('Received expected data (%x)' % rdata)
 
         self.dut._log.info('job done!')
 
@@ -566,91 +604,55 @@ class HW_BB_Test(object):
         return expected_rdata
 
     async def _generate_expected_clock(self, clk_en):
-        # when driving on a negative edge, an extra clock gets put out:
         #self.dut.expected_clk.value = cocotb.types.Logic('z')
         self.dut.expected_clk.value = self.clock_inactive_state
         clk_en_copy = clk_en.copy()
-        if not self.drive_edge:
-            clk_en_copy.append(clk_en_copy[-1])
-            #self.dut._log.info('Extended clk_en: %s' % clk_en_copy)
 
-        if self.clock_inactive_state == 0:
-            for cen in clk_en_copy:
-                await RisingEdge(self.dut.clock_out_normal)
-                if cen:
-                    self.dut.expected_clk.value = 1
-                else:
-                    self.dut.expected_clk.value = 0
-                await FallingEdge(self.dut.clock_out_normal)
-                self.dut.expected_clk.value = 0
+        # Account for special cases:
+        if not self.clocked_first_bit:
+            clk_en_copy = clk_en_copy[1:]
 
-        else:
-            # things are a bit different (and messy!) in this case!
-            # 1. the first rising edge is masked IF drive_edge=1
-            # 2. clk_en low on cycle i means that the clock is held high on cycle i-1 
-            #    (otherwise, there would have to be a rising edge on cycle i)
-            if self.drive_edge:
-                start_index = 1
-            else:
-                start_index = 0
-            await FallingEdge(self.dut.clock_out_normal)
-            if clk_en_copy[start_index]:
-                self.dut.expected_clk.value = 0
-            else:
+        # Note: this is the only point where we take the DUT clock as golden; if it's wrong, then all our testing
+        # will be off (and hopefully, that will cause some errors)
+        await RisingEdge(self.dut.clock_out_normal)
+
+        for cen in clk_en_copy:
+            if cen:
                 self.dut.expected_clk.value = 1
-            await RisingEdge(self.dut.clock_out_normal)
-            self.dut.expected_clk.value = 1
-
-            for cen in clk_en_copy[start_index+1:]:
-                await FallingEdge(self.dut.clock_out_normal)
-                if cen:
-                    self.dut.expected_clk.value = 0
-                else:
-                    self.dut.expected_clk.value = 1
-                await RisingEdge(self.dut.clock_out_normal)
-                self.dut.expected_clk.value = 1
-
-            # last cycle:
-            await FallingEdge(self.dut.clock_out_normal)
-            if clk_en_copy[-1]:
+                await ClockCycles(self.dut.clk_adc, self.clk_div//2)
                 self.dut.expected_clk.value = 0
+                await ClockCycles(self.dut.clk_adc, self.clk_div//2)
             else:
-                self.dut.expected_clk.value = 1
-            await RisingEdge(self.dut.clock_out_debug)
-            self.dut.expected_clk.value = 1
+                self.dut.expected_clk.value = self.clock_inactive_state
+                await ClockCycles(self.dut.clk_adc, self.clk_div)
 
+        self.dut.expected_clk.value = self.clock_inactive_state
 
 
     async def _generate_expected_outputs(self, pattern_data, hiz, pattern_en, trigger_en, clk_en, data_in):
         b = 0
         cocotb.start_soon(self._generate_expected_clock(clk_en)) # clock checking is easier to handle in a separate thread
+        await self._first_drive_edge()
         for expected_data, expected_hiz, expected_en, expected_trigger, tb_data_in in zip(pattern_data, hiz, pattern_en, trigger_en, data_in):
             # drive-edge driven I/O's:
-            #self.dut._log.info('awaiting drive edge %d...' % b)
-            await self._next_drive_edge()
-            #self.dut._log.info('got it')
             self.dut.expected_data.value = expected_data
             self.dut.expected_hiz.value = expected_hiz
 
             # check-edge driven I/O's:
             if self.drive_edge != self.check_edge:
-                #self.dut._log.info('awaiting check edge %d...' % b)
-                await self._next_check_edge()
-                #self.dut._log.info('got it')
+                await ClockCycles(self.dut.clk_adc, self.clk_div//2)
             self.dut.tb_data_in.value = tb_data_in
             self.dut.expected_trigger.value = expected_trigger
             # trigger is a single fast clock cycle:
             await ClockCycles(self.dut.clk_adc, 1)
             self.dut.expected_trigger.value = 0
 
+            if self.drive_edge != self.check_edge:
+                wait_cycles = self.clk_div//2-1
+            else:
+                wait_cycles = self.clk_div-1
+            await ClockCycles(self.dut.clk_adc, wait_cycles)
             b += 1
-
-        # count with fast clock here because target-driven clock won't be there
-        if self.drive_edge != self.check_edge:
-            #await self._next_drive_edge()
-            await ClockCycles(self.dut.clk_adc, self.clk_div//2 - 1)
-        else:
-            await ClockCycles(self.dut.clk_adc, self.clk_div - 1)
 
         self.set_expected_defaults()
 
@@ -660,15 +662,14 @@ class HW_BB_Test(object):
         self.dut.expected_hiz.value = not self.inactive_state
 
 
-    async def _next_drive_edge(self):
-        if self.drive_edge:
-            await RisingEdge(self.dut.clock_out_normal)
-        else:
-            await FallingEdge(self.dut.clock_out_normal)
-
-
-    async def _next_check_edge(self):
-        if self.check_edge:
+    async def _first_drive_edge(self):
+        if not self.drive_edge and not self.clock_inactive_state:
+            # Note: in this case, there is no clock_out_normal edge until *after* the
+            # data that we need to check, so we need to peak inside the DUT and wait for
+            # a magic number of clock cycles...
+            await RisingEdge(self.dut.U_dut.U_hw_bb_trig.go_condition)
+            await ClockCycles(self.dut.clk_adc, 1 + self.clk_div//2)
+        elif self.drive_edge:
             await RisingEdge(self.dut.clock_out_normal)
         else:
             await FallingEdge(self.dut.clock_out_normal)

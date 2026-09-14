@@ -378,7 +378,7 @@ module hw_bb_trig #(
         // clock start/stop logic:
         // (used to be above with the data driving logic, but now that data is not driven at the same 
         // time as the clock it's easier to handle this separately)
-        if (go_condition && (!drive_edge)) begin // let the clock earlier so that it gets a proper full duty cycle;
+        if (go_condition && !drive_edge && clock_inactive_state) begin // let the clock earlier so that it gets a proper full duty cycle;
             clock_running <= 1'b1;
             clk_en_out <= clk_en;
         end
@@ -391,10 +391,11 @@ module hw_bb_trig #(
                 // (whether enabled or not).
                 clk_en_out <= clk_en;
 
-            if (running && (clock_counter == 0) && !clock_out_pre_r)
-                clock_running <= 1'b1;
-            else if (!running && (clock_counter == 0) && !clock_out_pre_r)
+            if ((bit_counter_drive == actual_bits) && (clock_counter == 0) &&  clock_out_pre_r)
                 clock_running <= 1'b0;
+            else if (running && (clock_counter == 0) && !clock_out_pre_r)
+                clock_running <= 1'b1;
+
         end
     end
 
