@@ -43,7 +43,11 @@ module hw_bb_wrapper #(
     output wire         bb_data_drive,
     output wire         bb_clock_out,
     output wire         trigger_bb,
-    input  wire         glitchclk
+    input  wire         glitchclk,
+
+    output wire         clock_out_debug,
+    output wire         clock_out_normal,
+    output wire [15:0]  clk_div_debug
 
 );
 
@@ -107,12 +111,144 @@ module hw_bb_wrapper #(
       .data_out                 (bb_data_out   ),
       .data_drive               (bb_data_drive ),
       .clock_out                (bb_clock_out  ),
+      .clock_out_debug          (clock_out_debug),
+      .clock_out_normal         (clock_out_normal),
+      .clk_div_debug            (clk_div_debug ),
       .trigger_pulse            (trigger_bb    ),
 
       .trigger_active           (1'b1          ),
       .glitch_in                (glitchclk     ),
       .debug                    (              )
     );   
+
+
+    // Following 4 instances are for debug/development only:
+    // instantiate each of the 4 combinations of drive_edge and
+    // clock_inactive_state, with fixed values (unchanged by programming), 
+    // so that they can be "seen" in parallel (at the same time) in
+    // a simulation waveform. The outputs of these instances are ignored.
+    hw_bb_trig #(
+      .pBYTECNT_SIZE            (pBYTECNT_SIZE),
+      .pPATTERN_DEPTH           (pPATTERN_DEPTH),
+      .pSAVE_DEPTH              (pSAVE_DEPTH),
+      .pDRIVE_EDGE              (1),
+      .pCLOCK_INACTIVE_STATE    (0),
+      .pFIXED_CONFIG            (1)
+    ) U_1a_10 (
+      .reset                    (reset         ),
+      .clk_usb                  (clk_usb       ),
+      .reg_address              (reg_address   ),
+      .reg_bytecnt              (reg_bytecnt   ),
+      .reg_datai                (write_data    ),
+      .reg_datao                (              ),
+      .reg_read                 (reg_read      ),
+      .reg_write                (reg_write     ),
+      .clock                    (clk_adc       ),
+      .data_in                  (bb_data_in    ),
+      .data_out                 (              ),
+      .data_drive               (              ),
+      .clock_out                (              ),
+      .clock_out_debug          (              ),
+      .clock_out_normal         (              ),
+      .clk_div_debug            (              ),
+      .trigger_pulse            (              ),
+      .trigger_active           (1'b1          ),
+      .glitch_in                (glitchclk     ),
+      .debug                    (              )
+    );   
+
+
+    hw_bb_trig #(
+      .pBYTECNT_SIZE            (pBYTECNT_SIZE),
+      .pPATTERN_DEPTH           (pPATTERN_DEPTH),
+      .pSAVE_DEPTH              (pSAVE_DEPTH),
+      .pDRIVE_EDGE              (1),
+      .pCLOCK_INACTIVE_STATE    (1),
+      .pFIXED_CONFIG            (1)
+    ) U_1b_11 (
+      .reset                    (reset         ),
+      .clk_usb                  (clk_usb       ),
+      .reg_address              (reg_address   ),
+      .reg_bytecnt              (reg_bytecnt   ),
+      .reg_datai                (write_data    ),
+      .reg_datao                (              ),
+      .reg_read                 (reg_read      ),
+      .reg_write                (reg_write     ),
+      .clock                    (clk_adc       ),
+      .data_in                  (bb_data_in    ),
+      .data_out                 (              ),
+      .data_drive               (              ),
+      .clock_out                (              ),
+      .clock_out_debug          (              ),
+      .clock_out_normal         (              ),
+      .clk_div_debug            (              ),
+      .trigger_pulse            (              ),
+      .trigger_active           (1'b1          ),
+      .glitch_in                (glitchclk     ),
+      .debug                    (              )
+    );   
+
+    hw_bb_trig #(
+      .pBYTECNT_SIZE            (pBYTECNT_SIZE),
+      .pPATTERN_DEPTH           (pPATTERN_DEPTH),
+      .pSAVE_DEPTH              (pSAVE_DEPTH),
+      .pDRIVE_EDGE              (0),
+      .pCLOCK_INACTIVE_STATE    (1),
+      .pFIXED_CONFIG            (1)
+    ) U_2a_01 (
+      .reset                    (reset         ),
+      .clk_usb                  (clk_usb       ),
+      .reg_address              (reg_address   ),
+      .reg_bytecnt              (reg_bytecnt   ),
+      .reg_datai                (write_data    ),
+      .reg_datao                (              ),
+      .reg_read                 (reg_read      ),
+      .reg_write                (reg_write     ),
+      .clock                    (clk_adc       ),
+      .data_in                  (bb_data_in    ),
+      .data_out                 (              ),
+      .data_drive               (              ),
+      .clock_out                (              ),
+      .clock_out_debug          (              ),
+      .clock_out_normal         (              ),
+      .clk_div_debug            (              ),
+      .trigger_pulse            (              ),
+      .trigger_active           (1'b1          ),
+      .glitch_in                (glitchclk     ),
+      .debug                    (              )
+    );   
+
+    hw_bb_trig #(
+      .pBYTECNT_SIZE            (pBYTECNT_SIZE),
+      .pPATTERN_DEPTH           (pPATTERN_DEPTH),
+      .pSAVE_DEPTH              (pSAVE_DEPTH),
+      .pDRIVE_EDGE              (0),
+      .pCLOCK_INACTIVE_STATE    (0),
+      .pFIXED_CONFIG            (1)
+    ) U_2b_00 (
+      .reset                    (reset         ),
+      .clk_usb                  (clk_usb       ),
+      .reg_address              (reg_address   ),
+      .reg_bytecnt              (reg_bytecnt   ),
+      .reg_datai                (write_data    ),
+      .reg_datao                (              ),
+      .reg_read                 (reg_read      ),
+      .reg_write                (reg_write     ),
+      .clock                    (clk_adc       ),
+      .data_in                  (bb_data_in    ),
+      .data_out                 (              ),
+      .data_drive               (              ),
+      .clock_out                (              ),
+      .clock_out_debug          (              ),
+      .clock_out_normal         (              ),
+      .clk_div_debug            (              ),
+      .trigger_pulse            (              ),
+      .trigger_active           (1'b1          ),
+      .glitch_in                (glitchclk     ),
+      .debug                    (              )
+    );   
+
+
 
 
 endmodule

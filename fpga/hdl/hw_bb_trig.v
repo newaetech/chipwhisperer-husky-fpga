@@ -36,7 +36,10 @@ module hw_bb_trig #(
    parameter pBYTECNT_SIZE = 7,
    parameter pPATTERN_DEPTH = 256,
    parameter pSAVE_DEPTH = 64,
-   parameter pBITRECORD_SUPPORTED = 1
+   parameter pBITRECORD_SUPPORTED = 1,
+   parameter pDRIVE_EDGE = 1,
+   parameter pCLOCK_INACTIVE_STATE = 0,
+   parameter pFIXED_CONFIG = 0
 )(
    input  wire                          reset,
    input  wire                          clk_usb,
@@ -57,7 +60,12 @@ module hw_bb_trig #(
    input  wire                          trigger_active,
    input  wire                          glitch_in,
 
-   output wire [7:0]                    debug
+   output wire [7:0]                    debug,
+
+   // for testbench only:
+   output wire                          clock_out_debug,
+   output wire                          clock_out_normal,
+   output wire [15:0]                   clk_div_debug
 );
 
     localparam pCOUNTER_WIDTH = (pPATTERN_DEPTH <= 32)?  5 :
@@ -66,7 +74,7 @@ module hw_bb_trig #(
                                 (pPATTERN_DEPTH <= 256)? 8 :
                                 (pPATTERN_DEPTH <= 512)? 9 : 10;
 
-    reg matched;
+    reg matched = 1'b0;
     reg matching;
     reg bitrecord = 1'b0;
     reg match_check = 1'b0;
@@ -77,12 +85,14 @@ module hw_bb_trig #(
     reg continuous_clk = 1'b0;
     reg trigger_when_matched = 1'b0;
     reg [1:0] data_io_inactive_state = 2'b01;
+    reg clock_inactive_state = pCLOCK_INACTIVE_STATE;
     reg trigger_en = 1'b0;
     reg [1:0] glitch_mode = 2'b00;
     reg [15:0] clk_div = {15'd1, 1'b0};
     reg [15:0] clock_counter = 16'd0;
     reg drive_output = 1'b0;
     reg drive_data;
+    reg clk_en_out = 1'b1;
     reg [15:0] num_bits = 0; // max-sized because of where it sits in the register space
     reg [pSAVE_DEPTH-1:0] saved_payload = 0;
 
@@ -95,10 +105,12 @@ module hw_bb_trig #(
     wire active = running;
 
     reg enable_glitch_output = 1'b0;
-    reg drive_edge = 1'b1; // drive data on falling (0) / rising (1) edge of clock_out_pre
+    reg drive_edge = pDRIVE_EDGE; // drive data on falling (0) / rising (1) edge of clock_out_pre
     reg check_edge = 1'b1; // check data and fire trigger on falling (0) / rising (1) edge of clock_out_pre
 
     wire bitrecord_supported = (pBITRECORD_SUPPORTED)? 1'b1 : 1'b0;
+
+    assign clk_div_debug = clk_div;
 
     reg internal_error = 1'b0;
 
@@ -125,6 +137,7 @@ module hw_bb_trig #(
 
 
     wire [14:0] clk_div_fix = clk_div[15:1]; // omit LSB to divide by 2, so that clk_div works as intended
+    wire [13:0] clk_div_fix_half = clk_div[15:2]; // divide by 2 again to drive data mid-cycle
 
     reg fifo_wr = 1'b0;
     always @(posedge clk_usb) begin
@@ -139,9 +152,12 @@ module hw_bb_trig #(
                       1: begin
                           continuous_clk                <= reg_datai[7];
                           data_io_inactive_state        <= reg_datai[6:5];
+                          if (!pFIXED_CONFIG)
+                              clock_inactive_state      <= reg_datai[4];
                           trigger_when_matched          <= reg_datai[3];
                           enable_glitch_output          <= reg_datai[2];
-                          drive_edge                    <= reg_datai[1];
+                          if (!pFIXED_CONFIG)
+                              drive_edge                <= reg_datai[1];
                           check_edge                    <= reg_datai[0];
                       end
                       2: clk_div[0 +: 8]                <= reg_datai;
@@ -181,20 +197,26 @@ module hw_bb_trig #(
     reg clock_out_pre = 1'b0;
     reg trigger;
     reg trigger_r;
-    reg driving = 1'b0;
 
     assign trigger_pulse = running && trigger_en && trigger_active && trigger && ~trigger_r;
-    wire clock_enable = continuous_clk || ((drive_edge)? driving : running);
-    assign clock_out = clock_enable && clock_out_pre_r;
+    wire clock_enable = continuous_clk || clock_running;
+    assign clock_out = (clock_enable & clk_en_out)? clock_out_pre_r ^ (!drive_edge) : clock_inactive_state;
+
+    // version of clock_out which doesn't factor in clk_en; useful for debugging; also used by testbench for sampling data:
+    assign clock_out_debug = (clock_enable)? clock_out_pre_r ^ (!drive_edge) : clock_inactive_state;
+
+    // same but don't go to inactive high state; makes a bunch of testbench stuff easier, 
+    // and is also used here in the check logic:
+    assign clock_out_normal = (clock_enable)? clock_out_pre_r ^ (!drive_edge) : 1'b0;
 
     wire fifo_overflow_error;
     wire fifo_underflow_error;
     wire fifo_empty;
-    wire [4:0] fifo_dout;
+    wire [5:0] fifo_dout;
     reg  fifo_rd = 1'b0;
 
     fifo_async #(
-        .pDATA_WIDTH    (5),
+        .pDATA_WIDTH    (6),
         .pDEPTH         (pPATTERN_DEPTH),
         .pFALLTHROUGH   (1),
         .pFLOPS         (1),
@@ -208,7 +230,7 @@ module hw_bb_trig #(
         .wfull_threshold_value  (0),
         .rempty_threshold_value (0),
         .wen                    (fifo_wr),
-        .wdata                  (reg_datai[4:0]),
+        .wdata                  (reg_datai[5:0]),
         .wfull                  (),
         .walmost_full           (),
         .woverflow              (fifo_overflow_error),
@@ -226,6 +248,7 @@ module hw_bb_trig #(
     wire pattern_en = fifo_dout[2];
     wire trigger_bits = fifo_dout[3];
     wire record_en = fifo_dout[4];
+    wire clk_en = fifo_dout[5];
 
     reg clock_out_pre_r;
 
@@ -241,12 +264,14 @@ module hw_bb_trig #(
             pattern_en_r    <= pattern_en;
             trigger_bits_r  <= trigger_bits;
         end
+        else if (go_condition)
+            trigger_bits_r  <= 1'b0; // otherwise a last bit trigger can induce a first bit trigger on the next bit-bang!
     end
 
-    wire record_en_check    = (drive_edge == check_edge)? record_en    : record_en_r;
-    wire pattern_en_check   = (drive_edge == check_edge)? pattern_en   : pattern_en_r;
-    wire pattern_data_check = (drive_edge == check_edge)? pattern_data : pattern_data_r;
-    wire trigger_bits_check = (drive_edge == check_edge)? trigger_bits : trigger_bits_r;
+    wire pattern_data_check = pattern_data_r;
+    wire pattern_en_check   = pattern_en_r;
+    wire trigger_bits_check = trigger_bits_r;
+    wire record_en_check    = record_en_r;
 
     wire [pCOUNTER_WIDTH:0] actual_bits = (num_bits > 0)? num_bits : pPATTERN_DEPTH;
 
@@ -255,7 +280,7 @@ module hw_bb_trig #(
         // note that clk_div_fix is the number of input clock cycles per *half period* of
         // the generated clock; in other words, clk_div_fix is twice the actual clock divisor:
         clock_out_pre_r <= clock_out_pre;
-        if (clock_counter == (clk_div_fix-1)) begin
+        if (clock_counter >= (clk_div_fix-1)) begin // >= only really needed for testbench; when on-target it'll wrap around fast enough
             clock_counter <= 0;
             clock_out_pre <= ~clock_out_pre;
         end
@@ -263,18 +288,21 @@ module hw_bb_trig #(
             clock_counter <= clock_counter + 1;
     end
 
+    reg clock_running = 1'b0;
+
+    wire go_condition = go_wait_sync && (clock_counter == 0) && (clock_out_pre_r != drive_edge);
+
     always @(posedge clock) begin
         trigger_r <= trigger;
         running_r <= running;
         // synchronize "go" to our running clock output:
-        if (go_wait_sync && (clock_counter == 0) && (clock_out_pre_r != drive_edge)) begin
+        if (go_condition) begin
             go_wait_sync <= 1'b0;
             running <= 1'b1;
             trigger <= 1'b0;
             matching <= 1'b1;
             bit_counter_drive <= 0;
             bit_counter_check <= 0;
-            driving <= 1'b0;
             internal_error <= 1'b0;
         end
         else if (go_target_pulse) begin
@@ -290,38 +318,32 @@ module hw_bb_trig #(
             if (fifo_empty && (bit_counter_drive < actual_bits))
                 internal_error <= 1'b1;
 
-            // drive logic:
-            if (clock_counter == 0) begin
-                // drive data on falling or rising edge:
-                if (clock_out_pre_r != drive_edge) begin 
-                    driving <= 1'b1;
-                    if (bit_counter_drive == actual_bits) begin
-                        running <= 1'b0;
-                        driving <= 1'b0;
-                        drive_data <= data_io_inactive_state[1];
-                        drive_output <= data_io_inactive_state[0];
-                        if (matching)
-                            matched <= 1'b1;
-                        else
-                            matched <= 1'b0;
-                    end
-                    else begin
-                        if (~fifo_empty) fifo_rd <= 1'b1; // check on empty because FWFT: need to block last read
-                        drive_data <= pattern_data;
-                        drive_output <= ~pattern_hiz;
-                        bit_counter_drive <= bit_counter_drive + 1;
-                    end
+            // drive logic: we drive at the halfway point of the clock's low state, to prevent setup violations at the receiving end
+            // (note that drive_edge is no longer accounted for here; instead the output clock is inverted later)
+            if ((clock_counter == clk_div_fix_half) && !clock_out_pre_r) begin
+                if (bit_counter_drive == actual_bits) begin
+                    running <= 1'b0;
+                    drive_data <= data_io_inactive_state[1];
+                    drive_output <= data_io_inactive_state[0];
+                    if (matching)
+                        matched <= 1'b1;
+                    else
+                        matched <= 1'b0;
                 end
-                else
-                    fifo_rd <= 1'b0;
+                else begin
+                    if (~fifo_empty) fifo_rd <= 1'b1; // check on empty because FWFT: need to block last read
+                    drive_data <= pattern_data;
+                    drive_output <= ~pattern_hiz;
+                    bit_counter_drive <= bit_counter_drive + 1;
+                end
             end
             else
                 fifo_rd <= 1'b0;
 
             // check logic:
             if (clock_counter == 0) begin
-                // check pattern match and fire trigger on falling or rising edge:
-                if ((clock_out_pre_r != check_edge) && (driving || (check_edge == drive_edge))) begin 
+                // check pattern match and fire trigger on falling or rising edge (bit messy but it works!):
+                if ((clock_out_normal != check_edge) && ((drive_edge && check_edge)? !clock_out_pre_r : 1'b1)) begin 
                     bit_counter_check <= bit_counter_check + 1;
                     match_check <= 1'b1;
                     if (record_en_check) 
@@ -350,6 +372,30 @@ module hw_bb_trig #(
             match_check <= 1'b0;
             drive_data <= data_io_inactive_state[1];
             drive_output <= data_io_inactive_state[0];
+        end
+
+
+        // clock start/stop logic:
+        // (used to be above with the data driving logic, but now that data is not driven at the same 
+        // time as the clock it's easier to handle this separately)
+        if (go_condition && !drive_edge && clock_inactive_state) begin // let the clock earlier so that it gets a proper full duty cycle;
+            clock_running <= 1'b1;
+            clk_en_out <= clk_en;
+        end
+        else begin
+            if (running && (clock_counter == 0) && !clock_out_pre && !fifo_empty)
+                // Note: fifo_empty condition specifically covers the case of drive_edge=0,
+                // for the last clock cycle that we drive out (*after* the data) to permit
+                // a rising edge clock.
+                // This makes clk_en for that last clock the same as the previous clock
+                // (whether enabled or not).
+                clk_en_out <= clk_en;
+
+            if ((bit_counter_drive == actual_bits) && (clock_counter == 0) &&  clock_out_pre_r)
+                clock_running <= 1'b0;
+            else if (running && (clock_counter == 0) && !clock_out_pre_r)
+                clock_running <= 1'b1;
+
         end
     end
 
