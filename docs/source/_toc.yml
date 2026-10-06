@@ -4,6 +4,9 @@
 format: jb-book
 root: index
 parts:
+- caption: Getting Started
+  chapters:
+  - file: Starting/install
 - caption: Implementation
   chapters:
   - file: Implementation/implementation
@@ -17,4 +20,6 @@ parts:
 - caption: Architecture
   chapters:
   - file: Architecture/adc_highlevel_update
+  - file: Architecture/adc_details
+  - file: Architecture/registers
 

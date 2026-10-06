@@ -1,0 +1,12 @@
+{ "signal" : [
+  { "name": "clock",                  "wave": "p.....|......|......" },
+  { "name": "reg_address",            "wave": "x2....|......|......", data:["`CONFIG_ADDR"] },
+  { "name": "reg_bytecnt",            "wave": "x2....|3.....|4.....", data:[0,1,2]},
+  { "name": "reg_write",              "wave": "0.10..|.10...|.10..." },
+  { "name": "write_data",             "wave": "x.2...|..3...|..4...", data:["wdata[7:0]", "wdata[15:8]", "wdata[23:16]"] },
+  { "name": "config_reg",             "wave": "5..2..|...3..|...4..", data:["24'b0", "{16'b0, wdata[7:0]", "{8'b0, wdata[15:0]}", "wdata[23:0]"] }
+
+],
+  "config" : { "hscale" : 2 }
+}
+

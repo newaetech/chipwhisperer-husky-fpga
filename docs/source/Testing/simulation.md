@@ -1,10 +1,12 @@
 # Verilog Simulation
 
 ## Requirements
-* [Icarus Verilog](http://iverilog.icarus.com)
+* [Icarus Verilog](https://github.com/steveicarus/iverilog)
 * [cocotb](https://github.com/cocotb/cocotb)
-* [gtkwave](http://gtkwave.sourceforge.net) or [surfer](https://surfer-project.org/)
+* [gtkwave](https://github.com/gtkwave/gtkwave) or [surfer](https://surfer-project.org/)
 * **no commercial tools!**
+
+(See the [installation](../Starting/install) page for version information.)
 
 Note that the Vivado simulator is not supported. In theory [any simulator
 supported by cocotb](https://docs.cocotb.org/en/stable/simulator_support.html)
