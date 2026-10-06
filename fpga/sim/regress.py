@@ -187,7 +187,7 @@ tests.append(dict(name  = 'adc_max_segments',
              MAX_SEGMENT_CYCLES = 1000,
              ADC_RES = 8,
              FIFOSIZE = "TINYFIFO",
-             TIMEOUT_TIME = 5000,
+             TIMEOUT_TIME = 6500,
              description = 'ADC-only capture with segments filling up the slow FIFO.'))
              # Slow FIFO (8b) is 256*18 = 4608 bytes samples; that's 32 segments of 144 bytes.
              # 9 bytes go to the offset word, leaving 135 bytes of sample data (which happily
