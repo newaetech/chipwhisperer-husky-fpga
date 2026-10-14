@@ -394,6 +394,8 @@ module clockglitch_a7 #(
 `else
    assign #1 glitch_mmcm1_clk_out = source_clk;
    assign #1 glitch_mmcm2_clk_out = glitch_mmcm1_clk_out;
+   assign mmcm1_locked = 1'b1;
+   assign mmcm2_locked = 1'b1;
 `endif
 
    reg_mmcm_drp #(

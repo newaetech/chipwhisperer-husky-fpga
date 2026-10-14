@@ -122,7 +122,8 @@ module reg_openadc_adcfifo #(
    reg [7:0] reg_datao_reg;
    assign reg_datao = reg_datao_reg;
 
-   wire [28:0] fifo_stat = {shared_fifo_empty,                  // 28
+   wire [31:0] fifo_stat = {3'b0,
+                            shared_fifo_empty,                  // 28
                             preddr_la_empty,                    // 27
                             preddr_trace_empty,                 // 26
                             preddr_adc_fifo_empty,              // 25

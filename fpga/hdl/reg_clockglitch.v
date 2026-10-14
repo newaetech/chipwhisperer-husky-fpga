@@ -104,8 +104,8 @@ module reg_clockglitch #(
    wire mmcm1_locked;
    wire mmcm2_locked;
 
-   reg phase1_done_reg;
-   reg phase2_done_reg;
+   reg phase1_done_reg = 1'b0;
+   reg phase2_done_reg = 1'b0;
 
    assign phase_requested = clockglitch_settings_reg[15:0];
 
