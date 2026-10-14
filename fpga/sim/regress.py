@@ -546,13 +546,28 @@ def check_pass_fail(logfile, cocotb):
     warnings = 0
     errors = 0
     error_msg = None
+    warning_msg = None
     for line in log:
        if cocotb:
            failed = None
-           if not error_msg:
-               error_match = error_regex.search(line)
-               if error_match:
+           error_match = error_regex.search(line)
+           if error_match:
+               errors += 1
+               if not error_msg:
                    error_msg = error_match.group(1)
+
+           timeout_match = timeout_regex.search(line)
+           if timeout_match:
+               errors += 1
+               if not error_msg:
+                   error_msg = 'SimTimeoutError'
+
+           warning_match = warning_regex.search(line)
+           if warning_match:
+               warnings += 1
+               if not warning_msg:
+                   warning_msg = warning_match.group(1)
+
 
            stat_matches = cocotb_stat_regex.search(line)
            if stat_matches:
@@ -573,10 +588,7 @@ def check_pass_fail(logfile, cocotb):
     log.close()
     if passed is None:
         print("*** parsing error on %s ***" % logfile)
-    if cocotb and failed:
-        errors = 1
-    return passed, warnings, errors, error_msg
-
+    return passed, warnings, errors, error_msg, warning_msg
 
 
 if (args.list):
@@ -612,6 +624,8 @@ test_regex = re.compile(args.tests)
 exclude_regex = re.compile(args.exclude)
 cocotb_stat_regex = re.compile(r'TESTS=(\d+) PASS=(\d+) FAIL=(\d+) SKIP=(\d+)')
 error_regex = re.compile(r'ERROR\s+cocotb.+cocowrapper\s+(.+)$')
+warning_regex = re.compile(r'WARNING\s+cocotb.+cocowrapper\s+(.+)$')
+timeout_regex = re.compile(r'cocotb.result.SimTimeoutError')
 
 
 exefile = 'coco.vvp'
@@ -726,9 +740,6 @@ for test in tests:
 num_processes = len(jobs_to_submit)
 print("done. %d tests to run." % num_processes)
 
-warns = []
-fails = []
-
 pbar_dispatched = tqdm(total=len(jobs_to_submit), desc='Tests dispatched')
 pbar_finished   = tqdm(total=len(jobs_to_submit), desc='Tests finished ')
 pbar_passed     = tqdm(total=len(jobs_to_submit), desc='Tests passing  ')
@@ -757,17 +768,20 @@ finished = 0
 oldpass_count = 0
 fail_count = 0
 pass_count = 0
+warn_count = 0
 while len(processes):
     for p,l,s,cocotb in processes:
         if not p.poll() is None:
             finished += 1
-            passed, warnings, errors, error_msg = check_pass_fail(l,cocotb)
+            passed, warnings, errors, error_msg, warning_msg = check_pass_fail(l,cocotb)
             pass_count += passed
             if warnings:
-                warns.append("%s: %0d warnings" % (l, warnings))
+                warn_count += 1
             if errors:
                 fail_count += 1
-                fails.append("%-42s %3d errors, seed:%12d 1st error: %20s" % (l, errors, s, error_msg))
+                tqdm.write("%-42s %3d *ERRORS*, seed:%12d 1st error: %20s" % (l, errors, s, error_msg))
+            if warnings:
+                tqdm.write("%-42s %3d warnings, seed:%12d 1st warning: %20s" % (l, warnings, s, warning_msg))
             processes.remove((p,l,s,cocotb))
             if len(jobs_to_submit) > 0:
                 makeargs, logfile, outfile, seed, cocotb = jobs_to_submit.pop()
@@ -790,18 +804,12 @@ pbar_passed.close()
 #exit_codes = [p.wait() for p,l,s in processes]
 
 # sanity check:
-assert num_processes == pass_count + fail_count, "pass=%d, fail=%d" % (pass_count, fail_count)
+assert num_processes == pass_count + fail_count, "total=%d, pass=%d, fail=%d" % (num_processes, pass_count, fail_count)
 
 # Summarize results:
 print('\n*** RESULTS SUMMARY ***')
-print('%d tests passing, %d tests failing.' % (pass_count, fail_count))
+print('%d tests passing\n%d tests failing\n%d tests with warnings' % (pass_count, fail_count, warn_count))
 print('Elapsed time: %d seconds' % (int(time.time() - start_time)))
-if warns:
-    for w in warns:
-        print(w)
-if fails:
-    for f in fails:
-        print(f)
 
 # clean up .vvp files:
 if not args.compile_once:
