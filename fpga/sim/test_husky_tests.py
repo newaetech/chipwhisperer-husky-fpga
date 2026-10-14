@@ -122,6 +122,7 @@ class GenericTest(object):
 
     async def _trigger(self, job) -> None:
         """ Trigger the DUT capture.
+        Returns: whether or not untriggered.
         """
         self.dut._log.error("%12s: _trigger() must be implemented in child class." % self.name)
 
@@ -291,14 +292,22 @@ class GenericTest(object):
             await ClockCycles(self.sampling_clock, 1) # ensure trigger is synchronous with sampling clock
             self.dut._log.info("%12s Triggering: %s" %(job_name, job))
             self.dut.current_action.value = self.harness.hexstring("%12s Triggering" % job_name)
-            await self._trigger(job)
-            # kick off thread to de-assert trigger, except for segmented captures (which manage their own untriggering):
-            if not (self.name == 'ADC' and job['segments'] > 1): 
+            untriggered = await self._trigger(job)
+            # kick off thread to de-assert trigger, unless self._trigger handled untriggering (for example,
+            # some cases of segmented captures manage their own untriggering that way):
+            if not untriggered:
+                # Keep trigger for at least > 1 cycle of the trace clock which
+                # is the USB clock, otherwise it may be missed by scope.trace.
+                # FPGA *could* be fixed to allow single-cycle trigger, but
+                # that's a degenerate case, not worth touching all the trace
+                # hardware for!
+                min_trigger_time = math.ceil(self.harness.usb_period / self.harness.adc_period) + 1
                 if random.randint(0,4):
-                    untrigger_wait = random.randint(10, 500)
+                    untrigger_wait = random.randint(max(min_trigger_time, 10), 500)
                 else:
-                    untrigger_wait = random.randint(1,2)
+                    untrigger_wait = random.randint(min_trigger_time, min_trigger_time+2)
                 self.untriggering = cocotb.start_soon(self._untrigger_thread(job, untrigger_wait))
+
 
             if self.harness.trigger_lock.locked():
                 self.harness.trigger_lock.release()
@@ -322,7 +331,7 @@ class GenericTest(object):
             self.dut._log.info("%12s popped from job queue (count = %d, contents: %s)" % (job_name, self.harness.queue.qsize(), self.harness._queue_contents))
             result = await self.checker.results.get()
             # sometimes trigger is held high for a very long time; wait for it to be cleared:
-            await Join(self.untriggering)
+            if not untriggered: await Join(self.untriggering)
             await self._post_job()
             self.errors += result['errors']
 
@@ -435,7 +444,6 @@ class ADCTest(GenericTest):
         # you'll get a segment and/or presample error; a quick look at the waveform can confirm that
         # the design is working as intended.
         min_wait_segment_samples = offset + samples_to_collect + 200
-        self.dut._log.warning('XXX: min_wait = %d' % min_wait_segment_samples)
         # when there are "enough" presamples, the presample filling stage gives us more time:
         if presamples < 32:
             min_wait_segment_samples += 20
@@ -516,6 +524,7 @@ class ADCTest(GenericTest):
         await self.harness.wait_flush('ADC')  # allow for any flushes (triggered by arming) to complete before triggering
 
     async def _trigger(self, job) -> None:
+        untriggered = False
         if job['segment_counter_en'] == 0:
             iterations = job['segments']
         else:
@@ -527,15 +536,25 @@ class ADCTest(GenericTest):
                 await self.trigger_io4()
             else:
                 raise ValueError('Unsupported trigger %s' % job['trigger_type'])
-            self.dut._log.info('%12s issued trigger %d' % (job['name'], i))
-            if i < iterations - 1:
-                untrigger_wait = random.randint(1, job['segment_times'][i]-2)
-            else:
-                untrigger_wait = random.randint(1, 500)
-            self.untriggering = cocotb.start_soon(self._untrigger_thread(job, untrigger_wait))
+            if iterations > 1:
+                # Keep trigger for at least > 1 cycle of the trace clock which
+                # is the USB clock, otherwise it may be missed by scope.trace.
+                # FPGA *could* be fixed to allow single-cycle trigger, but
+                # that's a degenerate case, not worth touching all the trace
+                # hardware for!
+                min_trigger_time = math.ceil(self.harness.usb_period / self.harness.adc_period) + 1
+                self.dut._log.info('%12s issued trigger %d' % (job['name'], i))
+                if i < iterations - 1:
+                    untrigger_wait = random.randint(min_trigger_time, job['segment_times'][i]-2)
+                else:
+                    untrigger_wait = random.randint(min_trigger_time, 500)
+                self.untriggering = cocotb.start_soon(self._untrigger_thread(job, untrigger_wait))
+                untriggered = True
+
             if i < iterations - 1:
                 # wait prescribed time for the next trigger:
                 await ClockCycles(self.sampling_clock, job['segment_times'][i])
+        return untriggered
 
     async def trigger_now(self) -> None:
         await self.registers.write(self.reg_addr['SETTINGS_ADDR'], [0x4c + (self.stream << 4)]) # trigger
@@ -744,6 +763,7 @@ class LATest(GenericTest):
             pass # nothing to do!
         else:
             raise ValueError('Unsupported trigger %s' % job['trigger_type'])
+        return False
 
     async def trigger_now(self) -> None:
         await self.registers.write(self.reg_addr['LA_MANUAL_CAPTURE'], [1])
@@ -834,6 +854,7 @@ class TraceTest(GenericTest):
             raise ValueError
         # NOTE: adding more trigger options is tricky, because for trace it's either pass-thru (ADC) or pattern 
         # match (which we don't exercise here (yet?))
+        return False
 
     async def trigger_now(self) -> None:
         await self.registers.write(self.reg_addr['REG_ARM'], [3])   # capture now
@@ -956,6 +977,7 @@ class GlitchTest(GenericTest):
             pass # nothing to do!
         else:
             raise ValueError
+        return False
 
     async def trigger_now(self) -> None:
         settings = await self.harness.registers.read(self.reg_addr['CLOCKGLITCH_SETTINGS'], 8)
