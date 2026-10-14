@@ -34,6 +34,7 @@
 ../hdl/sad_x2.v
 ../hdl/edge_trigger.v
 ../hdl/trigger_pulse_cdc.v
+../hdl/trigger_cdc.v
 ../fpga-common/hdl/cdc_pulse.v
 ../fpga-common/hdl/cdc_bus.v
 ../fpga-common/hdl/cdc_simple.v

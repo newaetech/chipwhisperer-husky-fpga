@@ -495,19 +495,19 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
    wire trigger_glitch_pulse;
    wire trigger_trace_pulse;
-   cdc_pulse U_trigger_pulse_glitch (
-       .reset_i       (reset),
+   wire trigger_source = (trigger_sequencer_on)? trigger_sequencer_out : trigger_chooser[0];
+
+   trigger_cdc U_trigger_pulse_glitch (
        .src_clk       (adc_sample_clk),
        .dst_clk       (glitch_mmcm1_clk_out),
-       .src_pulse     ((trigger_sequencer_on)? trigger_sequencer_out : trigger_chooser[0] ),
+       .src_data      (trigger_source),
        .dst_pulse     (trigger_glitch_pulse)
    );
 
-   cdc_pulse U_trigger_pulse_trace (
-       .reset_i       (reset),
+   trigger_cdc U_trigger_pulse_trace (
        .src_clk       (adc_sample_clk),
        .dst_clk       (trace_fe_clk),
-       .src_pulse     ((trigger_sequencer_on)? trigger_sequencer_out : trigger_chooser[0] ),
+       .src_data      (trigger_source),
        .dst_pulse     (trigger_trace_pulse)
    );
 
@@ -525,7 +525,6 @@ CW_IOROUTE_ADDR, address 55 (0x37) - GPIO Pin Routing [8 bytes]
 
    assign trigger_glitch = (~trigger_sequencer_on && (registers_cwtrigmod[2:0] == 3'b000))? trigger_ext_glitch_pulse : trigger_glitch_pulse;
    assign trigger_trace  = (~trigger_sequencer_on && (registers_cwtrigmod[2:0] == 3'b000))? trigger_ext[0] : trigger_trace_pulse;
-
 
    assign decodeio_active       = (trigger_sequencer_on)? |tc_decodeio_active : tc_decodeio_active[0];
    assign trace_active          = (trigger_sequencer_on)? |tc_trace_active : tc_trace_active[0];
