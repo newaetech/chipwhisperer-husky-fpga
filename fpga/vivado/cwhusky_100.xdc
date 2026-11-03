@@ -450,3 +450,18 @@ set_property C_CLK_INPUT_FREQ_HZ 300000000 [get_debug_cores dbg_hub]
 set_property C_ENABLE_CLK_DIVIDER false [get_debug_cores dbg_hub]
 set_property C_USER_SCAN_CHAIN 1 [get_debug_cores dbg_hub]
 #connect_debug_port dbg_hub/clk [get_nets clk_usb_buf_BUFG]
+
+# --- Clock buffering fixes for recent Vivado (e.g. 2026.1) ------------------
+# The explicit BUFG now driving clk_usb_buf (see cwhusky_top.v) is fed from the
+# clk_usb input pin, which lacks a dedicated route to the BUFG; allow the single-
+# fanout IBUF->BUFG hop over general routing (the BUFG still drives the global
+# clock spine, so the 96 MHz clock tree is low-skew).
+set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets clk_usb_ibuf]
+# The chained BUFGMUX clock selects (glitch source / LA source / trace+fifo clk)
+# are BUFG->BUFG cascades the 2026.1 clock placer can't place "adjacent and
+# cyclic"; these are config-time selects, not skew-critical. (Vivado prints these
+# exact workarounds.)
+set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets U_trace_top/fe_clk]
+set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets reg_clockglitch/mux1out]
+set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets reg_la/la_source_clk]
+set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets reg_la/mux1out]
