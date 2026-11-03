@@ -155,9 +155,21 @@ module cwhusky_top(
    `ifdef __ICARUS__
       assign clk_usb_buf = clk_usb;
    `else
+      // An IBUFG brings clk_usb into the fabric but does NOT put it on the global
+      // clock network -- a BUFG is required for that. This relied on Vivado
+      // auto-inserting the BUFG, which it does not always do (notably when
+      // clk_usb_buf is also used as a data bit, e.g. the usb_debug buses below):
+      // in Vivado 2026.1 the 96 MHz clock then stays on general routing
+      // (fanout ~5944, ~14 ns skew) and the whole clk_usb domain fails timing.
+      // Instantiate the global buffer explicitly so it is version-independent.
+      wire clk_usb_ibuf;
       IBUFG IBUFG_usb_inst (
-         .O(clk_usb_buf),
+         .O(clk_usb_ibuf),
          .I(clk_usb)
+      );
+      BUFG BUFG_usb_inst (
+         .O(clk_usb_buf),
+         .I(clk_usb_ibuf)
       );
    `endif
 
