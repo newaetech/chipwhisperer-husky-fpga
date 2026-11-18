@@ -155,7 +155,7 @@ You'll notice that the register address is provided as a string, not a
 number. Indeed, the ChipWhisperer Python API code parses the Verilog
 `registers.v` file to learn the defined address of each register, which
 allows Verilog registers to be addressed by name rather than by number
-(goodbye magic numbers!). This makes it very to see exactly what touches a
+(goodbye magic numbers!). This makes it very easy to see exactly what touches a
 particular register in the Python code base. Here's an example of finding
 all the code that reads or writes the `USERIO_CONFIG` register:
 

@@ -16,7 +16,7 @@ FPGA code documentation for two main reasons:
    needs (for example: redistributing storage between ADC, trace, and logic
    analyzer).
 
-This write-up is not a full technical deep-dive (one will be written soon),
+This write-up is not a full technical deep-dive (look [here](adc_details) for that),
 but it does get a fair bit into why and how the changes discussed here were
 made. If you're not interested in those details, here's what you need to
 know about this update as a Husky user:

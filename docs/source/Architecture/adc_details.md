@@ -19,7 +19,7 @@ limitations, and what we did to overcome those limitations.
 The target audience for this post are experienced FPGA designers. We will
 try to keep this sufficiently high-level that less-experienced FPGA
 designers can still follow along and get something out of this; if goes into
-more detail than you care for, you'll likely prefer our a lighter
+more detail than you care for, you'll likely prefer our lighter
 take on the same topic: [ADC Storage
 Update](adc_highlevel_update).
 
@@ -327,7 +327,7 @@ New FIFO Architecture
 One of the things that should stand out from this architecture is the wider
 width of the wide FIFOs. Why go from 36 to 72? We explained above that a
 FIFO width that is a multiple of 36 is required to avoid "wasting" bits.
-However, a 36-bit-wide FIFO at 96 MHz tops out a 288 MS/s; to avoid
+However, a 36-bit-wide FIFO at 96 MHz tops out at 288 MS/s; to avoid
 additional re-architecturing in the future, it seemed wise to future-proof
 the design. 72 also has the advantage of dividing both 12 and 8, thus
 allowing waste-free storage for both sample sizes. With 72 bits, the *FIFOs*
